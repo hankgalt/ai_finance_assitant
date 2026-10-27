@@ -1,0 +1,30 @@
+[
+  {
+    "case_id": "finance-investing-basics",
+    "query": "What is the difference between saving and investing, and why does compound growth matter?",
+    "filters": {"logical_kb": "finance_education", "tax_year": null, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["investor-introduction-investing"],
+    "critical_filter": false
+  },
+  {
+    "case_id": "finance-asset-allocation",
+    "query": "How do asset allocation, time horizon, risk tolerance, and diversification relate?",
+    "filters": {"logical_kb": "finance_education", "tax_year": null, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["investor-asset-allocation"],
+    "critical_filter": false
+  },
+  {
+    "case_id": "finance-investment-fees",
+    "query": "How can small ongoing investment fees affect a portfolio over many years?",
+    "filters": {"logical_kb": "finance_education", "tax_year": null, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["investor-understanding-fees", "investor-mutual-fund-fees"],
+    "critical_filter": false
+  },
+  {
+    "case_id": "finance-investment-products",
+    "query": "What investment options include stocks bonds mutual funds ETFs and Treasury securities?",
+    "filters": {"logical_kb": "finance_education", "tax_year": null, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["investor-investment-options"],
+    "critical_filter": false
+  }
+]

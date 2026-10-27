@@ -1,0 +1,17 @@
+{
+  "activation": {
+    "active_collection": "tax_education_v1_704df2e0b78d",
+    "alias": "tax_education_active",
+    "previous_collection": "tax_education_v1_f3799e77e663"
+  },
+  "activation_requested": true,
+  "collection_name": "tax_education_v1_704df2e0b78d",
+  "evaluation_artifact": "artifacts/m1/tax_education_v1_704df2e0b78d.evaluation.json",
+  "evaluation_passed": true,
+  "recorded_at": "2026-10-27T18:31:11.536835+00:00",
+  "schema_version": "1",
+  "write": {
+    "created": true,
+    "points_written": 3332
+  }
+}

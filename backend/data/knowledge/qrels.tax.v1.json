@@ -1,0 +1,58 @@
+[
+  {
+    "case_id": "tax-2025-qualified-dividends",
+    "query": "How are qualified dividends and capital gain distributions taxed?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p550-2025"],
+    "critical_filter": true
+  },
+  {
+    "case_id": "tax-2024-qualified-dividends",
+    "query": "How are qualified dividends and capital gain distributions taxed?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2024, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p550-2024"],
+    "critical_filter": true
+  },
+  {
+    "case_id": "tax-2023-qualified-dividends",
+    "query": "How are qualified dividends and capital gain distributions taxed?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2023, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p550-2023"],
+    "critical_filter": true
+  },
+  {
+    "case_id": "tax-2022-qualified-dividends",
+    "query": "How are qualified dividends and capital gain distributions taxed?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2022, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p550-2022"],
+    "critical_filter": true
+  },
+  {
+    "case_id": "tax-2025-estimated-tax",
+    "query": "Who must make estimated tax payments and how is withholding considered?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p505-2025"],
+    "critical_filter": true
+  },
+  {
+    "case_id": "tax-2025-ira-contributions",
+    "query": "What are the rules and limits for traditional and Roth IRA contributions?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p590a-2025"],
+    "critical_filter": true
+  },
+  {
+    "case_id": "tax-2025-ira-distributions",
+    "query": "When are required minimum distributions from an IRA required?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p590b-2025"],
+    "critical_filter": true
+  },
+  {
+    "case_id": "tax-2025-federal-income-tax",
+    "query": "What income must be reported on an individual federal income tax return?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p17-2025"],
+    "critical_filter": true
+  }
+]

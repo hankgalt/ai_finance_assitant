@@ -1,0 +1,8 @@
+{
+  "action": "rollback",
+  "active_collection": "tax_education_v1_f3799e77e663",
+  "alias": "tax_education_active",
+  "previous_collection": "tax_education_v1_704df2e0b78d",
+  "recorded_at": "2026-10-27T18:31:19.283473+00:00",
+  "schema_version": "1"
+}

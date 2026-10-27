@@ -1,0 +1,363 @@
+{
+  "schema_version": "1",
+  "reviewed_at": "2026-10-27T00:00:00Z",
+  "sources": [
+    {
+      "source_id": "investor-introduction-investing",
+      "logical_kb": "finance_education",
+      "title": "Introduction to Investing",
+      "publisher": "U.S. Securities and Exchange Commission — Investor.gov",
+      "canonical_url": "https://www.investor.gov/introduction-investing",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "SEC public information may be copied and redistributed; page reviewed as SEC-authored investor education.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude SEC marks, logos, stock art, and linked third-party material.", "Do not imply SEC endorsement or treat education as legal interpretation."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "investor-asset-allocation",
+      "logical_kb": "finance_education",
+      "title": "Asset Allocation and Diversification",
+      "publisher": "U.S. Securities and Exchange Commission — Investor.gov",
+      "canonical_url": "https://www.investor.gov/introduction-investing/getting-started/asset-allocation",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "SEC public information may be copied and redistributed; page reviewed as SEC-authored investor education.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude SEC marks, logos, stock art, and linked third-party material.", "Do not imply SEC endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "investor-understanding-fees",
+      "logical_kb": "finance_education",
+      "title": "Understanding Fees",
+      "publisher": "U.S. Securities and Exchange Commission — Investor.gov",
+      "canonical_url": "https://www.investor.gov/introduction-investing/getting-started/understanding-fees",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "SEC public information may be copied and redistributed; page reviewed as SEC-authored investor education.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude SEC marks, logos, stock art, and linked third-party material.", "Do not imply SEC endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "investor-investment-options",
+      "logical_kb": "finance_education",
+      "title": "Learn About Investment Options",
+      "publisher": "U.S. Securities and Exchange Commission — Investor.gov",
+      "canonical_url": "https://www.investor.gov/introduction-investing/investing-basics/save-and-invest/learn-about-investment-options",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "SEC public information may be copied and redistributed; page reviewed as SEC-authored investor education.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude SEC marks, logos, stock art, and linked third-party material.", "Do not imply SEC endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "investor-mutual-fund-fees",
+      "logical_kb": "finance_education",
+      "title": "Mutual Fund and ETF Fees and Expenses",
+      "publisher": "U.S. Securities and Exchange Commission — Investor.gov",
+      "canonical_url": "https://www.investor.gov/introduction-investing/investing-basics/glossary/mutual-fund-fees-and-expenses",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "SEC public information may be copied and redistributed; page reviewed as SEC-authored investor education.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude SEC marks, logos, stock art, and linked third-party material.", "Do not imply SEC endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "cfpb-emergency-fund",
+      "logical_kb": "finance_education",
+      "title": "An Essential Guide to Building an Emergency Fund",
+      "publisher": "Consumer Financial Protection Bureau",
+      "canonical_url": "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "quarantined",
+      "permitted_use": {
+        "basis": "CFPB-created information is public domain and may be reproduced, published, or otherwise used; page reviewed as CFPB-authored.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude CFPB trademarks, logos, and third-party inclusions.", "Do not imply CFPB endorsement.", "Automated fetch returned HTTP 403 on 2026-10-27; quarantine until an approved access method is documented."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": false
+    },
+    {
+      "source_id": "cfpb-credit-reports",
+      "logical_kb": "finance_education",
+      "title": "Credit Reports and Scores",
+      "publisher": "Consumer Financial Protection Bureau",
+      "canonical_url": "https://www.consumerfinance.gov/consumer-tools/credit-reports-and-scores/",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "quarantined",
+      "permitted_use": {
+        "basis": "CFPB-created information is public domain and may be reproduced, published, or otherwise used; page reviewed as CFPB-authored.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude CFPB trademarks, logos, and third-party inclusions.", "Do not imply CFPB endorsement.", "Automated fetch returned HTTP 403 on 2026-10-27; quarantine until an approved access method is documented."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": false
+    },
+    {
+      "source_id": "cfpb-debt-collection",
+      "logical_kb": "finance_education",
+      "title": "Debt Collection",
+      "publisher": "Consumer Financial Protection Bureau",
+      "canonical_url": "https://www.consumerfinance.gov/consumer-tools/debt-collection/",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "quarantined",
+      "permitted_use": {
+        "basis": "CFPB-created information is public domain and may be reproduced, published, or otherwise used; page reviewed as CFPB-authored.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude CFPB trademarks, logos, and third-party inclusions.", "Do not imply CFPB endorsement.", "Automated fetch returned HTTP 403 on 2026-10-27; quarantine until an approved access method is documented."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": false
+    },
+    {
+      "source_id": "irs-p17-2025",
+      "logical_kb": "tax_education",
+      "title": "Publication 17 (2025), Your Federal Income Tax",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/publications/p17",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2025],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official content is not copyrighted and may be freely copied; page reviewed for IRS-authored material.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "irs-p505-2025",
+      "logical_kb": "tax_education",
+      "title": "Publication 505 (2025), Tax Withholding and Estimated Tax",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/publications/p505",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2025],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official content is not copyrighted and may be freely copied; page reviewed for IRS-authored material.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "irs-p550-2025",
+      "logical_kb": "tax_education",
+      "title": "Publication 550 (2025), Investment Income and Expenses",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/publications/p550",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2025],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official content is not copyrighted and may be freely copied; page reviewed for IRS-authored material.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "irs-p550-2024",
+      "logical_kb": "tax_education",
+      "title": "Publication 550 (2024), Investment Income and Expenses",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/pub/irs-prior/p550--2024.pdf",
+      "source_type": "pdf",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2024],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official publication is not copyrighted and may be freely copied; PDF reviewed as an IRS publication.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "irs-p550-2023",
+      "logical_kb": "tax_education",
+      "title": "Publication 550 (2023), Investment Income and Expenses",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/pub/irs-prior/p550--2023.pdf",
+      "source_type": "pdf",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2023],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official publication is not copyrighted and may be freely copied; PDF reviewed as an IRS publication.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "irs-p550-2022",
+      "logical_kb": "tax_education",
+      "title": "Publication 550 (2022), Investment Income and Expenses",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/pub/irs-prior/p550--2022.pdf",
+      "source_type": "pdf",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2022],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official publication is not copyrighted and may be freely copied; PDF reviewed as an IRS publication.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "irs-p590a-2025",
+      "logical_kb": "tax_education",
+      "title": "Publication 590-A (2025), Contributions to Individual Retirement Arrangements",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/publications/p590a",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2025],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official content is not copyrighted and may be freely copied; page reviewed for IRS-authored material.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "irs-p590b-2025",
+      "logical_kb": "tax_education",
+      "title": "Publication 590-B (2025), Distributions from Individual Retirement Arrangements",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/publications/p590b",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2025],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official content is not copyrighted and may be freely copied; page reviewed for IRS-authored material.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "finra-investing-basics-pending",
+      "logical_kb": "finance_education",
+      "title": "FINRA Investing Basics (not approved for ingestion)",
+      "publisher": "Financial Industry Regulatory Authority",
+      "canonical_url": "https://www.finra.org/investors/investing/investing-basics",
+      "source_type": "html",
+      "jurisdiction": "US",
+      "tax_years": [],
+      "status": "pending_review",
+      "permitted_use": {
+        "basis": "Pending explicit written permission or a source-specific license covering storage, vectorization, and delivery.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": false,
+        "redistribution_allowed": false,
+        "attribution_required": true,
+        "restrictions": ["Do not fetch, store, embed, or use in qrels while permission is pending."],
+        "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": false
+    }
+  ]
+}

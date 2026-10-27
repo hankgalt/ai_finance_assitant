@@ -1,0 +1,34 @@
+{
+  "citation_integrity": true,
+  "collection_name": "finance_education_v1_2fdf182ee6ab",
+  "critical_filters_exact": true,
+  "evaluated_at": "2026-10-27T22:48:48.151791Z",
+  "failures": [],
+  "logical_kb": "finance_education",
+  "metrics": [
+    {
+      "mean_reciprocal_rank": 1.0,
+      "precision_at_5": 0.55,
+      "recall_at_5": 0.875,
+      "strategy": "dense"
+    },
+    {
+      "mean_reciprocal_rank": 0.875,
+      "precision_at_5": 0.6,
+      "recall_at_5": 1.0,
+      "strategy": "sparse"
+    },
+    {
+      "mean_reciprocal_rank": 1.0,
+      "precision_at_5": 0.6,
+      "recall_at_5": 0.875,
+      "strategy": "hybrid"
+    }
+  ],
+  "minimum_hybrid_recall_at_5": 0.85,
+  "passed": true,
+  "qrels_case_count": 4,
+  "qrels_checksum": "4548340e4c92c568864a0f3677c2601b83571c7b7d272f6fbaf2e868539d1f40",
+  "schema_version": "1",
+  "top_k": 5
+}

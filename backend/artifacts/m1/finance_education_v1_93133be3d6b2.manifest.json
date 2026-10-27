@@ -1,0 +1,75 @@
+{
+  "documents": [
+    {
+      "canonical_url": "https://www.investor.gov/introduction-investing/getting-started/asset-allocation",
+      "document_id": "investor-asset-allocation",
+      "document_version": "517b80a12d38e342a2f0bb11caf9fe165fc3584d6f23da54adc506b2c1ed2dcb",
+      "fetched_at": "2026-10-27T18:20:42.597032+00:00",
+      "tax_years": []
+    },
+    {
+      "canonical_url": "https://www.investor.gov/introduction-investing",
+      "document_id": "investor-introduction-investing",
+      "document_version": "f38add50651fe894b71f7859e70983c388dcac37b8834594db565b7a3c375321",
+      "fetched_at": "2026-10-27T18:20:42.222853+00:00",
+      "tax_years": []
+    },
+    {
+      "canonical_url": "https://www.investor.gov/introduction-investing/investing-basics/save-and-invest/learn-about-investment-options",
+      "document_id": "investor-investment-options",
+      "document_version": "3ae8b4d0388e457f3bebd84a625c260233f754c0836810dbceda940e902f799e",
+      "fetched_at": "2026-10-27T18:20:43.345976+00:00",
+      "tax_years": []
+    },
+    {
+      "canonical_url": "https://www.investor.gov/introduction-investing/investing-basics/glossary/mutual-fund-fees-and-expenses",
+      "document_id": "investor-mutual-fund-fees",
+      "document_version": "9a2346e559e75d347cd7e910a2114fec8ea2234dc2fd4ce4b174cca9336f9b04",
+      "fetched_at": "2026-10-27T18:20:43.672215+00:00",
+      "tax_years": []
+    },
+    {
+      "canonical_url": "https://www.investor.gov/introduction-investing/getting-started/understanding-fees",
+      "document_id": "investor-understanding-fees",
+      "document_version": "c18341c06195aa49151fafa07ea68d24bc970a8fa48af3ebdc7d52ba80982c81",
+      "fetched_at": "2026-10-27T18:20:43.035148+00:00",
+      "tax_years": []
+    }
+  ],
+  "manifest": {
+    "chunking_policy": {
+      "max_chars": 1600,
+      "min_chars": 80,
+      "overlap_chars": 160,
+      "version": "structural-v1"
+    },
+    "collection_name": "finance_education_v1_93133be3d6b2",
+    "collection_version": "v1-93133be3d6b2",
+    "corpus_checksum": "93133be3d6b2991af748b890de73cb865d4604d956651f71189544679d081479",
+    "created_at": "2026-10-27T18:28:56.847326Z",
+    "dense_artifact_sha256": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+    "dense_dimensions": 384,
+    "dense_model_id": "BAAI/bge-small-en-v1.5",
+    "dense_model_revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+    "dense_vector_name": "dense",
+    "document_count": 5,
+    "evaluation_artifact": null,
+    "logical_kb": "finance_education",
+    "point_count": 20,
+    "ready": false,
+    "schema_version": "1",
+    "source_ids": [
+      "investor-asset-allocation",
+      "investor-introduction-investing",
+      "investor-investment-options",
+      "investor-mutual-fund-fees",
+      "investor-understanding-fees"
+    ],
+    "source_registry_checksum": "51bc61636b250d758acfb902c8c811b77fd819f1052097a24f65d70f7d23cf16",
+    "sparse_artifact_sha256": "019f104ba2ed07436d05f9cdd3383034ad66014edc27fc651f837e1a038b6451",
+    "sparse_model_id": "Qdrant/bm25",
+    "sparse_model_revision": "22b8d2af71a76161e18dd432d2cee0eefa66e412",
+    "sparse_vector_name": "sparse",
+    "state": "candidate"
+  }
+}

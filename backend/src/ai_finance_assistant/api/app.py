@@ -16,7 +16,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title=resolved_settings.app_name,
         version=resolved_settings.app_version,
-        description="M0 foundation. Financial and agent workflows are not implemented.",
+        description=(
+            "M1 foundation with offline knowledge ingestion and read-only Qdrant readiness. "
+            "Financial and agent workflows are not implemented."
+        ),
     )
     app.state.settings = resolved_settings
     app.add_middleware(RequestCorrelationMiddleware)

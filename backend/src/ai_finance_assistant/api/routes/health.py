@@ -1,4 +1,4 @@
-"""Liveness and honest M0 readiness endpoints."""
+"""Liveness and Qdrant collection readiness endpoints."""
 
 from fastapi import APIRouter, Request, Response, status
 

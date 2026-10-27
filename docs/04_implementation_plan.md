@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 1.1 | Status: Approved sequence; M0 complete, later milestones planned | 2026-10-27
+Version 1.2 | Status: Approved sequence; M0–M1 complete, later milestones planned | 2026-10-27
 
 ## 1. Delivery rules
 
@@ -64,7 +64,7 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Tests:** Extraction/chunking fixtures, duplicate/change detection, payload/metadata validation, tax-year filters, dense baseline, sparse/hybrid/RRF comparisons, citation-source integrity, activation/rollback, missing-Qdrant behavior.
 
-**Evidence:** Source manifest, permitted-use review notes, collection manifest/checksums, evaluation report, activation record, and rollback transcript. Coursework corpus counts are reported separately without padding.
+**Evidence:** [M1 delivery report](M1_delivery_report.md), SourceRegistry and permitted-use review, collection manifests/checksums, fixed qrels, comparative evaluation reports, activation records, restart evidence, and rollback transcripts. Coursework corpus counts are reported separately without padding.
 
 ### M2 — Deterministic financial calculation modules
 

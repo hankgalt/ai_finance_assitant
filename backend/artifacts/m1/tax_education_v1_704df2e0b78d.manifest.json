@@ -1,0 +1,115 @@
+{
+  "documents": [
+    {
+      "canonical_url": "https://www.irs.gov/publications/p17",
+      "document_id": "irs-p17-2025",
+      "document_version": "90e807c357a9fa8915f924acd994b7f27d93c4c95a27f340548373f4cde77b66",
+      "fetched_at": "2026-10-27T18:21:02.993781+00:00",
+      "tax_years": [
+        2025
+      ]
+    },
+    {
+      "canonical_url": "https://www.irs.gov/publications/p505",
+      "document_id": "irs-p505-2025",
+      "document_version": "c9da541539464dea2fcac17338302e9ce4c488efa601c382d9caa13874524176",
+      "fetched_at": "2026-10-27T18:21:04.235776+00:00",
+      "tax_years": [
+        2025
+      ]
+    },
+    {
+      "canonical_url": "https://www.irs.gov/pub/irs-prior/p550--2022.pdf",
+      "document_id": "irs-p550-2022",
+      "document_version": "71319bbf60cec9999b2529d783f3f02dffffb8be8e7774b6570e9dec6527991e",
+      "fetched_at": "2026-10-27T18:21:12.484501+00:00",
+      "tax_years": [
+        2022
+      ]
+    },
+    {
+      "canonical_url": "https://www.irs.gov/pub/irs-prior/p550--2023.pdf",
+      "document_id": "irs-p550-2023",
+      "document_version": "512386ffd4abb2baa6e52f5f36f189d146fcb9d11b54bb0341726755785b399f",
+      "fetched_at": "2026-10-27T18:21:09.126394+00:00",
+      "tax_years": [
+        2023
+      ]
+    },
+    {
+      "canonical_url": "https://www.irs.gov/pub/irs-prior/p550--2024.pdf",
+      "document_id": "irs-p550-2024",
+      "document_version": "526169d6387e1a8a494c6fec0aeed5f4fb749bcf5a6096a8a9b6a67b44b238b4",
+      "fetched_at": "2026-10-27T18:21:05.712031+00:00",
+      "tax_years": [
+        2024
+      ]
+    },
+    {
+      "canonical_url": "https://www.irs.gov/publications/p550",
+      "document_id": "irs-p550-2025",
+      "document_version": "3df60d92b6853af090238d820b2e063e78cbaefb3d3ce4088329a9a6b0fe9bc1",
+      "fetched_at": "2026-10-27T18:21:04.932910+00:00",
+      "tax_years": [
+        2025
+      ]
+    },
+    {
+      "canonical_url": "https://www.irs.gov/publications/p590a",
+      "document_id": "irs-p590a-2025",
+      "document_version": "785d55c1277af4dfc661189fc4dd5d59c397907382615aaee1def17fd4f4d7cd",
+      "fetched_at": "2026-10-27T18:21:15.239803+00:00",
+      "tax_years": [
+        2025
+      ]
+    },
+    {
+      "canonical_url": "https://www.irs.gov/publications/p590b",
+      "document_id": "irs-p590b-2025",
+      "document_version": "b89622971df149f189ecfd49f28d46a4dd4c65d550a1559ecaf13a0115124263",
+      "fetched_at": "2026-10-27T18:21:15.868158+00:00",
+      "tax_years": [
+        2025
+      ]
+    }
+  ],
+  "manifest": {
+    "chunking_policy": {
+      "max_chars": 1600,
+      "min_chars": 80,
+      "overlap_chars": 160,
+      "version": "structural-v1"
+    },
+    "collection_name": "tax_education_v1_704df2e0b78d",
+    "collection_version": "v1-704df2e0b78d",
+    "corpus_checksum": "704df2e0b78db303a9db0fb09a09a8ad43fbf1b6f2bbcd1aec7fcbba6df8aaab",
+    "created_at": "2026-10-27T18:29:16.588064Z",
+    "dense_artifact_sha256": "51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431",
+    "dense_dimensions": 384,
+    "dense_model_id": "BAAI/bge-small-en-v1.5",
+    "dense_model_revision": "aa8f8b060edb00e03bfdd08813a2949946c8ba55",
+    "dense_vector_name": "dense",
+    "document_count": 8,
+    "evaluation_artifact": null,
+    "logical_kb": "tax_education",
+    "point_count": 3332,
+    "ready": false,
+    "schema_version": "1",
+    "source_ids": [
+      "irs-p17-2025",
+      "irs-p505-2025",
+      "irs-p550-2022",
+      "irs-p550-2023",
+      "irs-p550-2024",
+      "irs-p550-2025",
+      "irs-p590a-2025",
+      "irs-p590b-2025"
+    ],
+    "source_registry_checksum": "51bc61636b250d758acfb902c8c811b77fd819f1052097a24f65d70f7d23cf16",
+    "sparse_artifact_sha256": "019f104ba2ed07436d05f9cdd3383034ad66014edc27fc651f837e1a038b6451",
+    "sparse_model_id": "Qdrant/bm25",
+    "sparse_model_revision": "22b8d2af71a76161e18dd432d2cee0eefa66e412",
+    "sparse_vector_name": "sparse",
+    "state": "candidate"
+  }
+}

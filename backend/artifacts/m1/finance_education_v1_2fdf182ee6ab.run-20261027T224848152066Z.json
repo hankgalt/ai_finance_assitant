@@ -1,0 +1,17 @@
+{
+  "activation": {
+    "active_collection": "finance_education_v1_2fdf182ee6ab",
+    "alias": "finance_education_active",
+    "previous_collection": "finance_education_v1_2fdf182ee6ab"
+  },
+  "activation_requested": true,
+  "collection_name": "finance_education_v1_2fdf182ee6ab",
+  "evaluation_artifact": "artifacts/m1/finance_education_v1_2fdf182ee6ab.evaluation.json",
+  "evaluation_passed": true,
+  "recorded_at": "2026-10-27T22:48:48.152066+00:00",
+  "schema_version": "1",
+  "write": {
+    "created": false,
+    "points_written": 0
+  }
+}
