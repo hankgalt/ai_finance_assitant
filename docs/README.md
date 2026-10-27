@@ -15,6 +15,9 @@ This directory is the design authority for AI Finance Assistant. The product mis
 7. [Codex M0 starting prompt](06_codex_starting_prompt.md) is the bounded implementation prompt for the foundation milestone. It is an instruction artifact, not a record that M0 has been executed.
 8. [Domain glossary](../GLOSSARY.md) provides canonical product terminology.
 
+Milestone completion evidence is recorded separately from the design authority. See
+[M0 delivery report](M0_delivery_report.md) for the foundation milestone.
+
 If documents conflict, use this precedence: product requirements, accepted ADRs, system design, implementation plan, evaluation strategy, then the M0 prompt. Coursework criteria remain mandatory for the coursework release even when they do not constrain later product architecture. Resolve source-rubric ambiguities in the coursework criteria rather than weakening product requirements.
 
 ## Scope labels

@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 1.0 | Status: Approved sequence, implementation not started by this document | 2026-10-26
+Version 1.1 | Status: Approved sequence; M0 complete, later milestones planned | 2026-10-27
 
 ## 1. Delivery rules
 
@@ -18,6 +18,14 @@ Every milestone delivery report must include:
 8. unresolved decisions and the next permitted milestone.
 
 Cash flow remains a planned enhancement: M2 reserves and tests its interface shape only. The initial release prioritizes investment portfolios and complete behavior for all six agents.
+
+Observability has three distinct records that must not be collapsed into one vendor:
+
+1. privacy-filtered RunEvents are the authoritative product execution record used by history, replay, and the Inspector;
+2. OpenTelemetry carries operational traces and metrics across the browser, FastAPI, application modules, and external adapters, with structured logs correlated by trace/span and request/execution identifiers;
+3. LangSmith is an optional agent/LLM trace and evaluation adapter, not a replacement for RunEvent persistence, operational metrics, or logs.
+
+Telemetry configuration is environment-driven and disabled safely when no exporter credentials or endpoint are configured. Export failure must not fail a product request. Every exporter receives only allow-listed, redacted fields; raw prompts, financial records, transactions, credentials, hidden reasoning, and unrestricted tool payloads are excluded.
 
 ## 2. Revised milestones
 
@@ -38,7 +46,7 @@ Cash flow remains a planned enhancement: M2 reserves and tests its interface sha
 
 **Tests:** Backend schema/health tests; frontend navigation, contract, and accessibility smoke tests; lint/typecheck; secret/redaction fixtures.
 
-**Evidence:** M0 delivery report, command log, generated schema snapshot, screenshots of labeled empty/synthetic states. The bounded implementation prompt is [06_codex_starting_prompt.md](06_codex_starting_prompt.md).
+**Evidence:** [M0 delivery report](M0_delivery_report.md), command log, generated schema snapshot, screenshots of labeled empty/synthetic states. The bounded implementation prompt is [06_codex_starting_prompt.md](06_codex_starting_prompt.md).
 
 ### M1 — Persistent Qdrant and offline knowledge ingestion
 
@@ -102,14 +110,17 @@ Cash flow remains a planned enhancement: M2 reserves and tests its interface sha
 - Finance Q&A, Portfolio Analysis, Market Analysis, Goal Planning, News Synthesizer, and Tax Education agents with the exact §3 responsibilities.
 - Finance and Tax retrieval; M2 calculations; M3 providers; multi-agent composition without recursive agent calls.
 - Actual RunEvent instrumentation for routes, nodes, retrieval, tools/providers, models, and terminal state.
+- A small vendor-neutral observability interface for spans, metrics, and context propagation, with OpenTelemetry runtime and in-memory test adapters.
+- Optional LangSmith tracing for LangGraph, agent, model, retrieval, and tool spans; RunEvent identifiers correlate with exported traces while RunEvent persistence remains authoritative.
+- Redaction and allow-list filtering before RunEvent persistence or external trace export; LangSmith inputs/outputs and unsafe metadata are hidden by default.
 
 **Dependencies:** M1–M3.
 
-**Acceptance:** Each agent passes distinct domain cases; labeled requests route correctly; Finance/Tax cite Run evidence; Portfolio/Goal use deterministic outputs; multi-agent results preserve domain boundaries; restart/follow-up and partial failures behave as designed; event sequences match graph execution.
+**Acceptance:** Each agent passes distinct domain cases; labeled requests route correctly; Finance/Tax cite Run evidence; Portfolio/Goal use deterministic outputs; multi-agent results preserve domain boundaries; restart/follow-up and partial failures behave as designed; event sequences match graph execution; every instrumented operation carries stable correlation; disabling or losing an observability exporter does not change product behavior.
 
-**Tests:** Labeled single/multi-intent routing, agent contract suites, collaboration, hop/deadline bounds, citation and tax-year correctness, prompt injection, malformed model output, checkpoint restart/isolation, event ordering and redaction.
+**Tests:** Labeled single/multi-intent routing, agent contract suites, collaboration, hop/deadline bounds, citation and tax-year correctness, prompt injection, malformed model output, checkpoint restart/isolation, event ordering and redaction, in-memory span/metric assertions, disabled/exporter-failure behavior, and RunEvent-to-trace correlation.
 
-**Evidence:** Six-agent behavior report, route confusion matrix, captured privacy-filtered traces, actual graph diagrams, and failure examples.
+**Evidence:** Six-agent behavior report, route confusion matrix, captured privacy-filtered RunEvents and OpenTelemetry traces, optional LangSmith trace samples when configured, actual graph diagrams, exporter-failure evidence, and failure examples.
 
 ### M5 — FastAPI integration and persistence
 
@@ -119,14 +130,16 @@ Cash flow remains a planned enhancement: M2 reserves and tests its interface sha
 - SSE for conversational chunks and RunEvents with documented replay or REST recovery.
 - Durable local adapters for checkpoints, saved portfolios, run summaries/events, and deletion; idempotency for artifact-creating requests.
 - OpenAPI-driven or contract-verified frontend types and readiness for storage/Qdrant/providers.
+- FastAPI and outbound-client OpenTelemetry instrumentation with W3C trace-context propagation; JSON logs enriched with trace, span, request, execution, and Run identifiers when available.
+- OTLP/Collector configuration for enabled signals, with backend request/error/latency, provider/retrieval timing, retry/rate-limit, cache, and persistence metrics using bounded low-cardinality attributes.
 
 **Dependencies:** M1–M4.
 
-**Acceptance:** REST is authoritative; reconnect deduplicates events; cross-session reads/streams fail; restart behavior matches configured retention; deletion removes defined user artifacts; partial and not-ready states use stable errors.
+**Acceptance:** REST is authoritative; reconnect deduplicates events; cross-session reads/streams fail; restart behavior matches configured retention; deletion removes defined user artifacts; partial and not-ready states use stable errors; inbound and outbound trace context correlates with logs and RunEvents; telemetry remains non-blocking and no metric label or exported attribute exposes protected or unbounded identifiers.
 
-**Tests:** OpenAPI snapshots/contracts, REST/SSE framing, last-event/recovery behavior, concurrent Runs, authorization scope, restart, idempotency, deletion, migration, CORS/local bind, and resource limits.
+**Tests:** OpenAPI snapshots/contracts, REST/SSE framing, last-event/recovery behavior, concurrent Runs, authorization scope, restart, idempotency, deletion, migration, CORS/local bind, resource limits, W3C context propagation, log/trace correlation, metric cardinality, health-endpoint exclusion, and unavailable Collector/exporter behavior.
 
-**Evidence:** Interface specification, migration records, contract test report, SSE transcript, lifecycle/isolation evidence, and documented local security posture.
+**Evidence:** Interface specification, migration records, contract test report, SSE transcript, lifecycle/isolation evidence, correlated FastAPI/module trace sample, metric inventory, Collector/exporter configuration, and documented local security posture.
 
 ### M6 — React product experiences
 
@@ -136,14 +149,16 @@ Cash flow remains a planned enhancement: M2 reserves and tests its interface sha
 - Manual/JSON/CSV/XLSX portfolio flows with validation review and no silent corrections.
 - TanStack Query integration, Recharts visuals and accessible tables, citations/provenance, freshness, coverage, and assumption displays.
 - Responsive, keyboard-accessible loading, empty, partial, success, stale, and failure states.
+- Privacy-safe frontend telemetry module for error-boundary events, Web Vitals, navigation, and API timing/failure categories, with W3C trace context and request correlation propagated to FastAPI.
+- First-party telemetry transport or protected Collector adapter; no LangSmith, provider, or telemetry credential is shipped to the browser, and telemetry contains no prompt or financial payload content.
 
 **Dependencies:** M5 interfaces and deterministic backend fixtures.
 
-**Acceptance:** Users complete core workflows without developer tools; UI never performs authoritative calculations or leaks credentials; chart/tabular values match backend resources; refresh/reconnect preserves intended state.
+**Acceptance:** Users complete core workflows without developer tools; UI never performs authoritative calculations or leaks credentials; chart/tabular values match backend resources; refresh/reconnect preserves intended state; frontend failures correlate to backend traces when sampled; disabled or failed telemetry has no user-visible functional effect.
 
-**Tests:** Component tests, API mock contracts, Playwright user journeys, keyboard/focus/semantic/contrast checks, responsive layouts, network failure and stale data, import error correction.
+**Tests:** Component tests, API mock contracts, Playwright user journeys, keyboard/focus/semantic/contrast checks, responsive layouts, network failure and stale data, import error correction, error-boundary and Web-Vitals emission, trace/request-header propagation, payload redaction, CSP/CORS behavior, and unavailable telemetry transport.
 
-**Evidence:** Browser-test report, accessibility review, screenshots/video for each state, and contract-version record.
+**Evidence:** Browser-test report, accessibility review, screenshots/video for each state, contract-version record, privacy-safe frontend telemetry sample, and browser-to-FastAPI correlation record.
 
 ### M7 — Agent Execution Inspector
 
@@ -153,6 +168,7 @@ Cash flow remains a planned enhancement: M2 reserves and tests its interface sha
 - Display of routing, status, measured timing, safe tool/result metadata, retrieval sources, and tokens/cost where available.
 - Explicit “not available” states and clearly distinct static workflow-design overlays if used.
 - Event deduplication, out-of-order handling, reconnect behavior, and accessible list alternative.
+- Authorized correlation identifiers sufficient to locate the corresponding operational or LangSmith trace when configured; the Inspector continues to render only persisted RunEvents and never queries an external trace backend as its source of truth.
 
 **Dependencies:** M4 instrumentation, M5 history/SSE, M6 shared UI.
 
@@ -170,15 +186,16 @@ Cash flow remains a planned enhancement: M2 reserves and tests its interface sha
 - Privacy/security threat review, prompt-injection suite, safe-file suite, and session/access audit.
 - Reliability tests for providers, Qdrant, persistence, retries, load bounds, and restart.
 - Measured routing/retrieval/grounding/arithmetic/portfolio/import/citation/tax-year/UI/Inspector/latency/cost reports.
+- End-to-end observability qualification across browser, FastAPI, deterministic modules, providers/retrieval, LangGraph, and RunEvent persistence, including sampling, correlation, redaction, retention, metric cardinality, and exporter backpressure/outage behavior.
 - Operational runbooks for local failures and explicit production-hardening gap register.
 
 **Dependencies:** M1–M7 feature-complete candidate.
 
-**Acceptance:** All critical release gates pass; no critical financial arithmetic, access, leakage, citation, or trace-fidelity defect remains open; metrics include configuration and unavailable values; any noncritical exception has owner, rationale, and expiry.
+**Acceptance:** All critical release gates pass; no critical financial arithmetic, access, leakage, citation, or trace-fidelity defect remains open; metrics include configuration and unavailable values; a sampled request can be reconciled across frontend telemetry, backend spans/logs, LangSmith when enabled, and the authoritative RunEvent record; collector/exporter loss cannot corrupt or block product state; any noncritical exception has owner, rationale, and expiry.
 
-**Tests:** Full regression, adversarial, integration, browser, accessibility, benchmark, soak/concurrency within initial scale, and clean-environment suite.
+**Tests:** Full regression, adversarial, integration, browser, accessibility, benchmark, soak/concurrency within initial scale, clean-environment suite, sensitive-field canaries, sampling/retention, missing-parent/partial-trace handling, high-cardinality rejection, and Collector/LangSmith outage tests.
 
-**Evidence:** Immutable evaluation bundle, coverage report, threat model, dependency scan, benchmark/cost report, known-risk register, and release recommendation.
+**Evidence:** Immutable evaluation bundle, coverage report, threat model, dependency scan, benchmark/cost report, observability data-flow diagram, signal/attribute inventory, correlated cross-tier trace, redaction and exporter-failure reports, known-risk register, and release recommendation.
 
 ### M9 — Product documentation, coursework packaging, demonstration, and release
 
@@ -188,6 +205,7 @@ Cash flow remains a planned enhancement: M2 reserves and tests its interface sha
 - Read-only MCP adapter and client setup/evidence if CA-13 remains required.
 - Coursework evidence matrix, 5–10 minute demonstration script/recording plan, and React/Qdrant substitution rationale.
 - Product release notes, limitation/disclaimer review, collection and schema versions, rollback instructions, and signed completion checklist.
+- Operator guidance for observability configuration, disabled mode, sampling, privacy filters, retention, Collector/exporter routing, LangSmith setup, dashboards/alerts where deployed, and correlation-based troubleshooting.
 
 **Dependencies:** M8 release recommendation and authoritative coursework confirmation where obtainable.
 

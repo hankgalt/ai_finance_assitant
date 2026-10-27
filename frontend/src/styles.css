@@ -1,0 +1,397 @@
+@import "tailwindcss";
+
+:root {
+  color: #18211d;
+  background: #f3f6f3;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --background: 120 20% 97%;
+  --foreground: 150 16% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 150 16% 11%;
+  --primary: 151 44% 27%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 135 16% 92%;
+  --muted-foreground: 150 8% 40%;
+  --border: 138 12% 84%;
+  --radius: 0.75rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: -4rem;
+  z-index: 50;
+  border-radius: 0.5rem;
+  background: #183d2d;
+  color: white;
+  padding: 0.75rem 1rem;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 5rem;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #d7dfd9;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.topbar h1,
+.topbar p,
+.page-header h2,
+.page-header p {
+  margin: 0;
+}
+
+.topbar h1 {
+  margin-top: 0.2rem;
+  font-size: 1.15rem;
+}
+
+.brand-kicker,
+.eyebrow,
+.sidebar-label {
+  color: #537063;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-height: calc(100vh - 5rem);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid #d7dfd9;
+  background: #e9eee9;
+}
+
+.sidebar-label {
+  margin: 0 0 0.75rem 0.75rem;
+}
+
+.sidebar nav {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: #34473d;
+  cursor: pointer;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.nav-item:hover,
+.nav-item:focus-visible {
+  border-color: #a7b8ae;
+  outline: none;
+}
+
+.nav-item.active {
+  border-color: #b9c8bf;
+  background: white;
+  box-shadow: 0 1px 2px rgba(24, 61, 45, 0.08);
+  color: #183d2d;
+  font-weight: 700;
+}
+
+.nav-item small {
+  color: #738278;
+  font-size: 0.65rem;
+}
+
+.local-note {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: auto;
+  border: 1px solid #cbd6ce;
+  border-radius: 0.75rem;
+  background: #f7f9f7;
+  color: #526159;
+  padding: 0.9rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.local-note strong {
+  color: #26382f;
+}
+
+main {
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+}
+
+main:focus {
+  outline: none;
+}
+
+.page-header,
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.page-header {
+  margin-bottom: 2.5rem;
+}
+
+.page-header h2 {
+  margin-top: 0.45rem;
+  font-size: clamp(1.8rem, 3vw, 2.75rem);
+  letter-spacing: -0.04em;
+}
+
+.page-header p:not(.eyebrow) {
+  max-width: 44rem;
+  margin-top: 0.7rem;
+  color: #5d6b63;
+  line-height: 1.65;
+}
+
+.milestone-chip,
+.schema-chip,
+.status-pill {
+  flex: none;
+  border: 1px solid #c5d1c9;
+  border-radius: 999px;
+  background: white;
+  padding: 0.45rem 0.7rem;
+  color: #42564b;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.status-ready {
+  border-color: #9bc6a8;
+  background: #eaf7ed;
+}
+
+.status-warning {
+  border-color: #dcc88f;
+  background: #fff8df;
+}
+
+.status-error {
+  border-color: #dfaca7;
+  background: #fff0ef;
+}
+
+.status-pending {
+  color: #5d6b63;
+}
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  min-height: 22rem;
+  place-content: center;
+  border: 1px dashed #bdc9c1;
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 3rem;
+  text-align: center;
+}
+
+.empty-state h3,
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state p {
+  max-width: 32rem;
+  margin-top: 0.5rem;
+  color: #647168;
+  line-height: 1.55;
+}
+
+.empty-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 1rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #dce8df;
+  color: #305b43;
+  font-size: 1.5rem;
+}
+
+.notice {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 2rem;
+  border-left: 4px solid #b58b2a;
+  border-radius: 0.5rem;
+  background: #fff8e8;
+  padding: 1rem 1.2rem;
+  color: #66531f;
+}
+
+.notice span {
+  font-size: 0.9rem;
+}
+
+.section-heading h2 {
+  margin: 0.4rem 0 0;
+  font-size: 1.4rem;
+}
+
+.section-heading p {
+  margin: 0;
+}
+
+.timeline {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline li {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+.timeline-marker {
+  width: 0.72rem;
+  height: 0.72rem;
+  margin-top: 1.1rem;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #3f7557;
+  box-shadow: 0 0 0 1px #3f7557;
+}
+
+.timeline article {
+  border: 1px solid #d8e0da;
+  border-radius: 0.8rem;
+  background: white;
+  padding: 1rem;
+}
+
+.timeline h3 {
+  margin: 0.55rem 0 0.9rem;
+  font-size: 1rem;
+}
+
+.event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: #65736b;
+  font-size: 0.72rem;
+  text-transform: capitalize;
+}
+
+.event-meta span {
+  border-radius: 999px;
+  background: #eff3f0;
+  padding: 0.25rem 0.45rem;
+}
+
+.timeline dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0;
+}
+
+.timeline dl div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.timeline dt {
+  color: #728078;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.timeline dd {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .workspace {
+    display: block;
+  }
+
+  .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #d7dfd9;
+  }
+
+  .sidebar nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .local-note {
+    margin-top: 1rem;
+  }
+
+  main {
+    padding: 1.25rem;
+  }
+
+  .page-header {
+    display: grid;
+  }
+}

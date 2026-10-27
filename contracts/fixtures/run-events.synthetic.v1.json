@@ -1,0 +1,86 @@
+[
+  {
+    "schema_version": "1",
+    "event_id": "evt-synthetic-001",
+    "execution_id": "run-synthetic-m0",
+    "trace_id": null,
+    "trace_unavailable_reason": "Synthetic M0 fixture has no external trace.",
+    "session_id": "session-synthetic-m0",
+    "workflow_id": "workflow-foundation",
+    "workflow_version": "1",
+    "sequence": 1,
+    "node_id": "workflow",
+    "agent_id": null,
+    "tool_call_id": null,
+    "tool_name": null,
+    "parent_event_id": null,
+    "event_type": "run_started",
+    "status": "running",
+    "started_at": "2026-10-27T12:00:00Z",
+    "completed_at": null,
+    "duration_ms": null,
+    "duration_unavailable_reason": "Synthetic start event has no duration.",
+    "routing": null,
+    "tool_result": null,
+    "error": null,
+    "usage": {
+      "availability": "unavailable",
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "cost_amount": null,
+      "cost_currency": null,
+      "method": null,
+      "unavailable_reason": "Synthetic M0 fixture has no model usage."
+    },
+    "retrieval": null,
+    "summary": "Synthetic foundation run started.",
+    "safe_metadata": {
+      "fixture_version": "m0-v1"
+    }
+  },
+  {
+    "schema_version": "1",
+    "event_id": "evt-synthetic-002",
+    "execution_id": "run-synthetic-m0",
+    "trace_id": null,
+    "trace_unavailable_reason": "Synthetic M0 fixture has no external trace.",
+    "session_id": "session-synthetic-m0",
+    "workflow_id": "workflow-foundation",
+    "workflow_version": "1",
+    "sequence": 2,
+    "node_id": "router",
+    "agent_id": null,
+    "tool_call_id": null,
+    "tool_name": null,
+    "parent_event_id": "evt-synthetic-001",
+    "event_type": "route_selected",
+    "status": "completed",
+    "started_at": "2026-10-27T12:00:00.010Z",
+    "completed_at": "2026-10-27T12:00:00.014Z",
+    "duration_ms": 4,
+    "duration_unavailable_reason": null,
+    "routing": {
+      "selected_node_ids": ["finance_qa"],
+      "outcome": "Fixture route selected.",
+      "reason_category": "synthetic_demo"
+    },
+    "tool_result": null,
+    "error": null,
+    "usage": {
+      "availability": "unavailable",
+      "input_tokens": null,
+      "output_tokens": null,
+      "total_tokens": null,
+      "cost_amount": null,
+      "cost_currency": null,
+      "method": null,
+      "unavailable_reason": "Synthetic M0 fixture has no model usage."
+    },
+    "retrieval": null,
+    "summary": "Synthetic route selected Finance Q&A.",
+    "safe_metadata": {
+      "fixture_version": "m0-v1"
+    }
+  }
+]
