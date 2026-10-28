@@ -200,7 +200,7 @@ Open decisions that require implementation research or owner approval:
 - deployment target and the corresponding production identity, storage, encryption, and retention mechanisms;
 - authoritative market and news providers, licensing, entitlements, cache terms, and fallback ordering;
 - Qdrant hosting mode, embedding and sparse models, distance metric, chunk policy, and relevance thresholds, chosen through M1 evaluation;
-- supported multi-currency valuation and approved short-position behavior for the initial release;
+- production FX-provider/conversion behavior and any future short-position model beyond the conservative ADR-021 initial policy;
 - durable stores and retention periods for portfolios, checkpoints, runs, and traces;
-- exact diversification heuristic and the language used to prevent it being read as a validated risk score;
+- any diversification methodology beyond the versioned HHI/effective-holdings heuristic accepted by ADR-021;
 - instructor confirmation of rubric, React substitution, MCP status, and named-provider flexibility.

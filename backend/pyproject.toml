@@ -8,6 +8,7 @@ dependencies = [
   "beautifulsoup4>=4.14,<5",
   "fastapi>=0.162,<0.163",
   "numpy>=2.1,<2.4",
+  "openpyxl>=3.1,<4",
   "pydantic>=2.13,<3",
   "pydantic-settings>=2.12,<3",
   "pypdf>=6.6,<7",
@@ -52,5 +53,5 @@ plugins = ["pydantic.mypy"]
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["uvicorn.*"]
+module = ["openpyxl.*", "uvicorn.*"]
 ignore_missing_imports = true

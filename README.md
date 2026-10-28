@@ -1,8 +1,8 @@
 # AI Finance Assistant
 
-AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository is at **M1: persistent Qdrant and offline knowledge ingestion**. It has a working foundation, versioned Finance and Tax knowledge collections, and read-only collection readiness. It does not yet provide financial calculations, working LangGraph agents, live market/news data, saved user data, or professional financial or tax advice.
+AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository is at **M2: deterministic financial calculation modules**. It has a working foundation, versioned Finance and Tax knowledge collections, safe portfolio import/calculation modules, and deterministic goal projections. It does not yet provide working LangGraph agents, live market/news data, saved user data, portfolio/goal REST resources, or professional financial or tax advice.
 
-Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). M1 evidence and limitations are in [docs/M1_delivery_report.md](docs/M1_delivery_report.md).
+Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). M1 retrieval evidence is in [docs/M1_delivery_report.md](docs/M1_delivery_report.md); M2 calculation evidence and limitations are in [docs/M2_delivery_report.md](docs/M2_delivery_report.md).
 
 ## Current capabilities
 
@@ -13,8 +13,13 @@ Read [docs/README.md](docs/README.md) before implementation work. Repository-wid
 - Locally generated BGE-small dense and Qdrant BM25 sparse representations with exact model revisions and artifact hashes.
 - Dense, sparse, and hybrid/RRF evaluation against fixed Finance and Tax qrels.
 - Runtime readiness that validates active aliases, schema, vector configuration, model artifacts, payload indexes, ready state, and nonempty collections without fetching or embedding.
+- One safe PortfolioImport interface for manual, JSON, CSV, and XLSX input, with aggregate diagnostics, duplicate rejection, source hashing, bounded parsing, and formula/macro defenses.
+- Immutable imported Portfolio/Account/Holding records kept separate from fake/provider enrichment records and calculated Portfolio Snapshots.
+- Decimal-based valuation, per-currency allocation, expense/classification coverage, concentration, and a versioned HHI/effective-holdings heuristic.
+- Multi-scenario goal projections with explicit contribution timing/frequency, inflation, modeled fees, risk-tolerance context, and nominal/real decomposition.
+- A types-only CashFlowAnalysisService seam and minimized CashFlowSummary; cash-flow analysis itself remains a planned enhancement.
 
-LangGraph, the six working agents, deterministic financial modules, provider adapters, SSE, saved user data, MCP, and real Inspector instrumentation belong to later milestones.
+LangGraph, the six working agents, provider adapters, portfolio/goal REST resources, SSE, saved user data, MCP, and real Inspector instrumentation belong to later milestones.
 
 ## Prerequisites
 
@@ -87,6 +92,8 @@ make knowledge-validate
 
 `make verify` is credential-free and skips the live-Qdrant integration test. `make qdrant-check` explicitly exercises candidate creation, compatibility validation, atomic activation, rollback, and cleanup against the loopback service.
 
+M2 calculation and import contracts are exercised by the ordinary backend test suite. The versioned numerical policy is [docs/M2_calculation_policy.md](docs/M2_calculation_policy.md), and valid/adversarial samples are indexed by `backend/data/finance/sample_manifest.v1.json`.
+
 ## Local security posture
 
-The development services bind to `127.0.0.1`. Local Qdrant has no authentication and is not a production deployment. Do not expose it publicly. Only reviewed public educational sources are enabled, raw source caches are ignored, and no user financial data is part of M1. Logs continue to exclude request bodies, query values, credentials, raw prompts, holdings, and transaction payloads.
+The development services bind to `127.0.0.1`. Local Qdrant has no authentication and is not a production deployment. Do not expose it publicly. Only reviewed public educational sources are enabled, raw source caches are ignored, and M2 uses versioned synthetic financial fixtures rather than real user data. Logs continue to exclude request bodies, query values, credentials, raw prompts, holdings, and transaction payloads.

@@ -1,0 +1,31 @@
+{
+  "rows": [
+    {
+      "account_id": "acct-1",
+      "account_type": "taxable_brokerage",
+      "holding_id": "holding-1",
+      "identifier_type": "ticker",
+      "identifier_value": "AAA",
+      "quantity": "10",
+      "currency": "USD"
+    },
+    {
+      "account_id": "acct-1",
+      "account_type": "taxable_brokerage",
+      "holding_id": "holding-1",
+      "identifier_type": "ticker",
+      "identifier_value": "AAA",
+      "quantity": "10",
+      "currency": "USD"
+    },
+    {
+      "account_id": "acct-2",
+      "account_type": "roth_ira",
+      "holding_id": "holding-2",
+      "identifier_type": "ticker",
+      "identifier_value": "=HYPERLINK(\"https://example.invalid\")",
+      "quantity": "-1",
+      "currency": "USD"
+    }
+  ]
+}

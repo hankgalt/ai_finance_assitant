@@ -1,0 +1,46 @@
+{
+  "rows": [
+    {
+      "account_id": "acct-taxable",
+      "account_type": "taxable_brokerage",
+      "institution_label": "Example Brokerage",
+      "holding_id": "holding-stock",
+      "identifier_type": "ticker",
+      "identifier_value": "AAA",
+      "quantity": "10",
+      "currency": "USD",
+      "asset_class": "Equity",
+      "sector": "Technology",
+      "user_price": "100",
+      "user_price_as_of": "2026-10-27T12:00:00Z",
+      "user_price_provenance": "user statement",
+      "expense_ratio": "0.001"
+    },
+    {
+      "account_id": "acct-taxable",
+      "account_type": "taxable_brokerage",
+      "institution_label": "Example Brokerage",
+      "holding_id": "holding-bond",
+      "identifier_type": "ticker",
+      "identifier_value": "BBB",
+      "quantity": "20",
+      "currency": "USD",
+      "asset_class": "Fixed Income",
+      "sector": "Government",
+      "user_price": "25",
+      "user_price_as_of": "2026-10-27T12:00:00Z",
+      "user_price_provenance": "user statement"
+    },
+    {
+      "account_id": "acct-roth",
+      "account_type": "roth_ira",
+      "institution_label": "Example Brokerage",
+      "holding_id": "holding-unpriced",
+      "identifier_type": "user_defined",
+      "identifier_value": "PRIVATE-ASSET",
+      "quantity": "5",
+      "currency": "USD",
+      "asset_class": "Equity"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": "1",
+  "cases": [
+    {
+      "case_id": "zero-return-monthly-end",
+      "starting_amount": "1000",
+      "goal_amount": "2500",
+      "contribution_amount": "100",
+      "contribution_frequency": "monthly",
+      "contribution_timing": "end",
+      "horizon_months": 12,
+      "scenario": {
+        "label": "zero",
+        "annual_return_rate": "0",
+        "annual_inflation_rate": "0",
+        "annual_fee_rate": "0"
+      },
+      "expected": {
+        "nominal_future_value": "2200.00",
+        "inflation_adjusted_value": "2200.00",
+        "total_contributions": "1200.00",
+        "modeled_growth": "0.00",
+        "nominal_shortfall_or_surplus": "-300.00"
+      }
+    },
+    {
+      "case_id": "one-percent-monthly-net",
+      "starting_amount": "1000",
+      "goal_amount": "2400",
+      "contribution_amount": "100",
+      "contribution_frequency": "monthly",
+      "contribution_timing": "end",
+      "horizon_months": 12,
+      "scenario": {
+        "label": "illustrative",
+        "annual_return_rate": "0.12",
+        "annual_inflation_rate": "0",
+        "annual_fee_rate": "0"
+      },
+      "expected": {
+        "nominal_future_value": "2395.08",
+        "inflation_adjusted_value": "2395.08",
+        "total_contributions": "1200.00",
+        "modeled_growth": "195.08",
+        "nominal_shortfall_or_surplus": "-4.92"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 1.2 | Status: Approved sequence; M0–M1 complete, later milestones planned | 2026-10-27
+Version 1.3 | Status: Approved sequence; M0–M2 complete, later milestones planned | 2026-10-27
 
 ## 1. Delivery rules
 
@@ -83,7 +83,7 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Tests:** Unit, property, and metamorphic arithmetic tests; all four import modes; malicious formula/macro-like content; size/row limits; duplicate and missing-field fixtures; serialization and deletion lifecycle.
 
-**Evidence:** Calculation policy/version, hand-worked golden cases, sample-data manifest, test and coverage reports, documented heuristic limitations.
+**Evidence:** [M2 delivery report](M2_delivery_report.md), [calculation policy/version](M2_calculation_policy.md), hand-worked golden cases, sample-data manifest, test and coverage reports, and documented heuristic limitations.
 
 ### M3 — External market and news integrations
 

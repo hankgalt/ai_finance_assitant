@@ -1,0 +1,32 @@
+{
+  "schema_version": "1",
+  "calculation_policy_version": "finance-calculation-v1",
+  "source_dataset": "data/finance/portfolio_rows.valid.v1.json",
+  "hand_working": {
+    "holding-stock": "10 × 100 = 1000.00 USD",
+    "holding-bond": "20 × 25 = 500.00 USD",
+    "holding-unpriced": "No price; excluded rather than valued at zero.",
+    "priced_total": "1000.00 + 500.00 = 1500.00 USD",
+    "stock_allocation_percent": "1000 / 1500 × 100 = 66.6667",
+    "bond_allocation_percent": "500 / 1500 × 100 = 33.3333",
+    "holding_count_coverage_percent": "2 / 3 × 100 = 66.6667",
+    "expense_ratio": "1000 × 0.001 / 1000 = 0.00100000 with 66.6667% value coverage",
+    "holding_hhi": "(1000 / 1500)^2 + (500 / 1500)^2 = 0.55555556",
+    "effective_holding_count": "1 / HHI = 1.8000"
+  },
+  "expected": {
+    "base_currency_total": "1500.00",
+    "unpriced_holding_ids": [
+      "holding-unpriced"
+    ],
+    "holding_count_coverage_percent": "66.6667",
+    "stock_value": "1000.00",
+    "stock_allocation_percent": "66.6667",
+    "bond_value": "500.00",
+    "bond_allocation_percent": "33.3333",
+    "weighted_expense_ratio": "0.00100000",
+    "expense_coverage_percent": "66.6667",
+    "holding_hhi": "0.55555556",
+    "effective_holding_count": "1.8000"
+  }
+}

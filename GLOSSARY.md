@@ -6,6 +6,8 @@
 
 **Collection version:** An immutable, validated snapshot of one logical knowledge base that can be activated or rolled back as a unit.
 
+**Cash-flow summary:** A minimized, authorized deterministic summary of income, spending, surplus, trends, coverage, and warnings. It excludes raw transaction descriptions and is the only planned cash-flow shape available to Goal Planning.
+
 **Coursework release:** The product release submitted for the capstone, including all mandatory rubric evidence.
 
 **Evidence:** Source material and provenance used to support an educational or analytical statement.
@@ -13,6 +15,8 @@
 **Financial account:** See Account.
 
 **Holding:** A position in a security or other asset within one Account at a stated quantity and currency.
+
+**Goal projection:** A deterministic hypothetical calculation using explicit starting resources, contributions, horizon, return, inflation, and fee assumptions. It is an illustration, not a forecast or guarantee.
 
 **Imported portfolio data:** User-supplied portfolio, account, and holding fields before external enrichment or calculation.
 

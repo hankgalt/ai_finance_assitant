@@ -1,0 +1,37 @@
+{
+  "schema_version": "1",
+  "calculation_policy_version": "finance-calculation-v1",
+  "import_policy_version": "portfolio-import-v1",
+  "goal_policy_version": "goal-projection-v1",
+  "golden_artifact": "../../artifacts/m2/calculation-goldens.v1.json",
+  "golden_artifact_sha256": "eec09d892a729a9cb7e8621c03b4c3467091846ee40e9935543a79701db85bb3",
+  "datasets": [
+    {
+      "path": "portfolio_rows.valid.v1.json",
+      "sha256": "0edbc50d8bbfadb6c55319a0a8cfebf774a38d6ebaa64cc58905797408ef10dc",
+      "purpose": "Valid multi-account JSON import with decimal quantities and a missing price."
+    },
+    {
+      "path": "portfolio_rows.valid.v1.csv",
+      "sha256": "8e64a569c1badb53dc790841e97b261b8aa093d1a09426cf4c7820bb77369291",
+      "purpose": "CSV representation of the same valid rows for cross-format parity."
+    },
+    {
+      "path": "portfolio_rows.adversarial.v1.json",
+      "sha256": "749a6ea462eaa13ab963583aa1444ae1942a112b6c4bfa8a96098f5b58669667",
+      "purpose": "Duplicate, negative-quantity, and formula-like adversarial rows."
+    },
+    {
+      "path": "goal_cases.v1.json",
+      "sha256": "c3396f19707e8b44fad0e377bb3e1b1c70becf4c66048f6f4fc6a5d561d046ae",
+      "purpose": "Hand-worked zero-return and monthly-compounding goal goldens."
+    }
+  ],
+  "generated_test_fixtures": [
+    {
+      "kind": "xlsx",
+      "source": "portfolio_rows.valid.v1.json",
+      "purpose": "Tests generate an in-memory XLSX representation and macro/formula adversaries without retaining uploaded files."
+    }
+  ]
+}

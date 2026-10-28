@@ -2,7 +2,7 @@ QDRANT_URL ?= http://127.0.0.1:6333
 
 .PHONY: backend-sync backend-dev backend-check frontend-install frontend-dev frontend-check \
 	qdrant-up qdrant-status qdrant-stop qdrant-check knowledge-finance knowledge-tax \
-	knowledge-validate verify m1-check
+	knowledge-validate verify m1-check m2-check
 
 backend-sync:
 	cd backend && uv sync
@@ -54,3 +54,6 @@ knowledge-validate:
 verify: backend-check frontend-check
 
 m1-check: verify qdrant-check knowledge-validate
+
+m2-check:
+	cd backend && uv run pytest -q tests/test_portfolio_import.py tests/test_portfolio_analysis.py tests/test_goal_projection.py tests/test_cash_flow_contracts.py

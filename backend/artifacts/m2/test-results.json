@@ -1,0 +1,31 @@
+{
+  "schema_version": "1",
+  "recorded_at": "2026-10-27T16:56:45-07:00",
+  "focused_m2": {
+    "command": "UV_CACHE_DIR=/private/tmp/aifa-uv-cache make m2-check",
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 0.13
+  },
+  "full_backend": {
+    "command": "UV_CACHE_DIR=/private/tmp/aifa-uv-cache make verify",
+    "collected": 45,
+    "passed": 44,
+    "failed": 0,
+    "skipped": 1,
+    "duration_seconds": 7.26,
+    "coverage_percent": 83,
+    "skip_reason": "Existing live-Qdrant integration requires AIFA_TEST_QDRANT_URL; M1 records its separate live pass."
+  },
+  "quality_gates": {
+    "backend_format": "pass",
+    "backend_ruff": "pass",
+    "backend_strict_mypy": "pass",
+    "frontend_format": "pass",
+    "frontend_eslint": "pass",
+    "frontend_typecheck": "pass",
+    "frontend_tests_passed": 3,
+    "frontend_production_build": "pass"
+  }
+}

@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 1.1 | Status: Product architecture baseline; M0–M1 evidence recorded | 2026-10-27
+Version 1.2 | Status: Product architecture baseline; M0–M2 evidence recorded | 2026-10-27
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -15,10 +15,12 @@ This directory is the design authority for AI Finance Assistant. The product mis
 7. [Codex M0 starting prompt](06_codex_starting_prompt.md) is the bounded implementation prompt for the foundation milestone. It is an instruction artifact, not a record that M0 has been executed.
 8. [Domain glossary](../GLOSSARY.md) provides canonical product terminology.
 9. [M1 Qdrant, model, and source-use research](research/M1_qdrant_models_sources.md) records the primary-source evidence used for M1 decisions; it is not itself an ADR.
+10. [M2 calculation policy](M2_calculation_policy.md) records the implemented precision, import, coverage, and heuristic rules for deterministic finance modules.
 
 Milestone completion evidence is recorded separately from the design authority. See
 [M0 delivery report](M0_delivery_report.md) for the foundation milestone and
-[M1 delivery report](M1_delivery_report.md) for persistent knowledge ingestion, retrieval evaluation, activation, and rollback.
+[M1 delivery report](M1_delivery_report.md) for persistent knowledge ingestion, retrieval evaluation, activation, and rollback, and
+[M2 delivery report](M2_delivery_report.md) for deterministic Portfolio import/analysis, goal projection, and the reserved cash-flow interface.
 
 If documents conflict, use this precedence: product requirements, accepted ADRs, system design, implementation plan, evaluation strategy, then the M0 prompt. Coursework criteria remain mandatory for the coursework release even when they do not constrain later product architecture. Resolve source-rubric ambiguities in the coursework criteria rather than weakening product requirements.
 
