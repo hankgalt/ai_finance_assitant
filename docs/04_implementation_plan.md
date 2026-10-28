@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 1.3 | Status: Approved sequence; M0–M2 complete, later milestones planned | 2026-10-27
+Version 1.5 | Status: Approved sequence; M0–M2 complete, later milestones planned | 2026-10-27
 
 ## 1. Delivery rules
 
@@ -17,7 +17,9 @@ Every milestone delivery report must include:
 7. security/privacy impact and known limitations;
 8. unresolved decisions and the next permitted milestone.
 
-Cash flow remains a planned enhancement: M2 reserves and tests its interface shape only. The initial release prioritizes investment portfolios and complete behavior for all six agents.
+Cash flow remains a planned enhancement: M2 reserves and tests its interface shape, and post-release M10 implements provider-independent CSV/JSON bank and credit-card imports. The initial release prioritizes investment portfolios and complete behavior for all six agents.
+
+The initial and coursework releases are production-oriented private demonstration releases, not public launches. A documented live-demo mode may use approved provider calls within a predeclared entitlement-aware request budget. A separate credential-free mode uses deterministic adapters and remains fully demonstrable when credentials, quota, or provider availability are absent. Modes are selected explicitly; a run never silently changes from live to synthetic data.
 
 Observability has three distinct records that must not be collapsed into one vendor:
 
@@ -93,14 +95,15 @@ Telemetry configuration is environment-driven and disabled safely when no export
 - Standard provenance/freshness envelopes, provider-specific rate limits, bounded cache, timeouts, retry/jitter, and circuit behavior.
 - Current/historical quote and dated-news retrieval suitable for the Market and News agents.
 - Provider license, entitlement, and fallback decision record updates.
+- Explicit live-demo and credential-free provider modes, including startup/readiness checks, per-workflow request budgets, cache reuse, and labels that prevent synthetic, delayed, cached, or unavailable data from appearing live.
 
 **Dependencies:** M0 contracts; selected providers and accepted data terms. Portfolio enrichment consumes M2 interfaces.
 
-**Acceptance:** Success, delay, cache, stale, rate-limit, invalid-symbol/query, malformed-payload, and unavailable behavior are observable and correctly labeled; mock/demo results cannot appear as live.
+**Acceptance:** Success, delay, cache, stale, rate-limit, invalid-symbol/query, malformed-payload, and unavailable behavior are observable and correctly labeled; the documented private live-demo journey stays within the configured provider entitlement and request budget; the same feature journey remains reproducible in credential-free mode; synthetic results cannot appear live and one Run never mixes live and fake provider data.
 
-**Tests:** Adapter contracts using recorded permitted fixtures or fakes; 401/403, 429, timeout, malformed data, cache expiry, provider fallback, provenance timestamp, and concurrency/quota cases.
+**Tests:** Adapter contracts using recorded permitted fixtures or fakes; 401/403, 429, timeout, malformed data, cache expiry, provider fallback, provenance timestamp, concurrency/quota cases, preflight budget exhaustion before a provider call, repeated-view cache behavior, missing credentials, explicit mode selection, and no live/synthetic mixing.
 
-**Evidence:** Provider decision update, contract fixtures, failure matrix, cache/rate configuration, actual test report, and cost/limit notes.
+**Evidence:** Provider decision update, contract fixtures, failure matrix, cache/rate configuration, actual test report, cost/limit notes, and a private-demo call-budget transcript for both live and credential-free modes.
 
 ### M4 — LangGraph orchestration and all six agents
 
@@ -204,16 +207,37 @@ Telemetry configuration is environment-driven and disabled safely when no export
 - User/developer/operator documentation, diagrams, source/license register, sample-data guide, and clean-start instructions.
 - Read-only MCP adapter and client setup/evidence if CA-13 remains required.
 - Coursework evidence matrix, 5–10 minute demonstration script/recording plan, and React/Qdrant substitution rationale.
+- Private-demo runbook with explicit provider mode, readiness preflight, per-journey request budget, cache assumptions, and a separately selected credential-free alternative that remains labeled synthetic.
 - Product release notes, limitation/disclaimer review, collection and schema versions, rollback instructions, and signed completion checklist.
 - Operator guidance for observability configuration, disabled mode, sampling, privacy filters, retention, Collector/exporter routing, LangSmith setup, dashboards/alerts where deployed, and correlation-based troubleshooting.
 
 **Dependencies:** M8 release recommendation and authoritative coursework confirmation where obtainable.
 
-**Acceptance:** Product gate: a clean environment reproduces the documented release, every initial product requirement has evidence or an explicitly approved exception, and no planned enhancement or production control is claimed complete. Coursework gate: CA-01 through CA-13 have evidence or an approved instructor clarification, demo paths work with stable fixtures, and optional live calls are separately labeled.
+**Acceptance:** Product gate: a clean environment reproduces the private demonstration release, every initial product requirement has evidence or an explicitly approved exception, and no public-deployment or unimplemented production control is claimed complete. Coursework gate: CA-01 through CA-13 have evidence or an approved instructor clarification; every demo path works with stable fixtures; optional live calls pass preflight, remain within the recorded provider budget, and are separately labeled.
 
 **Tests:** Clean install/start, documentation link/command validation, packaged sample walkthrough, MCP protocol/client test, evidence-path audit, and final regression.
 
 **Evidence:** Release bundle, exact environment/command log, requirement-to-evidence matrix, demonstration artifact, MCP record, known limitations, and approval.
+
+### M10 — Provider-independent bank and credit-card cash-flow import
+
+**Deliverables**
+
+- Versioned `CashFlowImport` interface with safe UTF-8 JSON and CSV parsers for user-exported bank and credit-card transactions; no financial-data provider or live account connection is required.
+- Canonical JSON schema plus versioned Cash-flow import profiles that map supported CSV headers, date/amount conventions, debit/credit signs, and source categories into the M2 transaction contracts.
+- Deterministic CashFlowAnalysisService implementation for normalization, versioned categorization with user overrides, recurring-expense candidates, monthly/category income and spending, surplus, trends, coverage, and warnings.
+- Authorized cross-import reconciliation for duplicates, transfers, and credit-card payments so internal money movement is excluded from spending exactly once, with ambiguous matches left unresolved.
+- Versioned REST resources, durable authorized storage, idempotent imports, retention/deletion behavior, and a React import/review/correction experience with accessible summaries.
+- Minimized CashFlowSummary access for Goal Planning by identifier; raw rows and descriptions remain outside general LangGraph state, prompts, RunEvents, logs, metrics, and external traces.
+- Deterministic fake data and versioned valid/adversarial JSON and CSV fixtures. A future provider adapter may target the same canonical interface but is not an M10 dependency or acceptance requirement.
+
+**Dependencies:** M2 cash-flow contracts plus M5 authorization/persistence/API patterns and the M6 UI foundation. M10 is scheduled after the M9 initial/coursework release and has no dependency on M3 market/news providers or a banking-data provider.
+
+**Acceptance:** Equivalent CSV and JSON inputs produce the same canonical transactions and summaries without network access or paid credentials; unsupported or ambiguous mappings require user review rather than guessed fields; transfers and card payments are not double-counted; category overrides and unresolved matches remain reproducible; mixed currencies are not silently combined; import bytes follow the documented cleanup policy; authorized restart and cascade deletion behavior passes; Goal Planning receives only an authorized minimized summary; no seventh agent is introduced.
+
+**Tests:** Parser schema and mapping-profile contracts; CSV/JSON equivalence; malformed encoding/shape, formula-like cells, size/row/column limits, date/amount/sign conventions, duplicate/idempotent imports, deterministic categorization and overrides, recurring detection, transfer/card-payment reconciliation and ambiguity, multi-account/currency coverage, restart/isolation/deletion, REST/OpenAPI contracts, browser import-correction/accessibility journeys, and log/trace/prompt redaction canaries.
+
+**Evidence:** Cash-flow import and calculation policy versions, profile registry, canonical schema, valid/adversarial fixture manifest, hand-worked reconciliation goldens, API and lifecycle reports, test/coverage results, UI evidence, privacy data-flow review, redaction report, limitations, and a delivery report.
 
 ## 3. Dependency sequence
 
@@ -224,9 +248,10 @@ M0 → M3
 M1 + M2 + M3 → M4
 M4 → M5 → M6 → M7
 M1 through M7 → M8 → M9
+M2 + M5 + M6 → M10 after M9 release approval
 ~~~
 
-M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests.
+M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
 
 ## 4. Mapping from the previous milestone plan
 
@@ -242,10 +267,11 @@ M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 wh
 | Old M7: observability/safety/evaluation | New M0/M4 and M8 | Contracts/instrumentation move earlier; integrated qualification remains M8 |
 | Old M8: MCP tools | New M9 | Kept as a coursework release obligation after validated core modules |
 | Old M9: documentation and demo | New M9 | Preserved and broadened into product release packaging |
+| Previously unsequenced PR-016 cash-flow implementation | New M10 | Adds a provider-independent JSON/CSV path after the initial/coursework release while preserving the M2 domain seam |
 | Old M10: optional hybrid retrieval or voice | New M1 evaluation and future backlog | Hybrid retrieval is evaluated as a retrieval strategy, not bonus theater; voice remains out of initial scope |
 
 ## 5. Release sequencing and stop conditions
 
-The **initial product release** requires M0 through M8 plus the product documentation and packaging portions of M9. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. Cash-flow end-user implementation and all production-hardening controls remain later work.
+The **initial product release** requires M0 through M8 plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the planned post-release cash-flow implementation; it does not delay either release and does not require a banking-data provider. Public availability and remaining production-hardening controls stay out of scope until separately approved.
 
 Stop a milestone when a critical dependency, source-use right, data-integrity policy, security decision, or external authority is missing. Record the blocker rather than substituting invented data, bypassing a gate, or weakening the requirement. Near-complete work is not milestone completion.

@@ -2,6 +2,8 @@
 
 AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository is at **M2: deterministic financial calculation modules**. It has a working foundation, versioned Finance and Tax knowledge collections, safe portfolio import/calculation modules, and deterministic goal projections. It does not yet provide working LangGraph agents, live market/news data, saved user data, portfolio/goal REST resources, or professional financial or tax advice.
 
+The planned initial release is a production-oriented private demonstration release for the owner and approved viewers, not a public launch. Live provider demonstrations must remain within approved API terms and configured quotas; a separately selected credential-free mode remains reproducible and clearly labeled synthetic.
+
 Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). M1 retrieval evidence is in [docs/M1_delivery_report.md](docs/M1_delivery_report.md); M2 calculation evidence and limitations are in [docs/M2_delivery_report.md](docs/M2_delivery_report.md).
 
 ## Current capabilities
@@ -17,7 +19,7 @@ Read [docs/README.md](docs/README.md) before implementation work. Repository-wid
 - Immutable imported Portfolio/Account/Holding records kept separate from fake/provider enrichment records and calculated Portfolio Snapshots.
 - Decimal-based valuation, per-currency allocation, expense/classification coverage, concentration, and a versioned HHI/effective-holdings heuristic.
 - Multi-scenario goal projections with explicit contribution timing/frequency, inflation, modeled fees, risk-tolerance context, and nominal/real decomposition.
-- A types-only CashFlowAnalysisService seam and minimized CashFlowSummary; cash-flow analysis itself remains a planned enhancement.
+- A types-only CashFlowAnalysisService seam and minimized CashFlowSummary; provider-independent JSON/CSV cash-flow import and analysis are planned for post-release M10.
 
 LangGraph, the six working agents, provider adapters, portfolio/goal REST resources, SSE, saved user data, MCP, and real Inspector instrumentation belong to later milestones.
 

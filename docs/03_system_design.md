@@ -271,6 +271,7 @@ CashFlowAnalysisService remains outside the initial end-user release but gets a 
 
 Input:
 
+- versioned provider-independent JSON or CSV import plus a Cash-flow import profile that maps source columns and date/amount/sign conventions to canonical rows;
 - authorized import_id, account_id, source type (bank or credit card), schema/version, currency;
 - transaction rows with date, posted date, description, amount/direction, optional merchant/category, and source-row identifier;
 - optional user category overrides and reconciliation hints.
@@ -288,7 +289,7 @@ Output:
 
 Normalization, categorization rules, recurrence detection, and reconciliation are deterministic or explicitly versioned analytical implementations. Transfer/card-payment pairs are excluded from spending totals exactly once. Raw transactions never enter general graph state; the graph receives a reference or minimized summary.
 
-Live bank connections, automatic transactions, PDF statements, and a seventh LLM agent are excluded. Adding any of them requires a new decision and security review.
+M10 implements the JSON/CSV path without requiring a financial-data provider. A future provider adapter may emit the same canonical rows, but live bank connections, automatic transactions, PDF statements, and a seventh LLM agent remain excluded. Adding any of them requires a new decision and security review.
 
 ## 14. Logical repository layout and deployment posture
 
@@ -317,4 +318,4 @@ knowledge/
 docs/
 ~~~
 
-The layout is conceptual and can be refined without changing the interfaces. The initial development topology uses separate Vite, FastAPI, Qdrant, and ingestion commands/processes. Mock mode requires no paid keys. Production hosting, identity, stores, encryption, availability objectives, and compliance posture remain unresolved; the documentation does not claim a production deployment or regulatory approval.
+The layout is conceptual and can be refined without changing the interfaces. The initial development topology uses separate Vite, FastAPI, Qdrant, and ingestion commands/processes. The release target is a production-oriented private demonstration release, not a public deployment or claim of regulatory approval. Credential-free demo mode uses labeled deterministic adapters. Live-demo mode is separately selected, performs provider readiness and configured-budget checks, uses only approved credentials and entitlements, and never silently substitutes synthetic results. Public hosting, identity, stores, encryption, availability objectives, and compliance posture remain unresolved.

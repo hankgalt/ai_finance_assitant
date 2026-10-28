@@ -1,6 +1,6 @@
 # AI Finance Assistant — Product requirements specification
 
-Version 1.0 | Status: Product architecture baseline | 2026-10-26
+Version 1.2 | Status: Product architecture baseline | 2026-10-27
 
 ## 1. Mission and product posture
 
@@ -14,7 +14,7 @@ Product requirements are defined here. Submission-specific obligations are defin
 
 Primary users are individuals learning financial concepts, beginner-to-intermediate investors reviewing self-entered portfolios, and people exploring savings or investment goal scenarios. The product should explain terminology and uncertainty without assuming professional expertise.
 
-The **initial release** includes all six agents, persistent knowledge retrieval, portfolio analysis, goal projections, market and news integrations, the React application, FastAPI integration, and the Agent Execution Inspector. **Production hardening** requirements apply before public multi-user deployment. Personal cash flow is a **planned enhancement** with a stable interface designed during the initial release but no required end-user implementation.
+The **initial release** includes all six agents, persistent knowledge retrieval, portfolio analysis, goal projections, market and news integrations, the React application, FastAPI integration, and the Agent Execution Inspector. It is delivered as a **private demonstration release**: engineered with production-oriented boundaries and evidence, but operated only in a controlled local or private environment for the owner and approved viewers. It is not a public launch. **Production hardening** requirements apply before public multi-user deployment. Personal cash flow is a **planned enhancement** with a stable interface designed during the initial release but no required end-user implementation.
 
 ## 3. Product functional requirements
 
@@ -33,9 +33,9 @@ The **initial release** includes all six agents, persistent knowledge retrieval,
 | PR-011 | Initial | Stream conversational and measured execution events where appropriate while keeping ordinary operations on versioned REST interfaces | OpenAPI and event contract tests pass; reconnection never mixes sessions or duplicates rendered events |
 | PR-012 | Initial | Visualize actual LangGraph execution through an accessible timeline, details view, and React Flow graph | Every dynamic node maps to a recorded event; unavailable measurements are labeled; sensitive material is redacted |
 | PR-013 | Initial | Persist conversation checkpoints, run summaries, active knowledge collection metadata, and necessary user artifacts according to documented retention modes | Restart and session-isolation behavior is tested; local-demo limitations are visible |
-| PR-014 | Initial | Provide sample datasets, reproducible local development, product documentation, evaluation artifacts, and release instructions | A clean-environment verification record identifies exact commands, versions, results, and limitations |
+| PR-014 | Initial | Provide sample datasets, reproducible local development, product documentation, evaluation artifacts, and private-demo release instructions | A clean-environment verification record identifies exact commands, versions, results, limitations, provider mode, and a quota-safe demonstration path |
 | PR-015 | Coursework release | Expose approved read-only capabilities through MCP using the same validation and deterministic modules as the web application | Protocol and external-client tests demonstrate no bypass of authorization, validation, or provenance |
-| PR-016 | Planned enhancement | Add personal cash flow analysis as a deterministic domain module available to authorized agents, not as a seventh LLM agent | The interface supports normalized transaction imports and goal summaries without changing existing agent identities |
+| PR-016 | Planned enhancement | Add personal cash flow analysis from user-controlled, versioned JSON or CSV bank and credit-card imports as a deterministic domain module available to authorized agents, not as a seventh LLM agent | Equivalent JSON/CSV inputs produce reproducible normalized transactions, reconciliation, summaries, and authorized goal context without requiring a financial-data provider or changing existing agent identities |
 
 ## 4. Six-agent product contract
 
@@ -121,9 +121,9 @@ A source-change check that finds no content change does not trigger re-embedding
 
 ## 7. Planned CashFlowAnalysisService
 
-The planned CashFlowAnalysisService is a deterministic module, not an agent. Its future interface accepts versioned bank-transaction and credit-card CSV imports and returns normalized transactions, categorization with confidence/override state, income and spending summaries, detected recurring expenses, reconciled transfers and card payments, monthly surplus, trends, coverage, and warnings.
+The planned CashFlowAnalysisService is a deterministic module, not an agent. Its M10 implementation accepts versioned bank-transaction and credit-card JSON or CSV imports and returns normalized transactions, categorization with confidence/override state, income and spending summaries, detected recurring expenses, reconciled transfers and card payments, monthly surplus, trends, coverage, and warnings. Versioned Cash-flow import profiles map institution export columns and date/amount/sign conventions to the canonical transaction schema.
 
-The initial design must allow Goal Planning to consume an authorized cash-flow summary without exposing raw transactions to unrelated agents. Transfer reconciliation must prevent double-counting across accounts. The initial release does not implement live banking connections, automated transfers or trades, or PDF statement extraction. Those require separate approval and threat modeling.
+The import path is provider-independent and must work locally without network access, paid credentials, or a live bank connection. A future provider adapter may produce the same canonical transactions but is not required for PR-016. Goal Planning consumes only an authorized cash-flow summary; raw transactions remain unavailable to unrelated agents. Transfer and card-payment reconciliation must prevent double-counting across accounts. Live banking connections, automated transfers or trades, and PDF statement extraction require separate approval and threat modeling.
 
 ## 8. Product quality requirements
 
@@ -131,7 +131,7 @@ The initial design must allow Goal Planning to consume an authorized cash-flow s
 |---|---|---|---|
 | QR-001 Privacy and minimization | Collect only fields needed for the requested analysis; keep raw records out of prompts, traces, and logs unless strictly required and sanitized | Formal data inventory, privacy notice, purpose/consent controls, regional review | Log/trace inspection and data-flow tests |
 | QR-002 Secure file handling | Type/size/row limits, isolated parsing, formula neutralization, safe temporary-file cleanup, and no execution of embedded content | Malware scanning, encrypted object storage, quarantine, abuse monitoring | Malicious and oversized fixture tests |
-| QR-003 Authentication/authorization | Local demo binds to an explicitly local interface and is labeled unauthenticated; access to a Session or Portfolio is scoped by unguessable identifiers and server checks | Identity provider, strong authentication, per-resource authorization, administrative roles | Negative authorization and cross-session tests |
+| QR-003 Authentication/authorization | The private demo binds to an explicitly local interface and is labeled unauthenticated; any non-loopback private deployment requires separately approved strong authentication and per-resource authorization | Identity provider, strong authentication, per-resource authorization, administrative roles | Negative authorization, bind-mode, and cross-session tests |
 | QR-004 Session isolation | State, streams, caches, checkpoints, and traces are keyed and checked by user/session context | Tenant isolation review and penetration testing | Concurrent two-session regression suite |
 | QR-005 Secrets | Secrets come from environment or an approved local secret mechanism and are redacted from errors and traces | Managed secret store, rotation, least-privilege credentials | Repository scan and forced-error tests |
 | QR-006 Retention/deletion | Define local retention per artifact; support deletion of imported files, normalized records, sessions, runs, and traces; knowledge provenance is retained independently | User-facing export/deletion workflow, retention enforcement jobs, legal-policy review | Lifecycle and deletion tests |
@@ -139,11 +139,11 @@ The initial design must allow Goal Planning to consume an authorized cash-flow s
 | QR-008 Retrieval quality | Fixed qrels, relevance thresholds, valid citations, collection/version reporting, and explicit no-evidence behavior | Drift monitoring and reviewed activation workflow | Recall/ranking/citation and historical-year tests |
 | QR-009 Calculation accuracy | Decimal or a documented numerical representation, explicit rounding/currency policy, deterministic results, and 100% pass on approved golden cases | Independent financial-model validation and change control | Golden, property, metamorphic, and edge tests |
 | QR-010 Reliability | Typed failures, bounded retries with jitter, timeouts, idempotent writes, partial results, and no unlabeled fallback data | Availability objectives, durable queues where needed, disaster recovery and load testing | Timeout, retry, duplicate, restart, and partial-result tests |
-| QR-011 Provider limits/caching | Provider-specific rate policy, bounded caches, provenance and freshness, and circuit behavior | Distributed quota coordination and contractual data entitlements | 429, stale-cache, invalid-data, and outage tests |
+| QR-011 Provider limits/caching | Provider-specific rate policy, bounded caches, provenance/freshness, circuit behavior, and a predeclared private-demo request budget that stays within the configured entitlement | Distributed quota coordination and contractual data entitlements | Budget exhaustion, 429, stale-cache, invalid-data, and outage tests |
 | QR-012 LLM quality and safety | Versioned prompts/models, structured results, grounding checks, tool allow-lists, bounded steps, prompt-injection treatment of external text as data, and financial safety review | Continuous red-team program, model-risk governance, abuse controls | Labeled routing/grounding/injection/advice suite |
 | QR-013 Accessibility | WCAG 2.2 AA design target; keyboard access, semantic labels, focus management, contrast, and nonvisual tables for charts/graphs | Formal accessibility audit with assistive technologies | Automated checks plus keyboard/screen-reader review |
 | QR-014 Performance/cost | Record p50/p95 task latency, provider/cache timing, tokens and estimated cost when supplied; show “not available” otherwise | Calibrated objectives, capacity tests, budgets and alerts | Versioned benchmark report |
-| QR-015 Reproducibility | Pinned tools/dependencies, deterministic fixtures, documented setup, mock mode, migration and collection version checks | Reproducible deployment artifacts and supply-chain controls | Clean-environment run and artifact hashes |
+| QR-015 Reproducibility | Pinned tools/dependencies, deterministic fixtures, documented setup, an explicitly labeled credential-free demo mode, migration and collection version checks | Reproducible deployment artifacts and supply-chain controls | Clean-environment and quota-safe demo runs plus artifact hashes |
 
 ## 9. Core acceptance scenarios
 
@@ -182,7 +182,7 @@ Brokerage execution, automated financial transactions, custody, bank aggregation
 | PR-013 | ADR-003/019; design §12 | M0, M5, M8 | EV-11/15 |
 | PR-014 | ADR-011; docs index | M8–M9 | clean-environment and product release audit |
 | PR-015 | ADR-010; coursework criteria | M9 | MCP protocol/client and coursework evidence |
-| PR-016 | ADR-020; design §13 | Interface in M2; implementation later | future cash-flow contract and reconciliation suite |
+| PR-016 | ADR-020/022; design §13 | Interface in M2; provider-independent implementation in M10 | cash-flow import, reconciliation, lifecycle, and summary suites |
 | QR-001–QR-015 | ADR-011/012/019; design §12 | Every milestone; consolidated M8 | security, quality, reliability, and benchmark suites |
 
 ## 12. Resolved conflicts and open decisions

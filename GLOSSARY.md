@@ -8,6 +8,8 @@
 
 **Cash-flow summary:** A minimized, authorized deterministic summary of income, spending, surplus, trends, coverage, and warnings. It excludes raw transaction descriptions and is the only planned cash-flow shape available to Goal Planning.
 
+**Cash-flow import profile:** A versioned mapping from a bank or credit-card export's columns and date, amount, sign, and category conventions to canonical cash-flow transaction fields. It does not imply a live connection to the financial institution.
+
 **Coursework release:** The product release submitted for the capstone, including all mandatory rubric evidence.
 
 **Evidence:** Source material and provenance used to support an educational or analytical statement.
@@ -27,6 +29,8 @@
 **Portfolio:** A user-defined set of one or more Accounts and their Holdings.
 
 **Portfolio snapshot:** A time-specific analytical result created from imported portfolio data, provider-enriched security information, and deterministic calculations.
+
+**Private demonstration release:** A production-oriented release operated only in a controlled local or private environment for the owner and approved viewers. It is not a public multi-user deployment.
 
 **Pricing provenance:** The provider, retrieval time, market-data time, delay status, and cache status associated with a price.
 
