@@ -1,0 +1,35 @@
+{
+  "schema_version": "1",
+  "fixture_kind": "hand-authored-shape-equivalent-synthetic",
+  "provider_payload_capture": false,
+  "files": [
+    {
+      "path": "alpha_vantage.history.synthetic.v1.json",
+      "sha256": "f2a94176a06f45e0febfcd611eb393c2a965752f316b59c44a96756780a236a0"
+    },
+    {
+      "path": "alpha_vantage.quote.synthetic.v1.json",
+      "sha256": "11e8eea38225e4f61a86035c27d6b936bffa278a4fef5a4839caa6ffcf559436"
+    },
+    {
+      "path": "alpha_vantage.search.synthetic.v1.json",
+      "sha256": "c23c3077b2a3e3791267eb3c5c123b779b643c630606bdb16b0f41791863bd7c"
+    },
+    {
+      "path": "massive.history.synthetic.v1.json",
+      "sha256": "cfc3b9bf271331fa86834411e95fc8bc84a020734234bcfbeb3db9180d408d9f"
+    },
+    {
+      "path": "massive.previous_close.synthetic.v1.json",
+      "sha256": "78446c0ace5ccbbf29868594dc685bd75c8c93625ab154193082841df297229e"
+    },
+    {
+      "path": "massive.search.synthetic.v1.json",
+      "sha256": "9956dcf4f3b28bfbc1d10aeacab3aaf3f942796b416985b4f4bbad9e2bf865d1"
+    },
+    {
+      "path": "tavily.news.synthetic.v1.json",
+      "sha256": "5be7f7e38b4814a95b0a9c33a36a13664e66d569433e053513704d8671414784"
+    }
+  ]
+}

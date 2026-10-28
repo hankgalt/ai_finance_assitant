@@ -1,5 +1,6 @@
 """Allow-list trace metadata and redact protected keys recursively."""
 
+import re
 from collections.abc import Mapping
 from typing import Final
 
@@ -32,6 +33,12 @@ SAFE_METADATA_KEYS: Final = frozenset(
         "strategy",
     }
 )
+SENSITIVE_QUERY_VALUE: Final = re.compile(
+    r"(?i)([?&](?:api[_-]?key|access[_-]?token|auth[_-]?token|token)=)([^&#\s\"']+)"
+)
+SENSITIVE_AUTHORIZATION_VALUE: Final = re.compile(
+    r"(?i)(\bauthorization\b[\"']?\s*[:=]\s*[\"']?(?:bearer\s+)?)([^,\s\"'}]+)"
+)
 
 
 def _is_protected(key: str) -> bool:
@@ -53,6 +60,13 @@ def redact_mapping(value: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
         else:
             result[key] = item
     return result
+
+
+def redact_text(value: str) -> str:
+    """Redact credential values that may be embedded in a formatted log message."""
+
+    redacted = SENSITIVE_QUERY_VALUE.sub(rf"\1{REDACTED}", value)
+    return SENSITIVE_AUTHORIZATION_VALUE.sub(rf"\1{REDACTED}", redacted)
 
 
 def sanitize_metadata(

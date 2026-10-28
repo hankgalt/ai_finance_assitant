@@ -1,0 +1,29 @@
+{
+  "schema_version": "1",
+  "recorded_at": "2026-10-27T21:18:24-07:00",
+  "cases": [
+    {"state": "fixture_integrity", "evidence": ["test_provider_fixture_manifest_hashes_match"]},
+    {"state": "success", "evidence": ["test_alpha_quote_is_normalized_and_repeated_view_reuses_cache", "test_massive_previous_close_is_normalized_and_repeated_view_reuses_cache", "test_massive_search_and_history_are_normalized", "test_tavily_news_is_attributed_and_request_minimizes_content"]},
+    {"state": "empty", "evidence": ["test_fake_history_empty_window_is_observable", "test_tavily_empty_and_malformed_results_are_distinct"]},
+    {"state": "end_of_day_or_historical", "evidence": ["test_alpha_quote_is_normalized_and_repeated_view_reuses_cache", "test_alpha_search_and_history_are_normalized", "test_massive_previous_close_is_normalized_and_repeated_view_reuses_cache", "test_massive_search_and_history_are_normalized"]},
+    {"state": "cache_hit", "evidence": ["test_alpha_quote_is_normalized_and_repeated_view_reuses_cache", "test_massive_previous_close_is_normalized_and_repeated_view_reuses_cache"]},
+    {"state": "stale_cache", "evidence": ["test_stale_cache_fallback_preserves_original_retrieval_time"]},
+    {"state": "stale_cache_forbidden_for_authorization", "evidence": ["test_invalid_or_authorization_failures_do_not_serve_stale_cache"]},
+    {"state": "invalid_request_or_symbol", "evidence": ["test_alpha_provider_payload_errors_are_typed_without_leaking_payload", "test_massive_http_failure_matrix", "test_massive_non_ok_payload_is_rejected_without_leaking_provider_detail", "test_tavily_failure_matrix"]},
+    {"state": "unauthorized_or_entitlement_401_403", "evidence": ["test_alpha_http_failure_matrix", "test_massive_http_failure_matrix", "test_tavily_failure_matrix"]},
+    {"state": "rate_or_plan_limit", "evidence": ["test_alpha_http_failure_matrix", "test_alpha_body_level_plan_limit_is_not_retried", "test_massive_http_failure_matrix", "test_tavily_failure_matrix", "test_local_rate_limit_prevents_an_additional_provider_call"]},
+    {"state": "body_level_plan_limit_not_retried", "evidence": ["test_alpha_body_level_plan_limit_is_not_retried"]},
+    {"state": "credential_log_redaction", "evidence": ["test_json_logging_redacts_credentials_embedded_in_messages"]},
+    {"state": "timeout_or_unavailable", "evidence": ["test_alpha_timeout_and_malformed_payload_are_typed", "test_alpha_http_failure_matrix", "test_massive_timeout_is_typed_and_fractional_volume_is_preserved", "test_massive_http_failure_matrix"]},
+    {"state": "malformed_payload", "evidence": ["test_alpha_timeout_and_malformed_payload_are_typed", "test_tavily_empty_and_malformed_results_are_distinct"]},
+    {"state": "fractional_volume_preserved", "evidence": ["test_massive_timeout_is_typed_and_fractional_volume_is_preserved"]},
+    {"state": "budget_exhausted_before_call", "evidence": ["test_budget_exhaustion_happens_before_an_additional_provider_call"]},
+    {"state": "concurrency_limited_before_call", "evidence": ["test_concurrency_limit_is_observable_without_a_second_call"]},
+    {"state": "circuit_open_before_call", "evidence": ["test_open_circuit_prevents_a_follow_up_provider_call"]},
+    {"state": "missing_credentials_before_call", "evidence": ["test_missing_live_credentials_fail_readiness_without_http_calls", "test_settings_explicitly_select_massive_without_falling_back_to_alpha"]},
+    {"state": "unapproved_entitlement_before_call", "evidence": ["test_settings_select_one_mode_without_silent_fallback"]},
+    {"state": "no_live_synthetic_or_cross_provider_mixing", "evidence": ["test_provider_bundle_rejects_mixed_live_and_synthetic_modes", "test_settings_select_one_mode_without_silent_fallback", "test_settings_explicitly_select_massive_without_falling_back_to_alpha"]},
+    {"state": "explicit_market_provider_selection", "evidence": ["test_settings_explicitly_select_massive_without_falling_back_to_alpha"]},
+    {"state": "query_minimization", "evidence": ["test_tavily_news_is_attributed_and_request_minimizes_content", "test_news_query_rejects_excessive_windows_and_sensitive_flag"]}
+  ]
+}

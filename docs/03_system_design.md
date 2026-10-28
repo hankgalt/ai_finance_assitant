@@ -192,6 +192,10 @@ The provider policy defines rate limits, concurrency, timeout, retry eligibility
 
 News preserves publisher and publication time and distinguishes source text from generated interpretation. Market statistics are computed from returned structured series rather than model guesses.
 
+M3 implements the application ports with deterministic credential-free adapters, conditional Alpha Vantage and Massive market adapters, and a conditional Tavily news adapter under ADR-024/025. `AIFA_PROVIDER_MODE` selects one bundle and `AIFA_MARKET_DATA_PROVIDER` selects one live market adapter before workflow execution. Each bundle uses one mode and one market adapter; missing credentials, insufficient budget, quota failure, or failed readiness returns an explicit unavailable state and never switches a running workflow to fake data or another live provider. The initial bounded in-memory cache is scoped to the provider process/workflow and is not a durable user record. M5 may add an approved durable cache adapter only under the same provenance and provider-rights rules.
+
+Alpha Vantage quote currency is caller-supplied because the selected quote/daily endpoints do not return a currency. Massive uses the previous-day and raw daily-aggregate endpoints; its quote currency is likewise caller-supplied, and Basic data remains end-of-day with a rolling history window. Neither adapter presents these responses as realtime. Massive individual-plan data is owner-only and cannot be shown to testers or viewers without approved Business/commercial rights. Tavily is a discovery provider, not a publisher: the adapter disables generated answers and raw content, preserves the source URL/host, and labels `published_date` as provider-estimated or unavailable. Only a bounded public query may leave the backend; holdings, transactions, credentials, and user-specific financial context are prohibited.
+
 ## 10. FastAPI and React interfaces
 
 The React application contains:

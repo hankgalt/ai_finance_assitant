@@ -6,6 +6,8 @@ from contextvars import ContextVar, Token
 from datetime import UTC, datetime
 from typing import Any
 
+from ai_finance_assistant.core.redaction import redact_text
+
 correlation_id: ContextVar[str | None] = ContextVar("correlation_id", default=None)
 
 
@@ -15,7 +17,7 @@ class JsonFormatter(logging.Formatter):
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact_text(record.getMessage()),
             "correlation_id": correlation_id.get(),
         }
         return json.dumps(payload, separators=(",", ":"), default=str)

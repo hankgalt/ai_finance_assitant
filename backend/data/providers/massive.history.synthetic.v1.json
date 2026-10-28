@@ -1,0 +1,26 @@
+{
+  "adjusted": false,
+  "queryCount": 2,
+  "request_id": "massive-synthetic-history-v1",
+  "results": [
+    {
+      "c": 123.0,
+      "h": 124.0,
+      "l": 119.0,
+      "o": 120.0,
+      "t": 1792728000000,
+      "v": 1000000
+    },
+    {
+      "c": 123.45,
+      "h": 125.0,
+      "l": 122.0,
+      "o": 123.0,
+      "t": 1792987200000,
+      "v": 1100000
+    }
+  ],
+  "resultsCount": 2,
+  "status": "OK",
+  "ticker": "DEMO"
+}

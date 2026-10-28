@@ -20,6 +20,7 @@ source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "numpy" },
     { name = "openpyxl" },
     { name = "pydantic" },
@@ -42,6 +43,7 @@ dev = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.14,<5" },
     { name = "fastapi", specifier = ">=0.162,<0.163" },
+    { name = "httpx", specifier = ">=0.28,<0.29" },
     { name = "numpy", specifier = ">=2.1,<2.4" },
     { name = "openpyxl", specifier = ">=3.1,<4" },
     { name = "pydantic", specifier = ">=2.13,<3" },

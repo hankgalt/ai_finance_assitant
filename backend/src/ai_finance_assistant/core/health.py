@@ -1,5 +1,7 @@
 """Health builders with read-only M1 Qdrant compatibility checks."""
 
+from pydantic import JsonValue
+
 from ai_finance_assistant.contracts.health import (
     CheckStatus,
     DependencyCheck,
@@ -21,7 +23,7 @@ def build_liveness(settings: Settings) -> Liveness:
 
 
 def build_readiness(settings: Settings) -> Readiness:
-    shared_expected = {
+    shared_expected: dict[str, JsonValue] = {
         "payload_schema_version": settings.expected_payload_schema_version,
         "dense_model_id": settings.expected_dense_model_id,
         "dense_model_revision": settings.expected_dense_model_revision,

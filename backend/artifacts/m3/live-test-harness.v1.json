@@ -1,0 +1,36 @@
+{
+  "schema_version": "1",
+  "recorded_at": "2026-10-28T12:56:54-07:00",
+  "marker": "live_provider",
+  "test_file": "backend/tests/test_live_provider_adapters.py",
+  "default_exclusion": {
+    "command": "UV_NO_SYNC=1 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make verify",
+    "backend_collected": 90,
+    "backend_selected": 88,
+    "backend_passed": 87,
+    "backend_skipped": 1,
+    "live_provider_deselected": 2,
+    "external_provider_calls": 0
+  },
+  "disabled_explicit_selection": {
+    "command": "AIFA_RUN_LIVE_PROVIDER_TESTS=false AIFA_PROVIDER_MODE=live pytest -q -m live_provider tests/test_live_provider_adapters.py",
+    "skipped": 2,
+    "external_provider_calls": 0
+  },
+  "explicit_target": "make provider-live-check",
+  "market_provider_selector": "AIFA_MARKET_DATA_PROVIDER=alpha_vantage|massive",
+  "maximum_live_calls": {
+    "selected_market_provider": 3,
+    "tavily": 1
+  },
+  "market_stops_after_first_failed_operation": true,
+  "credential_log_redaction": true,
+  "live_execution": {
+    "qualification_status": "contract_pass_rights_not_qualified",
+    "diagnostic_result": "alpha_vantage_body_level_rate_or_plan_limit_after_successful_search",
+    "massive_result": "selected_market_contract_pass_search_quote_history",
+    "tavily_result": "selected_news_contract_pass",
+    "command_result": "2_passed_in_1.01_seconds"
+  },
+  "live_result_claimed": true
+}

@@ -2,7 +2,7 @@ QDRANT_URL ?= http://127.0.0.1:6333
 
 .PHONY: backend-sync backend-dev backend-check frontend-install frontend-dev frontend-check \
 	qdrant-up qdrant-status qdrant-stop qdrant-check knowledge-finance knowledge-tax \
-	knowledge-validate verify m1-check m2-check
+	knowledge-validate verify m1-check m2-check m3-check provider-live-check
 
 backend-sync:
 	cd backend && uv sync
@@ -57,3 +57,12 @@ m1-check: verify qdrant-check knowledge-validate
 
 m2-check:
 	cd backend && uv run pytest -q tests/test_portfolio_import.py tests/test_portfolio_analysis.py tests/test_goal_projection.py tests/test_cash_flow_contracts.py
+
+m3-check:
+	cd backend && uv run ruff format --check src tests
+	cd backend && uv run ruff check src tests
+	cd backend && uv run mypy
+	cd backend && uv run pytest -q tests/test_provider_adapters.py
+
+provider-live-check:
+	cd backend && AIFA_RUN_LIVE_PROVIDER_TESTS=true AIFA_PROVIDER_MODE=live uv run pytest -q -m live_provider tests/test_live_provider_adapters.py

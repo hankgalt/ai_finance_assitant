@@ -1,0 +1,17 @@
+{
+  "request_id": "synthetic-request-v1",
+  "results": [
+    {
+      "title": "Synthetic company reports a demonstration update",
+      "url": "https://news.example.invalid/synthetic-update",
+      "content": "A hand-authored result used to verify attribution and timestamp labels.",
+      "published_date": "2026-10-26T14:00:00Z"
+    },
+    {
+      "title": "Synthetic market briefing has no publication timestamp",
+      "url": "https://briefing.example.invalid/synthetic-briefing",
+      "content": "This item verifies the explicit unavailable timestamp state.",
+      "published_date": null
+    }
+  ]
+}

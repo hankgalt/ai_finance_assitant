@@ -1,10 +1,10 @@
 # AI Finance Assistant
 
-AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository is at **M2: deterministic financial calculation modules**. It has a working foundation, versioned Finance and Tax knowledge collections, safe portfolio import/calculation modules, and deterministic goal projections. It does not yet provide working LangGraph agents, live market/news data, saved user data, portfolio/goal REST resources, or professional financial or tax advice.
+AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository is at **M3: external market and news integrations**. It has a working foundation, versioned Finance and Tax knowledge collections, safe portfolio import/calculation modules, deterministic goal projections, provider ports, credential-free market/news adapters, and conditional live-provider adapters. It does not yet provide working LangGraph agents, approved live-provider access, saved user data, portfolio/goal REST resources, or professional financial or tax advice.
 
 The planned initial release is a production-oriented private demonstration release for the owner and approved viewers, not a public launch. Live provider demonstrations must remain within approved API terms and configured quotas; a separately selected credential-free mode remains reproducible and clearly labeled synthetic.
 
-Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). M1 retrieval evidence is in [docs/M1_delivery_report.md](docs/M1_delivery_report.md); M2 calculation evidence and limitations are in [docs/M2_delivery_report.md](docs/M2_delivery_report.md).
+Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). M1 retrieval evidence is in [docs/M1_delivery_report.md](docs/M1_delivery_report.md); M2 calculation evidence is in [docs/M2_delivery_report.md](docs/M2_delivery_report.md); M3 provider evidence and activation limits are in [docs/M3_delivery_report.md](docs/M3_delivery_report.md) and [docs/M3_provider_policy.md](docs/M3_provider_policy.md).
 
 ## Current capabilities
 
@@ -20,8 +20,11 @@ Read [docs/README.md](docs/README.md) before implementation work. Repository-wid
 - Decimal-based valuation, per-currency allocation, expense/classification coverage, concentration, and a versioned HHI/effective-holdings heuristic.
 - Multi-scenario goal projections with explicit contribution timing/frequency, inflation, modeled fees, risk-tolerance context, and nominal/real decomposition.
 - A types-only CashFlowAnalysisService seam and minimized CashFlowSummary; provider-independent JSON/CSV cash-flow import and analysis are planned for post-release M10.
+- MarketDataProvider and NewsProvider ports with normalized provenance, freshness, cache, entitlement, warning, and typed-error states.
+- Deterministic credential-free market/news adapters and hand-authored synthetic fixtures for CI and private demonstrations.
+- Conditional Alpha Vantage or Massive end-of-day/daily-market adapters plus Tavily attributed-news behind explicit selection, readiness, quota, retry, circuit, and bounded-cache controls.
 
-LangGraph, the six working agents, provider adapters, portfolio/goal REST resources, SSE, saved user data, MCP, and real Inspector instrumentation belong to later milestones.
+LangGraph, the six working agents, provider/API integration, portfolio/goal REST resources, SSE, saved user data, MCP, and real Inspector instrumentation belong to later milestones. Live providers are not enabled until the account-specific rights gate passes.
 
 ## Prerequisites
 
@@ -96,6 +99,10 @@ make knowledge-validate
 
 M2 calculation and import contracts are exercised by the ordinary backend test suite. The versioned numerical policy is [docs/M2_calculation_policy.md](docs/M2_calculation_policy.md), and valid/adversarial samples are indexed by `backend/data/finance/sample_manifest.v1.json`.
 
+M3 provider contracts and failure behavior are exercised by `make m3-check`. Credential-free mode is the default. Live mode requires both keys, documented entitlements, and a predeclared request budget; missing readiness never silently falls back within a Run.
+
+Set `AIFA_MARKET_DATA_PROVIDER=alpha_vantage|massive` before a live workflow. After the selected market provider and Tavily credentials, terms flags, and entitlement descriptions are configured in `backend/.env`, run `make provider-live-check` for the explicitly marked, quota-bounded live smoke tests. Selection is explicit per workflow; quota failure never silently switches providers. Massive individual-plan data is owner-only, so a demo shown to viewers or testers requires separately approved Business/commercial rights. Ordinary `pytest`, `make backend-check`, `make verify`, and `make m3-check` runs exclude the `live_provider` marker and make no live-provider calls.
+
 ## Local security posture
 
-The development services bind to `127.0.0.1`. Local Qdrant has no authentication and is not a production deployment. Do not expose it publicly. Only reviewed public educational sources are enabled, raw source caches are ignored, and M2 uses versioned synthetic financial fixtures rather than real user data. Logs continue to exclude request bodies, query values, credentials, raw prompts, holdings, and transaction payloads.
+The development services bind to `127.0.0.1`. Local Qdrant has no authentication and is not a production deployment. Do not expose it publicly. Only reviewed public educational sources are enabled, raw source caches are ignored, and M2/M3 use versioned synthetic financial/provider fixtures rather than real user data. Logs continue to exclude request bodies, query values, credentials, raw prompts, holdings, and transaction payloads.

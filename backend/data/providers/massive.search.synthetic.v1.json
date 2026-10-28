@@ -1,0 +1,18 @@
+{
+  "count": 1,
+  "request_id": "massive-synthetic-search-v1",
+  "results": [
+    {
+      "active": true,
+      "currency_name": "usd",
+      "last_updated_utc": "2026-10-26T00:00:00Z",
+      "locale": "us",
+      "market": "stocks",
+      "name": "Synthetic Demonstration Equity",
+      "primary_exchange": "XNYS",
+      "ticker": "DEMO",
+      "type": "CS"
+    }
+  ],
+  "status": "OK"
+}

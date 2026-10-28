@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,6 +38,31 @@ class Settings(BaseSettings):
         "019f104ba2ed07436d05f9cdd3383034ad66014edc27fc651f837e1a038b6451"
     )
     expected_chunking_policy_version: str = "structural-v1"
+    provider_mode: Literal["credential_free", "live"] = "credential_free"
+    market_data_provider: Literal["alpha_vantage", "massive"] = "alpha_vantage"
+    alpha_vantage_api_key: SecretStr | None = None
+    massive_api_key: SecretStr | None = None
+    tavily_api_key: SecretStr | None = None
+    alpha_vantage_terms_approved: bool = False
+    massive_terms_approved: bool = False
+    tavily_terms_approved: bool = False
+    market_provider_request_budget: int = Field(default=5, ge=0, le=100)
+    news_provider_request_budget: int = Field(default=3, ge=0, le=100)
+    alpha_vantage_entitlement: str = Field(
+        default="conditional-private-demo; verify account terms before live use",
+        min_length=1,
+        max_length=512,
+    )
+    massive_entitlement: str = Field(
+        default=("conditional-owner-only-demo; verify business/display rights before sharing data"),
+        min_length=1,
+        max_length=512,
+    )
+    tavily_entitlement: str = Field(
+        default="conditional-private-demo; third-party source rights remain separate",
+        min_length=1,
+        max_length=512,
+    )
 
 
 @lru_cache

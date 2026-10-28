@@ -1,0 +1,21 @@
+{
+  "adjusted": false,
+  "queryCount": 1,
+  "request_id": "massive-synthetic-request-v1",
+  "results": [
+    {
+      "T": "DEMO",
+      "c": 123.45,
+      "h": 125.0,
+      "l": 122.0,
+      "n": 10000,
+      "o": 123.0,
+      "t": 1792987200000,
+      "v": 1100000,
+      "vw": 123.75
+    }
+  ],
+  "resultsCount": 1,
+  "status": "OK",
+  "ticker": "DEMO"
+}

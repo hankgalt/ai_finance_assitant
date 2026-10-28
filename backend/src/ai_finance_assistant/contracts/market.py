@@ -1,4 +1,4 @@
-"""Provider provenance and quote contracts; no provider adapter is implemented in M0."""
+"""Provider provenance and quote contracts shared by enrichment consumers."""
 
 from decimal import Decimal
 from enum import StrEnum
@@ -11,6 +11,8 @@ from ai_finance_assistant.contracts.common import CurrencyCode, Identifier, Shor
 class DelayStatus(StrEnum):
     REAL_TIME = "real_time"
     DELAYED = "delayed"
+    END_OF_DAY = "end_of_day"
+    HISTORICAL = "historical"
     UNKNOWN = "unknown"
 
 

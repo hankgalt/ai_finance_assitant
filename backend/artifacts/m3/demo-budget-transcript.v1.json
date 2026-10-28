@@ -1,0 +1,28 @@
+{
+  "schema_version": "1",
+  "recorded_at": "2026-10-27T21:18:24-07:00",
+  "credential_free": {
+    "selected_mode": "credential_free",
+    "market_provider": "fake_market_data_v1",
+    "news_provider": "fake_news_v1",
+    "external_call_budget": 0,
+    "external_calls_made": 0,
+    "readiness": "ready",
+    "result_label": "synthetic"
+  },
+  "live": {
+    "selected_mode": "live",
+    "market_provider": "alpha_vantage",
+    "news_provider": "tavily",
+    "declared_market_request_budget": 5,
+    "declared_news_request_budget": 3,
+    "alpha_vantage_credential_configured": false,
+    "tavily_credential_configured": false,
+    "alpha_vantage_terms_approved": false,
+    "tavily_terms_approved": false,
+    "account_specific_rights_approval_recorded": false,
+    "readiness": "blocked",
+    "external_calls_made": 0,
+    "outcome": "Live journey refused before provider calls; no fallback or live validation claimed."
+  }
+}

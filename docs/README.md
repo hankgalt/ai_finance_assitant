@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 1.4 | Status: Product architecture baseline; M0–M2 evidence recorded | 2026-10-27
+Version 1.5 | Status: Product architecture baseline; M0–M3 evidence recorded | 2026-10-27
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -17,11 +17,14 @@ This directory is the design authority for AI Finance Assistant. The product mis
 9. [M1 Qdrant, model, and source-use research](research/M1_qdrant_models_sources.md) records the primary-source evidence used for M1 decisions; it is not itself an ADR.
 10. [M2 calculation policy](M2_calculation_policy.md) records the implemented precision, import, coverage, and heuristic rules for deterministic finance modules.
 11. [M3 market and news provider candidate research](research/M3_provider_candidates.md) evaluates Tavily, Alpha Vantage, and yfinance against the provider seam; it is decision input, not an approved provider selection.
+12. [M3 provider policy](M3_provider_policy.md) records the implemented adapters, endpoint policies, rights gate, quota budget, and safe fallback behavior.
+13. [M3 Massive market-data adapter research](research/M3_massive_provider.md) evaluates Massive's technical fit, current Basic-plan limits, and owner-only individual-plan rights using official sources.
 
 Milestone completion evidence is recorded separately from the design authority. See
 [M0 delivery report](M0_delivery_report.md) for the foundation milestone and
 [M1 delivery report](M1_delivery_report.md) for persistent knowledge ingestion, retrieval evaluation, activation, and rollback, and
-[M2 delivery report](M2_delivery_report.md) for deterministic Portfolio import/analysis, goal projection, and the reserved cash-flow interface.
+[M2 delivery report](M2_delivery_report.md) for deterministic Portfolio import/analysis, goal projection, and the reserved cash-flow interface, and
+[M3 delivery report](M3_delivery_report.md) for market/news ports, deterministic adapters, and conditional live-provider adapters.
 
 If documents conflict, use this precedence: product requirements, accepted ADRs, system design, implementation plan, evaluation strategy, then the M0 prompt. Coursework criteria remain mandatory for the coursework release even when they do not constrain later product architecture. Resolve source-rubric ambiguities in the coursework criteria rather than weakening product requirements.
 

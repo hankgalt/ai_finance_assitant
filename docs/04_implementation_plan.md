@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 1.5 | Status: Approved sequence; M0–M2 complete, later milestones planned | 2026-10-27
+Version 1.7 | Status: Approved sequence; M0–M3 complete, later milestones planned | 2026-10-28
 
 ## 1. Delivery rules
 
@@ -101,9 +101,9 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Acceptance:** Success, delay, cache, stale, rate-limit, invalid-symbol/query, malformed-payload, and unavailable behavior are observable and correctly labeled; the documented private live-demo journey stays within the configured provider entitlement and request budget; the same feature journey remains reproducible in credential-free mode; synthetic results cannot appear live and one Run never mixes live and fake provider data.
 
-**Tests:** Adapter contracts using recorded permitted fixtures or fakes; 401/403, 429, timeout, malformed data, cache expiry, provider fallback, provenance timestamp, concurrency/quota cases, preflight budget exhaustion before a provider call, repeated-view cache behavior, missing credentials, explicit mode selection, and no live/synthetic mixing.
+**Tests:** Adapter contracts using recorded permitted fixtures or fakes; 401/403, 429, timeout, malformed data, cache expiry, provider fallback, provenance timestamp, concurrency/quota cases, preflight budget exhaustion before a provider call, repeated-view cache behavior, missing credentials, explicit mode/market-adapter selection, and no live/synthetic or cross-provider mixing. Opt-in tests marked `live_provider` may validate an approved Alpha Vantage or Massive market account plus Tavily; ordinary suites exclude that marker and require no credentials.
 
-**Evidence:** Provider decision update, contract fixtures, failure matrix, cache/rate configuration, actual test report, cost/limit notes, and a private-demo call-budget transcript for both live and credential-free modes.
+**Evidence:** [M3 delivery report](M3_delivery_report.md), [provider policy and activation gate](M3_provider_policy.md), ADR-024/025, synthetic contract fixtures, failure matrix, cache/rate configuration, actual test report, cost/limit notes, and a private-demo call-budget transcript for credential-free mode and the deliberately blocked live preflight.
 
 ### M4 — LangGraph orchestration and all six agents
 
