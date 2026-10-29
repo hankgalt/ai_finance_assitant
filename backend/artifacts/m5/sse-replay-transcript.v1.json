@@ -1,0 +1,28 @@
+{
+  "schema_version": "1",
+  "captured_at": "2026-10-28T22:43:23-07:00",
+  "mode": "credential_free",
+  "session_id": "session-a69b7eb17a384f9e9c96e60996cf7166",
+  "execution_id": "run-65a50f320f424b94934eb5292bbd11fe",
+  "terminal_status": "failed",
+  "terminal_reason": "Finance evidence was intentionally unavailable because Qdrant was not configured.",
+  "persisted_event_count": 7,
+  "full_stream_frame_ids": [
+    "evt:run-65a50f320f424b94934eb5292bbd11fe:1",
+    "evt:run-65a50f320f424b94934eb5292bbd11fe:2",
+    "evt:run-65a50f320f424b94934eb5292bbd11fe:3",
+    "evt:run-65a50f320f424b94934eb5292bbd11fe:4",
+    "evt:run-65a50f320f424b94934eb5292bbd11fe:5",
+    "evt:run-65a50f320f424b94934eb5292bbd11fe:6",
+    "evt:run-65a50f320f424b94934eb5292bbd11fe:7",
+    "chunk:run-65a50f320f424b94934eb5292bbd11fe:1"
+  ],
+  "replay_request": {
+    "last_event_id": "evt:run-65a50f320f424b94934eb5292bbd11fe:1"
+  },
+  "replay_first_frame_id": "evt:run-65a50f320f424b94934eb5292bbd11fe:2",
+  "replayed_cursor_frame": false,
+  "terminal_chunk_replay_returns_empty": true,
+  "content_type": "text/event-stream",
+  "payloads_omitted_from_artifact": true
+}

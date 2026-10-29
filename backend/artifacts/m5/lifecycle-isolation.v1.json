@@ -1,0 +1,37 @@
+{
+  "schema_version": "1",
+  "cases": [
+    {
+      "behavior": "Run idempotency",
+      "result": "same key and body returned the original Run; changed body returned 409"
+    },
+    {
+      "behavior": "Session isolation",
+      "result": "cross-Session Run read and SSE stream returned 403"
+    },
+    {
+      "behavior": "Concurrent Sessions",
+      "result": "two concurrent Run requests retained their own Session identifiers and terminal states"
+    },
+    {
+      "behavior": "Restart",
+      "result": "Sessions, Runs, RunEvents, and checkpoint follow-up state survived process reconstruction"
+    },
+    {
+      "behavior": "Session deletion",
+      "result": "owned Runs, events, contexts, Portfolios, Snapshots, idempotency records, and checkpoint thread were removed"
+    },
+    {
+      "behavior": "Retention expiry",
+      "result": "startup removed an expired Session and its checkpoint thread; old RunEvents and expired Portfolios use configured cutoffs"
+    },
+    {
+      "behavior": "Stable failures",
+      "result": "request validation, authorization, not-ready, conflict, and unexpected workflow failure returned bounded typed states"
+    }
+  ],
+  "tests": [
+    "tests/test_m5_api.py",
+    "tests/test_m5_persistence.py"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1",
+  "application_migration": {
+    "version": 1,
+    "name": "m5_initial_application_and_provider_cache",
+    "transactional": true,
+    "newer_schema_fails_closed": true
+  },
+  "sqlite_policy": {
+    "journal_mode_file_backed": "WAL",
+    "foreign_keys": true,
+    "busy_timeout_milliseconds": 5000,
+    "application_connection": "locked synchronous connection",
+    "checkpoint_connection": "dedicated official LangGraph SqliteSaver connection",
+    "checkpoint_deserialization": "explicit allow-list"
+  },
+  "application_tables": [
+    "schema_migrations",
+    "sessions",
+    "runs",
+    "run_events",
+    "portfolios",
+    "portfolio_snapshots",
+    "agent_contexts",
+    "idempotency_records",
+    "market_bars",
+    "market_coverage"
+  ],
+  "langgraph_tables": ["checkpoints", "writes"],
+  "verification": {
+    "restart": "passed",
+    "newer_schema_rejection": "passed",
+    "expired_session_checkpoint_cleanup": "passed"
+  }
+}

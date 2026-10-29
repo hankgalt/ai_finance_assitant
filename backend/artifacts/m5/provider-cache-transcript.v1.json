@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "policy": {
+    "memory_max_entries": 128,
+    "memory_ttl_seconds": 300,
+    "retention_days_maximum": 3650,
+    "recent_tail_days": 7,
+    "tail_refresh_seconds": 21600
+  },
+  "call_count_cases": [
+    {
+      "case": "restart_exact_range",
+      "range": ["2026-01-01", "2026-01-05"],
+      "provider_calls_after_initial": 1,
+      "provider_calls_after_restart_read": 1,
+      "restart_layer": "durable"
+    },
+    {
+      "case": "overlapping_range",
+      "requested_range": ["2026-01-03", "2026-01-08"],
+      "fetched_gap": ["2026-01-06", "2026-01-08"],
+      "total_provider_calls": 2,
+      "coverage": "complete"
+    },
+    {
+      "case": "concurrent_exact_requests",
+      "concurrent_requests": 5,
+      "provider_calls": 1,
+      "memory_results_after_leader": 4
+    },
+    {
+      "case": "recent_tail_provider_failure",
+      "provider_calls": 2,
+      "served_stored_bars": true,
+      "cache_state": "stale"
+    }
+  ],
+  "isolation_verified": [
+    "provider",
+    "instrument",
+    "interval",
+    "currency",
+    "adjustment_basis",
+    "schema_version",
+    "policy_version"
+  ],
+  "recovery_verified": [
+    "malformed row purged and refetched",
+    "expired rows not reused",
+    "provider-scoped administrative purge",
+    "live unverified rights bypass durable storage without owner acceptance"
+  ]
+}

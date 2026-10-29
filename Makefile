@@ -3,7 +3,8 @@ QDRANT_URL ?= http://127.0.0.1:6333
 .PHONY: backend-sync backend-dev backend-check frontend-install frontend-dev frontend-check \
 	qdrant-up qdrant-status qdrant-stop qdrant-check knowledge-finance knowledge-tax \
 	knowledge-validate verify m1-check m2-check m3-check m4-check m4-1-check \
-	provider-live-check model-live-check
+	m5-check provider-live-check model-live-check observability-up observability-status \
+	observability-stop
 
 backend-sync:
 	cd backend && uv sync
@@ -76,6 +77,21 @@ m4-1-check:
 	cd backend && uv run ruff check src tests
 	cd backend && uv run mypy
 	cd backend && uv run pytest -q tests/test_openai_model_adapter.py tests/test_model_factory.py tests/test_agents.py tests/test_workflow.py tests/test_workflow_application.py tests/test_observability.py
+
+m5-check:
+	cd backend && uv run ruff format --check src tests
+	cd backend && uv run ruff check src tests
+	cd backend && uv run mypy
+	cd backend && uv run pytest -q tests/test_m5_api.py tests/test_m5_persistence.py tests/test_durable_provider_cache.py tests/test_m5_observability.py tests/test_m5_contract_manifest.py tests/test_health.py
+
+observability-up:
+	docker compose --profile observability up -d otel-collector
+
+observability-status:
+	docker compose --profile observability ps otel-collector
+
+observability-stop:
+	docker compose --profile observability stop otel-collector
 
 provider-live-check:
 	cd backend && AIFA_RUN_LIVE_PROVIDER_TESTS=true AIFA_PROVIDER_MODE=live uv run pytest -q -m live_provider tests/test_live_provider_adapters.py

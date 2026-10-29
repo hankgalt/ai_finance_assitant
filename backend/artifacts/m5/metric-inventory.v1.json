@@ -1,0 +1,33 @@
+{
+  "schema_version": "1",
+  "measurements": [
+    {"name": "backend.http.requests", "kind": "counter", "attributes": ["http_method", "route", "status_class"]},
+    {"name": "backend.http.errors", "kind": "counter", "attributes": ["http_method", "route", "status_class"]},
+    {"name": "backend.http.duration_ms", "kind": "histogram", "attributes": ["http_method", "route", "status_class"]},
+    {"name": "workflow.runs", "kind": "counter", "attributes": ["result_status"]},
+    {"name": "workflow.duration_ms", "kind": "histogram", "attributes": ["result_status"]},
+    {"name": "retrieval.requests", "kind": "counter", "attributes": ["strategy", "result_status"]},
+    {"name": "retrieval.duration_ms", "kind": "histogram", "attributes": ["strategy", "result_status"]},
+    {"name": "provider.tool.requests", "kind": "counter", "attributes": ["provider", "operation", "result_status"]},
+    {"name": "provider.tool.duration_ms", "kind": "histogram", "attributes": ["provider", "operation", "result_status"]},
+    {"name": "provider.requests", "kind": "counter", "attributes": ["provider", "operation", "result_status"]},
+    {"name": "provider.duration_ms", "kind": "histogram", "attributes": ["provider", "operation", "result_status"]},
+    {"name": "provider.retries", "kind": "counter", "attributes": ["provider", "operation"]},
+    {"name": "provider.rate_limited", "kind": "counter", "attributes": ["provider", "operation"]},
+    {"name": "provider.cache.requests", "kind": "counter", "attributes": ["provider", "cache_status"]},
+    {"name": "persistence.operations", "kind": "counter", "attributes": ["operation", "result_status"]},
+    {"name": "persistence.duration_ms", "kind": "histogram", "attributes": ["operation", "result_status"]}
+  ],
+  "cardinality_controls": {
+    "route_uses_template": true,
+    "health_routes_excluded": true,
+    "session_run_request_and_instrument_identifiers_excluded": true,
+    "attributes_allow_listed": true
+  },
+  "transport": {
+    "protocol": "OTLP/HTTP",
+    "loopback_endpoint": "http://127.0.0.1:4318",
+    "default_export_enabled": false,
+    "collector_exporter": "debug"
+  }
+}

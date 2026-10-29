@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 2.2 | Status: Approved sequence; M0–M4.1 complete; M5 and later milestones planned | 2026-10-28
+Version 2.3 | Status: Approved sequence; M0–M5 complete; M6 and later milestones planned | 2026-10-28
 
 ## 1. Delivery rules
 
@@ -163,7 +163,7 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Tests:** OpenAPI snapshots/contracts, REST/SSE framing, last-event/recovery behavior, concurrent Runs, authorization scope, restart, idempotency, deletion, migration, CORS/local bind, resource limits, W3C context propagation, log/trace correlation, metric cardinality, health-endpoint exclusion, and unavailable Collector/exporter behavior. Provider-cache tests cover exact and overlapping ranges, gap-only fetches, recent-tail refresh, stale fallback, no-call restart reuse, concurrent request coalescing, provider/currency/adjustment/schema isolation, malformed or migrated rows, purge, retention expiry, and owner-only versus shared/public rights gates.
 
-**Evidence:** Interface specification, migration records, contract test report, SSE transcript, lifecycle/isolation evidence, provider call-count and restart-reuse transcripts, cache schema and purge record, retention/rights configuration, correlated FastAPI/module trace sample, metric inventory, Collector/exporter configuration, and documented local security posture.
+**Evidence:** [M5 delivery report](M5_delivery_report.md), interface specification, migration records, contract test report, SSE transcript, lifecycle/isolation evidence, provider call-count and restart-reuse transcripts, cache schema and purge record, retention/rights configuration, correlated FastAPI/module trace sample, metric inventory, Collector/exporter configuration, and documented local security posture.
 
 ### M6 — React product experiences
 

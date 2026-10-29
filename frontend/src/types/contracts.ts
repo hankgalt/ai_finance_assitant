@@ -115,3 +115,59 @@ export interface RunEvent {
   summary: string;
   safe_metadata: Record<string, unknown>;
 }
+
+// M5 contract-verified resource types. The backend OpenAPI document remains authoritative.
+export interface SessionRecord {
+  session_id: string;
+  label: string | null;
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+}
+
+export type StoredRunStatus =
+  "running" | "completed" | "partial" | "failed" | "clarification";
+
+export interface WorkflowRunResult {
+  schema_version: "1";
+  execution_id: string;
+  session_id: string;
+  workflow_id: string;
+  workflow_version: string;
+  status: Exclude<StoredRunStatus, "running">;
+  selected_agent_ids: string[];
+  agent_results: Array<Record<string, unknown>>;
+  summary: string;
+  warnings: string[];
+  errors: Array<Record<string, unknown>>;
+  trace_id: string | null;
+  trace_unavailable_reason: string | null;
+}
+
+export interface RunRecord {
+  execution_id: string;
+  session_id: string;
+  workflow_id: string;
+  workflow_version: string;
+  status: StoredRunStatus;
+  result: WorkflowRunResult | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RunEventHistory {
+  execution_id: string;
+  events: RunEvent[];
+  recovery: string;
+}
+
+export type ProviderCacheLayer =
+  "memory" | "durable" | "provider" | "not_applicable";
+
+export type ProviderCacheCoverage =
+  | "complete"
+  | "partial"
+  | "stale"
+  | "missing"
+  | "unavailable"
+  | "not_applicable";

@@ -71,6 +71,22 @@ class AdjustmentBasis(StrEnum):
     UNKNOWN = "unknown"
 
 
+class CacheLayer(StrEnum):
+    MEMORY = "memory"
+    DURABLE = "durable"
+    PROVIDER = "provider"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class CacheCoverageStatus(StrEnum):
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    STALE = "stale"
+    MISSING = "missing"
+    UNAVAILABLE = "unavailable"
+    NOT_APPLICABLE = "not_applicable"
+
+
 class ProviderError(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -99,6 +115,8 @@ class ProviderEnvelope(BaseModel):
     delay_status: DelayStatus = DelayStatus.UNKNOWN
     timestamp_quality: TimestampQuality = TimestampQuality.UNAVAILABLE
     cache_status: CacheStatus = CacheStatus.NOT_APPLICABLE
+    cache_layer: CacheLayer = CacheLayer.NOT_APPLICABLE
+    cache_coverage: CacheCoverageStatus = CacheCoverageStatus.NOT_APPLICABLE
     cache_age_seconds: float | None = Field(default=None, ge=0)
     is_stale: bool = False
     is_synthetic: bool = False

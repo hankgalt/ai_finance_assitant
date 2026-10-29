@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TypeVar
 
+from ai_finance_assistant.contracts.market import CacheStatus
 from ai_finance_assistant.providers.models import (
+    CacheCoverageStatus,
+    CacheLayer,
     ProviderEnvelope,
     ProviderError,
     ProviderErrorCode,
@@ -45,6 +48,20 @@ def envelope_from_outcome(
     entitlement: str,
 ) -> ProviderEnvelope:
     value = outcome.value
+    if outcome.cache_status in {CacheStatus.HIT, CacheStatus.STALE}:
+        cache_layer = CacheLayer.MEMORY
+    elif outcome.attempts > 0:
+        cache_layer = CacheLayer.PROVIDER
+    else:
+        cache_layer = CacheLayer.NOT_APPLICABLE
+    if outcome.is_stale:
+        coverage = CacheCoverageStatus.STALE
+    elif value is not None:
+        coverage = CacheCoverageStatus.COMPLETE
+    elif outcome.error is not None:
+        coverage = CacheCoverageStatus.UNAVAILABLE
+    else:
+        coverage = CacheCoverageStatus.MISSING
     return ProviderEnvelope(
         provider=provider,
         mode=mode,
@@ -55,6 +72,8 @@ def envelope_from_outcome(
         delay_status=value.delay_status if value is not None else "unknown",
         timestamp_quality=value.timestamp_quality if value is not None else "unavailable",
         cache_status=outcome.cache_status,
+        cache_layer=cache_layer,
+        cache_coverage=coverage,
         cache_age_seconds=outcome.cache_age_seconds,
         is_stale=outcome.is_stale,
         is_synthetic=mode == ProviderMode.CREDENTIAL_FREE,

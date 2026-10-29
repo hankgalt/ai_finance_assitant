@@ -17,5 +17,6 @@ dist/
 .cache/
 playwright-report/
 test-results/
+/backend/data/*.sqlite3*
 
 .env

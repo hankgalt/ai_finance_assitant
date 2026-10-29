@@ -1,0 +1,31 @@
+{
+  "schema_version": "1",
+  "authority": "FastAPI OpenAPI",
+  "frontend_type_file": "frontend/src/types/contracts.ts",
+  "paths": {
+    "/api/v1/sessions": ["get", "post"],
+    "/api/v1/sessions/{session_id}": ["delete", "get"],
+    "/api/v1/sessions/{session_id}/runs": ["get", "post"],
+    "/api/v1/sessions/{session_id}/runs/{execution_id}": ["get"],
+    "/api/v1/sessions/{session_id}/runs/{execution_id}/events": ["get"],
+    "/api/v1/sessions/{session_id}/runs/{execution_id}/stream": ["get"],
+    "/api/v1/sessions/{session_id}/traces/{execution_id}": ["get"],
+    "/api/v1/sessions/{session_id}/portfolio-imports/validate": ["post"],
+    "/api/v1/sessions/{session_id}/portfolios": ["get", "post"],
+    "/api/v1/sessions/{session_id}/portfolios/{portfolio_id}": ["delete", "get"],
+    "/api/v1/sessions/{session_id}/portfolios/{portfolio_id}/snapshots": ["get", "post"],
+    "/api/v1/sessions/{session_id}/snapshots/{snapshot_id}": ["get"],
+    "/api/v1/sessions/{session_id}/market/instruments/search": ["post"],
+    "/api/v1/sessions/{session_id}/market/quotes": ["post"],
+    "/api/v1/sessions/{session_id}/market/history": ["post"],
+    "/api/v1/sessions/{session_id}/goal-projections": ["post"],
+    "/api/v1/admin/provider-cache": ["delete"]
+  },
+  "required_frontend_types": [
+    "SessionRecord",
+    "RunRecord",
+    "RunEventHistory",
+    "ProviderCacheLayer",
+    "ProviderCacheCoverage"
+  ]
+}

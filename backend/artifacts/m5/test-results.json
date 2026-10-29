@@ -1,0 +1,51 @@
+{
+  "schema_version": "1",
+  "recorded_at": "2026-10-28",
+  "credential_free": true,
+  "gates": [
+    {
+      "command": "make m5-check",
+      "result": "passed",
+      "details": {
+        "formatted_files": 107,
+        "ruff": "passed",
+        "mypy_source_files": 107,
+        "tests_passed": 31,
+        "duration_seconds": 0.73
+      }
+    },
+    {
+      "command": "make backend-check",
+      "result": "passed",
+      "details": {
+        "formatted_files": 114,
+        "ruff": "passed",
+        "mypy_source_files": 107,
+        "tests_passed": 157,
+        "tests_skipped": 1,
+        "tests_deselected": 3,
+        "coverage_percent": 87
+      }
+    },
+    {
+      "command": "make frontend-check",
+      "result": "passed",
+      "details": {
+        "prettier": "passed",
+        "eslint": "passed",
+        "typescript": "passed",
+        "tests_passed": 3,
+        "production_build": "passed"
+      }
+    },
+    {
+      "command": "docker compose --profile observability config --quiet",
+      "result": "passed"
+    }
+  ],
+  "skips_and_exclusions": [
+    "Live Qdrant integration was skipped because no opt-in test URL was supplied.",
+    "Three opt-in live provider/model tests were deselected by their explicit markers."
+  ],
+  "external_calls_made": 0
+}

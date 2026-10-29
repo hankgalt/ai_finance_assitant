@@ -1,0 +1,17 @@
+{
+  "schema_version": "1",
+  "input_traceparent": "00-11111111111111111111111111111111-2222222222222222-01",
+  "run_trace_id": "11111111111111111111111111111111",
+  "persisted_run_event_trace_ids": ["11111111111111111111111111111111"],
+  "outbound_httpx_traceparent_injected": true,
+  "log_fields": [
+    "request_id",
+    "trace_id",
+    "span_id",
+    "session_id",
+    "execution_id",
+    "run_id"
+  ],
+  "protected_payload_fields_exported": false,
+  "test": "tests/test_m5_observability.py"
+}

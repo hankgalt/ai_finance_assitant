@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.1 | Status: Product architecture baseline | 2026-10-28
+Version 1.2 | Status: Product architecture baseline through M5 | 2026-10-28
 
 ## 1. Architecture principles
 
@@ -235,6 +235,10 @@ Versioned interface groups:
 
 REST returns authoritative resources and terminal Run status. SSE carries typed conversation chunks and RunEvents. A client reconnects with the last event identifier when replay is supported; otherwise it reloads authorized event history and final state over REST. OpenAPI is the contract source and generated or contract-tested TypeScript types prevent drift.
 
+M5 implements these interfaces under `/api/v1`. Artifact-creating requests accept bounded idempotency keys; reused keys return the original resource only when the request hash matches. RunEvents are persisted before replay, use stable sequence-derived event identifiers, and can be resumed with `Last-Event-ID`; the terminal conversational chunk has its own stable identifier. Every history, stream, Portfolio, Snapshot, and context lookup checks the requested Session scope. The local demo remains unauthenticated and loopback-only, so Session identifiers are isolation keys rather than proof of identity.
+
+FastAPI and outbound HTTPX calls are OpenTelemetry-instrumented with W3C propagation. JSON logs add request, trace, span, Session, and Run identifiers when available without bodies or headers. The optional loopback OTLP HTTP Collector receives traces and metrics and currently exports only to its debug sink. Bounded operational measurements cover HTTP status class/route, workflow status, retrieval strategy, provider operation/status/retry/rate-limit, cache outcome, and persistence operation/status. Health endpoints are excluded and protected or unbounded identifiers are not metric attributes. Export failure is isolated from product behavior; RunEvents remain the authoritative execution record.
+
 ## 11. Agent Execution Inspector contract
 
 RunEvent schema version 1 contains:
@@ -279,6 +283,10 @@ Data classes and initial local policy:
 | Durable provider cache | Reliability, quota control, and reusable historical ranges | Normalized historical bars survive restart; recent bars are revalidated; quote/news retention stays endpoint-specific; local owner-only long retention requires explicit unverified-rights risk acceptance | Server only; provider/schema/policy scoped, administratively purgeable, and never presented without provenance |
 
 The local demo is unauthenticated only when explicitly configured and bound for local use. Opaque identifiers are not authentication. Every resource lookup and stream still checks Session scope to prevent accidental cross-session leakage. A public deployment requires the ADR-019 production controls before release.
+
+M5 local persistence uses application schema version 1 in SQLite with foreign keys, WAL for file-backed databases, a five-second busy timeout, and transactional migrations. Application tables store Sessions, Runs, privacy-filtered RunEvents, saved Portfolios, Snapshots, authorized agent contexts, idempotency records, normalized market bars, and range coverage. The official LangGraph SQLite saver uses a dedicated connection to the same local file and strict allow-listed checkpoint deserialization. Startup rejects a newer schema, purges expired application/cache records, and removes expired Session checkpoint threads. Session deletion cascades user artifacts and explicitly deletes its checkpoint thread; provider cache purge is a separately token-protected local administrative operation.
+
+Default local retention is 30 days for Sessions and RunEvents and 365 days for saved Portfolios. Historical cache retention is at most 3,650 days, with a seven-day recent tail revalidated after six hours and a 128-entry/five-minute memory tier. These are private-demo defaults, not public legal-policy approval. A later public or multi-user store requires a new ADR, authentication/authorization, protected storage, enforced retention jobs, backup/recovery, and migration qualification.
 
 Logs and traces use allow-listed fields, pseudonymous correlation identifiers, and field-level redaction. Raw prompts, raw portfolio rows, transactions, credentials, hidden reasoning, and unrestricted tool payloads are excluded. Secrets remain server-side. File parsing enforces content and resource limits and cannot execute formulas, macros, or embedded objects.
 

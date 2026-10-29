@@ -1,10 +1,10 @@
 # AI Finance Assistant
 
-AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository has completed **M4.1: production LLM adapter and live-model qualification**. It has a working foundation, versioned Finance and Tax knowledge collections, safe portfolio import/calculation modules, deterministic goal projections, provider ports/adapters, a bounded six-agent LangGraph workflow, a qualified OpenAI model path, authoritative measured RunEvents, and vendor-neutral observability. It does not yet provide workflow REST/SSE, durable user/checkpoint/event storage, approved public-provider rights, or professional financial or tax advice.
+AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository has completed **M5: FastAPI integration and durable local persistence**. It has versioned Finance and Tax knowledge collections, safe portfolio import/calculation modules, deterministic goal projections, provider ports/adapters, a bounded six-agent LangGraph workflow, a qualified OpenAI model path, authoritative measured RunEvents, versioned REST/replayable SSE, durable private-demo storage, a historical provider cache, and vendor-neutral operational telemetry. It does not yet provide the M6 product UI experiences, approved public-provider rights, public multi-user controls, or professional financial or tax advice.
 
 The planned initial release is a production-oriented private demonstration release for the owner and approved viewers, not a public launch. Live provider demonstrations must remain within approved API terms and configured quotas; a separately selected credential-free mode remains reproducible and clearly labeled synthetic.
 
-Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). Milestone reports are indexed in the documentation directory; M4 behavior, observability, tests, and limitations are recorded in [docs/M4_delivery_report.md](docs/M4_delivery_report.md).
+Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). Milestone reports are indexed in the documentation directory; M5 behavior, persistence, observability, tests, and limitations are recorded in [docs/M5_delivery_report.md](docs/M5_delivery_report.md).
 
 ## Current capabilities
 
@@ -26,10 +26,14 @@ Read [docs/README.md](docs/README.md) before implementation work. Repository-wid
 - Exactly six specialist agents behind a typed, bounded LangGraph router/synthesis workflow, with no recursive agent calls and separate Market Analysis and Goal Planning authorities.
 - Finance and Tax citation grounding, deterministic Portfolio/Goal delegation, attributed News, and provider-backed Market behavior through stable application ports.
 - Privacy-filtered RunEvents plus in-memory and OpenTelemetry span/metric adapters with stable trace correlation and optional input/output-hidden LangSmith tracing.
+- Versioned `/api/v1` Session, Run, Portfolio, Snapshot, market, goal, and authorized trace resources with typed safe failures and artifact idempotency.
+- Replayable SSE for persisted RunEvents and terminal response chunks with `Last-Event-ID` recovery.
+- SQLite application schema v1, official durable LangGraph checkpoints, retention/deletion behavior, and a two-tier historical daily-bar cache with truthful memory/durable/provider/stale states.
+- FastAPI and outbound HTTPX W3C instrumentation, bounded backend/provider/retrieval/cache/persistence metrics, structured correlation logs, and optional loopback OTLP Collector transport.
 
-Workflow/API integration, portfolio/goal REST resources, SSE, durable saved user/checkpoint/event data, frontend experiences, MCP, and the Inspector UI belong to later milestones. Live providers are not enabled until the account-specific rights gate passes.
+Frontend product experiences, browser telemetry, MCP, and the Inspector UI belong to later milestones. Live providers are not enabled until the account-specific rights gate passes.
 
-M4.1 adds a conditional OpenAI `gpt-6.1-sol` ModelAdapter while retaining the deterministic credential-free default. Model selection is fixed per Run, structured output cannot overwrite deterministic facts, ordinary tests make no model calls, and the corrected six-call qualification passes. M5 is now the next permitted milestone.
+M4.1 adds a conditional OpenAI `gpt-6.1-sol` ModelAdapter while retaining the deterministic credential-free default. M5 integrates it through the durable application boundary without changing deterministic authority or credential-free CI. M6 is the next permitted milestone.
 
 ## Prerequisites
 
@@ -109,6 +113,8 @@ M3 provider contracts and failure behavior are exercised by `make m3-check`. Cre
 M4 routing, all six agent contracts, checkpoint behavior, failure bounds, RunEvents, redaction, OpenTelemetry correlation, optional LangSmith privacy defaults, and exporter-failure isolation are exercised by `make m4-check`. OpenTelemetry is enabled locally without a network exporter by default; `AIFA_OBSERVABILITY_MODE=disabled|in_memory|opentelemetry` controls the runtime adapter. LangSmith remains off unless explicitly configured.
 
 M4.1 structured-output, failure, retry, request-budget, concurrency, privacy, and configuration contracts are exercised credential-free by `make m4-1-check`. Live mode requires `OPENAI_API_KEY` (or `AIFA_OPENAI_API_KEY`) and `AIFA_OPENAI_TERMS_APPROVED=true`; `make model-live-check` then makes exactly one request for each of the six agents. Current LangSmith variables (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, and `LANGSMITH_PROJECT`) and their legacy `LANGCHAIN_*` aliases are accepted, but inputs and outputs remain hidden and RunEvents stay authoritative.
+
+M5 REST/SSE contracts, isolation, idempotency, restart/deletion/retention, migrations, cache reuse and rights gates, W3C propagation, metric cardinality, and readiness behavior are exercised by `make m5-check`. `make observability-up` starts the optional loopback OTLP Collector debug sink; network export remains disabled until `AIFA_OTEL_EXPORT_ENABLED=true` is deliberately configured.
 
 Set `AIFA_MARKET_DATA_PROVIDER=alpha_vantage|massive` before a live workflow. After the selected market provider and Tavily credentials, terms flags, and entitlement descriptions are configured in `backend/.env`, run `make provider-live-check` for the explicitly marked, quota-bounded live smoke tests. Selection is explicit per workflow; quota failure never silently switches providers. Massive individual-plan data is owner-only, so a demo shown to viewers or testers requires separately approved Business/commercial rights. Ordinary `pytest`, `make backend-check`, `make verify`, and `make m3-check` runs exclude the `live_provider` marker and make no live-provider calls.
 

@@ -1,0 +1,43 @@
+{
+  "schema_version": "1",
+  "deployment": {
+    "audience": "owner_only",
+    "bind": "127.0.0.1",
+    "authentication": "not implemented; loopback private demo only",
+    "session_scope_is_authentication": false
+  },
+  "retention_days": {
+    "session": 30,
+    "run_event": 30,
+    "portfolio": 365,
+    "eligible_historical_bar_maximum": 3650
+  },
+  "deletion": {
+    "session_cascades_user_artifacts": true,
+    "session_deletes_checkpoint_thread": true,
+    "portfolio_cascades_snapshots": true,
+    "provider_cache_requires_admin_token": true
+  },
+  "provider_rights": {
+    "synthetic_history_cache_allowed": true,
+    "verified_live_retention_allowed": true,
+    "unverified_live_retention_requires_owner_only_risk_acceptance": true,
+    "unverified_shared_or_public_readiness": "failed",
+    "risk_acceptance_establishes_contractual_permission": false
+  },
+  "excluded_from_provider_cache": [
+    "raw provider payloads",
+    "credentials",
+    "news bodies",
+    "user portfolio context"
+  ],
+  "public_release_blockers": [
+    "strong identity and per-resource authorization",
+    "protected managed persistence",
+    "encryption and key management",
+    "enforced legal retention and backup/recovery",
+    "distributed concurrency and availability qualification",
+    "approved provider display/cache/redistribution rights",
+    "deployment threat review"
+  ]
+}

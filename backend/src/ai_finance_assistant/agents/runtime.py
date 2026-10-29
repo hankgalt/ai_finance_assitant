@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from time import monotonic
 from typing import TypeVar
 from uuid import uuid4
 
@@ -68,6 +69,7 @@ class AgentRuntime:
         tax_year: int | None = None,
     ) -> RetrievalResult:
         identity = _identity(request)
+        started_monotonic = monotonic()
         started = self._events.record(
             identity,
             event_type=EventType.RETRIEVAL_STARTED,
@@ -89,6 +91,13 @@ class AgentRuntime:
                     limit=5,
                 )
         except Exception as exc:
+            attributes = {"strategy": "hybrid", "result_status": "failed"}
+            self._observability.count("retrieval.requests", 1, attributes)
+            self._observability.observe(
+                "retrieval.duration_ms",
+                (monotonic() - started_monotonic) * 1_000,
+                attributes,
+            )
             error = SafeError(
                 code="RETRIEVAL_UNAVAILABLE",
                 category=ErrorCategory.NOT_READY,
@@ -141,6 +150,13 @@ class AgentRuntime:
             started_at=started.started_at,
             completed=True,
             parent_event_id=started.event_id,
+        )
+        attributes = {"strategy": result.strategy.value, "result_status": "completed"}
+        self._observability.count("retrieval.requests", 1, attributes)
+        self._observability.observe(
+            "retrieval.duration_ms",
+            (monotonic() - started_monotonic) * 1_000,
+            attributes,
         )
         return result
 
@@ -257,6 +273,7 @@ class AgentRuntime:
         operation: Callable[[], _ProviderResultT],
     ) -> _ProviderResultT:
         identity = _identity(request)
+        started_monotonic = monotonic()
         tool_call_id = f"tool:{request.agent_id.value}:{uuid4().hex[:12]}"
         started = self._events.record(
             identity,
@@ -272,6 +289,13 @@ class AgentRuntime:
             with self._observability.span("tool.execute", {"provider": name}):
                 result = operation()
         except Exception as exc:
+            attributes = {"provider": name, "operation": name, "result_status": "failed"}
+            self._observability.count("provider.tool.requests", 1, attributes)
+            self._observability.observe(
+                "provider.tool.duration_ms",
+                (monotonic() - started_monotonic) * 1_000,
+                attributes,
+            )
             error = SafeError(
                 code="TOOL_EXECUTION_FAILED",
                 category=ErrorCategory.UPSTREAM_UNAVAILABLE,
@@ -295,6 +319,29 @@ class AgentRuntime:
             raise AgentRuntimeFailure(error) from exc
 
         succeeded = result.status in {ProviderStatus.SUCCESS, ProviderStatus.EMPTY}
+        attributes = {
+            "provider": result.provenance.provider,
+            "operation": name,
+            "result_status": result.status.value,
+        }
+        self._observability.count("provider.tool.requests", 1, attributes)
+        self._observability.observe(
+            "provider.tool.duration_ms",
+            (monotonic() - started_monotonic) * 1_000,
+            attributes,
+        )
+        if result.provenance.attempts > 1:
+            self._observability.count(
+                "provider.retries",
+                result.provenance.attempts - 1,
+                {"provider": result.provenance.provider, "operation": name},
+            )
+        if result.status in {ProviderStatus.RATE_LIMITED, ProviderStatus.BUDGET_EXHAUSTED}:
+            self._observability.count(
+                "provider.rate_limited",
+                1,
+                {"provider": result.provenance.provider, "operation": name},
+            )
         safe_error = _provider_error(result) if not succeeded else None
         record_count = _record_count(result)
         tool_result = ToolResultMetadata(

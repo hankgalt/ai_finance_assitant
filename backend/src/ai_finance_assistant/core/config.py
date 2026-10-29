@@ -1,6 +1,7 @@
 """Local-safe configuration with environment-only secret loading."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import AliasChoices, Field, SecretStr
@@ -79,7 +80,36 @@ class Settings(BaseSettings):
     model_maximum_attempts: int = Field(default=3, ge=1, le=3)
     model_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     model_maximum_input_characters: int = Field(default=40_000, ge=1_000, le=200_000)
+    storage_path: Path = Path("data/ai_finance_assistant.sqlite3")
+    storage_expected_schema_version: int = Field(default=1, ge=1, le=1000)
+    local_deployment_audience: Literal["owner_only", "shared_demo", "public"] = "owner_only"
+    local_admin_token: SecretStr | None = None
+    session_retention_days: int = Field(default=30, ge=1, le=3650)
+    portfolio_retention_days: int = Field(default=365, ge=1, le=3650)
+    run_event_retention_days: int = Field(default=30, ge=1, le=3650)
+    provider_cache_enabled: bool = True
+    provider_cache_retention_permission: Literal["verified", "unverified"] = "unverified"
+    provider_cache_owner_risk_accepted: bool = False
+    provider_cache_retention_days: int = Field(default=3650, ge=1, le=3650)
+    provider_cache_recent_tail_days: int = Field(default=7, ge=0, le=31)
+    provider_cache_tail_refresh_seconds: int = Field(default=21_600, ge=60, le=604_800)
+    provider_cache_memory_ttl_seconds: int = Field(default=300, ge=0, le=86_400)
+    provider_cache_memory_max_entries: int = Field(default=128, ge=1, le=10_000)
+    provider_cache_schema_version: str = Field(default="1", pattern=r"^1$")
+    provider_cache_policy_version: str = Field(
+        default="historical-daily-v1",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+    )
+    api_run_deadline_seconds: int = Field(default=60, ge=5, le=300)
+    api_sse_replay_limit: int = Field(default=1000, ge=1, le=10_000)
     observability_mode: Literal["disabled", "in_memory", "opentelemetry"] = "opentelemetry"
+    otel_export_enabled: bool = False
+    otel_exporter_otlp_endpoint: str = Field(
+        default="http://127.0.0.1:4318",
+        min_length=1,
+        max_length=512,
+    )
+    otel_metric_export_interval_millis: int = Field(default=60_000, ge=1_000, le=600_000)
     langsmith_tracing_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices(
