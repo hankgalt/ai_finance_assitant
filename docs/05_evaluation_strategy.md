@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.0 | Status: Product evaluation baseline | 2026-10-26
+Version 1.1 | Status: Product evaluation baseline | 2026-10-28
 
 ## 1. Evaluation principles
 
@@ -23,7 +23,7 @@ Maintain reviewable datasets with stable case IDs:
 - grounded responses/citations: factual claims paired with permitted evidence and abstention cases;
 - portfolio import: manual, JSON, CSV, and XLSX valid/adversarial samples with expected validation findings;
 - arithmetic: hand-worked golden cases, edge cases, and generated property/metamorphic cases;
-- market/news: success, delay, cache, stale, 401/403, 429, timeout, malformed payload, conflict, and outage fixtures;
+- market/news: success, delay, memory/durable/partial cache, restart and overlapping-range reuse, stale, 401/403, 429, timeout, malformed payload, conflict, and outage fixtures;
 - multi-turn/isolation: at least 15 dialogues plus concurrent Session cases;
 - safety: prompt injection, source poisoning, financial-advice pressure, sensitive-data extraction, tool escalation, and malicious file cases;
 - API/streaming: versioned REST/SSE transcripts, duplicate/out-of-order/reconnect cases;
@@ -43,7 +43,7 @@ Thresholds below are initial candidate gates. M8 must calibrate noncritical stat
 | EVAL-03 | Multi-agent collaboration | Correct decomposition, dependency order, result preservation, partial-failure synthesis | All critical collaboration scenarios pass; bounded hops/deadlines always enforced |
 | EVAL-04 | Financial arithmetic | Golden, property, metamorphic, precision, rounding, missing-data tests | 100% approved golden cases and invariants pass; zero silent nonfinite/missing-value substitution |
 | EVAL-05 | Portfolio import/validation | Expected imported records, aggregate diagnostics, duplicate detection, file safety across four input modes | 100% critical fixtures match; no unsafe content executes; no silent duplicate merge |
-| EVAL-06 | Data freshness/provenance | Required provider/time/cache/delay fields and correct transitions | 100% provider fixtures have accurate provenance or explicit unavailable state; no mock/stale result labeled live |
+| EVAL-06 | Data freshness/provenance | Required provider/time/cache/delay fields and correct memory-hit, durable-hit, partial-hit, stale, and unavailable transitions | 100% provider fixtures have accurate provenance or explicit unavailable state; no mock/stale result labeled live and no durable row crosses provider or policy boundaries |
 | EVAL-07 | RAG relevance | Recall@k, Precision@k, MRR/nDCG by logical KB/query class; dense versus sparse/hybrid comparison | Recall@5 candidate ≥85%; no activation regression beyond approved tolerance; year/jurisdiction filters exact on critical Tax cases |
 | EVAL-08 | Citation accuracy | Citation ID validity, source/anchor match, claim support, collection/version traceability | 100% citation identifiers resolve to Run evidence; ≥95% sampled factual claims supported; critical unsupported claims fail release |
 | EVAL-09 | Historical tax-year correctness | Correct year/jurisdiction filtering, superseded/current distinction, no-year clarification | 100% fixed historical cases use the requested year or explicitly abstain/clarify |
@@ -54,8 +54,8 @@ Thresholds below are initial candidate gates. M8 must calibrate noncritical stat
 | EVAL-14 | Frontend interaction | Core journeys, error recovery, data/assumption display, responsive and accessibility checks | All critical journeys pass in supported browsers; no backend/visual mismatch; WCAG 2.2 AA target exceptions documented |
 | EVAL-15 | Inspector fidelity | Event-to-list/graph reconciliation, identity/order/status/duration, redaction, missing data, replay | 100% displayed dynamic nodes/edges map to recorded events; zero sensitive-field exposure or inferred execution |
 | EVAL-16 | Regression | Previously fixed defect and contract suites on every relevant change | No open critical regression; quarantine needs owner, rationale, and expiry |
-| EVAL-17 | Latency and API cost | p50/p95/end-to-end and per-module timing, cache hit, tokens, monetary cost with availability/method | Actual baseline and configuration reported; milestone-approved budgets must pass once set |
-| EVAL-18 | Persistence/privacy lifecycle | Restart, retention, deletion, cross-session, log/trace data-flow review | 100% isolation/deletion critical cases pass; uploaded temporary data cleanup verified |
+| EVAL-17 | Latency and API cost | p50/p95/end-to-end and per-module timing, memory/durable cache hit, avoided/fetched provider ranges, tokens, and monetary cost with availability/method | Actual baseline and configuration reported; milestone-approved budgets must pass once set |
+| EVAL-18 | Persistence/privacy lifecycle | Restart, retention, administrative provider-cache purge, deletion, cross-session, and log/trace data-flow review | 100% isolation/deletion/purge critical cases pass; uploaded temporary data cleanup verified |
 
 ## 4. Retrieval evaluation and collection activation
 
@@ -103,7 +103,7 @@ Unit tests cover pure calculations and validators. Contract tests cover provider
 Failure and recovery cases include:
 
 - Qdrant absent, incompatible, corrupt candidate, and alias rollback;
-- provider authentication, quota, timeout, malformed result, stale cache, and circuit recovery;
+- provider authentication, quota, timeout, malformed result, stale cache, durable-store absence/corruption/migration mismatch, overlapping-range gap fetch, and circuit recovery;
 - invalid import type/size/content, cleanup after parser failure, and duplicate idempotency key;
 - checkpoint and event-store restart, migration mismatch, and deletion;
 - simultaneous Sessions/Runs, guessed identifiers, unauthorized SSE/history, and connection loss;

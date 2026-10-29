@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.0 | Status: Product architecture baseline | 2026-10-26
+Version 1.1 | Status: Product architecture baseline | 2026-10-28
 
 ## 1. Architecture principles
 
@@ -192,7 +192,11 @@ The provider policy defines rate limits, concurrency, timeout, retry eligibility
 
 News preserves publisher and publication time and distinguishes source text from generated interpretation. Market statistics are computed from returned structured series rather than model guesses.
 
-M3 implements the application ports with deterministic credential-free adapters, conditional Alpha Vantage and Massive market adapters, and a conditional Tavily news adapter under ADR-024/025. `AIFA_PROVIDER_MODE` selects one bundle and `AIFA_MARKET_DATA_PROVIDER` selects one live market adapter before workflow execution. Each bundle uses one mode and one market adapter; missing credentials, insufficient budget, quota failure, or failed readiness returns an explicit unavailable state and never switches a running workflow to fake data or another live provider. The initial bounded in-memory cache is scoped to the provider process/workflow and is not a durable user record. M5 may add an approved durable cache adapter only under the same provenance and provider-rights rules.
+M3 implements the application ports with deterministic credential-free adapters, conditional Alpha Vantage and Massive market adapters, and a conditional Tavily news adapter under ADR-024/025. `AIFA_PROVIDER_MODE` selects one bundle and `AIFA_MARKET_DATA_PROVIDER` selects one live market adapter before workflow execution. Each bundle uses one mode and one market adapter; missing credentials, insufficient budget, quota failure, or failed readiness returns an explicit unavailable state and never switches a running workflow to fake data or another live provider. The initial bounded in-memory cache is scoped to the provider process/workflow and is not a durable user record.
+
+M5 implements ADR-026 as a two-tier durable provider cache. The memory tier serves hot exact requests; the database tier stores normalized daily bars independently by provider, canonical instrument, interval, trading date, currency, adjustment basis, and schema/policy version. A range read reports complete, partial, stale, or missing coverage, fetches only provider-specific gaps plus a configurable recent refresh window, and upserts without combining providers. Every returned series retains the source provider, original market and retrieval timestamps, freshness, cache state, and applicable entitlement/retention label. Raw provider payloads, credentials, user portfolio context, and news article bodies are not stored in this cache. Current quotes and news keep short endpoint-specific retention unless a later decision approves a different lifecycle.
+
+Owner-only local mode may explicitly opt into long-term historical-bar retention under the ADR-026 risk exception when cache permission has not been confirmed. The setting and resulting records must state that permission is unverified, support administrative purge, and cannot satisfy readiness for a shared demonstration or public deployment. This local product-owner risk acceptance does not amend provider terms or establish redistribution rights.
 
 Alpha Vantage quote currency is caller-supplied because the selected quote/daily endpoints do not return a currency. Massive uses the previous-day and raw daily-aggregate endpoints; its quote currency is likewise caller-supplied, and Basic data remains end-of-day with a rolling history window. Neither adapter presents these responses as realtime. Massive individual-plan data is owner-only and cannot be shown to testers or viewers without approved Business/commercial rights. Tavily is a discovery provider, not a publisher: the adapter disables generated answers and raw content, preserves the source URL/host, and labels `published_date` as provider-estimated or unavailable. Only a bounded public query may leave the backend; holdings, transactions, credentials, and user-specific financial context are prohibited.
 
@@ -261,7 +265,7 @@ Data classes and initial local policy:
 | Conversation checkpoints | Follow-up context | Durable local mode with documented retention | Owning Session; delete with Session |
 | Run events/traces | Inspector and audit | Privacy-filtered and time-bounded | Owning Session; deletion supported |
 | Knowledge sources/collections | Shared education evidence | Versioned according to source rights and rollback policy | Administrative ingestion role; user deletion does not remove shared sources |
-| Provider cache | Reliability and rate control | Endpoint-specific bounded TTL and provider terms | Server only; never presented without provenance |
+| Durable provider cache | Reliability, quota control, and reusable historical ranges | Normalized historical bars survive restart; recent bars are revalidated; quote/news retention stays endpoint-specific; local owner-only long retention requires explicit unverified-rights risk acceptance | Server only; provider/schema/policy scoped, administratively purgeable, and never presented without provenance |
 
 The local demo is unauthenticated only when explicitly configured and bound for local use. Opaque identifiers are not authentication. Every resource lookup and stream still checks Session scope to prevent accidental cross-session leakage. A public deployment requires the ADR-019 production controls before release.
 

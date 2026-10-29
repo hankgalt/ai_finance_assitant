@@ -1,6 +1,6 @@
 # AI Finance Assistant — Product requirements specification
 
-Version 1.2 | Status: Product architecture baseline | 2026-10-27
+Version 1.3 | Status: Product architecture baseline | 2026-10-28
 
 ## 1. Mission and product posture
 
@@ -134,12 +134,12 @@ The import path is provider-independent and must work locally without network ac
 | QR-003 Authentication/authorization | The private demo binds to an explicitly local interface and is labeled unauthenticated; any non-loopback private deployment requires separately approved strong authentication and per-resource authorization | Identity provider, strong authentication, per-resource authorization, administrative roles | Negative authorization, bind-mode, and cross-session tests |
 | QR-004 Session isolation | State, streams, caches, checkpoints, and traces are keyed and checked by user/session context | Tenant isolation review and penetration testing | Concurrent two-session regression suite |
 | QR-005 Secrets | Secrets come from environment or an approved local secret mechanism and are redacted from errors and traces | Managed secret store, rotation, least-privilege credentials | Repository scan and forced-error tests |
-| QR-006 Retention/deletion | Define local retention per artifact; support deletion of imported files, normalized records, sessions, runs, and traces; knowledge provenance is retained independently | User-facing export/deletion workflow, retention enforcement jobs, legal-policy review | Lifecycle and deletion tests |
+| QR-006 Retention/deletion | Define local retention per artifact; support deletion of imported files, normalized records, sessions, runs, traces, and administrative purging of the durable provider cache; knowledge provenance is retained independently | User-facing export/deletion workflow, retention enforcement jobs, legal-policy review | Lifecycle, cache-purge, and deletion tests |
 | QR-007 Observability/auditability | Structured correlation, routing, provider/retrieval provenance, failure, latency, and measured usage events without hidden reasoning or raw financial records | Centralized access-controlled logs, alerting, audit retention, tamper controls | Trace-schema, redaction, and incident fixture tests |
 | QR-008 Retrieval quality | Fixed qrels, relevance thresholds, valid citations, collection/version reporting, and explicit no-evidence behavior | Drift monitoring and reviewed activation workflow | Recall/ranking/citation and historical-year tests |
 | QR-009 Calculation accuracy | Decimal or a documented numerical representation, explicit rounding/currency policy, deterministic results, and 100% pass on approved golden cases | Independent financial-model validation and change control | Golden, property, metamorphic, and edge tests |
 | QR-010 Reliability | Typed failures, bounded retries with jitter, timeouts, idempotent writes, partial results, and no unlabeled fallback data | Availability objectives, durable queues where needed, disaster recovery and load testing | Timeout, retry, duplicate, restart, and partial-result tests |
-| QR-011 Provider limits/caching | Provider-specific rate policy, bounded caches, provenance/freshness, circuit behavior, and a predeclared private-demo request budget that stays within the configured entitlement | Distributed quota coordination and contractual data entitlements | Budget exhaustion, 429, stale-cache, invalid-data, and outage tests |
+| QR-011 Provider limits/caching | Provider-specific rate policy, a bounded memory cache, a durable normalized cache for reusable historical market observations, provenance/freshness, circuit behavior, and a predeclared private-demo request budget that stays within the configured entitlement | Distributed quota coordination, contractual retention/display rights, and reviewed provider-specific retention | Restart reuse, overlapping-range gap fetch, budget exhaustion, 429, stale-cache, invalid-data, and outage tests |
 | QR-012 LLM quality and safety | Versioned prompts/models, structured results, grounding checks, tool allow-lists, bounded steps, prompt-injection treatment of external text as data, and financial safety review | Continuous red-team program, model-risk governance, abuse controls | Labeled routing/grounding/injection/advice suite |
 | QR-013 Accessibility | WCAG 2.2 AA design target; keyboard access, semantic labels, focus management, contrast, and nonvisual tables for charts/graphs | Formal accessibility audit with assistive technologies | Automated checks plus keyboard/screen-reader review |
 | QR-014 Performance/cost | Record p50/p95 task latency, provider/cache timing, tokens and estimated cost when supplied; show “not available” otherwise | Calibrated objectives, capacity tests, budgets and alerts | Versioned benchmark report |
@@ -175,7 +175,7 @@ Brokerage execution, automated financial transactions, custody, bank aggregation
 |---|---|---|---|
 | PR-001–PR-002 | ADR-001/002; design §2–3 | M4 | EV-01/02, routing and collaboration suites |
 | PR-003, PR-009 | ADR-009/018; design §5–6 | M2, M6 | EV-03/04, arithmetic and import suites |
-| PR-004, PR-006 | ADR-006; design §9 | M3–M4 | EV-05/07/09 |
+| PR-004, PR-006 | ADR-006/026; design §9 | M3–M5 | EV-05/07/09 |
 | PR-005 | ADR-009; design §6 | M2, M6 | EV-06 |
 | PR-007–PR-008 | ADR-016/017; design §7–8 | M1, M4 | EV-01/02/08/13/14 |
 | PR-010–PR-012 | ADR-007/013/014/015; design §10–11 | M5–M7 | EV-12 and browser/contract suites |

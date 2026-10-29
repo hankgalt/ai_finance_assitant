@@ -34,6 +34,9 @@
 
 **Pricing provenance:** The provider, retrieval time, market-data time, delay status, and cache status associated with a price.
 
+**Durable provider cache:** A server-side store of normalized provider observations retained across application restarts for bounded reuse. It remains derived provider data with freshness and rights metadata, not an authoritative market-data warehouse.
+_Avoid_: Market-data archive, source-of-truth price store
+
 **Production hardening:** Controls required before operating as a public multi-user financial product, beyond the initial local release.
 
 **Run:** One orchestrated execution of a user request. A Run has an execution identifier and belongs to a Session and Workflow.

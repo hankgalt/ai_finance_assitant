@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 1.7 | Status: Approved sequence; M0–M3 complete, later milestones planned | 2026-10-28
+Version 1.8 | Status: Approved sequence; M0–M3 complete, later milestones planned | 2026-10-28
 
 ## 1. Delivery rules
 
@@ -132,17 +132,18 @@ Telemetry configuration is environment-driven and disabled safely when no export
 - Versioned REST resources for Sessions, chat Runs, Portfolios/import validation, Portfolio Snapshots, market queries, goal projections, and authorized trace history.
 - SSE for conversational chunks and RunEvents with documented replay or REST recovery.
 - Durable local adapters for checkpoints, saved portfolios, run summaries/events, and deletion; idempotency for artifact-creating requests.
+- An application-owned durable provider-cache port and relational adapter for normalized historical daily bars, with a bounded memory front cache, range-coverage and gap detection, recent-tail revalidation, provider/schema/policy isolation, concurrent-request deduplication, and administrative purge. Current quotes and news retain short endpoint-specific lifecycles unless separately approved.
 - OpenAPI-driven or contract-verified frontend types and readiness for storage/Qdrant/providers.
 - FastAPI and outbound-client OpenTelemetry instrumentation with W3C trace-context propagation; JSON logs enriched with trace, span, request, execution, and Run identifiers when available.
 - OTLP/Collector configuration for enabled signals, with backend request/error/latency, provider/retrieval timing, retry/rate-limit, cache, and persistence metrics using bounded low-cardinality attributes.
 
-**Dependencies:** M1–M4.
+**Dependencies:** M1–M4. ADR-026 validation must select the concrete local relational store and record provider-specific refresh, retention, migration, and risk-acceptance behavior before implementation.
 
-**Acceptance:** REST is authoritative; reconnect deduplicates events; cross-session reads/streams fail; restart behavior matches configured retention; deletion removes defined user artifacts; partial and not-ready states use stable errors; inbound and outbound trace context correlates with logs and RunEvents; telemetry remains non-blocking and no metric label or exported attribute exposes protected or unbounded identifiers.
+**Acceptance:** REST is authoritative; reconnect deduplicates events; cross-session reads/streams fail; restart behavior matches configured retention; deletion removes defined user artifacts; partial and not-ready states use stable errors; inbound and outbound trace context correlates with logs and RunEvents; telemetry remains non-blocking and no metric label or exported attribute exposes protected or unbounded identifiers. A complete, fresh historical range survives restart without a provider call; an overlapping or partially stale request fetches only missing/provider-approved refresh coverage; stored observations never cross provider, adjustment, currency, or schema/policy boundaries; and every response truthfully distinguishes memory hit, durable hit, partial hit, stale, and unavailable states. Owner-only unverified-rights retention requires explicit local risk acceptance and cannot pass shared-demo or public-deployment readiness.
 
-**Tests:** OpenAPI snapshots/contracts, REST/SSE framing, last-event/recovery behavior, concurrent Runs, authorization scope, restart, idempotency, deletion, migration, CORS/local bind, resource limits, W3C context propagation, log/trace correlation, metric cardinality, health-endpoint exclusion, and unavailable Collector/exporter behavior.
+**Tests:** OpenAPI snapshots/contracts, REST/SSE framing, last-event/recovery behavior, concurrent Runs, authorization scope, restart, idempotency, deletion, migration, CORS/local bind, resource limits, W3C context propagation, log/trace correlation, metric cardinality, health-endpoint exclusion, and unavailable Collector/exporter behavior. Provider-cache tests cover exact and overlapping ranges, gap-only fetches, recent-tail refresh, stale fallback, no-call restart reuse, concurrent request coalescing, provider/currency/adjustment/schema isolation, malformed or migrated rows, purge, retention expiry, and owner-only versus shared/public rights gates.
 
-**Evidence:** Interface specification, migration records, contract test report, SSE transcript, lifecycle/isolation evidence, correlated FastAPI/module trace sample, metric inventory, Collector/exporter configuration, and documented local security posture.
+**Evidence:** Interface specification, migration records, contract test report, SSE transcript, lifecycle/isolation evidence, provider call-count and restart-reuse transcripts, cache schema and purge record, retention/rights configuration, correlated FastAPI/module trace sample, metric inventory, Collector/exporter configuration, and documented local security posture.
 
 ### M6 — React product experiences
 
