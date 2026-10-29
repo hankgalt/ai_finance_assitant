@@ -284,6 +284,7 @@ class MassiveMarketDataProvider:
             ),
             {"adjusted": "false", "sort": "asc", "limit": "5000"},
             timeout,
+            accepted_statuses=frozenset({"OK", "DELAYED"}),
         )
         if payload.get("next_url"):
             raise _malformed("Massive daily-history response was unexpectedly paginated.")
@@ -335,7 +336,11 @@ class MassiveMarketDataProvider:
             data_as_of=(
                 datetime.combine(latest, datetime.min.time(), tzinfo=UTC) if latest else None
             ),
-            delay_status=DelayStatus.HISTORICAL,
+            delay_status=(
+                DelayStatus.DELAYED
+                if str(payload.get("status")).upper() == "DELAYED"
+                else DelayStatus.HISTORICAL
+            ),
             timestamp_quality=(
                 TimestampQuality.DATE_ONLY if bars else TimestampQuality.UNAVAILABLE
             ),
@@ -347,6 +352,8 @@ class MassiveMarketDataProvider:
         path: str,
         params: dict[str, str],
         timeout: float,
+        *,
+        accepted_statuses: frozenset[str] = frozenset({"OK"}),
     ) -> dict[str, Any]:
         assert self._api_key is not None
         try:
@@ -378,7 +385,7 @@ class MassiveMarketDataProvider:
         if "status" not in payload:
             raise _malformed("Massive response omitted status.")
         status = payload.get("status")
-        if status is not None and str(status).upper() != "OK":
+        if status is not None and str(status).upper() not in accepted_statuses:
             raise ProviderCallError(
                 ProviderErrorCode.INVALID_REQUEST,
                 "Massive returned a non-success response.",

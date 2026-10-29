@@ -1,0 +1,28 @@
+{
+  "schema_version": "1",
+  "authority": "FastAPI OpenAPI",
+  "frontend_type_file": "frontend/src/types/contracts.ts",
+  "required_paths": {
+    "/api/v1/sessions": ["post"],
+    "/api/v1/sessions/{session_id}": ["get"],
+    "/api/v1/sessions/{session_id}/runs": ["get", "post"],
+    "/api/v1/sessions/{session_id}/runs/{execution_id}/stream": ["get"],
+    "/api/v1/sessions/{session_id}/portfolio-imports/validate": ["post"],
+    "/api/v1/sessions/{session_id}/portfolios": ["get", "post"],
+    "/api/v1/sessions/{session_id}/portfolios/{portfolio_id}/snapshots": ["get", "post"],
+    "/api/v1/sessions/{session_id}/market/quotes": ["post"],
+    "/api/v1/sessions/{session_id}/market/history": ["post"],
+    "/api/v1/sessions/{session_id}/goal-projections": ["post"],
+    "/api/v1/telemetry/browser": ["post"]
+  },
+  "required_frontend_types": [
+    "AgentResult",
+    "PortfolioImportApiRequest",
+    "PortfolioImportResult",
+    "PortfolioSnapshot",
+    "QuoteResult",
+    "HistoricalResult",
+    "GoalProjectionResult",
+    "BrowserTelemetryEvent"
+  ]
+}

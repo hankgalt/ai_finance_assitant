@@ -54,5 +54,12 @@
     "filters": {"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"},
     "expected_document_ids": ["irs-p17-2025"],
     "critical_filter": true
+  },
+  {
+    "case_id": "tax-2025-sep-ira",
+    "query": "What is a SEP IRA and how does a simplified employee pension plan work?",
+    "filters": {"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["irs-p560-2025"],
+    "critical_filter": true
   }
 ]

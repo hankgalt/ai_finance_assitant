@@ -1,11 +1,12 @@
 {
   "schema_version": "1",
   "dataset": "data/workflow/routing_cases.v1.json",
-  "case_count": 40,
-  "exact_match_count": 40,
+  "evaluation_mode": "scripted_model_outputs",
+  "case_count": 42,
+  "exact_match_count": 42,
   "exact_match_rate": 1.0,
   "case_classes": {
-    "single_domain": {"count": 24, "exact": 24},
+    "single_domain": {"count": 26, "exact": 26},
     "multi_domain": {"count": 8, "exact": 8},
     "clarification": {"count": 4, "exact": 4},
     "checkpoint_follow_up": {"count": 4, "exact": 4}
@@ -16,10 +17,10 @@
     "market_analysis": {"expected": 8, "selected": 8},
     "goal_planning": {"expected": 8, "selected": 8},
     "news_synthesizer": {"expected": 8, "selected": 8},
-    "tax_education": {"expected": 8, "selected": 8}
+    "tax_education": {"expected": 10, "selected": 10}
   },
   "limitations": [
-    "This is a deterministic development dataset, not a representative production traffic sample.",
-    "M8 must expand and independently review routing and safety evaluation before release qualification."
+    "This suite validates the router/model contract and graph selection with scripted credential-free model outputs; it does not measure live-LLM semantic routing accuracy.",
+    "M8 must run, expand, and independently review live-model routing and safety evaluation before release qualification."
   ]
 }

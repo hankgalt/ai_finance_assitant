@@ -2,7 +2,11 @@
 
 from typing import Protocol
 
-from ai_finance_assistant.llm.models import ModelAdapterResult, ModelRequest
+from ai_finance_assistant.llm.models import (
+    ModelAdapterResult,
+    ModelRequest,
+    RoutingModelRequest,
+)
 
 
 class ModelAdapter(Protocol):
@@ -15,4 +19,9 @@ class ModelAdapter(Protocol):
     @property
     def prompt_version(self) -> str: ...
 
+    @property
+    def routing_prompt_version(self) -> str: ...
+
     def generate(self, request: ModelRequest) -> ModelAdapterResult: ...
+
+    def route(self, request: RoutingModelRequest) -> ModelAdapterResult: ...

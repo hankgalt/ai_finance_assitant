@@ -53,6 +53,7 @@ def test_application_creates_one_provider_bundle_per_run() -> None:
         settings=Settings(
             mode="test",
             provider_mode="credential_free",
+            model_mode="credential_free",
             langsmith_tracing_enabled=False,
         ),
         retrieval=StaticKnowledgeRetrieval({LogicalKnowledgeBase.FINANCE: (evidence,)}),

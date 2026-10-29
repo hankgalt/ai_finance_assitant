@@ -1,7 +1,7 @@
 """Specialist agents that interpret shared-module results without owning their rules."""
 
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from functools import partial
 from typing import TypeVar
@@ -399,23 +399,29 @@ class NewsSynthesizerAgent:
 
     def invoke(self, request: AgentRequest) -> AgentResult:
         context = _context(request, self._contexts, NewsAgentContext)
+        warnings: tuple[str, ...] = ()
         if context is None:
-            return _clarification_result(
-                self.agent_id,
-                "Provide a public topic and bounded date window for news synthesis.",
+            search_request = _default_public_ticker_news_request(request.message)
+            if search_request is None:
+                return _clarification_result(
+                    self.agent_id,
+                    "Provide a public topic or uppercase ticker for news synthesis.",
+                )
+            warnings = (
+                "No date window was specified; using the latest 7 days for public ticker news.",
+            )
+        else:
+            search_request = NewsSearchRequest(
+                query=context.query,
+                symbols=context.symbols,
+                start_date=context.start_date,
+                end_date=context.end_date,
+                max_results=5,
             )
         result = self._runtime.tool(
             request,
             name="news.search",
-            operation=lambda: self._news.search(
-                NewsSearchRequest(
-                    query=context.query,
-                    symbols=context.symbols,
-                    start_date=context.start_date,
-                    end_date=context.end_date,
-                    max_results=5,
-                )
-            ),
+            operation=lambda: self._news.search(search_request),
         )
         if result.status not in {ProviderStatus.SUCCESS, ProviderStatus.EMPTY}:
             return _error_result(self.agent_id, _provider_result_error(result.error))
@@ -456,7 +462,7 @@ class NewsSynthesizerAgent:
                 for item in result.items
             ),
             as_of=result.provenance.data_as_of,
-            warnings=tuple(item.message for item in result.warnings),
+            warnings=warnings + tuple(item.message for item in result.warnings),
         )
 
 
@@ -477,13 +483,12 @@ class TaxEducationAgent:
                 ),
             )
         match = re.search(r"\b(20\d{2})\b", request.message)
-        tax_year = int(match.group(1)) if match else datetime.now(UTC).year
-        warnings = () if match else (f"Tax year {tax_year} was assumed from the current year.",)
+        requested_tax_year = int(match.group(1)) if match else None
         try:
             retrieval = self._runtime.retrieve(
                 request,
                 logical_kb=LogicalKnowledgeBase.TAX,
-                tax_year=tax_year,
+                tax_year=requested_tax_year,
             )
         except AgentRuntimeFailure as failure:
             return _error_result(self.agent_id, failure.error)
@@ -496,10 +501,40 @@ class TaxEducationAgent:
                     message="No authoritative evidence matched the requested tax year.",
                 ),
             )
+        tax_year = requested_tax_year
+        warnings: tuple[str, ...] = ()
+        if tax_year is None:
+            matching_years = {
+                year
+                for item in retrieval.evidence
+                for year in item.tax_years
+                if year <= datetime.now(UTC).year
+            }
+            if not matching_years:
+                return _error_result(
+                    self.agent_id,
+                    SafeError(
+                        code="TAX_EVIDENCE_NOT_FOUND",
+                        category=ErrorCategory.NO_EVIDENCE,
+                        message="No authoritative evidence matched the requested tax year.",
+                    ),
+                )
+            tax_year = max(matching_years)
+            retrieval = retrieval.model_copy(
+                update={
+                    "evidence": tuple(
+                        item for item in retrieval.evidence if tax_year in item.tax_years
+                    )
+                }
+            )
+            warnings = (
+                "No tax year was specified; using the latest matching authoritative "
+                f"tax year {tax_year}.",
+            )
         facts: tuple[dict[str, JsonValue], ...] = (
             {
                 "tax_year": tax_year,
-                "jurisdiction": "US-federal",
+                "jurisdiction": "US-Federal",
                 "collection_version": retrieval.evidence[0].collection_version,
             },
         )
@@ -569,6 +604,20 @@ def _context(
         if isinstance(value, context_type):
             return value
     return None
+
+
+def _default_public_ticker_news_request(message: str) -> NewsSearchRequest | None:
+    symbols = tuple(dict.fromkeys(re.findall(r"\b[A-Z][A-Z0-9.-]{0,9}\b", message)))[:10]
+    if not symbols:
+        return None
+    end_date = datetime.now(UTC).date()
+    return NewsSearchRequest(
+        query=f"{' '.join(symbols)} company financial news",
+        symbols=symbols,
+        start_date=end_date - timedelta(days=7),
+        end_date=end_date,
+        max_results=5,
+    )
 
 
 def _provider_result_error(error: object | None) -> SafeError:

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from ai_finance_assistant.knowledge.cli import _next_run_path
+from ai_finance_assistant.knowledge.cli import _load_qrels, _next_run_path
 from ai_finance_assistant.knowledge.evaluation import evaluate_candidate
 from ai_finance_assistant.knowledge.ingestion import OfflineIngestionService, document_versions
 from ai_finance_assistant.knowledge.memory_store import InMemoryKnowledgeStore
@@ -21,7 +21,11 @@ from ai_finance_assistant.knowledge.models import (
     SourceStatus,
     SourceType,
 )
-from ai_finance_assistant.knowledge.registry import CachedSourceFetcher, FixtureSourceFetcher
+from ai_finance_assistant.knowledge.registry import (
+    CachedSourceFetcher,
+    FixtureSourceFetcher,
+    load_source_registry,
+)
 from ai_finance_assistant.knowledge.representations import DeterministicTestEncoder
 from ai_finance_assistant.knowledge.retrieval import KnowledgeRetriever
 
@@ -93,6 +97,24 @@ def _service(
 def test_registry_rejects_unreviewed_enabled_source() -> None:
     with pytest.raises(ValidationError, match="only approved sources"):
         _source("pending", status=SourceStatus.PENDING_REVIEW)
+
+
+def test_governed_tax_registry_includes_publication_560_for_sep_education() -> None:
+    data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
+    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    source = next(item for item in registry.sources if item.source_id == "irs-p560-2025")
+    qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+    sep_case = next(item for item in qrels if item.case_id == "tax-2025-sep-ira")
+
+    assert source.status == SourceStatus.APPROVED
+    assert source.ingestion_enabled is True
+    assert source.tax_years == (2025,)
+    assert source.jurisdiction == "US-Federal"
+    assert source.permitted_use.ai_processing_allowed is True
+    assert source.permitted_use.redistribution_allowed is True
+    assert sep_case.expected_document_ids == (source.source_id,)
+    assert sep_case.filters.tax_year == 2025
+    assert sep_case.filters.jurisdiction == "US-Federal"
 
 
 def test_source_cache_reuses_checksum_verified_body(tmp_path: Path) -> None:

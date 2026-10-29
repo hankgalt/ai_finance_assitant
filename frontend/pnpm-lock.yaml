@@ -13,6 +13,9 @@ importers:
       "@xyflow/react":
         specifier: ^12.9.0
         version: 12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(immer@11.2.9)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      lucide-react:
+        specifier: ^0.468.0
+        version: 0.468.0(react@19.3.1)
       react:
         specifier: 19.3.1
         version: 19.3.1
@@ -22,10 +25,19 @@ importers:
       recharts:
         specifier: ^3.3.0
         version: 3.10.1(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react-is@19.3.1)(react@19.3.1)(redux@5.0.1)
+      web-vitals:
+        specifier: ^5.1.0
+        version: 5.3.0
     devDependencies:
+      "@axe-core/playwright":
+        specifier: ^4.10.2
+        version: 4.14.0(playwright-core@1.64.1)
       "@eslint/js":
         specifier: ^9.38.0
         version: 9.39.5
+      "@playwright/test":
+        specifier: ^1.55.0
+        version: 1.64.1
       "@tailwindcss/vite":
         specifier: ^4.1.0
         version: 4.3.3(vite@8.3.5(@types/node@24.19.2)(jiti@2.7.0))
@@ -111,6 +123,15 @@ packages:
       {
         integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==,
       }
+
+  "@axe-core/playwright@4.14.0":
+    resolution:
+      {
+        integrity: sha512-SGUhG5PIHd2eMdpgBF2PyQLOhX+qyDR2PT4cmoS4Qk2ak+jX/rrSvst9l0PGv5WTHolKpUMvVmoHpr4cZgf1RQ==,
+      }
+    engines: { node: ">=22.12.0" }
+    peerDependencies:
+      playwright-core: ">= 1.0.0"
 
   "@babel/code-frame@7.29.7":
     resolution:
@@ -436,6 +457,14 @@ packages:
       {
         integrity: sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q==,
       }
+
+  "@playwright/test@1.64.1":
+    resolution:
+      {
+        integrity: sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==,
+      }
+    engines: { node: ">=20" }
+    hasBin: true
 
   "@reduxjs/toolkit@2.13.0":
     resolution:
@@ -1188,6 +1217,13 @@ packages:
         integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==,
       }
     engines: { node: ">=12" }
+
+  axe-core@4.14.0:
+    resolution:
+      {
+        integrity: sha512-9WTZxEjsZ7b13TH8JPmbV2z8CHbl80/2hm3XPEG4JgNdQLK81IBRXmSxHfMAOkSqQeRxT/0dwNDz2GOm3zzpcQ==,
+      }
+    engines: { node: ">=4" }
 
   balanced-match@1.0.2:
     resolution:
@@ -2209,6 +2245,14 @@ packages:
         integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==,
       }
 
+  lucide-react@0.468.0:
+    resolution:
+      {
+        integrity: sha512-6koYRhnM2N0GGZIdXzSeiNwguv1gt/FAjZOiPl76roBi3xKEXa4WmfpxgQwTTL4KipXjefrnf3oV4IsYhi4JFA==,
+      }
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
+
   lz-string@1.5.0:
     resolution:
       {
@@ -2348,6 +2392,22 @@ packages:
         integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==,
       }
     engines: { node: ">=12" }
+
+  playwright-core@1.64.1:
+    resolution:
+      {
+        integrity: sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==,
+      }
+    engines: { node: ">=20" }
+    hasBin: true
+
+  playwright@1.64.1:
+    resolution:
+      {
+        integrity: sha512-HCrVhHr5QQuwYoswEUGTb7gGp522yflbv/ST8nF4sFWGuLjQCt17Q/EubpGGSNKYn1tsTCPZxqHhHCfVURu7UA==,
+      }
+    engines: { node: ">=20" }
+    hasBin: true
 
   postcss@8.5.31:
     resolution:
@@ -2820,6 +2880,12 @@ packages:
       }
     engines: { node: ">=18" }
 
+  web-vitals@5.3.0:
+    resolution:
+      {
+        integrity: sha512-q6LWsLatGYZp5VGBIOvbTj6JBV2nOmC8KvWztXBmwJcfFAzhwKwbOxhUH306XY3CcaZDUlSmSuNPBsCn0bFu+g==,
+      }
+
   webidl-conversions@8.0.1:
     resolution:
       {
@@ -2967,6 +3033,11 @@ snapshots:
       lru-cache: 11.5.3
 
   "@asamuzakjp/nwsapi@2.3.9": {}
+
+  "@axe-core/playwright@4.14.0(playwright-core@1.64.1)":
+    dependencies:
+      axe-core: 4.14.0
+      playwright-core: 1.64.1
 
   "@babel/code-frame@7.29.7":
     dependencies:
@@ -3178,6 +3249,10 @@ snapshots:
       "@jridgewell/sourcemap-codec": 1.6.0
 
   "@oxc-project/types@0.155.0": {}
+
+  "@playwright/test@1.64.1":
+    dependencies:
+      playwright: 1.64.1
 
   "@reduxjs/toolkit@2.13.0(react-redux@9.3.0(@types/react@19.3.0)(react@19.3.1)(redux@5.0.1))(react@19.3.1)":
     dependencies:
@@ -3609,6 +3684,8 @@ snapshots:
   aria-query@5.3.2: {}
 
   assertion-error@2.0.1: {}
+
+  axe-core@4.14.0: {}
 
   balanced-match@1.0.2: {}
 
@@ -4144,6 +4221,10 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
+  lucide-react@0.468.0(react@19.3.1):
+    dependencies:
+      react: 19.3.1
+
   lz-string@1.5.0: {}
 
   magic-string@0.30.21:
@@ -4206,6 +4287,12 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.64.1: {}
+
+  playwright@1.64.1:
+    dependencies:
+      playwright-core: 1.64.1
 
   postcss@8.5.31:
     dependencies:
@@ -4467,6 +4554,8 @@ snapshots:
   w3c-xmlserializer@5.0.0:
     dependencies:
       xml-name-validator: 5.0.0
+
+  web-vitals@5.3.0: {}
 
   webidl-conversions@8.0.1: {}
 

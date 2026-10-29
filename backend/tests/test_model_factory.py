@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from pydantic import SecretStr
@@ -123,3 +124,23 @@ def test_openai_standard_environment_key_is_supported(monkeypatch: MonkeyPatch) 
 
     assert settings.openai_api_key is not None
     assert settings.openai_api_key.get_secret_value() == "openai-fixture"
+
+
+def test_ordinary_tests_ignore_local_dotenv(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "AIFA_MODE=production\n"
+        "AIFA_PROVIDER_MODE=live\n"
+        "AIFA_MODEL_MODE=openai_live\n"
+        "AIFA_OPENAI_API_KEY=must-not-load\n"
+    )
+
+    settings = Settings()
+
+    assert settings.mode == "test"
+    assert settings.provider_mode == "credential_free"
+    assert settings.model_mode == "credential_free"
+    assert settings.openai_api_key is None

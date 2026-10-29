@@ -10,6 +10,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -17,11 +18,15 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.0",
     "@xyflow/react": "^12.9.0",
+    "lucide-react": "^0.468.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "recharts": "^3.3.0"
+    "recharts": "^3.3.0",
+    "web-vitals": "^5.1.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.55.0",
     "@eslint/js": "^9.38.0",
     "@tailwindcss/vite": "^4.1.0",
     "@testing-library/jest-dom": "6.9.1",

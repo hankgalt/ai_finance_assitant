@@ -9,7 +9,11 @@ from openai import OpenAI
 from ai_finance_assistant.core.config import Settings
 from ai_finance_assistant.llm.errors import ModelErrorCode, ModelProviderError
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
-from ai_finance_assistant.llm.models import ModelAdapterResult, ModelRequest
+from ai_finance_assistant.llm.models import (
+    ModelAdapterResult,
+    ModelRequest,
+    RoutingModelRequest,
+)
 from ai_finance_assistant.llm.openai import (
     OPENAI_PROMPT_VERSION,
     OpenAIClient,
@@ -21,12 +25,17 @@ from ai_finance_assistant.llm.ports import ModelAdapter
 class UnavailableModelAdapter:
     provider_id = "openai"
     prompt_version = OPENAI_PROMPT_VERSION
+    routing_prompt_version = "openai-routing-system-v1"
 
     def __init__(self, *, model_id: str, error: ModelProviderError) -> None:
         self.model_id = model_id
         self._error = error
 
     def generate(self, request: ModelRequest) -> ModelAdapterResult:
+        del request
+        raise self._error
+
+    def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
         del request
         raise self._error
 

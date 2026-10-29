@@ -4,6 +4,8 @@ Status: Complete
 
 Completed: 2026-10-27
 
+Maintenance update: 2026-10-29 (Publication 560 / SEP-IRA coverage)
+
 Scope: PR-007, PR-008; QR-005, QR-007, QR-008, QR-012, QR-014, QR-015; ADR-011, ADR-012, ADR-016, ADR-017
 
 ## Outcome
@@ -15,9 +17,9 @@ Active aliases at completion:
 | Logical KB | Active physical collection | Documents | Points | Covered tax years |
 | --- | --- | ---: | ---: | --- |
 | Finance Education | `finance_education_v1_2fdf182ee6ab` | 5 | 20 | n/a |
-| Tax Education | `tax_education_v1_77e7f3e03d50` | 8 | 3,332 | 2022–2025 |
+| Tax Education | `tax_education_v1_4cf0dfd5f870` | 9 | 3,549 | 2022–2025 |
 
-The 3,352 total records are structure/page-bounded source chunks produced by the documented chunk policy. No records were added to inflate a coursework count.
+The 3,569 total records are structure/page-bounded source chunks produced by the documented chunk policy. No records were added to inflate a coursework count.
 
 ## Delivered interfaces and artifacts
 
@@ -49,7 +51,7 @@ Changing an enabled source definition, source content, chunk policy, model ident
 ## Source-use decisions
 
 - Enabled Finance sources are individually reviewed SEC/Investor.gov educational pages. SEC marks, art, linked third-party content, and endorsement implications are excluded.
-- Enabled Tax sources are IRS-authored current publications plus historical Publication 550 versions for 2022–2024. Tax year and federal jurisdiction remain explicit filters.
+- Enabled Tax sources are IRS-authored current publications, including Publication 560 for small-business retirement plans and SEP education, plus historical Publication 550 versions for 2022–2024. Tax year and federal jurisdiction remain explicit filters.
 - Three CFPB entries are quarantined: the reviewed use policy was acceptable, but the bounded fetcher received HTTP 403 on 2026-10-27. M1 did not bypass that access control.
 - FINRA is `pending_review` and disabled because its general terms do not provide the required RAG storage/vectorization/redistribution permission.
 - Raw fetched bodies live only in ignored `backend/.cache/knowledge-sources/`; committed artifacts contain URLs, versions, hashes, and aggregate evidence rather than copied source bodies.
@@ -65,14 +67,14 @@ The same fixed qrels, filters, collection, top-k of 5, and RRF configuration wer
 | Finance dense | 0.875 | 0.55 | 1.00 | comparison |
 | Finance sparse | 1.00 | 0.60 | 0.875 | comparison |
 | Finance hybrid/RRF | 0.875 | 0.60 | 1.00 | pass |
-| Tax dense | 1.00 | 0.775 | 0.875 | comparison |
-| Tax sparse | 1.00 | 0.875 | 0.875 | comparison |
-| Tax hybrid/RRF | 1.00 | 0.825 | 0.8542 | pass |
+| Tax dense | 1.00 | 0.7778 | 0.8889 | comparison |
+| Tax sparse | 1.00 | 0.8667 | 0.8889 | comparison |
+| Tax hybrid/RRF | 1.00 | 0.8444 | 0.8704 | pass |
 
 Both hybrid candidates exceeded the EVAL-07 Recall@5 threshold of 0.85. Citation identifiers and critical year/jurisdiction filters passed exactly. Machine-readable reports are:
 
 - `backend/artifacts/m1/finance_education_v1_2fdf182ee6ab.evaluation.json`
-- `backend/artifacts/m1/tax_education_v1_77e7f3e03d50.evaluation.json`
+- `backend/artifacts/m1/tax_education_v1_4cf0dfd5f870.evaluation.json`
 
 ## Acceptance evidence
 
@@ -100,12 +102,12 @@ uv run python -m ai_finance_assistant.knowledge.cli validate --kb tax_education
 docker compose restart qdrant
 ~~~
 
-Final observed results:
+Observed results after the 2026-10-29 maintenance qualification:
 
 - Backend formatting, Ruff, and strict mypy: pass.
-- Backend credential-free suite: 19 passed, 1 live-Qdrant test skipped by configuration.
+- Backend credential-free suite: 167 passed, 1 live-Qdrant test skipped by configuration, and 3 opt-in live tests deselected; total coverage rounds to 87%.
 - Live-Qdrant integration: 1 passed.
-- Frontend formatting, lint, typecheck, 3 tests, and production build: pass.
+- Frontend formatting, lint, typecheck, 9 tests, and production build: pass.
 - Both final aliases: compatible.
 - Exact commands are reproducible through `make verify`, `make qdrant-check`, and `make knowledge-validate`.
 
@@ -119,7 +121,7 @@ Final observed results:
 
 ## Limitations and unresolved decisions
 
-- Finance qrels contain 4 cases and Tax qrels contain 8. They are sufficient for the M1 gate, not a statistically broad release evaluation; M8 must expand and freeze independent holdouts.
+- Finance qrels contain 4 cases and Tax qrels contain 9, including SEP-IRA retrieval against Publication 560. They are sufficient for the M1 gate, not a statistically broad release evaluation; M8 must expand and freeze independent holdouts.
 - Only BGE-small plus BM25 were activated. MiniLM and SPLADE remain optional comparators if a later measured regression or hardware budget justifies them.
 - CFPB remains quarantined and FINRA remains excluded until an approved access/rights decision changes their registry status.
 - Retained-collection deletion count/age is not yet fixed. M1 keeps compatible prior generations and performs no automatic deletion.

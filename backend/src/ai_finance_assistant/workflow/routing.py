@@ -1,124 +1,56 @@
-"""Deterministic, bounded intent routing for the six specialist agents."""
+"""Schema-validated LLM routing for the six specialist agents."""
 
-import re
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ai_finance_assistant.contracts.agents import AgentId
-from ai_finance_assistant.contracts.common import ShortText
+from ai_finance_assistant.llm.models import (
+    ModelUsage,
+    RoutingModelOutput,
+    RoutingModelRequest,
+    RoutingReason,
+)
+from ai_finance_assistant.llm.ports import ModelAdapter
 
 
 class RouteDecision(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     selected_agent_ids: tuple[AgentId, ...] = Field(max_length=6)
-    reason_category: ShortText
-
-
-_KEYWORDS: dict[AgentId, tuple[str, ...]] = {
-    AgentId.FINANCE_QA: (
-        "etf",
-        "mutual fund",
-        "bond",
-        "diversification",
-        "asset class",
-        "financial literacy",
-        "compound interest",
-        "index fund",
-        "emergency fund",
-        "risk and return",
-        "risk versus return",
-        "inflation",
-    ),
-    AgentId.PORTFOLIO_ANALYSIS: (
-        "portfolio",
-        "holding",
-        "allocation",
-        "concentration",
-        "expense ratio",
-        "rebalance",
-        "asset allocation",
-    ),
-    AgentId.MARKET_ANALYSIS: (
-        "market price",
-        "stock price",
-        "quote",
-        "historical price",
-        "price history",
-        "market performance",
-        "what changed",
-        "trading volume",
-        "price today",
-    ),
-    AgentId.GOAL_PLANNING: (
-        "goal",
-        "retirement",
-        "save for",
-        "contribution",
-        "future value",
-        "down payment",
-        "college fund",
-        "savings target",
-    ),
-    AgentId.NEWS_SYNTHESIZER: (
-        "news",
-        "headline",
-        "announcement",
-        "latest story",
-        "recent story",
-        "recent development",
-        "company report",
-    ),
-    AgentId.TAX_EDUCATION: (
-        "tax",
-        "capital gain",
-        "wash sale",
-        "roth ira",
-        "traditional ira",
-        "1099",
-        "deduction",
-        "taxable income",
-    ),
-}
-
-_FOLLOW_UP_PHRASES = (
-    "that another way",
-    "explain that",
-    "tell me more",
-    "follow up",
-    "what about that",
-    "continue",
-)
+    reason_category: RoutingReason
+    usage: ModelUsage = Field(default_factory=ModelUsage)
 
 
 class IntentRouter:
+    def __init__(self, *, model: ModelAdapter) -> None:
+        self._model = model
+
+    @property
+    def model_metadata(self) -> dict[str, str]:
+        return {
+            "provider": self._model.provider_id,
+            "model_id": self._model.model_id,
+            "prompt_version": self._model.routing_prompt_version,
+        }
+
     def route(
         self,
         message: str,
         *,
         previous_agent_ids: tuple[AgentId, ...] = (),
+        deadline_at: datetime,
     ) -> RouteDecision:
-        normalized = re.sub(r"\s+", " ", message.casefold())
-        selected = tuple(
-            agent_id
-            for agent_id in AgentId
-            if any(keyword in normalized for keyword in _KEYWORDS[agent_id])
+        result = self._model.route(
+            RoutingModelRequest(
+                user_message=message,
+                previous_agent_ids=previous_agent_ids,
+                deadline_at=deadline_at,
+            )
         )
-        if (
-            not selected
-            and previous_agent_ids
-            and any(phrase in normalized for phrase in _FOLLOW_UP_PHRASES)
-        ):
-            return RouteDecision(
-                selected_agent_ids=previous_agent_ids,
-                reason_category="checkpoint_follow_up",
-            )
-        if not selected:
-            return RouteDecision(
-                selected_agent_ids=(),
-                reason_category="clarification_required",
-            )
+        output = RoutingModelOutput.model_validate(result.payload)
         return RouteDecision(
-            selected_agent_ids=selected,
-            reason_category="single_domain" if len(selected) == 1 else "multi_domain",
+            selected_agent_ids=output.selected_agent_ids,
+            reason_category=output.reason_category,
+            usage=result.usage,
         )

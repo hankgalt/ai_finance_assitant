@@ -13,20 +13,23 @@
   },
   "run_events": [
     {"sequence": 1, "event_id": "evt:m4-evidence-run:1", "type": "run_started", "status": "running", "node_id": "workflow", "parent_event_id": null},
-    {"sequence": 2, "event_id": "evt:m4-evidence-run:2", "type": "route_selected", "status": "completed", "node_id": "router", "parent_event_id": null, "selected_node_ids": ["finance_qa"]},
-    {"sequence": 3, "event_id": "evt:m4-evidence-run:3", "type": "node_started", "status": "running", "node_id": "finance_qa", "parent_event_id": null},
-    {"sequence": 4, "event_id": "evt:m4-evidence-run:4", "type": "retrieval_started", "status": "running", "node_id": "finance_qa", "parent_event_id": null},
-    {"sequence": 5, "event_id": "evt:m4-evidence-run:5", "type": "retrieval_completed", "status": "completed", "node_id": "finance_qa", "parent_event_id": "evt:m4-evidence-run:4", "safe_metadata": {"collection_version": "v1", "source_count": 1, "strategy": "hybrid"}},
-    {"sequence": 6, "event_id": "evt:m4-evidence-run:6", "type": "model_started", "status": "running", "node_id": "finance_qa", "parent_event_id": null, "safe_metadata": {"provider": "deterministic-model-v1"}},
-    {"sequence": 7, "event_id": "evt:m4-evidence-run:7", "type": "model_completed", "status": "completed", "node_id": "finance_qa", "parent_event_id": "evt:m4-evidence-run:6", "usage": {"availability": "measured", "input_tokens": 3, "output_tokens": 12, "total_tokens": 15, "method": "deterministic_fixture_count_v1"}},
-    {"sequence": 8, "event_id": "evt:m4-evidence-run:8", "type": "node_completed", "status": "completed", "node_id": "finance_qa", "parent_event_id": "evt:m4-evidence-run:3"},
-    {"sequence": 9, "event_id": "evt:m4-evidence-run:9", "type": "run_completed", "status": "completed", "node_id": "workflow", "parent_event_id": "evt:m4-evidence-run:1"}
+    {"sequence": 2, "event_id": "evt:m4-evidence-run:2", "type": "model_started", "status": "running", "node_id": "router", "parent_event_id": null, "safe_metadata": {"provider": "deterministic", "model_id": "deterministic-model-v1", "prompt_version": "deterministic-routing-fixture-v1"}},
+    {"sequence": 3, "event_id": "evt:m4-evidence-run:3", "type": "model_completed", "status": "completed", "node_id": "router", "parent_event_id": "evt:m4-evidence-run:2", "usage": {"availability": "measured", "input_tokens": 1, "output_tokens": 1, "total_tokens": 2, "method": "deterministic_fixture_count_v1"}},
+    {"sequence": 4, "event_id": "evt:m4-evidence-run:4", "type": "route_selected", "status": "completed", "node_id": "router", "parent_event_id": null, "selected_node_ids": ["finance_qa"]},
+    {"sequence": 5, "event_id": "evt:m4-evidence-run:5", "type": "node_started", "status": "running", "node_id": "finance_qa", "parent_event_id": null},
+    {"sequence": 6, "event_id": "evt:m4-evidence-run:6", "type": "retrieval_started", "status": "running", "node_id": "finance_qa", "parent_event_id": null},
+    {"sequence": 7, "event_id": "evt:m4-evidence-run:7", "type": "retrieval_completed", "status": "completed", "node_id": "finance_qa", "parent_event_id": "evt:m4-evidence-run:6", "safe_metadata": {"collection_version": "v1", "source_count": 1, "strategy": "hybrid"}},
+    {"sequence": 8, "event_id": "evt:m4-evidence-run:8", "type": "model_started", "status": "running", "node_id": "finance_qa", "parent_event_id": null, "safe_metadata": {"provider": "deterministic", "model_id": "deterministic-model-v1", "prompt_version": "deterministic-template-v1"}},
+    {"sequence": 9, "event_id": "evt:m4-evidence-run:9", "type": "model_completed", "status": "completed", "node_id": "finance_qa", "parent_event_id": "evt:m4-evidence-run:8", "usage": {"availability": "measured", "input_tokens": 3, "output_tokens": 12, "total_tokens": 15, "method": "deterministic_fixture_count_v1"}},
+    {"sequence": 10, "event_id": "evt:m4-evidence-run:10", "type": "node_completed", "status": "completed", "node_id": "finance_qa", "parent_event_id": "evt:m4-evidence-run:5"},
+    {"sequence": 11, "event_id": "evt:m4-evidence-run:11", "type": "run_completed", "status": "completed", "node_id": "workflow", "parent_event_id": "evt:m4-evidence-run:1"}
   ],
   "spans": [
     {"name": "finance.workflow.run", "span_id": "9af3a8ffc5a3d0b6", "parent_span_id": null, "attributes": {"operation": "workflow_run", "workflow_version": "1"}},
+    {"name": "model.route", "span_id": "4c51cb55119a40df", "parent_span_id": "9af3a8ffc5a3d0b6", "attributes": {"provider": "deterministic", "model_id": "deterministic-model-v1", "prompt_version": "deterministic-routing-fixture-v1"}},
     {"name": "agent.finance_qa", "span_id": "39705fd0a2bcace1", "parent_span_id": "9af3a8ffc5a3d0b6", "attributes": {"agent_id": "finance_qa"}},
     {"name": "knowledge.retrieve", "span_id": "1a5d0f475fae9995", "parent_span_id": "39705fd0a2bcace1", "attributes": {"collection_version": "active", "strategy": "hybrid"}},
-    {"name": "model.generate", "span_id": "45e55b43b82fd9d4", "parent_span_id": "39705fd0a2bcace1", "attributes": {"provider": "deterministic-model-v1"}}
+    {"name": "model.generate", "span_id": "45e55b43b82fd9d4", "parent_span_id": "39705fd0a2bcace1", "attributes": {"provider": "deterministic", "model_id": "deterministic-model-v1", "prompt_version": "deterministic-template-v1"}}
   ],
   "privacy": {
     "raw_prompt_exported": false,

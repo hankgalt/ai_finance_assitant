@@ -1,25 +1,25 @@
 {
   "schema_version": "1",
-  "recorded_at": "2026-10-28T12:56:54-07:00",
+  "recorded_at": "2026-10-29T18:00:33Z",
   "focused_m3": {
-    "command": "UV_NO_SYNC=1 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make m3-check",
-    "passed": 42,
+    "command": "UV_CACHE_DIR=/tmp/aifa-uv-cache make m3-check",
+    "passed": 43,
     "failed": 0,
     "skipped": 0,
-    "duration_seconds": 0.13
+    "duration_seconds": 0.2
   },
   "full_repository": {
-    "command": "UV_NO_SYNC=1 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make verify",
-    "backend_collected": 90,
-    "backend_selected": 88,
-    "backend_passed": 87,
+    "command": "UV_CACHE_DIR=/tmp/aifa-uv-cache make verify",
+    "backend_collected": 171,
+    "backend_selected": 168,
+    "backend_passed": 167,
     "backend_failed": 0,
     "backend_skipped": 1,
-    "backend_deselected": 2,
-    "backend_duration_seconds": 6.92,
-    "backend_coverage_percent": 85,
+    "backend_deselected": 3,
+    "backend_duration_seconds": 11.79,
+    "backend_coverage_percent": 87,
     "backend_skip_reason": "Existing live-Qdrant integration requires AIFA_TEST_QDRANT_URL; M1 records its separate live pass.",
-    "frontend_tests_passed": 3
+    "frontend_tests_passed": 9
   },
   "quality_gates": {
     "backend_format": "pass",
@@ -33,7 +33,21 @@
   "ordinary_suite_live_provider_network_calls": 0,
   "live_provider_validation": {
     "alpha_vantage": "not_completed_body_level_rate_or_plan_limit_after_successful_search",
-    "massive": "selected_market_contract_pass_search_quote_history_rights_not_qualified",
+    "massive": "selected_market_contract_and_current_day_delayed_history_pass_rights_not_qualified",
     "tavily": "selected_news_contract_pass"
+  },
+  "massive_delayed_history_regression": {
+    "symbol": "MSFT",
+    "range": ["2026-09-29", "2026-10-29"],
+    "provider_http_status": 200,
+    "provider_body_status": "DELAYED",
+    "normalized_status_before": "invalid_request",
+    "normalized_status_after": "success",
+    "normalized_delay_status_after": "delayed",
+    "bar_count": 22,
+    "massive_live_calls_during_diagnosis_and_verification": 9,
+    "tavily_live_calls_during_diagnosis_and_verification": 1,
+    "raw_payload_retained": false,
+    "credentials_or_headers_retained": false
   }
 }

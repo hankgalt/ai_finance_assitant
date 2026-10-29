@@ -32,7 +32,7 @@ export function HealthStatus() {
       className={"status-pill " + (ready ? "status-ready" : "status-warning")}
       role="status"
     >
-      {"API live · " + (ready ? "ready" : "M0 not ready")}
+      {"API live · " + (ready ? "ready" : "limited")}
     </div>
   );
 }

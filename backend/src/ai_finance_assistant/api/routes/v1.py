@@ -19,9 +19,11 @@ from ai_finance_assistant.agents.context import GoalAgentContext, PortfolioAgent
 from ai_finance_assistant.api.errors import ApiProblem
 from ai_finance_assistant.api.services import ApplicationServices
 from ai_finance_assistant.contracts.api import (
+    BrowserTelemetryEvent,
     CreateRunRequest,
     CreateSessionRequest,
     CreateSnapshotRequest,
+    PortfolioImportApiRequest,
     PurgeResult,
     ResponseChunk,
     RunEventHistory,
@@ -40,7 +42,6 @@ from ai_finance_assistant.finance.models import (
     GoalProjectionResult,
     ImportedPortfolio,
     PortfolioAnalysisRequest,
-    PortfolioImportRequest,
     PortfolioImportResult,
     PortfolioSnapshot,
 )
@@ -299,12 +300,12 @@ def stream_run(
 )
 def validate_portfolio_import(
     session_id: str,
-    body: PortfolioImportRequest,
+    body: PortfolioImportApiRequest,
     request: Request,
 ) -> PortfolioImportResult:
     services = _services(request)
     _require_session(services, session_id)
-    return services.portfolio_import.import_portfolio(body)
+    return services.portfolio_import.import_portfolio(body.to_domain())
 
 
 @router.post(
@@ -313,14 +314,14 @@ def validate_portfolio_import(
 )
 def create_portfolio(
     session_id: str,
-    body: PortfolioImportRequest,
+    body: PortfolioImportApiRequest,
     request: Request,
     response: Response,
     idempotency_key: IdempotencyHeader = None,
 ) -> PortfolioImportResult:
     services = _services(request)
     _require_session(services, session_id)
-    result = services.portfolio_import.import_portfolio(body)
+    result = services.portfolio_import.import_portfolio(body.to_domain())
     if not result.accepted or result.portfolio is None:
         response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
         return result
@@ -580,6 +581,39 @@ def purge_provider_cache(
         )
     count = services.purge_provider_cache(provider=provider)
     return PurgeResult(provider=provider, deleted_bar_count=count)
+
+
+@router.post("/telemetry/browser", status_code=204)
+def browser_telemetry(body: BrowserTelemetryEvent, request: Request) -> Response:
+    observability = _services(request).observability
+    if body.kind == "navigation":
+        observability.count("frontend.navigation", 1, {"page": body.page})
+    elif body.kind == "error_boundary":
+        observability.count(
+            "frontend.errors",
+            1,
+            {"page": body.page, "failure_category": body.failure_category},
+        )
+    elif body.kind == "web_vital":
+        observability.observe(
+            "frontend.web_vital",
+            body.metric_value or 0,
+            {
+                "page": body.page,
+                "metric_name": body.metric_name or "unavailable",
+                "rating": body.rating or "unavailable",
+            },
+        )
+    else:
+        attributes = {
+            "page": body.page,
+            "route": body.api_route or "unavailable",
+            "status_class": body.status_class or "unavailable",
+            "failure_category": body.failure_category,
+        }
+        observability.count("frontend.api.requests", 1, attributes)
+        observability.observe("frontend.api.duration_ms", body.duration_ms or 0, attributes)
+    return Response(status_code=204)
 
 
 def _sse_cursor(execution_id: str, value: str | None) -> tuple[int, bool]:

@@ -1,17 +1,22 @@
 {
   "schema_version": "1",
-  "recorded_at": "2026-10-28",
+  "recorded_at": "2026-10-29",
   "offline": {
     "m4_1_gate": {
       "command": "make m4-1-check",
       "result": "passed",
-      "summary": "format, lint, mypy, and 43 focused tests passed"
+      "summary": "format, lint, mypy, and 49 focused tests passed"
     },
     "backend_gate": {
       "command": "make backend-check",
       "result": "passed",
-      "summary": "99 files formatted; lint passed; 92 source files type-checked; 131 passed, 1 skipped, 3 deselected; 87% coverage"
+      "summary": "117 files formatted; lint passed; mypy passed for 109 source/test files; 168 passed, 1 skipped, 3 deselected; 87% coverage"
     }
+  },
+  "maintenance": {
+    "model_backed_routing": "passed offline adapter, router, workflow, observability, and API regressions",
+    "ordinary_test_env": "backend/.test.env; backend/.env not read",
+    "post_change_live_routing": "not run; seven-call aggregate approval required"
   },
   "live": {
     "approved_request_budgets": [6, 6, 6],
@@ -43,6 +48,13 @@
       "summary": "1 passed in 6.46s"
     },
     "secrets_recorded": false,
-    "langsmith_external_trace": "not_configured"
+    "langsmith_external_trace": {
+      "project": "ai_finance_assistant",
+      "root_run_name": "finance-assistant",
+      "synthetic_workflow": true,
+      "inputs_outputs_hidden": true,
+      "openai_calls": 0,
+      "status": "pass"
+    }
   }
 }

@@ -9,10 +9,13 @@ from ai_finance_assistant.contracts.agents import (
     AgentResultStatus,
 )
 from ai_finance_assistant.contracts.errors import ErrorCategory, SafeError
+from ai_finance_assistant.llm.fake import DeterministicModelAdapter
+from ai_finance_assistant.llm.models import RoutingModelOutput, RoutingReason
 from ai_finance_assistant.observability.memory import InMemoryObservability
 from ai_finance_assistant.workflow.events import InMemoryRunEventRepository, RunEventRecorder
 from ai_finance_assistant.workflow.graph import FinanceWorkflow
 from ai_finance_assistant.workflow.models import WorkflowRequest, WorkflowStatus
+from ai_finance_assistant.workflow.routing import IntentRouter
 
 
 class StubAgent:
@@ -53,6 +56,25 @@ class StubAgent:
         )
 
 
+def router_for(
+    message: str | None = None,
+    *selected_agent_ids: AgentId,
+) -> IntentRouter:
+    responses = {}
+    if message is not None:
+        responses[message] = RoutingModelOutput(
+            selected_agent_ids=selected_agent_ids,
+            reason_category=(
+                RoutingReason.CLARIFICATION_REQUIRED
+                if not selected_agent_ids
+                else RoutingReason.SINGLE_DOMAIN
+                if len(selected_agent_ids) == 1
+                else RoutingReason.MULTI_DOMAIN
+            ),
+        )
+    return IntentRouter(model=DeterministicModelAdapter(routing_responses=responses))
+
+
 def workflow_request(
     *,
     execution_id: str,
@@ -78,6 +100,10 @@ def test_workflow_routes_finance_question_through_langgraph() -> None:
         agents=agents,
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
+        router=router_for(
+            "What is an ETF and how does diversification work?",
+            AgentId.FINANCE_QA,
+        ),
     )
 
     result = workflow.run(
@@ -113,6 +139,7 @@ def test_workflow_result_preserves_response_while_run_events_exclude_it() -> Non
         agents=agents,
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
+        router=router_for("What is diversification?", AgentId.FINANCE_QA),
     )
 
     result = workflow.run(
@@ -136,6 +163,11 @@ def test_workflow_preserves_multi_agent_result_when_one_agent_fails() -> None:
         agents=agents,
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
+        router=router_for(
+            "Explain an ETF and capital gain tax.",
+            AgentId.FINANCE_QA,
+            AgentId.TAX_EDUCATION,
+        ),
     )
 
     result = workflow.run(
@@ -165,6 +197,7 @@ def test_workflow_requests_clarification_for_unroutable_message() -> None:
             observability=InMemoryObservability(),
         ),
         observability=InMemoryObservability(),
+        router=router_for(),
     )
 
     result = workflow.run(
@@ -186,6 +219,7 @@ def test_workflow_enforces_deadline_before_agent_execution() -> None:
             observability=telemetry,
         ),
         observability=telemetry,
+        router=router_for("What is an ETF?", AgentId.FINANCE_QA),
     )
 
     result = workflow.run(
@@ -214,6 +248,7 @@ def test_checkpoint_restart_supports_follow_up_and_isolates_sessions() -> None:
                 observability=telemetry,
             ),
             observability=telemetry,
+            router=router_for("What is an ETF?", AgentId.FINANCE_QA),
             checkpointer=checkpointer,
         )
 
@@ -244,6 +279,7 @@ def test_workflow_fails_safely_when_graph_hop_bound_is_too_small() -> None:
         agents={agent_id: StubAgent(agent_id) for agent_id in AgentId},
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
+        router=router_for("What is an ETF?", AgentId.FINANCE_QA),
         maximum_graph_hops=2,
     )
 

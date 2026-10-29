@@ -36,6 +36,8 @@ Stocks Basic currently advertises five API calls per minute, two years of histor
 
 On Stocks Basic, a trading day's REST aggregates are not available until after midnight Eastern Time, when that day is no longer current. A request for the current Eastern trading date can return HTTP 403 even after the market closes. Live tests must therefore use the previous accessible trading day, and normalized results must remain labeled end-of-day. Paid Starter/Developer tiers advertise 15-minute delayed data, while Advanced advertises realtime data; the adapter must not infer these entitlements from the presence of a key. ([Basic end-of-day availability](https://massive.com/knowledge-base/article/on-the-free-basic-plan-when-can-i-pull-the-previous-trading-days-data), [Stocks pricing](https://massive.com/pricing?product=stocks))
 
+For an account entitled to delayed current-day aggregates, Massive can return HTTP 200 with schema-valid bars and body status `DELAYED`. Massive explicitly defines that status as usable delayed data rather than an error, so an adapter may accept it only after ordinary payload validation and must preserve delayed provenance. A range ending before the current date returns `OK` on the same delayed account. ([Massive delayed REST status guidance](https://massive.com/knowledge-base/article/how-quickly-can-i-access-massives-market-date))
+
 The two-year Basic history window rolls forward with the request date. An older range can return HTTP 403 `NOT_AUTHORIZED`; a successful response may also omit bars before the entitled window, so the adapter must preserve the returned first/last data dates and make partial coverage visible. ([historical coverage](https://massive.com/knowledge-base/article/how-much-historical-stock-data-does-massive-have))
 
 ## Failure normalization
@@ -46,6 +48,7 @@ Normalize failures without retaining raw bodies or secrets:
 - HTTP 403: `ENTITLEMENT_REQUIRED` when the key is valid but the product, endpoint, recency, exchange agreement, or history window is unavailable; it is not retryable within the same request.
 - HTTP 429: `RATE_LIMITED`. Massive documents the five-per-minute Basic threshold but does not document a dependable `Retry-After` contract. Do not immediately retry within the live test; expose the limit and let a later workflow retry after the operator-controlled window.
 - HTTP 5xx, connection errors, and timeouts: `UNAVAILABLE` or `TIMEOUT`, eligible for the existing single bounded retry and circuit behavior.
+- HTTP 200 with body status `DELAYED` and schema-valid aggregate bars: success with `DelayStatus.DELAYED`, not an error or realtime result.
 - HTTP 200 with `status=OK` and no results: `EMPTY`, not an outage.
 - Invalid JSON, missing fields, non-finite values, or invalid OHLC relationships: `MALFORMED_RESPONSE`.
 

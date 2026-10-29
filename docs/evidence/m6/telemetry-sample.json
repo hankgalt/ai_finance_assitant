@@ -1,0 +1,29 @@
+{
+  "schema_version": "1",
+  "browser_event": {
+    "kind": "api_timing",
+    "page": "market",
+    "api_route": "market_history",
+    "status_class": "2xx",
+    "failure_category": "none",
+    "duration_ms": 42.5,
+    "trace_id": "11111111111111111111111111111111",
+    "request_id": "web-request-1"
+  },
+  "exported_metric_attributes": {
+    "page": "market",
+    "route": "market_history",
+    "status_class": "2xx",
+    "failure_category": "none"
+  },
+  "excluded_fields": [
+    "prompt",
+    "message",
+    "portfolio",
+    "provider_payload",
+    "error_text",
+    "credential",
+    "trace_id_metric_label",
+    "request_id_metric_label"
+  ]
+}

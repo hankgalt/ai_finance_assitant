@@ -1,12 +1,12 @@
 # AI Finance Assistant — Architecture decision records
 
-Version 1.3 | Status: Product architecture baseline through M5 | 2026-10-28
+Version 1.4 | Status: Product architecture baseline through M6 | 2026-10-29
 
 The existing single-file register is retained to avoid unnecessary file churn. “Accepted” records are architectural constraints; “Proposed” records require validation during the named milestone. Proof references are future completion evidence, not claims of implementation.
 
 ### ADR-001: LangGraph StateGraph for orchestration — Accepted
 
-Use a typed LangGraph StateGraph with an explicit router, conditional edges, specialist nodes, synthesis, and checkpointing. This provides inspectable workflows, bounded collaboration, and measured events for the Inspector. A single opaque tool-calling agent and CrewAI were rejected because the six responsibilities and routing behavior must remain testable.
+Use a typed LangGraph StateGraph with an explicit router, conditional edges, specialist nodes, synthesis, and checkpointing. Intent selection is a schema-constrained decision made through the Run's fixed ModelAdapter; a deterministic scripted adapter is permitted only for credential-free tests and demonstrations. A lexical substring table is not routing authority. This provides inspectable workflows, bounded collaboration, and measured model/route events for the Inspector. A single opaque tool-calling agent and CrewAI were rejected because the six responsibilities and routing behavior must remain testable.
 
 ### ADR-002: Six agent interfaces over shared deep modules — Accepted
 

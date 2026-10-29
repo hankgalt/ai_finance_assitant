@@ -3,18 +3,22 @@
   "credential_free": {
     "provider": "deterministic",
     "model_id": "deterministic-model-v1",
-    "prompt_version": "deterministic-template-v1"
+    "prompt_version": "deterministic-template-v1",
+    "routing_prompt_version": "deterministic-routing-fixture-v1"
   },
   "live": {
     "provider": "openai",
     "model_id": "gpt-6.1-sol",
     "api": "responses",
     "prompt_version": "openai-agent-system-v1",
+    "routing_prompt_version": "openai-routing-system-v1",
     "response_schema": "ModelOutput-v1",
+    "routing_response_schema": "RoutingModelOutput-v1",
     "response_fields": ["schema_version", "summary", "warnings"],
     "store": false,
     "tools_enabled": false,
     "reasoning_effort": {
+      "router": "low",
       "finance_qa": "medium",
       "tax_education": "medium",
       "portfolio_analysis": "low",
@@ -23,7 +27,7 @@
       "news_synthesizer": "low"
     },
     "limits": {
-      "requests_per_run": 6,
+      "requests_per_run": 7,
       "maximum_attempts_per_call": 3,
       "timeout_seconds": 30,
       "maximum_input_characters": 40000,

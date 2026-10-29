@@ -1,22 +1,48 @@
 
+# Operating-system and editor files
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Secrets and developer-local environment overrides
 .env
+.env.*
+!.env.example
+!.env.*.example
+
+# Python environments, caches, and reports
 .venv/
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.tox/
 htmlcov/
 .coverage
+.coverage.*
 coverage.xml
+
+# Node, Vite, and package-manager output
 node_modules/
 dist/
-*.log
 .vite/
-.cache/
-playwright-report/
-test-results/
-/backend/data/*.sqlite3*
+.pnpm-store/
+*.tsbuildinfo
+.eslintcache
 
-.env
+# Generated test and local-preview artifacts
+.cache/
+.sites-runtime/
+playwright-report/
+playwright-results/
+test-results/
+blob-report/
+*.log
+
+# Local application state
+/backend/data/*.sqlite3*

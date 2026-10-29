@@ -104,15 +104,15 @@ make qdrant-check
 make knowledge-validate
 ~~~
 
-`make verify` is credential-free and skips the live-Qdrant integration test. `make qdrant-check` explicitly exercises candidate creation, compatibility validation, atomic activation, rollback, and cleanup against the loopback service.
+`make verify` loads the tracked `backend/.test.env`, is credential-free, ignores the developer's `backend/.env`, and skips the live-Qdrant integration test. `make qdrant-check` explicitly exercises candidate creation, compatibility validation, atomic activation, rollback, and cleanup against the loopback service.
 
 M2 calculation and import contracts are exercised by the ordinary backend test suite. The versioned numerical policy is [docs/M2_calculation_policy.md](docs/M2_calculation_policy.md), and valid/adversarial samples are indexed by `backend/data/finance/sample_manifest.v1.json`.
 
 M3 provider contracts and failure behavior are exercised by `make m3-check`. Credential-free mode is the default. Live mode requires both keys, documented entitlements, and a predeclared request budget; missing readiness never silently falls back within a Run.
 
-M4 routing, all six agent contracts, checkpoint behavior, failure bounds, RunEvents, redaction, OpenTelemetry correlation, optional LangSmith privacy defaults, and exporter-failure isolation are exercised by `make m4-check`. OpenTelemetry is enabled locally without a network exporter by default; `AIFA_OBSERVABILITY_MODE=disabled|in_memory|opentelemetry` controls the runtime adapter. LangSmith remains off unless explicitly configured.
+M4 schema-constrained model routing, all six agent contracts, checkpoint behavior, failure bounds, RunEvents, redaction, OpenTelemetry correlation, optional LangSmith privacy defaults, and exporter-failure isolation are exercised by `make m4-check`. OpenTelemetry is enabled locally without a network exporter by default; `AIFA_OBSERVABILITY_MODE=disabled|in_memory|opentelemetry` controls the runtime adapter. LangSmith remains off unless explicitly configured.
 
-M4.1 structured-output, failure, retry, request-budget, concurrency, privacy, and configuration contracts are exercised credential-free by `make m4-1-check`. Live mode requires `OPENAI_API_KEY` (or `AIFA_OPENAI_API_KEY`) and `AIFA_OPENAI_TERMS_APPROVED=true`; `make model-live-check` then makes exactly one request for each of the six agents. Current LangSmith variables (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, and `LANGSMITH_PROJECT`) and their legacy `LANGCHAIN_*` aliases are accepted, but inputs and outputs remain hidden and RunEvents stay authoritative.
+M4.1 structured-output, routing, failure, retry, request-budget, concurrency, privacy, and configuration contracts are exercised credential-free by `make m4-1-check`. Live mode requires `OPENAI_API_KEY` (or `AIFA_OPENAI_API_KEY`) and `AIFA_OPENAI_TERMS_APPROVED=true`; `make model-live-check` makes one routing request plus one request for each selected agent, with a seven-call ceiling for the aggregate six-agent case. Current LangSmith variables (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, and `LANGSMITH_PROJECT`) and their legacy `LANGCHAIN_*` aliases are accepted, but inputs and outputs remain hidden and RunEvents stay authoritative.
 
 M5 REST/SSE contracts, isolation, idempotency, restart/deletion/retention, migrations, cache reuse and rights gates, W3C propagation, metric cardinality, and readiness behavior are exercised by `make m5-check`. `make observability-up` starts the optional loopback OTLP Collector debug sink; network export remains disabled until `AIFA_OTEL_EXPORT_ENABLED=true` is deliberately configured.
 

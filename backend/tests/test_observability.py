@@ -2,6 +2,7 @@ from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 
+from langchain_core.tracers.context import collect_runs
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -16,6 +17,7 @@ from ai_finance_assistant.contracts.agents import (
 )
 from ai_finance_assistant.contracts.events import EventStatus, EventType
 from ai_finance_assistant.core.config import Settings
+from ai_finance_assistant.llm.fake import DeterministicModelAdapter
 from ai_finance_assistant.observability.factory import observability_from_settings
 from ai_finance_assistant.observability.langsmith import LangSmithTracing
 from ai_finance_assistant.observability.memory import InMemoryObservability
@@ -29,6 +31,7 @@ from ai_finance_assistant.workflow.events import (
 )
 from ai_finance_assistant.workflow.graph import FinanceWorkflow
 from ai_finance_assistant.workflow.models import WorkflowRequest, WorkflowStatus
+from ai_finance_assistant.workflow.routing import IntentRouter
 
 
 class SuccessfulAgent:
@@ -101,6 +104,7 @@ def test_run_events_correlate_with_exported_opentelemetry_trace() -> None:
         agents=_agents(),
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
+        router=IntentRouter(model=DeterministicModelAdapter()),
     )
 
     result = workflow.run(_request("run-otel-1"))
@@ -115,6 +119,26 @@ def test_run_events_correlate_with_exported_opentelemetry_trace() -> None:
     assert all("message" not in (span.attributes or {}) for span in spans)
 
 
+def test_langgraph_root_trace_uses_workflow_name() -> None:
+    telemetry = InMemoryObservability()
+    workflow = FinanceWorkflow(
+        agents=_agents(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+        router=IntentRouter(model=DeterministicModelAdapter()),
+    )
+
+    with collect_runs() as collected:
+        result = workflow.run(_request("run-langsmith-name-1"))
+
+    root_runs = [run for run in collected.traced_runs if run.parent_run_id is None]
+    assert result.status == WorkflowStatus.COMPLETED
+    assert [run.name for run in root_runs] == ["finance-assistant"]
+
+
 def test_failed_observability_adapter_does_not_change_product_behavior() -> None:
     telemetry = SafeObservability(FailingTelemetry())
     events = InMemoryRunEventRepository()
@@ -122,6 +146,7 @@ def test_failed_observability_adapter_does_not_change_product_behavior() -> None
         agents=_agents(),
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
+        router=IntentRouter(model=DeterministicModelAdapter()),
     )
 
     result = workflow.run(_request("run-exporter-failure-1"))

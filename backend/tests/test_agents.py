@@ -32,9 +32,14 @@ from ai_finance_assistant.finance.portfolio_analysis import PortfolioAnalysis
 from ai_finance_assistant.knowledge.models import Evidence, LogicalKnowledgeBase
 from ai_finance_assistant.llm.errors import ModelErrorCode, ModelProviderError
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
-from ai_finance_assistant.llm.models import ModelAdapterResult, ModelRequest
+from ai_finance_assistant.llm.models import (
+    ModelAdapterResult,
+    ModelRequest,
+    RoutingModelRequest,
+)
 from ai_finance_assistant.observability.memory import InMemoryObservability
 from ai_finance_assistant.providers.fake import FakeMarketDataProvider, FakeNewsProvider
+from ai_finance_assistant.providers.models import NewsSearchRequest, NewsSearchResult
 from ai_finance_assistant.workflow.events import InMemoryRunEventRepository, RunEventRecorder
 from ai_finance_assistant.workflow.graph import SpecialistAgent
 from ai_finance_assistant.workflow.retrieval import StaticKnowledgeRetrieval
@@ -59,7 +64,7 @@ def evidence(*, logical_kb: LogicalKnowledgeBase, text: str) -> Evidence:
         content_hash="a" * 64,
         fetched_at=NOW,
         tax_years=(2026,) if logical_kb == LogicalKnowledgeBase.TAX else (),
-        jurisdiction="US",
+        jurisdiction=("US-Federal" if logical_kb == LogicalKnowledgeBase.TAX else "US"),
     )
 
 
@@ -118,6 +123,112 @@ def test_finance_agent_grounds_response_and_treats_retrieved_instructions_as_dat
     completed = next(event for event in recorded if event.event_type == EventType.MODEL_COMPLETED)
     assert completed.usage.cost_amount is None
     assert completed.usage.cost_unavailable_reason == "Model cost is not available."
+
+
+def test_tax_agent_uses_latest_matching_year_and_canonical_jurisdiction() -> None:
+    sep_evidence = evidence(
+        logical_kb=LogicalKnowledgeBase.TAX,
+        text="A SEP is a simplified employee pension plan funded by an employer.",
+    ).model_copy(
+        update={
+            "title": "Publication 560 (2025), Retirement Plans for Small Business",
+            "tax_years": (2025,),
+            "jurisdiction": "US-Federal",
+        }
+    )
+    telemetry = InMemoryObservability()
+    runtime = AgentRuntime(
+        retrieval=StaticKnowledgeRetrieval({LogicalKnowledgeBase.TAX: (sep_evidence,)}),
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+
+    result = TaxEducationAgent(runtime=runtime).invoke(
+        request(AgentId.TAX_EDUCATION, "What is a SEP IRA?")
+    )
+
+    assert result.status == AgentResultStatus.OK, result
+    assert result.facts[0]["tax_year"] == 2025
+    assert result.facts[0]["jurisdiction"] == "US-Federal"
+    assert result.evidence[0].evidence_id == sep_evidence.chunk_id
+    assert result.warnings == (
+        "No tax year was specified; using the latest matching authoritative tax year 2025.",
+    )
+
+
+def test_tax_agent_keeps_an_explicit_tax_year_strict() -> None:
+    sep_evidence = evidence(
+        logical_kb=LogicalKnowledgeBase.TAX,
+        text="A SEP is a simplified employee pension plan funded by an employer.",
+    ).model_copy(update={"tax_years": (2025,)})
+    telemetry = InMemoryObservability()
+    runtime = AgentRuntime(
+        retrieval=StaticKnowledgeRetrieval({LogicalKnowledgeBase.TAX: (sep_evidence,)}),
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+
+    result = TaxEducationAgent(runtime=runtime).invoke(
+        request(AgentId.TAX_EDUCATION, "What is a SEP IRA for tax year 2026?")
+    )
+
+    assert result.status == AgentResultStatus.ERROR
+    assert result.errors[0].code == "TAX_EVIDENCE_NOT_FOUND"
+
+
+class RecordingNewsProvider(FakeNewsProvider):
+    def __init__(self) -> None:
+        super().__init__()
+        self.request: NewsSearchRequest | None = None
+
+    def search(self, request: NewsSearchRequest) -> NewsSearchResult:
+        self.request = request
+        return super().search(request)
+
+
+def test_news_agent_derives_minimized_public_ticker_query_and_bounded_window() -> None:
+    telemetry = InMemoryObservability()
+    news = RecordingNewsProvider()
+    runtime = AgentRuntime(
+        retrieval=StaticKnowledgeRetrieval({}),
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+    before = datetime.now(UTC).date()
+
+    result = NewsSynthesizerAgent(
+        runtime=runtime,
+        contexts=InMemoryAgentContextRepository(),
+        news=news,
+    ).invoke(
+        request(
+            AgentId.NEWS_SYNTHESIZER,
+            "what\u2019s the latest news on MSFT",
+        )
+    )
+    after = datetime.now(UTC).date()
+
+    assert result.status == AgentResultStatus.OK, result
+    assert news.request is not None
+    assert news.request.query == "MSFT company financial news"
+    assert news.request.symbols == ("MSFT",)
+    assert news.request.end_date in {before, after}
+    assert (news.request.end_date - news.request.start_date).days == 7
+    assert result.warnings == (
+        "No date window was specified; using the latest 7 days for public ticker news.",
+    )
 
 
 def test_remaining_specialists_use_only_their_approved_domain_modules() -> None:
@@ -276,10 +387,15 @@ class MalformedModelAdapter:
     provider_id = "fixture"
     model_id = "malformed-model-fixture"
     prompt_version = "fixture-v1"
+    routing_prompt_version = "fixture-routing-v1"
 
     def generate(self, request: ModelRequest) -> ModelAdapterResult:
         del request
         return ModelAdapterResult(payload={"schema_version": "1"})
+
+    def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
+        del request
+        raise AssertionError("agent test adapter must not route")
 
 
 def test_agent_rejects_malformed_structured_model_output() -> None:
@@ -308,6 +424,7 @@ class RateLimitedModelAdapter:
     provider_id = "fixture"
     model_id = "rate-limited-model-fixture"
     prompt_version = "fixture-v1"
+    routing_prompt_version = "fixture-routing-v1"
 
     def generate(self, request: ModelRequest) -> ModelAdapterResult:
         del request
@@ -317,6 +434,10 @@ class RateLimitedModelAdapter:
             retryable=True,
             attempt_count=3,
         )
+
+    def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
+        del request
+        raise AssertionError("agent test adapter must not route")
 
 
 def test_agent_preserves_typed_model_failure_and_safe_model_versions() -> None:

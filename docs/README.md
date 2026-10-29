@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.0 | Status: Product architecture baseline; M0–M5 evidence recorded | 2026-10-28
+Version 2.0 | Status: Product architecture baseline; M0–M6 evidence recorded | 2026-10-29
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -28,7 +28,8 @@ Milestone completion evidence is recorded separately from the design authority. 
 [M3 delivery report](M3_delivery_report.md) for market/news ports, deterministic adapters, and conditional live-provider adapters, and
 [M4 delivery report](M4_delivery_report.md) for the six-agent graph, measured RunEvents, checkpoint behavior, and observability evidence, and
 [M4.1 delivery report](M4_1_delivery_report.md) for the live model adapter and completed six-agent qualification evidence, and
-[M5 delivery report](M5_delivery_report.md) for versioned REST/SSE, durable local persistence, the historical provider cache, and operational telemetry transport.
+[M5 delivery report](M5_delivery_report.md) for versioned REST/SSE, durable local persistence, the historical provider cache, and operational telemetry transport, and
+[M6 delivery report](M6_delivery_report.md) for the responsive React product experiences, accessible chart/table evidence, portfolio import review, and privacy-safe browser telemetry.
 
 If documents conflict, use this precedence: product requirements, accepted ADRs, system design, implementation plan, evaluation strategy, then the M0 prompt. Coursework criteria remain mandatory for the coursework release even when they do not constrain later product architecture. Resolve source-rubric ambiguities in the coursework criteria rather than weakening product requirements.
 

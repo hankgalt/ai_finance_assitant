@@ -19,7 +19,13 @@ from ai_finance_assistant.contracts.agents import (
     AgentResultStatus,
 )
 from ai_finance_assistant.contracts.errors import ErrorCategory, SafeError
-from ai_finance_assistant.contracts.events import EventStatus, EventType, RoutingMetadata
+from ai_finance_assistant.contracts.events import (
+    EventStatus,
+    EventType,
+    MeasurementAvailability,
+    RoutingMetadata,
+    UsageMetadata,
+)
 from ai_finance_assistant.observability.ports import Observability
 from ai_finance_assistant.workflow.events import EventIdentity, RunEventRecorder
 from ai_finance_assistant.workflow.models import (
@@ -68,7 +74,7 @@ class FinanceWorkflow:
         agents: Mapping[AgentId, SpecialistAgent],
         event_recorder: RunEventRecorder,
         observability: Observability,
-        router: IntentRouter | None = None,
+        router: IntentRouter,
         checkpointer: BaseCheckpointSaver[str] | None = None,
         maximum_graph_hops: int = 16,
     ) -> None:
@@ -77,7 +83,7 @@ class FinanceWorkflow:
         self._agents = dict(agents)
         self._events = event_recorder
         self._observability = observability
-        self._router = router or IntentRouter()
+        self._router = router
         self._checkpointer = checkpointer or InMemorySaver()
         self._maximum_graph_hops = maximum_graph_hops
         self._graph = self._build_graph()
@@ -116,6 +122,7 @@ class FinanceWorkflow:
                         "deadline_at": request.deadline_at,
                     },
                     {
+                        "run_name": request.workflow_id,
                         "configurable": {
                             "thread_id": f"{request.session_id}:{request.workflow_id}"
                         },
@@ -245,9 +252,70 @@ class FinanceWorkflow:
 
     def _route_node(self, state: FinanceState) -> FinanceState:
         identity = self._identity(state)
-        decision = self._router.route(
-            state["message"],
-            previous_agent_ids=state.get("selected_agent_ids", ()),
+        model_metadata = self._router.model_metadata
+        started = self._events.record(
+            identity,
+            event_type=EventType.MODEL_STARTED,
+            status=EventStatus.RUNNING,
+            node_id="router",
+            summary="Structured model routing started.",
+            safe_metadata=model_metadata,
+        )
+        try:
+            with self._observability.span("model.route", model_metadata):
+                decision = self._router.route(
+                    state["message"],
+                    previous_agent_ids=state.get("selected_agent_ids", ()),
+                    deadline_at=state["deadline_at"],
+                )
+        except Exception as exc:
+            error = SafeError(
+                code="MODEL_ROUTING_FAILED",
+                category=ErrorCategory.UPSTREAM_UNAVAILABLE,
+                message="The request could not be routed safely.",
+                retryable=True,
+            )
+            self._events.record(
+                identity,
+                event_type=EventType.MODEL_FAILED,
+                status=EventStatus.FAILED,
+                node_id="router",
+                summary="Structured model routing failed safely.",
+                error=error,
+                safe_metadata=model_metadata,
+                started_at=started.started_at,
+                completed=True,
+                parent_event_id=started.event_id,
+            )
+            raise RuntimeError("model routing failed") from exc
+        usage = decision.usage
+        usage_metadata = (
+            UsageMetadata(
+                availability=MeasurementAvailability.MEASURED,
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
+                total_tokens=(
+                    usage.input_tokens + usage.output_tokens
+                    if usage.input_tokens is not None and usage.output_tokens is not None
+                    else None
+                ),
+                method=usage.method,
+                unavailable_reason=None,
+            )
+            if usage.method is not None
+            else UsageMetadata()
+        )
+        self._events.record(
+            identity,
+            event_type=EventType.MODEL_COMPLETED,
+            status=EventStatus.COMPLETED,
+            node_id="router",
+            summary="Structured model routing completed.",
+            usage=usage_metadata,
+            safe_metadata=model_metadata,
+            started_at=started.started_at,
+            completed=True,
+            parent_event_id=started.event_id,
         )
         self._events.record(
             identity,
@@ -262,13 +330,13 @@ class FinanceWorkflow:
                     if decision.selected_agent_ids
                     else "More information is required."
                 ),
-                reason_category=decision.reason_category,
+                reason_category=decision.reason_category.value,
             ),
             completed=True,
         )
         return {
             "selected_agent_ids": decision.selected_agent_ids,
-            "route_reason_category": decision.reason_category,
+            "route_reason_category": decision.reason_category.value,
         }
 
     @staticmethod

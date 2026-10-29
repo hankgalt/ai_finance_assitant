@@ -4,15 +4,17 @@ Status: Approved for private-demo qualification | Reviewed: 2026-10-28
 
 ## Decision
 
-Use OpenAI `gpt-6.1-sol` through the Responses API as the initial live ModelAdapter for the
-private demonstration release. Keep `deterministic-model-v1` as the default credential-free
-adapter for development, ordinary tests, and reproducible demonstrations. Selection occurs once
-per Run; missing approval, credentials, quota, or availability never changes a live Run to the
-deterministic adapter.
+Use OpenAI `gpt-6.1-sol` through the Responses API as the initial live ModelAdapter for routing and
+specialist generation in the private demonstration release. Keep `deterministic-model-v1` as the
+default credential-free adapter for development, ordinary tests, and reproducible demonstrations.
+Selection occurs once per Run; missing approval, credentials, quota, or availability never changes
+a live Run to the deterministic adapter.
 
 The product owner selected OpenAI and `gpt-6.1-sol`, accepted the default API retention posture
-for synthetic qualification data, and approved a six-provider-request live-test budget. This is
-not approval to send real portfolio records or other sensitive user data during qualification.
+for synthetic qualification data, and approved the historical six-provider-request live-test
+budget. Model-backed routing raises the current six-agent aggregate ceiling to seven calls; no
+post-change live rerun is implied by the earlier approval. This is not approval to send real
+portfolio records or other sensitive user data during qualification.
 
 ## Fit against M4.1 criteria
 

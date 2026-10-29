@@ -435,6 +435,34 @@ def test_massive_search_and_history_are_normalized() -> None:
     assert history.provenance.request_id == "massive-synthetic-history-v1"
 
 
+def test_massive_delayed_history_with_bars_is_successfully_labeled() -> None:
+    payload = fixture("massive.history.synthetic.v1.json")
+    assert isinstance(payload, dict)
+    payload["status"] = "DELAYED"
+
+    result = MassiveMarketDataProvider(
+        api_key="test-key",
+        terms_approved=True,
+        client=httpx.Client(
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload))
+        ),
+        runtime=runtime(MutableClock()),
+    ).get_history(
+        HistoricalRequest(
+            symbol="DEMO",
+            currency="USD",
+            start_date=date(2026, 10, 24),
+            end_date=date(2026, 10, 27),
+        )
+    )
+
+    assert result.status == ProviderStatus.SUCCESS
+    assert result.error is None
+    assert result.series is not None
+    assert result.series.bars
+    assert result.provenance.delay_status == DelayStatus.DELAYED
+
+
 @pytest.mark.parametrize(
     ("status_code", "expected"),
     [

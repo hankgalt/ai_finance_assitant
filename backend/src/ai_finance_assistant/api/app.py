@@ -1,6 +1,6 @@
 """FastAPI application factory."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -27,7 +27,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     telemetry = telemetry_runtime_from_settings(resolved_settings)
 
     @asynccontextmanager
-    async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
         services = ApplicationServices(resolved_settings, telemetry=telemetry)
         application.state.services = services
         try:
@@ -39,9 +39,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=resolved_settings.app_name,
         version=resolved_settings.app_version,
         description=(
-            "M5 private-demo API with authoritative versioned REST, replayable SSE, durable "
+            "M5/M6 private-demo API with authoritative versioned REST, replayable SSE, durable "
             "SQLite resources and checkpoints, deterministic finance modules, provider cache, "
-            "and the six-agent LangGraph workflow."
+            "the six-agent LangGraph workflow, and bounded first-party browser telemetry."
         ),
         lifespan=lifespan,
     )

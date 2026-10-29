@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 2.3 | Status: Approved sequence; M0–M5 complete; M6 and later milestones planned | 2026-10-28
+Version 2.3 | Status: Approved sequence; M0–M6 complete; M7 and later milestones planned | 2026-10-29
 
 ## 1. Delivery rules
 
@@ -109,7 +109,7 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Deliverables**
 
-- Versioned FinanceState, router, bounded conditional graph, synthesis/validation, and checkpoint interfaces.
+- Versioned FinanceState, schema-constrained ModelAdapter router, bounded conditional graph, synthesis/validation, and checkpoint interfaces.
 - Finance Q&A, Portfolio Analysis, Market Analysis, Goal Planning, News Synthesizer, and Tax Education agents with the exact §3 responsibilities.
 - Finance and Tax retrieval; M2 calculations; M3 providers; multi-agent composition without recursive agent calls.
 - Actual RunEvent instrumentation for routes, nodes, retrieval, tools/providers, models, and terminal state.
@@ -131,11 +131,11 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 - Evaluation-based selection of the initial production model/provider under ADR-008, including capability, structured-output, privacy, retention/training, regional, latency, context-limit, availability, and cost considerations.
 - A production ModelAdapter implementing the same versioned structured request/result contract as the deterministic adapter; all six agents continue to use the shared seam and never call a vendor SDK directly.
-- Environment-owned credentials and explicit credential-free versus live-model modes. One Run fixes its model/provider/model-version selection before execution and never silently substitutes fake output.
+- Environment-owned credentials and explicit credential-free versus live-model modes. One Run fixes its model/provider/model-version selection before execution and uses it for routing plus selected-agent responses; it never silently substitutes fake output.
 - Versioned system instructions and response schemas, bounded evidence/context assembly, model and prompt identifiers on measured events, and schema-validation/repair behavior that does not accept arbitrary malformed output.
 - Deadline-aware timeout, bounded retry/backoff, concurrency and per-Run token/request budgets, typed provider failures, measured provider token usage where supplied, and clearly unavailable cost when no approved calculation method exists.
 - Privacy-safe OpenTelemetry and optional LangSmith instrumentation. Prompts, retrieved excerpts, financial records, credentials, provider payloads, and model responses remain excluded from RunEvents and operational telemetry; LangSmith inputs and outputs stay hidden unless a later approved privacy decision changes that policy.
-- Opt-in live-model qualification tests and a credential-free deterministic suite. Ordinary CI requires no model credential and performs no external model call.
+- Opt-in live-model qualification tests and a credential-free deterministic suite. Ordinary CI loads the tracked `backend/.test.env`, requires no model credential, performs no external model call, and never reads the developer's `backend/.env`; live targets opt into that file explicitly.
 
 **Dependencies:** Completed M4 seam; an approved model/provider decision satisfying ADR-008; account credentials and terms suitable for the private demonstration; documented data-use, retention, and training controls. Missing approval or credentials blocks live-model activation rather than triggering an automatic provider or fake fallback.
 
@@ -182,7 +182,7 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Tests:** Component tests, API mock contracts, Playwright user journeys, keyboard/focus/semantic/contrast checks, responsive layouts, network failure and stale data, import error correction, error-boundary and Web-Vitals emission, trace/request-header propagation, payload redaction, CSP/CORS behavior, and unavailable telemetry transport.
 
-**Evidence:** Browser-test report, accessibility review, screenshots/video for each state, contract-version record, privacy-safe frontend telemetry sample, and browser-to-FastAPI correlation record.
+**Evidence:** [M6 delivery report](M6_delivery_report.md), browser-test report, accessibility review, screenshots for representative states, contract-version record, privacy-safe frontend telemetry sample, and browser-to-FastAPI correlation record under `docs/evidence/m6/`.
 
 ### M7 — Agent Execution Inspector
 

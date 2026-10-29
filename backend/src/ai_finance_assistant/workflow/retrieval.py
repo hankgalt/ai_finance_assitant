@@ -15,6 +15,15 @@ from ai_finance_assistant.knowledge.models import (
 from ai_finance_assistant.knowledge.retrieval import KnowledgeRetriever
 
 
+def _canonical_jurisdiction(
+    logical_kb: LogicalKnowledgeBase,
+    jurisdiction: str,
+) -> str:
+    if logical_kb == LogicalKnowledgeBase.TAX and jurisdiction == "US":
+        return "US-Federal"
+    return jurisdiction
+
+
 class RetrievalResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -55,13 +64,14 @@ class ActiveKnowledgeRetrieval:
         limit: int = 5,
     ) -> RetrievalResult:
         strategy = RetrievalStrategy.HYBRID
+        canonical_jurisdiction = _canonical_jurisdiction(logical_kb, jurisdiction)
         query = RetrievalQuery(
             text=text,
             strategy=strategy,
             filters=RetrievalFilter(
                 logical_kb=logical_kb,
                 tax_year=tax_year,
-                jurisdiction=jurisdiction,
+                jurisdiction=canonical_jurisdiction,
             ),
             limit=limit,
         )
@@ -88,11 +98,12 @@ class StaticKnowledgeRetrieval:
         limit: int = 5,
     ) -> RetrievalResult:
         del text
+        canonical_jurisdiction = _canonical_jurisdiction(logical_kb, jurisdiction)
         candidates = self._evidence.get(logical_kb, ())
         filtered = tuple(
             item
             for item in candidates
-            if item.jurisdiction == jurisdiction
+            if item.jurisdiction == canonical_jurisdiction
             and (tax_year is None or tax_year in item.tax_years)
         )[:limit]
         return RetrievalResult(

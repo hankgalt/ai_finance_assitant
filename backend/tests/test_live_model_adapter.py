@@ -59,7 +59,7 @@ def test_openai_live_account_supports_all_six_agent_contracts() -> None:
     expected_agents = {only_agent} if only_agent is not None else set(AgentId)
     settings = settings.model_copy(
         update={
-            "model_request_budget": len(expected_agents),
+            "model_request_budget": len(expected_agents) + 1,
             "model_maximum_attempts": 1,
             "provider_mode": "credential_free",
         }
@@ -102,7 +102,7 @@ def test_openai_live_account_supports_all_six_agent_contracts() -> None:
         AgentId.MARKET_ANALYSIS: "Describe DEMO historical price data.",
         AgentId.GOAL_PLANNING: "Project my goal scenario.",
         AgentId.NEWS_SYNTHESIZER: "Summarize recent DEMO company news.",
-        AgentId.TAX_EDUCATION: "Explain 2026 investment taxes.",
+        AgentId.TAX_EDUCATION: "What is a SEP IRA for tax year 2026?",
     }
     all_agent_message = (
         "Explain diversification and 2026 investment taxes, analyze my portfolio, "
@@ -155,9 +155,10 @@ def test_openai_live_account_supports_all_six_agent_contracts() -> None:
         session_id="session-live-model-m4-1",
     )
     model_events = [event for event in events if event.event_type == EventType.MODEL_COMPLETED]
-    assert len(model_events) == len(expected_agents)
+    assert len(model_events) == len(expected_agents) + 1
     assert all(event.safe_metadata["provider"] == "openai" for event in model_events)
     assert all(event.safe_metadata["model_id"] == "gpt-6.1-sol" for event in model_events)
+    assert any(event.node_id == "router" for event in model_events)
     assert all(
         event.usage.availability == MeasurementAvailability.MEASURED for event in model_events
     )

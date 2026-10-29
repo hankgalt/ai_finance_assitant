@@ -1,5 +1,6 @@
 """Local-safe configuration with environment-only secret loading."""
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -11,7 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="AIFA_",
-        env_file=".env",
+        env_file=os.environ.get("AIFA_ENV_FILE", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
         populate_by_name=True,
@@ -76,7 +77,7 @@ class Settings(BaseSettings):
     )
     openai_model: str = Field(default="gpt-6.1-sol", min_length=1, max_length=128)
     openai_terms_approved: bool = False
-    model_request_budget: int = Field(default=6, ge=1, le=24)
+    model_request_budget: int = Field(default=7, ge=1, le=24)
     model_maximum_attempts: int = Field(default=3, ge=1, le=3)
     model_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     model_maximum_input_characters: int = Field(default=40_000, ge=1_000, le=200_000)

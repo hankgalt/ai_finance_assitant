@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "reviewed_at": "2026-10-27T00:00:00Z",
+  "reviewed_at": "2026-10-29T00:00:00Z",
   "sources": [
     {
       "source_id": "investor-introduction-investing",
@@ -293,6 +293,27 @@
         "attribution_required": true,
         "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
         "reviewed_at": "2026-10-27T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
+      "source_id": "irs-p560-2025",
+      "logical_kb": "tax_education",
+      "title": "Publication 560 (2025), Retirement Plans for Small Business",
+      "publisher": "Internal Revenue Service",
+      "canonical_url": "https://www.irs.gov/publications/p560",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [2025],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "IRS employee-created official content is not copyrighted and may be freely copied; page reviewed for IRS-authored material.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude IRS names, seals, symbols, and third-party copyrighted inclusions.", "Do not imply IRS endorsement."],
+        "reviewed_at": "2026-10-29T00:00:00Z"
       },
       "ingestion_enabled": true
     },

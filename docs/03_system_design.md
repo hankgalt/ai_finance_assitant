@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.2 | Status: Product architecture baseline through M5 | 2026-10-28
+Version 1.3 | Status: Product architecture baseline through M6 | 2026-10-29
 
 ## 1. Architecture principles
 
@@ -55,6 +55,8 @@ flowchart TD
 
 One Run follows: normalize and validate request → apply access and safety policy → classify intent → select one or more agents → execute independent agents concurrently where safe → synthesize structured results → validate citations, provenance, and safety → persist terminal state. Dependent work remains ordered; for example, a portfolio must be validated before enrichment and valued before a news question can be contextualized to its holdings.
 
+Intent classification uses the Run's fixed ModelAdapter and a closed `RoutingModelOutput` schema containing only allowed Agent identifiers and a bounded reason category. The router supplies the untrusted user message and prior selected agents as data, enables no tools, records model identity/usage separately from the route outcome, and fails closed when the provider or schema is unavailable. Credential-free tests use scripted routing outputs at the same seam; they do not claim to measure live-model semantic accuracy.
+
 Execution has maximum graph hops, per-tool timeouts, an overall deadline, and model/token budgets. An independent agent failure can yield a partial result with structured warnings. Missing required user input yields a clarification result, not guessed data.
 
 ## 3. Six-agent interfaces and interaction limits
@@ -67,8 +69,8 @@ All agents accept an AgentRequest containing Run, Session, Workflow, user-messag
 | Portfolio Analysis | Authorized Portfolio identifier or validated import; analysis options; valuation time | Portfolio Snapshot, allocation/concentration/expense results, coverage, provenance, warnings, explanation | Portfolio import/validation, security enrichment, MarketDataProvider, deterministic portfolio analysis | Portfolio data, provider adapter/cache, calculation policy | Invalid rows → validation report; missing prices or classifications → partial coverage; provider outage → stale-labeled or unavailable values | Does not invent data, predict returns, make suitability decisions, or overwrite imports |
 | Market Analysis | Security identifiers, date range, requested statistics | Current/historical observations, descriptive statistics, provenance, freshness, limitations | MarketDataProvider and deterministic time-series statistics | Provider adapter/cache | Rate limit/timeout → bounded retry then stale cache or unavailable; invalid symbol → typed error | Describes history and context; does not turn performance into a guaranteed forecast or own goal assumptions |
 | Goal Planning | Goal amount/date, starting resources, contribution schedule, inflation/return scenarios, declared risk tolerance; optional authorized summaries | Deterministic scenarios, contributions/growth decomposition, shortfall/surplus, assumptions, warnings | Goal projection module; read-only Portfolio Snapshot and future CashFlowSummary access | Calculation policy and authorized summaries | Missing fields → clarification; invalid horizon/rate → validation error; incomplete summary → labeled partial scenario | Remains separate from Market Analysis; market history may inform education but does not silently set future-return assumptions |
-| News Synthesizer | Topic, security identifiers, time window, optional authorized portfolio summary | Dated attributed story summaries, fact/interpretation labels, relevance, limitations | NewsProvider; optional Market Analysis result supplied through graph | News provider and LLM adapter | No recent stories → explicit empty state; provider failure → unavailable; conflicting reports → preserve attribution | Does not treat news as price prediction, retrieve unapproved sources, or expose portfolio records to the provider |
-| Tax Education | U.S. federal tax-education question, requested tax year, account/investment concept, jurisdiction | Educational explanation, applicable year/jurisdiction, authoritative citations, caveats | Tax Education retrieval and grounded-response adapter | Active Tax KB and LLM adapter | Ambiguous year → clarify or label assumed current year; no authoritative evidence → abstain; unsupported jurisdiction → out-of-scope | Does not calculate an individual return, make elections, provide legal advice, or silently apply current law to historical years |
+| News Synthesizer | Topic, security identifiers, time window, optional authorized portfolio summary | Dated attributed story summaries, fact/interpretation labels, relevance, limitations | NewsProvider; optional Market Analysis result supplied through graph | News provider and LLM adapter | Authorized context → use its query/window; uppercase ticker without context → construct a minimized public query and label a seven-day default; no safe public topic → clarify; no recent stories → explicit empty state; provider failure → unavailable | Does not treat news as price prediction, retrieve unapproved sources, or expose portfolio records or raw user prompts to the provider |
+| Tax Education | U.S. federal tax-education question, requested tax year, account/investment concept, jurisdiction | Educational explanation, applicable year/jurisdiction, authoritative citations, caveats | Tax Education retrieval and grounded-response adapter | Active Tax KB and LLM adapter | Explicit year → exact-year evidence only; omitted year → use and label the latest matching authoritative year; no authoritative evidence → abstain; unsupported jurisdiction → out-of-scope | Does not calculate an individual return, make elections, provide legal advice, or silently apply current law to historical years |
 
 Multi-domain requests are decomposed by the router. Agents never call one another recursively; the graph supplies another agent’s structured result when composition is required. Goal Planning and Market Analysis always remain separate nodes and authorities.
 
@@ -91,9 +93,10 @@ Ports exist only at seams that genuinely vary, normally production and test adap
 
 M4.1 selects OpenAI `gpt-6.1-sol` as the conditional live adapter and keeps the deterministic
 adapter as the credential-free default. `WorkflowApplication` creates one fixed model adapter per
-Run. The live adapter uses Responses structured output with `store=False`, no tools, bounded
-untrusted input assembly, a six-attempt Run budget, deadline-aware timeout, and typed failures.
-Finance and Tax use medium reasoning effort; the other four agents use low. Generated output is
+Run and shares its seven-attempt budget across one routing decision and up to six specialist
+responses. The live adapter uses Responses structured output with `store=False`, no tools, bounded
+untrusted input assembly, deadline-aware timeout, and typed failures. Routing and the four
+non-grounded specialists use low reasoning effort; Finance and Tax use medium. Generated output is
 limited to explanation and warnings: agents return deterministic module facts and provider
 provenance from their original code-owned values, never model-restated arithmetic. Model and
 prompt identifiers plus provider-reported token usage are allow-listed on measured events; model

@@ -1,20 +1,42 @@
 {
   "schema_version": "1",
-  "recorded_at": "2026-10-28",
+  "recorded_at": "2026-10-29",
   "status": "pass",
   "focused_m4": {
-    "tests": 16,
-    "passed": 16,
+    "tests": 23,
+    "passed": 23,
     "failed": 0
   },
   "repository_backend": {
-    "passed": 103,
+    "passed": 168,
     "skipped": 1,
-    "deselected": 2,
+    "deselected": 3,
     "coverage_percent": 87
   },
   "notes": [
     "The skipped test is the existing opt-in live-Qdrant integration test.",
-    "The two deselected tests are opt-in live-provider tests; no external provider call was made."
-  ]
+    "The three deselected tests are opt-in live-provider and live-model tests; the ordinary suite made no external call.",
+    "Routing contract cases use scripted credential-free model outputs and do not claim live-model semantic accuracy."
+  ],
+  "live_news_regression": {
+    "question": "what's the latest news on MSFT",
+    "provider": "tavily",
+    "provider_calls": 1,
+    "openai_calls": 0,
+    "status": "ok",
+    "evidence_count": 5,
+    "default_window_days": 7,
+    "provider_query": "MSFT company financial news",
+    "raw_user_message_forwarded": false,
+    "raw_provider_payload_retained": false
+  },
+  "live_langsmith_root_name": {
+    "project": "ai_finance_assistant",
+    "root_run_name": "finance-assistant",
+    "synthetic_workflow": true,
+    "inputs_outputs_hidden": true,
+    "openai_calls": 0,
+    "provider_calls": 0,
+    "status": "pass"
+  }
 }

@@ -25,6 +25,8 @@
     {"id":"single-tax-02","message":"What is the wash sale rule?","expected":["tax_education"]},
     {"id":"single-tax-03","message":"What does form 1099 report?","expected":["tax_education"]},
     {"id":"single-tax-04","message":"How can a deduction affect taxable income?","expected":["tax_education"]},
+    {"id":"single-tax-05","message":"What is a SEP IRA?","expected":["tax_education"]},
+    {"id":"single-tax-06","message":"Explain a Simplified Employee Pension plan.","expected":["tax_education"]},
     {"id":"multi-01","message":"Analyze my portfolio and give me a market price quote.","expected":["portfolio_analysis","market_analysis"]},
     {"id":"multi-02","message":"Compare market performance with the latest news.","expected":["market_analysis","news_synthesizer"]},
     {"id":"multi-03","message":"Model my retirement goal and explain the tax considerations.","expected":["goal_planning","tax_education"]},

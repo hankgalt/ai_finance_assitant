@@ -1,6 +1,8 @@
 """Versioned, minimized model request and response contracts."""
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue
+from enum import StrEnum
+
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.contracts.common import Identifier, ShortText
@@ -47,3 +49,46 @@ class ModelAdapterResult(BaseModel):
 
     payload: dict[str, JsonValue]
     usage: ModelUsage = Field(default_factory=ModelUsage)
+
+
+class RoutingReason(StrEnum):
+    SINGLE_DOMAIN = "single_domain"
+    MULTI_DOMAIN = "multi_domain"
+    CLARIFICATION_REQUIRED = "clarification_required"
+    CHECKPOINT_FOLLOW_UP = "checkpoint_follow_up"
+
+
+class RoutingModelRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: str = Field(default="1", pattern=r"^1$")
+    user_message: str = Field(min_length=1, max_length=20_000)
+    previous_agent_ids: tuple[AgentId, ...] = Field(default=(), max_length=6)
+    deadline_at: AwareDatetime
+
+
+class RoutingModelOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: str = Field(default="1", pattern=r"^1$")
+    selected_agent_ids: tuple[AgentId, ...] = Field(default=(), max_length=6)
+    reason_category: RoutingReason
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> "RoutingModelOutput":
+        if len(set(self.selected_agent_ids)) != len(self.selected_agent_ids):
+            raise ValueError("routing decisions cannot select an agent more than once")
+        if not self.selected_agent_ids:
+            if self.reason_category != RoutingReason.CLARIFICATION_REQUIRED:
+                raise ValueError("an empty route requires clarification_required")
+        elif self.reason_category == RoutingReason.CLARIFICATION_REQUIRED:
+            raise ValueError("a selected route cannot require clarification")
+        elif (
+            len(self.selected_agent_ids) == 1 and self.reason_category == RoutingReason.MULTI_DOMAIN
+        ):
+            raise ValueError("a single selected agent cannot use multi_domain")
+        elif (
+            len(self.selected_agent_ids) > 1 and self.reason_category == RoutingReason.SINGLE_DOMAIN
+        ):
+            raise ValueError("multiple selected agents cannot use single_domain")
+        return self

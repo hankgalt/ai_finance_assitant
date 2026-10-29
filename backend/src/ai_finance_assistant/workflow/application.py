@@ -31,6 +31,7 @@ from ai_finance_assistant.workflow.events import RunEventRecorder
 from ai_finance_assistant.workflow.graph import FinanceWorkflow, SpecialistAgent
 from ai_finance_assistant.workflow.models import WorkflowRequest, WorkflowRunResult
 from ai_finance_assistant.workflow.retrieval import KnowledgeRetrieval
+from ai_finance_assistant.workflow.routing import IntentRouter
 
 ProviderBundleBuilder = Callable[[Settings], ProviderBundle]
 ModelAdapterBuilder = Callable[[Settings], ModelAdapter]
@@ -107,6 +108,7 @@ class WorkflowApplication:
             agents=agents,
             event_recorder=self._event_recorder,
             observability=self._observability,
+            router=IntentRouter(model=model),
             checkpointer=self._checkpointer,
             maximum_graph_hops=self._settings.workflow_maximum_graph_hops,
         )

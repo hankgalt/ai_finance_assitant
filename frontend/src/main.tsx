@@ -3,6 +3,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./app/App";
+import { ErrorBoundary } from "./app/ErrorBoundary";
+import { startWebVitals } from "./lib/telemetry";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -22,7 +24,11 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </QueryClientProvider>
   </StrictMode>,
 );
+
+startWebVitals();

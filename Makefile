@@ -3,7 +3,7 @@ QDRANT_URL ?= http://127.0.0.1:6333
 .PHONY: backend-sync backend-dev backend-check frontend-install frontend-dev frontend-check \
 	qdrant-up qdrant-status qdrant-stop qdrant-check knowledge-finance knowledge-tax \
 	knowledge-validate verify m1-check m2-check m3-check m4-check m4-1-check \
-	m5-check provider-live-check model-live-check observability-up observability-status \
+	m5-check m6-check provider-live-check model-live-check observability-up observability-status \
 	observability-stop
 
 backend-sync:
@@ -84,6 +84,13 @@ m5-check:
 	cd backend && uv run mypy
 	cd backend && uv run pytest -q tests/test_m5_api.py tests/test_m5_persistence.py tests/test_durable_provider_cache.py tests/test_m5_observability.py tests/test_m5_contract_manifest.py tests/test_health.py
 
+m6-check: frontend-check
+	cd backend && uv run ruff format --check src tests
+	cd backend && uv run ruff check src tests
+	cd backend && uv run mypy
+	cd backend && uv run pytest -q tests/test_m6_browser_contract.py tests/test_m6_contract_manifest.py tests/test_m5_api.py tests/test_m5_contract_manifest.py
+	cd frontend && pnpm test:e2e
+
 observability-up:
 	docker compose --profile observability up -d otel-collector
 
@@ -94,7 +101,7 @@ observability-stop:
 	docker compose --profile observability stop otel-collector
 
 provider-live-check:
-	cd backend && AIFA_RUN_LIVE_PROVIDER_TESTS=true AIFA_PROVIDER_MODE=live uv run pytest -q -m live_provider tests/test_live_provider_adapters.py
+	cd backend && AIFA_TEST_ENV_FILE=.env AIFA_RUN_LIVE_PROVIDER_TESTS=true AIFA_PROVIDER_MODE=live uv run pytest -q -m live_provider tests/test_live_provider_adapters.py
 
 model-live-check:
-	cd backend && AIFA_RUN_LIVE_MODEL_TESTS=true AIFA_MODEL_MODE=openai_live uv run pytest -q -m live_model tests/test_live_model_adapter.py
+	cd backend && AIFA_TEST_ENV_FILE=.env AIFA_RUN_LIVE_MODEL_TESTS=true AIFA_MODEL_MODE=openai_live uv run pytest -q -m live_model tests/test_live_model_adapter.py
