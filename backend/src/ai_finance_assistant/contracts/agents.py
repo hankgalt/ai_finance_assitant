@@ -21,6 +21,7 @@ class AgentResultStatus(StrEnum):
     OK = "ok"
     PARTIAL = "partial"
     ERROR = "error"
+    CLARIFICATION = "clarification"
 
 
 class EvidenceReference(BaseModel):

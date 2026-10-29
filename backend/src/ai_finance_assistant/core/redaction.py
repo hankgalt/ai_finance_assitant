@@ -21,11 +21,14 @@ PROTECTED_KEY_PARTS: Final = frozenset(
         "transaction",
     }
 )
+SAFE_PROTECTED_KEY_EXCEPTIONS: Final = frozenset({"prompt_version"})
 SAFE_METADATA_KEYS: Final = frozenset(
     {
         "cache_status",
         "collection_version",
         "duration_source",
+        "model_id",
+        "prompt_version",
         "provider",
         "record_count",
         "result_status",
@@ -43,6 +46,8 @@ SENSITIVE_AUTHORIZATION_VALUE: Final = re.compile(
 
 def _is_protected(key: str) -> bool:
     normalized = key.casefold().replace("-", "_")
+    if normalized in SAFE_PROTECTED_KEY_EXCEPTIONS:
+        return False
     return any(part in normalized for part in PROTECTED_KEY_PARTS)
 
 

@@ -8,8 +8,13 @@ dependencies = [
   "beautifulsoup4>=4.14,<5",
   "fastapi>=0.162,<0.163",
   "httpx>=0.28,<0.29",
+  "langgraph>=1.0,<2",
+  "langsmith>=0.4,<1",
   "numpy>=2.1,<2.4",
+  "openai>=3.40,<4",
   "openpyxl>=3.1,<4",
+  "opentelemetry-api>=1.38,<2",
+  "opentelemetry-sdk>=1.38,<2",
   "pydantic>=2.13,<3",
   "pydantic-settings>=2.12,<3",
   "pypdf>=6.6,<7",
@@ -34,11 +39,12 @@ build-backend = "hatchling.build"
 packages = ["src/ai_finance_assistant"]
 
 [tool.pytest.ini_options]
-addopts = "--strict-config --strict-markers -m 'not live_provider'"
+addopts = "--strict-config --strict-markers -m 'not live_provider and not live_model'"
 testpaths = ["tests"]
 markers = [
   "qdrant: requires the explicitly configured local Qdrant integration service",
   "live_provider: makes explicitly enabled calls to approved external provider accounts",
+  "live_model: makes explicitly enabled calls to an approved external model account",
 ]
 
 [tool.ruff]

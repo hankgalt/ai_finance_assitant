@@ -80,6 +80,10 @@ class UsageMetadata(BaseModel):
     total_tokens: int | None = Field(default=None, ge=0)
     cost_amount: float | None = Field(default=None, ge=0)
     cost_currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    cost_unavailable_reason: str | None = Field(
+        default="Model cost is not available.",
+        max_length=256,
+    )
     method: str | None = Field(default=None, max_length=128)
     unavailable_reason: str | None = Field(default="Model usage is not available.", max_length=256)
 
@@ -101,6 +105,13 @@ class UsageMetadata(BaseModel):
                 raise ValueError("measured or estimated usage requires a method")
             if self.unavailable_reason is not None:
                 raise ValueError("available usage cannot contain an unavailable reason")
+        if self.cost_amount is None and not self.cost_unavailable_reason:
+            raise ValueError("missing model cost requires an unavailable reason")
+        if self.cost_amount is not None:
+            if self.cost_currency is None:
+                raise ValueError("available model cost requires a currency")
+            if self.cost_unavailable_reason is not None:
+                raise ValueError("available model cost cannot contain an unavailable reason")
         return self
 
 

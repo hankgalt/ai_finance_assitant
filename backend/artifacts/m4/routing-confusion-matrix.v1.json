@@ -1,0 +1,25 @@
+{
+  "schema_version": "1",
+  "dataset": "data/workflow/routing_cases.v1.json",
+  "case_count": 40,
+  "exact_match_count": 40,
+  "exact_match_rate": 1.0,
+  "case_classes": {
+    "single_domain": {"count": 24, "exact": 24},
+    "multi_domain": {"count": 8, "exact": 8},
+    "clarification": {"count": 4, "exact": 4},
+    "checkpoint_follow_up": {"count": 4, "exact": 4}
+  },
+  "agent_membership": {
+    "finance_qa": {"expected": 6, "selected": 6},
+    "portfolio_analysis": {"expected": 7, "selected": 7},
+    "market_analysis": {"expected": 8, "selected": 8},
+    "goal_planning": {"expected": 8, "selected": 8},
+    "news_synthesizer": {"expected": 8, "selected": 8},
+    "tax_education": {"expected": 8, "selected": 8}
+  },
+  "limitations": [
+    "This is a deterministic development dataset, not a representative production traffic sample.",
+    "M8 must expand and independently review routing and safety evaluation before release qualification."
+  ]
+}

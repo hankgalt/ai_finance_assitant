@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     app_name: str = "AI Finance Assistant API"
@@ -63,6 +64,52 @@ class Settings(BaseSettings):
         min_length=1,
         max_length=512,
     )
+    model_mode: Literal["credential_free", "openai_live"] = "credential_free"
+    openai_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "AIFA_OPENAI_API_KEY",
+            "OPENAI_API_KEY",
+            "openai_api_key",
+        ),
+    )
+    openai_model: str = Field(default="gpt-6.1-sol", min_length=1, max_length=128)
+    openai_terms_approved: bool = False
+    model_request_budget: int = Field(default=6, ge=1, le=24)
+    model_maximum_attempts: int = Field(default=3, ge=1, le=3)
+    model_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    model_maximum_input_characters: int = Field(default=40_000, ge=1_000, le=200_000)
+    observability_mode: Literal["disabled", "in_memory", "opentelemetry"] = "opentelemetry"
+    langsmith_tracing_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "AIFA_LANGSMITH_TRACING_ENABLED",
+            "LANGSMITH_TRACING",
+            "LANGCHAIN_TRACING_V2",
+            "langsmith_tracing_enabled",
+        ),
+    )
+    langsmith_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "AIFA_LANGSMITH_API_KEY",
+            "LANGSMITH_API_KEY",
+            "LANGCHAIN_API_KEY",
+            "langsmith_api_key",
+        ),
+    )
+    langsmith_project: str = Field(
+        default="ai-finance-assistant-local",
+        min_length=1,
+        max_length=128,
+        validation_alias=AliasChoices(
+            "AIFA_LANGSMITH_PROJECT",
+            "LANGSMITH_PROJECT",
+            "LANGCHAIN_PROJECT",
+            "langsmith_project",
+        ),
+    )
+    workflow_maximum_graph_hops: int = Field(default=16, ge=4, le=64)
 
 
 @lru_cache

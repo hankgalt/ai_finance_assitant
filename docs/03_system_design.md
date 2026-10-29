@@ -89,6 +89,17 @@ Multi-domain requests are decomposed by the router. Agents never call one anothe
 
 Ports exist only at seams that genuinely vary, normally production and test adapters. Internal helpers are not exposed just to make tests easier; observable behavior is tested through each module’s interface.
 
+M4.1 selects OpenAI `gpt-6.1-sol` as the conditional live adapter and keeps the deterministic
+adapter as the credential-free default. `WorkflowApplication` creates one fixed model adapter per
+Run. The live adapter uses Responses structured output with `store=False`, no tools, bounded
+untrusted input assembly, a six-attempt Run budget, deadline-aware timeout, and typed failures.
+Finance and Tax use medium reasoning effort; the other four agents use low. Generated output is
+limited to explanation and warnings: agents return deterministic module facts and provider
+provenance from their original code-owned values, never model-restated arithmetic. Model and
+prompt identifiers plus provider-reported token usage are allow-listed on measured events; model
+cost remains unavailable until an approved versioned calculator exists. See the
+[M4.1 selection record](research/M4_1_openai_model_selection.md).
+
 ## 5. Portfolio model and data flow
 
 ### 5.1 Imported records

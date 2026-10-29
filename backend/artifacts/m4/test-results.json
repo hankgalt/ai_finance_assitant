@@ -1,0 +1,20 @@
+{
+  "schema_version": "1",
+  "recorded_at": "2026-10-28",
+  "status": "pass",
+  "focused_m4": {
+    "tests": 16,
+    "passed": 16,
+    "failed": 0
+  },
+  "repository_backend": {
+    "passed": 103,
+    "skipped": 1,
+    "deselected": 2,
+    "coverage_percent": 87
+  },
+  "notes": [
+    "The skipped test is the existing opt-in live-Qdrant integration test.",
+    "The two deselected tests are opt-in live-provider tests; no external provider call was made."
+  ]
+}

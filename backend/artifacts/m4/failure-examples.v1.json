@@ -1,0 +1,35 @@
+{
+  "schema_version": "1",
+  "examples": [
+    {
+      "case": "independent_agent_exception",
+      "expected": "successful domain result is preserved and Run is partial",
+      "test": "tests/test_workflow.py::test_workflow_preserves_multi_agent_result_when_one_agent_fails"
+    },
+    {
+      "case": "expired_deadline",
+      "expected": "agent is not invoked and typed timeout is returned",
+      "test": "tests/test_workflow.py::test_workflow_enforces_deadline_before_agent_execution"
+    },
+    {
+      "case": "graph_hop_bound",
+      "expected": "bounded graph failure produces a safe terminal error",
+      "test": "tests/test_workflow.py::test_workflow_fails_safely_when_graph_hop_bound_is_too_small"
+    },
+    {
+      "case": "malformed_model_payload",
+      "expected": "schema validation rejects output and records model_failed",
+      "test": "tests/test_agents.py::test_agent_rejects_malformed_structured_model_output"
+    },
+    {
+      "case": "observability_exporter_failure",
+      "expected": "product completes and reports trace unavailable",
+      "test": "tests/test_observability.py::test_failed_observability_adapter_does_not_change_product_behavior"
+    },
+    {
+      "case": "cross_session_checkpoint_follow_up",
+      "expected": "prior route is unavailable and clarification is requested",
+      "test": "tests/test_workflow.py::test_checkpoint_restart_supports_follow_up_and_isolates_sessions"
+    }
+  ]
+}

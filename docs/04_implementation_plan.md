@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 1.8 | Status: Approved sequence; M0–M3 complete, later milestones planned | 2026-10-28
+Version 2.2 | Status: Approved sequence; M0–M4.1 complete; M5 and later milestones planned | 2026-10-28
 
 ## 1. Delivery rules
 
@@ -125,6 +125,26 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Evidence:** Six-agent behavior report, route confusion matrix, captured privacy-filtered RunEvents and OpenTelemetry traces, optional LangSmith trace samples when configured, actual graph diagrams, exporter-failure evidence, and failure examples.
 
+### M4.1 — Production LLM adapter and live-model qualification
+
+**Deliverables**
+
+- Evaluation-based selection of the initial production model/provider under ADR-008, including capability, structured-output, privacy, retention/training, regional, latency, context-limit, availability, and cost considerations.
+- A production ModelAdapter implementing the same versioned structured request/result contract as the deterministic adapter; all six agents continue to use the shared seam and never call a vendor SDK directly.
+- Environment-owned credentials and explicit credential-free versus live-model modes. One Run fixes its model/provider/model-version selection before execution and never silently substitutes fake output.
+- Versioned system instructions and response schemas, bounded evidence/context assembly, model and prompt identifiers on measured events, and schema-validation/repair behavior that does not accept arbitrary malformed output.
+- Deadline-aware timeout, bounded retry/backoff, concurrency and per-Run token/request budgets, typed provider failures, measured provider token usage where supplied, and clearly unavailable cost when no approved calculation method exists.
+- Privacy-safe OpenTelemetry and optional LangSmith instrumentation. Prompts, retrieved excerpts, financial records, credentials, provider payloads, and model responses remain excluded from RunEvents and operational telemetry; LangSmith inputs and outputs stay hidden unless a later approved privacy decision changes that policy.
+- Opt-in live-model qualification tests and a credential-free deterministic suite. Ordinary CI requires no model credential and performs no external model call.
+
+**Dependencies:** Completed M4 seam; an approved model/provider decision satisfying ADR-008; account credentials and terms suitable for the private demonstration; documented data-use, retention, and training controls. Missing approval or credentials blocks live-model activation rather than triggering an automatic provider or fake fallback.
+
+**Acceptance:** Each of the six agents completes at least one distinct, schema-valid live-model case through the shared adapter; Finance and Tax remain grounded in supplied Run evidence; Portfolio and Goal explain deterministic outputs without changing arithmetic; Market and News preserve provider provenance and attribution; model/prompt/version and measured usage correlate with RunEvents and OpenTelemetry; timeout, quota, malformed output, refusal, and provider outage return typed safe states; credential-free behavior remains reproducible; no raw prompt, evidence excerpt, financial payload, credential, unrestricted response, or hidden reasoning appears in persisted events, logs, or exported operational attributes.
+
+**Tests:** Production-adapter contract tests with permitted recorded or hand-authored fixtures; deterministic tests for structured success, refusal, malformed/extra/truncated output, timeout, authentication, quota/rate limit, transient retry exhaustion, context/token/request budget, deadline, cancellation propagation where supported, usage availability, redaction, prompt-injection boundaries, and fake/live separation. Explicitly marked live tests exercise one bounded request per representative agent behavior or an approved lower-call matrix that still covers all six output contracts; ordinary suites exclude the marker.
+
+**Evidence:** Model/provider selection record, account terms/privacy review, model and prompt/version inventory, structured-output and failure matrix, token/request budget, privacy data-flow review, captured redacted RunEvent/OpenTelemetry correlation, optional hidden-input/output LangSmith sample, opt-in live qualification report with actual request count and cost/usage availability, credential-free regression report, limitations, and a delivery report.
+
 ### M5 — FastAPI integration and persistence
 
 **Deliverables**
@@ -137,7 +157,7 @@ Telemetry configuration is environment-driven and disabled safely when no export
 - FastAPI and outbound-client OpenTelemetry instrumentation with W3C trace-context propagation; JSON logs enriched with trace, span, request, execution, and Run identifiers when available.
 - OTLP/Collector configuration for enabled signals, with backend request/error/latency, provider/retrieval timing, retry/rate-limit, cache, and persistence metrics using bounded low-cardinality attributes.
 
-**Dependencies:** M1–M4. ADR-026 validation must select the concrete local relational store and record provider-specific refresh, retention, migration, and risk-acceptance behavior before implementation.
+**Dependencies:** M1–M4.1. ADR-026 validation must select the concrete local relational store and record provider-specific refresh, retention, migration, and risk-acceptance behavior before implementation.
 
 **Acceptance:** REST is authoritative; reconnect deduplicates events; cross-session reads/streams fail; restart behavior matches configured retention; deletion removes defined user artifacts; partial and not-ready states use stable errors; inbound and outbound trace context correlates with logs and RunEvents; telemetry remains non-blocking and no metric label or exported attribute exposes protected or unbounded identifiers. A complete, fresh historical range survives restart without a provider call; an overlapping or partially stale request fetches only missing/provider-approved refresh coverage; stored observations never cross provider, adjustment, currency, or schema/policy boundaries; and every response truthfully distinguishes memory hit, durable hit, partial hit, stale, and unavailable states. Owner-only unverified-rights retention requires explicit local risk acceptance and cannot pass shared-demo or public-deployment readiness.
 
@@ -247,7 +267,7 @@ M0 → M1
 M0 → M2
 M0 → M3
 M1 + M2 + M3 → M4
-M4 → M5 → M6 → M7
+M4 → M4.1 → M5 → M6 → M7
 M1 through M7 → M8 → M9
 M2 + M5 + M6 → M10 after M9 release approval
 ~~~
@@ -262,7 +282,7 @@ M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 wh
 | Old M1: corpus and FAISS ingestion | New M1 | Replaced FAISS with persistent Qdrant; splits Finance/Tax KBs; adds offline versioning, evaluation, activation, rollback, and maintenance |
 | Old M2: deterministic finance core | New M2 | Expanded portfolio import/domain separation and reserves the future cash-flow interface |
 | Old M3: market abstraction | New M3 | Preserved and expanded to news, licensing, quota, and provenance behavior |
-| Old M4: orchestrator plus four agents | New M4 | All six agents now complete together so partial staging is not mistaken for the target architecture |
+| Old M4: orchestrator plus four agents | New M4 and M4.1 | M4 implements all six bounded agent modules and deterministic contracts; M4.1 qualifies the production LLM adapter so a fake-only graph is not mistaken for the release model path |
 | Old M5: News and Tax agents | New M1, M3, M4 | Tax knowledge belongs to M1, news provider to M3, and both agents to M4 |
 | Old M6: React views plus Inspector | New M6 and M7 | Separates core product journeys from trace fidelity while retaining their shared UI foundation |
 | Old M7: observability/safety/evaluation | New M0/M4 and M8 | Contracts/instrumentation move earlier; integrated qualification remains M8 |
@@ -273,6 +293,6 @@ M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 wh
 
 ## 5. Release sequencing and stop conditions
 
-The **initial product release** requires M0 through M8 plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the planned post-release cash-flow implementation; it does not delay either release and does not require a banking-data provider. Public availability and remaining production-hardening controls stay out of scope until separately approved.
+The **initial product release** requires M0 through M8, including M4.1, plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the planned post-release cash-flow implementation; it does not delay either release and does not require a banking-data provider. Public availability and remaining production-hardening controls stay out of scope until separately approved.
 
 Stop a milestone when a critical dependency, source-use right, data-integrity policy, security decision, or external authority is missing. Record the blocker rather than substituting invented data, bypassing a gate, or weakening the requirement. Near-complete work is not milestone completion.

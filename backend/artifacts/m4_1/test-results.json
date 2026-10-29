@@ -1,0 +1,48 @@
+{
+  "schema_version": "1",
+  "recorded_at": "2026-10-28",
+  "offline": {
+    "m4_1_gate": {
+      "command": "make m4-1-check",
+      "result": "passed",
+      "summary": "format, lint, mypy, and 43 focused tests passed"
+    },
+    "backend_gate": {
+      "command": "make backend-check",
+      "result": "passed",
+      "summary": "99 files formatted; lint passed; 92 source files type-checked; 131 passed, 1 skipped, 3 deselected; 87% coverage"
+    }
+  },
+  "live": {
+    "approved_request_budgets": [6, 6, 6],
+    "requests_made": 18,
+    "http_200_responses": 18,
+    "aggregate_attempt": {
+      "command": "AIFA_RUN_LIVE_MODEL_TESTS=true AIFA_MODEL_MODE=openai_live uv run pytest -q -m live_model tests/test_live_model_adapter.py",
+      "result": "post_call_fixture_failure",
+      "requests_made": 5,
+      "failure": "The router fixture omitted the exact historical-price intent phrase; corrected."
+    },
+    "market_diagnostic": {
+      "command": "AIFA_RUN_LIVE_MODEL_TESTS=true AIFA_MODEL_MODE=openai_live AIFA_LIVE_MODEL_ONLY_AGENT=market_analysis uv run pytest -q -m live_model tests/test_live_model_adapter.py",
+      "result": "post_call_fixture_failure",
+      "requests_made": 1,
+      "failure": "The assertion used the wrong deterministic fake-provider identifier; corrected."
+    },
+    "privacy_qualification_attempt": {
+      "command": "AIFA_RUN_LIVE_MODEL_TESTS=true AIFA_MODEL_MODE=openai_live uv run pytest -q -m live_model tests/test_live_model_adapter.py",
+      "result": "post_call_privacy_failure",
+      "requests_made": 6,
+      "successful_agent_contracts": 6,
+      "failure": "The terminal RunEvent copied the synthesized response summary; fixed with a status-only summary and a passing workflow regression test."
+    },
+    "clean_corrected_rerun": {
+      "command": "AIFA_RUN_LIVE_MODEL_TESTS=true AIFA_MODEL_MODE=openai_live uv run pytest -q -m live_model tests/test_live_model_adapter.py",
+      "result": "passed",
+      "requests_made": 6,
+      "summary": "1 passed in 6.46s"
+    },
+    "secrets_recorded": false,
+    "langsmith_external_trace": "not_configured"
+  }
+}

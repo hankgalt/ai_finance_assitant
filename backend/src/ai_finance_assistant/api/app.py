@@ -17,8 +17,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=resolved_settings.app_name,
         version=resolved_settings.app_version,
         description=(
-            "M1 foundation with offline knowledge ingestion and read-only Qdrant readiness. "
-            "Financial and agent workflows are not implemented."
+            "M4 foundation with offline knowledge ingestion, deterministic finance modules, "
+            "provider adapters, and an internal six-agent LangGraph workflow. Workflow REST, "
+            "SSE, and durable application persistence are not implemented until M5."
         ),
     )
     app.state.settings = resolved_settings

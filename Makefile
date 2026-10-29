@@ -2,7 +2,8 @@ QDRANT_URL ?= http://127.0.0.1:6333
 
 .PHONY: backend-sync backend-dev backend-check frontend-install frontend-dev frontend-check \
 	qdrant-up qdrant-status qdrant-stop qdrant-check knowledge-finance knowledge-tax \
-	knowledge-validate verify m1-check m2-check m3-check provider-live-check
+	knowledge-validate verify m1-check m2-check m3-check m4-check m4-1-check \
+	provider-live-check model-live-check
 
 backend-sync:
 	cd backend && uv sync
@@ -64,5 +65,20 @@ m3-check:
 	cd backend && uv run mypy
 	cd backend && uv run pytest -q tests/test_provider_adapters.py
 
+m4-check:
+	cd backend && uv run ruff format --check src tests
+	cd backend && uv run ruff check src tests
+	cd backend && uv run mypy
+	cd backend && uv run pytest -q tests/test_routing.py tests/test_agents.py tests/test_workflow.py tests/test_workflow_application.py tests/test_observability.py
+
+m4-1-check:
+	cd backend && uv run ruff format --check src tests
+	cd backend && uv run ruff check src tests
+	cd backend && uv run mypy
+	cd backend && uv run pytest -q tests/test_openai_model_adapter.py tests/test_model_factory.py tests/test_agents.py tests/test_workflow.py tests/test_workflow_application.py tests/test_observability.py
+
 provider-live-check:
 	cd backend && AIFA_RUN_LIVE_PROVIDER_TESTS=true AIFA_PROVIDER_MODE=live uv run pytest -q -m live_provider tests/test_live_provider_adapters.py
+
+model-live-check:
+	cd backend && AIFA_RUN_LIVE_MODEL_TESTS=true AIFA_MODEL_MODE=openai_live uv run pytest -q -m live_model tests/test_live_model_adapter.py
