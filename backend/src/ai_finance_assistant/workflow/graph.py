@@ -12,6 +12,11 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from ai_finance_assistant.agents.context import (
+    AgentContextRepository,
+    InMemoryAgentContextRepository,
+    PortfolioAgentContext,
+)
 from ai_finance_assistant.contracts.agents import (
     AgentId,
     AgentRequest,
@@ -27,9 +32,13 @@ from ai_finance_assistant.contracts.events import (
     RoutingMetadata,
     UsageMetadata,
 )
+from ai_finance_assistant.llm.models import RoutingReason
 from ai_finance_assistant.observability.ports import Observability
 from ai_finance_assistant.workflow.events import EventIdentity, RunEventRecorder
 from ai_finance_assistant.workflow.models import (
+    RequiredInput,
+    RequiredInputKind,
+    RequiredInputSelectionMode,
     WorkflowRequest,
     WorkflowRunResult,
     WorkflowStatus,
@@ -61,6 +70,9 @@ class FinanceState(TypedDict, total=False):
     deadline_at: datetime
     selected_agent_ids: tuple[AgentId, ...]
     route_reason_category: str
+    continuation_of_execution_id: str | None
+    missing_context_agent_ids: tuple[AgentId, ...]
+    required_input: RequiredInput | None
     agent_results: Annotated[dict[str, AgentResult], _merge_agent_results]
     final_status: WorkflowStatus
     final_summary: str
@@ -76,6 +88,7 @@ class FinanceWorkflow:
         event_recorder: RunEventRecorder,
         observability: Observability,
         router: IntentRouter,
+        contexts: AgentContextRepository | None = None,
         checkpointer: BaseCheckpointSaver[str] | None = None,
         maximum_graph_hops: int = 16,
     ) -> None:
@@ -85,6 +98,7 @@ class FinanceWorkflow:
         self._events = event_recorder
         self._observability = observability
         self._router = router
+        self._contexts = contexts or InMemoryAgentContextRepository()
         self._checkpointer = checkpointer or InMemorySaver()
         self._maximum_graph_hops = maximum_graph_hops
         self._graph = self._build_graph()
@@ -110,18 +124,27 @@ class FinanceWorkflow:
                 summary="Workflow execution started.",
             )
             try:
+                initial_state: FinanceState = {
+                    "execution_id": request.execution_id,
+                    "session_id": request.session_id,
+                    "workflow_id": request.workflow_id,
+                    "workflow_version": request.workflow_version,
+                    "message": request.message,
+                    "context_references": request.context_references,
+                    "locale": request.locale,
+                    "jurisdiction": request.jurisdiction,
+                    "deadline_at": request.deadline_at,
+                    "continuation_of_execution_id": request.continuation_of_execution_id,
+                    "missing_context_agent_ids": (),
+                    "required_input": None,
+                }
+                if request.continuation_of_execution_id is not None:
+                    initial_state["selected_agent_ids"] = request.continuation_agent_ids
+                    initial_state["route_reason_category"] = (
+                        RoutingReason.CHECKPOINT_FOLLOW_UP.value
+                    )
                 raw_state = self._graph.invoke(
-                    {
-                        "execution_id": request.execution_id,
-                        "session_id": request.session_id,
-                        "workflow_id": request.workflow_id,
-                        "workflow_version": request.workflow_version,
-                        "message": request.message,
-                        "context_references": request.context_references,
-                        "locale": request.locale,
-                        "jurisdiction": request.jurisdiction,
-                        "deadline_at": request.deadline_at,
-                    },
+                    initial_state,
                     {
                         "run_name": request.workflow_id,
                         "configurable": {
@@ -169,6 +192,9 @@ class FinanceWorkflow:
                     agent_results=(),
                     summary="The workflow could not complete safely.",
                     errors=(error,),
+                    continuation_of_execution_id=request.continuation_of_execution_id,
+                    locale=request.locale,
+                    jurisdiction=request.jurisdiction,
                     trace_id=trace.trace_id,
                     trace_unavailable_reason=(
                         None if trace.trace_id else "Observability trace is unavailable."
@@ -190,7 +216,15 @@ class FinanceWorkflow:
             }[status]
             selected = state.get("selected_agent_ids", ())
             result_map = state.get("agent_results", {})
-            results = tuple(result_map[agent_id.value] for agent_id in selected)
+            results = (
+                ()
+                if state.get("required_input") is not None
+                else tuple(
+                    result_map[agent_id.value]
+                    for agent_id in selected
+                    if agent_id.value in result_map
+                )
+            )
             errors = state.get("final_errors", ())
             self._events.record(
                 identity,
@@ -224,6 +258,10 @@ class FinanceWorkflow:
                 summary=state["final_summary"],
                 warnings=state.get("final_warnings", ()),
                 errors=errors,
+                required_input=state.get("required_input"),
+                continuation_of_execution_id=state.get("continuation_of_execution_id"),
+                locale=state["locale"],
+                jurisdiction=state["jurisdiction"],
                 trace_id=trace.trace_id,
                 trace_unavailable_reason=(
                     None if trace.trace_id else "Observability trace is unavailable."
@@ -240,16 +278,32 @@ class FinanceWorkflow:
             FinanceState
         )
         builder.add_node("router", self._route_node)
+        builder.add_node("context_gate", self._context_gate_node)
+        builder.add_node(
+            "portfolio_context_required",
+            self._portfolio_context_required_node,
+        )
         for agent_id, agent in self._agents.items():
             builder.add_node(agent_id.value, cast(Any, self._agent_node(agent)))
             builder.add_edge(agent_id.value, "synthesize")
         builder.add_node("synthesize", self._synthesize_node)
-        builder.add_edge(START, "router")
+        builder.add_conditional_edges(
+            START,
+            self._entry_node,
+            {"router": "router", "context_gate": "context_gate"},
+        )
+        builder.add_edge("router", "context_gate")
         path_map: dict[Hashable, str] = {agent_id.value: agent_id.value for agent_id in AgentId}
         path_map["synthesize"] = "synthesize"
-        builder.add_conditional_edges("router", self._next_nodes, path_map)
+        path_map["portfolio_context_required"] = "portfolio_context_required"
+        builder.add_conditional_edges("context_gate", self._next_nodes, path_map)
+        builder.add_edge("portfolio_context_required", "synthesize")
         builder.add_edge("synthesize", END)
         return builder.compile(checkpointer=self._checkpointer)
+
+    @staticmethod
+    def _entry_node(state: FinanceState) -> str:
+        return "context_gate" if state.get("continuation_of_execution_id") is not None else "router"
 
     def _route_node(self, state: FinanceState) -> FinanceState:
         identity = self._identity(state)
@@ -329,6 +383,8 @@ class FinanceWorkflow:
                 outcome=(
                     "Selected specialist agents."
                     if decision.selected_agent_ids
+                    else "Request is outside the supported financial scope."
+                    if decision.reason_category == RoutingReason.OUT_OF_SCOPE
                     else "More information is required."
                 ),
                 reason_category=decision.reason_category.value,
@@ -340,10 +396,75 @@ class FinanceWorkflow:
             "route_reason_category": decision.reason_category.value,
         }
 
+    def _context_gate_node(self, state: FinanceState) -> FinanceState:
+        identity = self._identity(state)
+        started = self._events.record(
+            identity,
+            event_type=EventType.NODE_STARTED,
+            status=EventStatus.RUNNING,
+            node_id="context_gate",
+            summary="Authorized context requirements are being checked.",
+        )
+        selected = state.get("selected_agent_ids", ())
+        missing: tuple[AgentId, ...] = ()
+        if AgentId.PORTFOLIO_ANALYSIS in selected:
+            has_portfolio_context = any(
+                isinstance(
+                    self._contexts.get(state["session_id"], reference),
+                    PortfolioAgentContext,
+                )
+                for reference in state.get("context_references", ())
+            )
+            if not has_portfolio_context:
+                missing = (AgentId.PORTFOLIO_ANALYSIS,)
+        self._events.record(
+            identity,
+            event_type=EventType.NODE_COMPLETED,
+            status=EventStatus.COMPLETED,
+            node_id="context_gate",
+            summary="Authorized context requirements were checked.",
+            safe_metadata={"required_input_count": len(missing)},
+            started_at=started.started_at,
+            completed=True,
+            parent_event_id=started.event_id,
+        )
+        return {"missing_context_agent_ids": missing}
+
     @staticmethod
     def _next_nodes(state: FinanceState) -> list[str]:
+        if AgentId.PORTFOLIO_ANALYSIS in state.get("missing_context_agent_ids", ()):
+            return ["portfolio_context_required"]
         selected = state.get("selected_agent_ids", ())
         return [item.value for item in selected] if selected else ["synthesize"]
+
+    def _portfolio_context_required_node(self, state: FinanceState) -> FinanceState:
+        identity = self._identity(state)
+        started = self._events.record(
+            identity,
+            event_type=EventType.NODE_STARTED,
+            status=EventStatus.RUNNING,
+            node_id="portfolio_context_required",
+            agent_id=AgentId.PORTFOLIO_ANALYSIS,
+            summary="Portfolio selection is required.",
+        )
+        required_input = RequiredInput(
+            kind=RequiredInputKind.PORTFOLIO_SELECTION,
+            agent_id=AgentId.PORTFOLIO_ANALYSIS,
+            selection_mode=RequiredInputSelectionMode.ONE_OR_EXPLICIT_COMPARISON,
+            prompt="Select the saved Portfolio you want me to analyze.",
+        )
+        self._events.record(
+            identity,
+            event_type=EventType.NODE_COMPLETED,
+            status=EventStatus.COMPLETED,
+            node_id="portfolio_context_required",
+            agent_id=AgentId.PORTFOLIO_ANALYSIS,
+            summary="Portfolio selection was requested.",
+            started_at=started.started_at,
+            completed=True,
+            parent_event_id=started.event_id,
+        )
+        return {"required_input": required_input}
 
     def _agent_node(
         self,
@@ -424,13 +545,31 @@ class FinanceWorkflow:
     @staticmethod
     def _synthesize_node(state: FinanceState) -> FinanceState:
         selected = state.get("selected_agent_ids", ())
-        if not selected:
+        required_input = state.get("required_input")
+        if required_input is not None:
             return {
                 "final_status": WorkflowStatus.CLARIFICATION,
-                "final_summary": (
+                "final_summary": required_input.prompt,
+                "final_warnings": (),
+                "final_errors": (),
+            }
+        if not selected:
+            if state.get("route_reason_category") == RoutingReason.OUT_OF_SCOPE.value:
+                summary = (
+                    "I can help with financial education, U.S. investment tax education, "
+                    "financial news, saved Portfolios, market data, and financial goals, but "
+                    "I can't answer unrelated general-knowledge questions."
+                )
+                status = WorkflowStatus.COMPLETED
+            else:
+                summary = (
                     "Please clarify whether you need finance education, portfolio analysis, "
                     "market data, goal planning, news, or U.S. tax education."
-                ),
+                )
+                status = WorkflowStatus.CLARIFICATION
+            return {
+                "final_status": status,
+                "final_summary": summary,
                 "final_warnings": (),
                 "final_errors": (),
             }

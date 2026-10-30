@@ -65,6 +65,7 @@ class RoutingReason(StrEnum):
     MULTI_DOMAIN = "multi_domain"
     CLARIFICATION_REQUIRED = "clarification_required"
     CHECKPOINT_FOLLOW_UP = "checkpoint_follow_up"
+    OUT_OF_SCOPE = "out_of_scope"
 
 
 class RoutingModelRequest(BaseModel):
@@ -88,10 +89,16 @@ class RoutingModelOutput(BaseModel):
         if len(set(self.selected_agent_ids)) != len(self.selected_agent_ids):
             raise ValueError("routing decisions cannot select an agent more than once")
         if not self.selected_agent_ids:
-            if self.reason_category != RoutingReason.CLARIFICATION_REQUIRED:
-                raise ValueError("an empty route requires clarification_required")
-        elif self.reason_category == RoutingReason.CLARIFICATION_REQUIRED:
-            raise ValueError("a selected route cannot require clarification")
+            if self.reason_category not in {
+                RoutingReason.CLARIFICATION_REQUIRED,
+                RoutingReason.OUT_OF_SCOPE,
+            }:
+                raise ValueError("an empty route requires clarification_required or out_of_scope")
+        elif self.reason_category in {
+            RoutingReason.CLARIFICATION_REQUIRED,
+            RoutingReason.OUT_OF_SCOPE,
+        }:
+            raise ValueError("a selected route cannot require clarification or be out of scope")
         elif (
             len(self.selected_agent_ids) == 1 and self.reason_category == RoutingReason.MULTI_DOMAIN
         ):

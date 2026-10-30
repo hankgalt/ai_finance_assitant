@@ -2,14 +2,15 @@
   "schema_version": "1",
   "dataset": "data/workflow/routing_cases.v1.json",
   "evaluation_mode": "scripted_model_outputs",
-  "case_count": 42,
-  "exact_match_count": 42,
+  "case_count": 44,
+  "exact_match_count": 44,
   "exact_match_rate": 1.0,
   "case_classes": {
     "single_domain": {"count": 26, "exact": 26},
     "multi_domain": {"count": 8, "exact": 8},
     "clarification": {"count": 4, "exact": 4},
-    "checkpoint_follow_up": {"count": 4, "exact": 4}
+    "checkpoint_follow_up": {"count": 4, "exact": 4},
+    "out_of_scope": {"count": 2, "exact": 2}
   },
   "agent_membership": {
     "finance_qa": {"expected": 6, "selected": 6},

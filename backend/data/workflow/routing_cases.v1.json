@@ -39,6 +39,8 @@
     {"id":"clarify-02","message":"I am not sure where to begin.","expected":[]},
     {"id":"clarify-03","message":"Please look at this.","expected":[]},
     {"id":"clarify-04","message":"Thanks for your help.","expected":[]},
+    {"id":"out-of-scope-01","message":"How's the weather?","expected":[],"reason":"out_of_scope"},
+    {"id":"out-of-scope-02","message":"Who's the president of the United States?","expected":[],"reason":"out_of_scope"},
     {"id":"followup-01","message":"Tell me more.","previous":["finance_qa"],"expected":["finance_qa"]},
     {"id":"followup-02","message":"Explain that another way.","previous":["tax_education"],"expected":["tax_education"]},
     {"id":"followup-03","message":"What about that?","previous":["market_analysis","news_synthesizer"],"expected":["market_analysis","news_synthesizer"]},

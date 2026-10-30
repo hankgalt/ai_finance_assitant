@@ -55,6 +55,8 @@ backend-only.
   against FastAPI OpenAPI.
 - `frontend/e2e/m6.spec.ts`: deterministic desktop/mobile journeys, import correction, semantic
   accessibility, keyboard focus, CSP, provenance, and chart/table assertions.
+- `examples/portfolios/`: import-ready synthetic JSON, CSV, and XLSX files for validating the
+  review, save, and backend Snapshot workflow without live provider calls.
 
 ## Acceptance and evidence
 
@@ -62,6 +64,7 @@ backend-only.
 | --- | --- |
 | Four core workflows complete without developer tools | Passed in Chrome Playwright journeys |
 | Manual/JSON/CSV/XLSX share validation and require explicit approval | Passed by transport and browser tests |
+| Committed example files import and produce complete dashboard Snapshots | Passed by importer, checksum, and deterministic Portfolio-analysis tests |
 | No browser-side authoritative portfolio/goal calculation | Passed; charts and tables use returned resources |
 | Provenance, freshness, coverage, assumptions, partial/failure labels | Implemented and contract-tested |
 | Refresh/reconnect preserves Session intent and stable SSE cursor IDs | Passed by Session reload and SSE parser tests |
@@ -136,12 +139,63 @@ agent-section divider, and a larger separation between each agent's citation lis
 supplemental warning or error. A browser fixture covering a legacy Run without a saved request
 message verifies both gaps at the rendered interface.
 
+Portfolio Dashboard warning maintenance now groups equivalent Holding-scoped Snapshot warnings by
+code and message at the presentation boundary. The authoritative backend warning array remains
+unchanged; one notice reports the affected-Holding count and exposes the individual Holding
+identifiers in an expandable list, while portfolio-wide warnings retain a separate scope. The
+focused regression first reproduced two duplicate cards, then passed with one grouped notice.
+Prettier, ESLint, TypeScript, all 16 Vitest tests, the production build, and all 6 Chrome Playwright
+journeys pass.
+
+Portfolio workflow hierarchy maintenance removes the implied mandatory Step 1/Step 2 sequence. The
+full-width saved Portfolio library is now the primary view, and the unchanged manual/file validation
+workflow opens only from an Import Portfolio action in a modal dialog. The dialog uses native modal
+focus containment, starts on an explicit close control, supports Escape dismissal with focus return,
+and closes after a successful save. A public-component regression verifies the on-demand form, and
+the Chrome journey verifies dialog semantics, focus behavior, import correction, save, and the
+resulting library. Prettier, ESLint, TypeScript, all 17 Vitest tests, the production build, Axe, and
+all 6 Chrome Playwright journeys pass.
+
+Saved Portfolio lifecycle maintenance adds a separately confirmed Delete action to each library
+entry. Confirmation identifies the Portfolio and states that its imported records and saved
+Snapshots are permanently removed from the Active Session; Cancel performs no mutation. Successful
+deletion uses the authoritative M5 API, refreshes the library, removes a displayed Snapshot owned by
+that Portfolio, and reports completion, while failures retain the confirmation with a safe error.
+API and component regressions plus the Chrome journey cover confirmation, cancellation, deletion,
+empty state, and Snapshot removal. Prettier, ESLint, TypeScript, all 19 Vitest tests, the production
+build, and all 6 Chrome Playwright journeys pass.
+
+Portfolio save and delete confirmations are transient accessible status messages with a shared
+four-second lifetime. A new Portfolio action replaces any earlier confirmation, and component
+unmount cancels the pending timer. The Chrome journey verifies that each message is initially
+visible and disappears within the five-second acceptance window without changing the saved
+Portfolio state.
+
+Assistant portfolio-context maintenance connects the saved Portfolio library to the graph's typed
+context requirement. The composer has no default selector and does not load saved Portfolios for an
+ordinary question. After the classifier selects Portfolio Analysis, the context gate returns a
+Portfolio-selection response when context is missing; only that Run renders the labeled selector.
+Even a single saved Portfolio requires an explicit choice, while multiple Portfolios also offer an
+explicit separate-comparison scope. Continuing creates a linked Run and removes the selection
+control from the resolved clarification. The Portfolio agent preserves every distinct authorized
+context, produces separate deterministic Snapshot facts, and instructs the model to name and report
+each Portfolio without blending totals. Component, API, workflow, and Chrome regressions cover the
+conditional single/multiple selection behavior and linked result.
+
+The same classifier maintenance rejects unrelated general knowledge such as weather or current
+political-office questions with a bounded finance-scope response and no specialist Agent result.
+The semantic decision remains in the structured model prompt; deterministic code validates the
+closed decision schema, enforces context authorization, and selects graph edges without maintaining
+a substring table.
+
 ## Security and privacy impact
 
 - Files remain untrusted: the browser only encodes bytes; backend size, type, schema, formula, and
   content checks remain authoritative. Validation findings are displayed without silent repair.
 - The browser stores only an opaque local Session identifier. It ships no OpenAI, provider,
   LangSmith, Collector, or other secret and never sends a prompt or financial payload to telemetry.
+- Portfolio context is selected from the authorized, Session-scoped saved list and transported as
+  opaque identifiers; labels or natural-language mentions are not treated as authorization.
 - Confirmed Session clearing uses the authoritative M5 archive endpoint. It preserves Session-owned
   artifacts and checkpoint history as read-only, and failure retains the browser identifier and
   active UI state. Permanent deletion is a separate History action and uses the guarded M5 cascade.

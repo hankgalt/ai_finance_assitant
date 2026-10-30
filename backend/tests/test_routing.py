@@ -14,6 +14,7 @@ class RoutingCase(TypedDict, total=False):
     message: str
     previous: list[str]
     expected: list[str]
+    reason: str
 
 
 def test_versioned_routing_dataset_meets_m4_gate() -> None:
@@ -26,7 +27,9 @@ def test_versioned_routing_dataset_meets_m4_gate() -> None:
         case["message"]: RoutingModelOutput(
             selected_agent_ids=tuple(AgentId(item) for item in case["expected"]),
             reason_category=(
-                RoutingReason.CHECKPOINT_FOLLOW_UP
+                RoutingReason(case["reason"])
+                if case.get("reason")
+                else RoutingReason.CHECKPOINT_FOLLOW_UP
                 if case.get("previous")
                 else RoutingReason.CLARIFICATION_REQUIRED
                 if not case["expected"]

@@ -6,6 +6,8 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	router(router)
+	context_gate(context_gate)
+	portfolio_context_required(portfolio_context_required)
 	finance_qa(finance_qa)
 	portfolio_analysis(portfolio_analysis)
 	market_analysis(market_analysis)
@@ -14,19 +16,23 @@ graph TD;
 	tax_education(tax_education)
 	synthesize(synthesize)
 	__end__([<p>__end__</p>]):::last
-	__start__ --> router;
+	__start__ -.-> context_gate;
+	__start__ -.-> router;
+	context_gate -.-> finance_qa;
+	context_gate -.-> goal_planning;
+	context_gate -.-> market_analysis;
+	context_gate -.-> news_synthesizer;
+	context_gate -.-> portfolio_analysis;
+	context_gate -.-> portfolio_context_required;
+	context_gate -.-> synthesize;
+	context_gate -.-> tax_education;
 	finance_qa --> synthesize;
 	goal_planning --> synthesize;
 	market_analysis --> synthesize;
 	news_synthesizer --> synthesize;
 	portfolio_analysis --> synthesize;
-	router -.-> finance_qa;
-	router -.-> goal_planning;
-	router -.-> market_analysis;
-	router -.-> news_synthesizer;
-	router -.-> portfolio_analysis;
-	router -.-> synthesize;
-	router -.-> tax_education;
+	portfolio_context_required --> synthesize;
+	router --> context_gate;
 	tax_education --> synthesize;
 	synthesize --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2

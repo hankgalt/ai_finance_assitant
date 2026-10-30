@@ -43,6 +43,48 @@ class LongNarrativeModelAdapter:
         return ModelAdapterResult(payload=output.model_dump(mode="json"))
 
 
+class PortfolioQuestionModelAdapter:
+    provider_id = "portfolio-question-fixture"
+    model_id = "portfolio-question-fixture-v1"
+    prompt_version = "portfolio-question-fixture-v1"
+    routing_prompt_version = "portfolio-question-routing-fixture-v1"
+
+    def generate(self, request: ModelRequest) -> ModelAdapterResult:
+        output = ModelOutput(
+            summary=(
+                f"Compared {len(request.facts)} authorized Portfolio Snapshot"
+                f"{'s' if len(request.facts) != 1 else ''} separately."
+            )
+        )
+        return ModelAdapterResult(payload=output.model_dump(mode="json"))
+
+    def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
+        del request
+        output = RoutingModelOutput(
+            selected_agent_ids=(AgentId.PORTFOLIO_ANALYSIS,),
+            reason_category=RoutingReason.SINGLE_DOMAIN,
+        )
+        return ModelAdapterResult(payload=output.model_dump(mode="json"))
+
+
+class OutOfScopeModelAdapter:
+    provider_id = "out-of-scope-fixture"
+    model_id = "out-of-scope-fixture-v1"
+    prompt_version = "out-of-scope-fixture-v1"
+    routing_prompt_version = "out-of-scope-routing-fixture-v1"
+
+    def generate(self, request: ModelRequest) -> ModelAdapterResult:
+        raise AssertionError(f"No specialist generation expected for {request.agent_id}")
+
+    def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
+        del request
+        output = RoutingModelOutput(
+            selected_agent_ids=(),
+            reason_category=RoutingReason.OUT_OF_SCOPE,
+        )
+        return ModelAdapterResult(payload=output.model_dump(mode="json"))
+
+
 def _session(client: TestClient, label: str = "test") -> str:
     response = client.post("/api/v1/sessions", json={"label": label})
     assert response.status_code == 201
@@ -138,6 +180,113 @@ def test_run_record_preserves_the_asked_question(client: TestClient) -> None:
     assert persisted.json()["request_message"] == question
     listed = client.get(f"/api/v1/sessions/{session_id}/runs")
     assert listed.json()["items"][0]["request_message"] == question
+
+
+def test_run_returns_bounded_response_without_specialists_for_out_of_scope_question(
+    client: TestClient,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    services = cast(Any, cast(Any, client.app).state.services)
+    monkeypatch.setattr(
+        services.workflow,
+        "_model_adapter_builder",
+        lambda _: OutOfScopeModelAdapter(),
+    )
+    session_id = _session(client, "out of scope")
+
+    created = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={"message": "How's the weather?"},
+    )
+
+    assert created.status_code == 201
+    result = created.json()["result"]
+    assert result["status"] == "completed"
+    assert result["selected_agent_ids"] == []
+    assert result["agent_results"] == []
+    assert "can't answer unrelated general-knowledge questions" in result["summary"]
+
+
+def test_run_uses_each_explicit_authorized_portfolio_context(
+    client: TestClient,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    services = cast(Any, cast(Any, client.app).state.services)
+    monkeypatch.setattr(
+        services.workflow,
+        "_model_adapter_builder",
+        lambda _: PortfolioQuestionModelAdapter(),
+    )
+    session_id = _session(client, "portfolio questions")
+    portfolio_path = f"/api/v1/sessions/{session_id}/portfolios"
+    portfolio_ids = ("portfolio-chat-1", "portfolio-chat-2")
+    for portfolio_id in portfolio_ids:
+        saved = client.post(
+            portfolio_path,
+            json=_portfolio_payload(portfolio_id),
+            headers={"Idempotency-Key": f"save-{portfolio_id}"},
+        )
+        assert saved.status_code == 201
+
+    clarification = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={
+            "message": "How many holdings in these portfolios have usable prices?",
+        },
+    )
+    assert clarification.status_code == 201
+    assert clarification.json()["status"] == "clarification"
+    assert clarification.json()["result"]["required_input"] == {
+        "kind": "portfolio_selection",
+        "agent_id": "portfolio_analysis",
+        "selection_mode": "one_or_explicit_comparison",
+        "prompt": "Select the saved Portfolio you want me to analyze.",
+    }
+
+    other_session_id = _session(client, "other portfolio owner")
+    denied = client.post(
+        f"/api/v1/sessions/{other_session_id}/runs/"
+        f"{clarification.json()['execution_id']}/continue",
+        json={"context_references": [portfolio_ids[0]]},
+    )
+    missing_context = client.post(
+        f"/api/v1/sessions/{session_id}/runs/{clarification.json()['execution_id']}/continue",
+        json={"context_references": ["missing-portfolio"]},
+    )
+    assert denied.status_code == 403
+    assert denied.json()["error"]["code"] == "RUN_SCOPE_DENIED"
+    assert missing_context.status_code == 403
+    assert missing_context.json()["error"]["code"] == "PORTFOLIO_CONTEXT_DENIED"
+
+    created = client.post(
+        f"/api/v1/sessions/{session_id}/runs/{clarification.json()['execution_id']}/continue",
+        json={"context_references": list(portfolio_ids)},
+    )
+
+    assert created.status_code == 201
+    result = created.json()["result"]
+    assert result["selected_agent_ids"] == ["portfolio_analysis"]
+    assert result["agent_results"][0]["summary"] == (
+        "Compared 2 authorized Portfolio Snapshots separately."
+    )
+    assert [fact["portfolio_id"] for fact in result["agent_results"][0]["facts"]] == list(
+        portfolio_ids
+    )
+    assert result["continuation_of_execution_id"] == clarification.json()["execution_id"]
+
+    replayed = client.post(
+        f"/api/v1/sessions/{session_id}/runs/{clarification.json()['execution_id']}/continue",
+        json={"context_references": [portfolio_ids[0]]},
+    )
+    assert replayed.status_code == 200
+    assert replayed.json()["execution_id"] == created.json()["execution_id"]
+
+    not_waiting = client.post(
+        f"/api/v1/sessions/{session_id}/runs/{created.json()['execution_id']}/continue",
+        json={"context_references": [portfolio_ids[0]]},
+    )
+    assert not_waiting.status_code == 409
+    assert not_waiting.json()["error"]["code"] == "RUN_CONTINUATION_NOT_AVAILABLE"
 
 
 def test_complete_narrative_persists_and_streams_without_truncation(
@@ -236,6 +385,48 @@ def test_portfolio_snapshot_goal_archive_and_deletion_lifecycle(client: TestClie
     assert archived_write.json()["error"]["code"] == "SESSION_ARCHIVED"
     assert deleted.status_code == 204
     assert client.get(f"{path}/{portfolio_id}").status_code == 404
+
+
+def test_portfolio_delete_is_scoped_cascades_and_allows_reimport(
+    client: TestClient,
+) -> None:
+    session_id = _session(client, "portfolio owner")
+    other_session_id = _session(client, "other owner")
+    portfolio_id = "portfolio-delete-1"
+    portfolio_path = f"/api/v1/sessions/{session_id}/portfolios/{portfolio_id}"
+    collection_path = f"/api/v1/sessions/{session_id}/portfolios"
+    payload = _portfolio_payload(portfolio_id)
+    headers = {"Idempotency-Key": "portfolio-delete-key"}
+
+    created = client.post(collection_path, json=payload, headers=headers)
+    snapshot = client.post(
+        f"{portfolio_path}/snapshots",
+        json={
+            "snapshot_id": "snapshot-delete-1",
+            "security_references": [],
+            "quote_set": {"quote_set_id": "quotes-delete-1", "quotes": []},
+        },
+    )
+    services = cast(Any, cast(Any, client.app).state.services)
+    assert services.context_repository.get(session_id, portfolio_id) is not None
+    denied = client.delete(f"/api/v1/sessions/{other_session_id}/portfolios/{portfolio_id}")
+    deleted = client.delete(portfolio_path)
+
+    assert created.status_code == 201
+    assert snapshot.status_code == 201
+    assert denied.status_code == 403
+    assert denied.json()["error"]["code"] == "PORTFOLIO_SCOPE_DENIED"
+    assert deleted.status_code == 204
+    assert client.get(portfolio_path).status_code == 404
+    assert (
+        client.get(f"/api/v1/sessions/{session_id}/snapshots/snapshot-delete-1").status_code == 404
+    )
+    assert services.context_repository.get(session_id, portfolio_id) is None
+    assert client.get(collection_path).json() == []
+
+    recreated = client.post(collection_path, json=payload, headers=headers)
+    assert recreated.status_code == 201
+    assert recreated.json()["portfolio"]["portfolio_id"] == portfolio_id
 
 
 def test_market_history_exposes_cache_layer_and_coverage(client: TestClient) -> None:

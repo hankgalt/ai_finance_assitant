@@ -1,5 +1,9 @@
 {
   "python.analysis.extraPaths": [
     "${workspaceFolder}/backend/src"
-  ]
+  ],
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingTypeStubs": "none"
+  }
 }

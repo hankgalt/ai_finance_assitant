@@ -1,0 +1,6 @@
+account_id,account_type,institution_label,holding_id,identifier_type,identifier_value,quantity,currency,asset_class,sector,cost_basis_amount,cost_basis_basis,acquisition_date,user_price,user_price_as_of,user_price_provenance,expense_ratio
+concentrated-taxable,taxable_brokerage,Synthetic Brokerage,concentrated-msft,ticker,MSFT,80,USD,U.S. Equity,Technology,21000,total,2021-04-12,530.00,2026-10-29T12:00:00Z,Synthetic example price,
+concentrated-taxable,taxable_brokerage,Synthetic Brokerage,concentrated-nvda,ticker,NVDA,50,USD,U.S. Equity,Technology,4200,total,2023-02-06,200.00,2026-10-29T12:00:00Z,Synthetic example price,
+concentrated-taxable,taxable_brokerage,Synthetic Brokerage,concentrated-aapl,ticker,AAPL,40,USD,U.S. Equity,Technology,6200,total,2020-09-18,280.00,2026-10-29T12:00:00Z,Synthetic example price,
+concentrated-taxable,taxable_brokerage,Synthetic Brokerage,concentrated-amzn,ticker,AMZN,20,USD,U.S. Equity,Consumer Discretionary,3100,total,2022-06-21,250.00,2026-10-29T12:00:00Z,Synthetic example price,
+concentrated-taxable,taxable_brokerage,Synthetic Brokerage,concentrated-cash,user_defined,CASH-USD,10000,USD,Cash,Cash,10000,total,2026-10-29,1.00,2026-10-29T12:00:00Z,Synthetic example price,0

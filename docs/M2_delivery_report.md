@@ -19,6 +19,7 @@ The implementation resolves the three M2 policy decisions conservatively: negati
 - `GoalProjection.project(GoalProjectionRequest) -> GoalProjectionResult` projects explicit, user-controlled scenarios month by month with recurring contributions, inflation, and modeled fees.
 - `CashFlowAnalysisService` is a Protocol with request, normalized transaction, categorization, recurring-expense, reconciliation, and minimized `CashFlowSummary` contracts. M2 intentionally supplies no implementation.
 - `backend/data/finance/` contains versioned valid, adversarial, and goal fixtures plus their SHA-256 manifest.
+- `examples/portfolios/` contains user-importable synthetic JSON, CSV, and XLSX portfolios plus a checksum manifest and usage guide.
 - `backend/artifacts/m2/` contains calculation goldens, privacy-safe qualification results, and coverage evidence.
 - `openpyxl` 3.1.5 is locked for bounded, read-only XLSX parsing.
 
@@ -41,6 +42,7 @@ Any incompatible formula, rounding rule, duplicate interpretation, accepted impo
 | --- | --- |
 | Approved goldens reproduce exactly | Portfolio and goal hand-worked cases pass under the Decimal/round-half-even policy. Versioned inputs and expected results are in `backend/artifacts/m2/calculation-goldens.v1.json` and `backend/data/finance/goal_cases.v1.json`. |
 | Four import modes converge | Manual, JSON, CSV, and generated XLSX representations produce the same normalized portfolio in `test_all_four_import_modes_share_one_validated_domain_result`. |
+| User-importable examples remain valid | Three synthetic JSON/CSV/XLSX examples pass the real importer and deterministic Portfolio analysis with complete price and classification coverage in `test_example_portfolios.py`. |
 | Errors aggregate safely | Adversarial fixtures report multiple row/field findings without echoing formula-like content. A rejected import returns no partial Portfolio. |
 | Duplicates are not silently merged | Exact duplicate rows, duplicate Holding IDs, and likely duplicate security positions are blocking findings requiring a corrected import or future explicit merge decision. |
 | Missing data remains missing | Missing or currency-mismatched prices produce no market value and reduce valuation coverage. Missing classification reduces classification coverage rather than creating an `unknown` value. |
@@ -71,6 +73,8 @@ Final observed results:
 - Manually verified M2 cases: none; acceptance evidence is automated.
 
 Machine-readable results are `backend/artifacts/m2/test-results.json` and `backend/artifacts/m2/coverage.json`. The JSON test summary deliberately excludes local hostnames and absolute user paths. The sample manifest verifies hashes for all committed source fixtures and the hand-worked golden artifact.
+
+Post-completion example-data verification on 2026-10-30: `uv run pytest tests/test_example_portfolios.py -q` passed 4 tests; Ruff and Ruff formatting checks passed for the new contract test. The example manifest verifies every end-user import file by SHA-256.
 
 ## Security, privacy, and observability impact
 

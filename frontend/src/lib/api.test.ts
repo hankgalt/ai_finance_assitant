@@ -81,3 +81,50 @@ test("telemetry transport failure cannot fail a successful product request", asy
     session_id: "session-1",
   });
 });
+
+test("deletes a Session-scoped portfolio through the authoritative API", async () => {
+  const fetchMock = vi.fn(async () => ({
+    ok: true,
+    status: 204,
+    headers: { get: () => null },
+    json: async () => ({}),
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+
+  await expect(
+    api.deletePortfolio("session-1", "portfolio-1"),
+  ).resolves.toBeUndefined();
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/v1/sessions/session-1/portfolios/portfolio-1",
+    expect.objectContaining({ method: "DELETE" }),
+  );
+});
+
+test("submits only the explicitly selected contexts to the Run continuation", async () => {
+  const fetchMock = vi.fn(
+    async (_input: string | URL | Request, init: RequestInit) => {
+      void init;
+      return {
+        ok: true,
+        status: 201,
+        headers: { get: () => "application/json" },
+        json: async () => ({ execution_id: "run-1" }),
+      };
+    },
+  );
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.continueRun("session-1", "run-clarification", [
+    "portfolio-1",
+    "portfolio-2",
+  ]);
+
+  const [url, request] = fetchMock.mock.calls[0]!;
+  expect(url).toBe(
+    "/api/v1/sessions/session-1/runs/run-clarification/continue",
+  );
+  expect(JSON.parse(String(request?.body))).toEqual({
+    context_references: ["portfolio-1", "portfolio-2"],
+  });
+});

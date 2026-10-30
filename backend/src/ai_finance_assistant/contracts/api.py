@@ -47,6 +47,12 @@ class CreateRunRequest(BaseModel):
     jurisdiction: str = Field(default="US", min_length=2, max_length=32)
 
 
+class ContinueRunRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    context_references: tuple[Identifier, ...] = Field(min_length=1, max_length=20)
+
+
 class EncodedFileImportPayload(BaseModel):
     """JSON-safe transport for the three file import modes."""
 

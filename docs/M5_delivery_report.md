@@ -97,6 +97,29 @@ REST recovery, and SSE response chunk; RunEvents remain short and response-free.
 offline gate passes 175 backend tests with 87% coverage and 15 frontend tests. The separately
 approved one-call OpenAI semantic replay is recorded with M4.1 evidence, not as an M5 gate.
 
+Portfolio lifecycle maintenance qualifies the existing Session-scoped Portfolio delete resource.
+Deletion cascades saved Snapshots and authorized agent context, now also removes the corresponding
+idempotency record so the same user-controlled Portfolio can be imported again without a stale
+reference. The focused API regression verifies cross-Session denial, cascade deletion, an empty
+authorized list, and same-key re-import. Eleven focused M5 API tests, Ruff formatting/lint, and mypy
+over 110 source files pass.
+
+Run-context maintenance keeps the existing `context_references` API as the authorization seam for
+Assistant portfolio questions. The Portfolio specialist now consumes every distinct authorized
+Portfolio reference in request order, calculates a separate Snapshot for each, and returns a
+clarification when none resolves in the Run's Session. It no longer silently selects the first of
+several references. The model receives bounded deterministic facts for explanation and cannot
+combine Portfolio or currency totals. Focused agent regressions cover no-context, one-context, and
+explicit multi-context behavior without a live provider or model call.
+
+Conditional Portfolio continuation maintenance adds the versioned
+`POST /sessions/{session_id}/runs/{execution_id}/continue` resource. It accepts only bounded opaque
+context identifiers for a source Run that is waiting on typed Portfolio input, re-authorizes every
+identifier in the same Active Session, and creates a separately persisted Run linked to its source.
+The continuation preserves the original selected-agent set and enters the graph at the context gate,
+so the classifier is not invoked twice. Repeated continuation attempts return the already linked Run;
+cross-Session, missing, non-Portfolio, and non-waiting contexts fail closed with safe errors.
+
 ## Security, privacy, and lifecycle impact
 
 - The demo remains unauthenticated and is allowed only on loopback. Session scope prevents

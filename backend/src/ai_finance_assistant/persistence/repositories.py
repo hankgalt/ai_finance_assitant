@@ -360,6 +360,11 @@ class SQLiteApplicationRepository:
                 "DELETE FROM agent_contexts WHERE session_id = ? AND context_id = ?",
                 (session_id, portfolio_id),
             )
+            connection.execute(
+                "DELETE FROM idempotency_records WHERE session_id = ? AND scope = ? "
+                "AND resource_id = ?",
+                (session_id, "portfolio", portfolio_id),
+            )
         return cursor.rowcount > 0
 
     def save_snapshot(self, snapshot: PortfolioSnapshot, *, session_id: str) -> None:

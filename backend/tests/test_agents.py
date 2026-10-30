@@ -19,7 +19,7 @@ from ai_finance_assistant.agents.specialists import (
 )
 from ai_finance_assistant.contracts.agents import AgentId, AgentRequest, AgentResultStatus
 from ai_finance_assistant.contracts.events import EventType
-from ai_finance_assistant.contracts.portfolio import SecurityIdentifier
+from ai_finance_assistant.contracts.portfolio import SecurityIdentifier, SecurityIdentifierType
 from ai_finance_assistant.finance.goal_projection import GoalProjection
 from ai_finance_assistant.finance.models import (
     GoalProjectionRequest,
@@ -27,6 +27,7 @@ from ai_finance_assistant.finance.models import (
     ImportedAccount,
     ImportedHolding,
     ImportedPortfolio,
+    ImportSourceKind,
 )
 from ai_finance_assistant.finance.portfolio_analysis import PortfolioAnalysis
 from ai_finance_assistant.knowledge.models import Evidence, LogicalKnowledgeBase
@@ -409,6 +410,130 @@ def test_remaining_specialists_use_only_their_approved_domain_modules() -> None:
     assert tax_result.facts[0]["tax_year"] == 2026
     assert tax_result.evidence[0].evidence_id == tax_evidence.chunk_id
     assert all("guarantee" not in result.summary.casefold() for result in results)
+
+
+def test_portfolio_agent_keeps_explicit_multiple_portfolio_contexts_separate() -> None:
+    events = InMemoryRunEventRepository()
+    telemetry = InMemoryObservability()
+    runtime = AgentRuntime(
+        retrieval=StaticKnowledgeRetrieval({}),
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(repository=events, observability=telemetry),
+        observability=telemetry,
+    )
+    contexts = InMemoryAgentContextRepository()
+
+    def put_portfolio(
+        *, context_id: str, portfolio_id: str, label: str, holding_ids: tuple[str, ...]
+    ) -> None:
+        contexts.put(
+            "session-1",
+            PortfolioAgentContext(
+                context_id=context_id,
+                portfolio=ImportedPortfolio(
+                    portfolio_id=portfolio_id,
+                    label=label,
+                    base_currency="USD",
+                    imported_at=NOW,
+                    source_kind=ImportSourceKind.MANUAL,
+                    source_file_hash=("c" if portfolio_id.endswith("1") else "d") * 64,
+                    accounts=(
+                        ImportedAccount(
+                            account_id=f"account-{portfolio_id}",
+                            portfolio_id=portfolio_id,
+                            account_type="taxable",
+                            holdings=tuple(
+                                ImportedHolding(
+                                    holding_id=holding_id,
+                                    account_id=f"account-{portfolio_id}",
+                                    source_row=index,
+                                    security=SecurityIdentifier(
+                                        identifier_type=SecurityIdentifierType.TICKER,
+                                        value="DEMO",
+                                    ),
+                                    quantity=Decimal(str(index)),
+                                    currency="USD",
+                                )
+                                for index, holding_id in enumerate(holding_ids, start=1)
+                            ),
+                        ),
+                    ),
+                ),
+                calculated_at=NOW,
+            ),
+        )
+
+    put_portfolio(
+        context_id="portfolio-context-1",
+        portfolio_id="portfolio-1",
+        label="Retirement portfolio",
+        holding_ids=("retirement-holding",),
+    )
+    put_portfolio(
+        context_id="portfolio-context-2",
+        portfolio_id="portfolio-2",
+        label="Taxable portfolio",
+        holding_ids=("taxable-holding-1", "taxable-holding-2"),
+    )
+    agent = PortfolioAnalysisAgent(
+        runtime=runtime,
+        contexts=contexts,
+        market=FakeMarketDataProvider(),
+        analysis=PortfolioAnalysis(),
+    )
+
+    result = agent.invoke(
+        request(
+            AgentId.PORTFOLIO_ANALYSIS,
+            "How many holdings in these portfolios have usable prices?",
+            context_references=(
+                "portfolio-context-1",
+                "portfolio-context-2",
+                "portfolio-context-1",
+            ),
+        )
+    )
+
+    assert result.status == AgentResultStatus.OK
+    assert [fact["portfolio_label"] for fact in result.facts] == [
+        "Retirement portfolio",
+        "Taxable portfolio",
+    ]
+    assert [fact["total_holding_count"] for fact in result.facts] == [1, 2]
+    assert [fact["priced_holding_count"] for fact in result.facts] == [1, 2]
+    holding_valuations = result.facts[1]["holding_valuations"]
+    assert isinstance(holding_valuations, list)
+    first_valuation = holding_valuations[0]
+    assert isinstance(first_valuation, dict)
+    assert first_valuation["identifier"] == "DEMO"
+
+
+def test_portfolio_agent_requires_an_authorized_selected_context() -> None:
+    telemetry = InMemoryObservability()
+    agent = PortfolioAnalysisAgent(
+        runtime=AgentRuntime(
+            retrieval=StaticKnowledgeRetrieval({}),
+            model=DeterministicModelAdapter(),
+            event_recorder=RunEventRecorder(
+                repository=InMemoryRunEventRepository(),
+                observability=telemetry,
+            ),
+            observability=telemetry,
+        ),
+        contexts=InMemoryAgentContextRepository(),
+        market=FakeMarketDataProvider(),
+        analysis=PortfolioAnalysis(),
+    )
+
+    result = agent.invoke(
+        request(
+            AgentId.PORTFOLIO_ANALYSIS,
+            "How many holdings in this portfolio have usable prices?",
+        )
+    )
+
+    assert result.status == AgentResultStatus.CLARIFICATION
+    assert "Select a saved Portfolio" in result.summary
 
 
 class MalformedModelAdapter:

@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.5 | Status: Product architecture baseline through M6 plus M6.1 response-cache design | 2026-10-29
+Version 1.7 | Status: Product architecture baseline through M6 plus M6.1 response-cache design | 2026-10-30
 
 ## 1. Architecture principles
 
@@ -56,9 +56,9 @@ flowchart TD
   MCP --> MDP
 ~~~
 
-One Run follows: normalize and validate request → apply access and safety policy → classify intent → select one or more agents → execute independent agents concurrently where safe → synthesize structured results → validate citations, provenance, and safety → persist terminal state. Dependent work remains ordered; for example, a portfolio must be validated before enrichment and valued before a news question can be contextualized to its holdings.
+One Run follows: normalize and validate request → apply access and safety policy → classify intent → reject unrelated general knowledge or select one or more agents → check required authorized context → execute independent agents concurrently where safe → synthesize structured results → validate citations, provenance, and safety → persist terminal state. Dependent work remains ordered; for example, a portfolio must be validated before enrichment and valued before a news question can be contextualized to its holdings.
 
-Intent classification uses the Run's fixed ModelAdapter and a closed `RoutingModelOutput` schema containing only allowed Agent identifiers and a bounded reason category. The router supplies the untrusted user message and prior selected agents as data, enables no tools, records model identity/usage separately from the route outcome, and fails closed when the provider or schema is unavailable. Credential-free tests use scripted routing outputs at the same seam; they do not claim to measure live-model semantic accuracy.
+Intent classification uses the Run's fixed ModelAdapter and a closed `RoutingModelOutput` schema containing only allowed Agent identifiers and a bounded reason category. The classifier is the normal graph entry path: it routes only explicit financial education, U.S. investment-tax education, financial news, saved-Portfolio, market-data, and financial-goal requests. Unrelated weather, politics, sports, entertainment, geography, and general-knowledge questions return `out_of_scope` with no specialist execution; an explicit financial connection is required before such a subject can route. The router supplies the untrusted user message and prior selected agents as data, enables no tools, records model identity/usage separately from the route outcome, and fails closed when the provider or schema is unavailable. Credential-free tests use scripted routing outputs at the same seam; they do not claim to measure live-model semantic accuracy.
 
 Under ADR-028, M6.1 may reuse an exact route only for a previously qualified standalone Finance Q&A request in the same opaque authorized Session scope and with no authorized context references. For a semantically similar question, normal routing still runs. Finance Q&A always performs current retrieval before a generation-cache lookup; a generation hit is valid only when its Session scope, exact version filters, and active-evidence fingerprint match, and citations are rebuilt from the current Evidence. Thus a cache can avoid model work without becoming routing authority, knowledge authority, conversation memory, or the source of a Run's citations.
 
@@ -264,6 +264,18 @@ Versioned interface groups:
 REST returns authoritative resources and terminal Run status. SSE carries typed conversation chunks and RunEvents. A client reconnects with the last event identifier when replay is supported; otherwise it reloads authorized event history and final state over REST. OpenAPI is the contract source and generated or contract-tested TypeScript types prevent drift.
 
 M5 implements these interfaces under `/api/v1`. Artifact-creating requests accept bounded idempotency keys; reused keys return the original resource only when the request hash matches. RunEvents are persisted before replay, use stable sequence-derived event identifiers, and can be resumed with `Last-Event-ID`; the terminal conversational chunk has its own stable identifier. Every history, stream, Portfolio, Snapshot, and context lookup checks the requested Session scope. Clearing the Active Session archives it as read-only and opens a new Active Session. Archived Sessions can be listed and read; writes fail with a stable conflict. Permanent deletion requires an Archived Session and removes its owned records plus checkpoint thread. The local demo remains unauthenticated and loopback-only, so Session identifiers are isolation keys rather than proof of identity.
+
+Assistant portfolio questions use a graph context gate after model routing. When Portfolio Analysis
+is selected without an authorized Portfolio context, the graph does not start any specialist; it
+returns a typed `portfolio_selection` requirement. Only then does React load the Session-scoped
+saved-Portfolio list and render an explicit single-Portfolio or “all saved Portfolios — compare
+separately” choice inside that Run. Submitting the choice creates a linked continuation Run through
+the context gate, preserving the classifier's selected agents without paying for or risking a
+second classification. FastAPI re-authorizes every opaque context identifier against the source
+Run's Session. Portfolio Analysis calculates a separate deterministic Snapshot for every supplied
+Portfolio and gives the model bounded Snapshot facts for explanation; it never silently chooses the
+first reference or combines totals across Portfolios or currencies. The original clarification and
+linked result remain separately visible in history.
 
 FastAPI and outbound HTTPX calls are OpenTelemetry-instrumented with W3C propagation. JSON logs add request, trace, span, Session, and Run identifiers when available without bodies or headers. The optional loopback OTLP HTTP Collector receives traces and metrics and currently exports only to its debug sink. Bounded operational measurements cover HTTP status class/route, workflow status, retrieval strategy, provider operation/status/retry/rate-limit, cache outcome, and persistence operation/status. Health endpoints are excluded and protected or unbounded identifiers are not metric attributes. Export failure is isolated from product behavior; RunEvents remain the authoritative execution record.
 

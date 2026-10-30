@@ -1,0 +1,36 @@
+{
+  "schema_version": "1",
+  "import_policy_version": "portfolio-import-v1",
+  "data_classification": "synthetic_example",
+  "price_as_of": "2026-10-29T12:00:00Z",
+  "price_provenance": "Synthetic example price",
+  "datasets": [
+    {
+      "path": "balanced_multi_account.json",
+      "format": "json",
+      "sha256": "ef4ef2744b75fb1cebca38836882e545d6d310c1e3182aa63fb6cb880eae79ec",
+      "expected_account_count": 3,
+      "expected_holding_count": 7,
+      "expected_import_findings": [],
+      "purpose": "Multi-account allocation, classification, expense, and diversification dashboard checks."
+    },
+    {
+      "path": "concentrated_technology.csv",
+      "format": "csv",
+      "sha256": "bafd816979f8c753758b27ab225a414f9aefea720c974ec249719b5615731703",
+      "expected_account_count": 1,
+      "expected_holding_count": 5,
+      "expected_import_findings": [],
+      "purpose": "Concentrated allocation and partial expense-ratio coverage dashboard checks."
+    },
+    {
+      "path": "retirement_income.xlsx",
+      "format": "xlsx",
+      "sha256": "6737b39be68ffcd9be8d61ee05b3db4d49855a384f84dc7393b89eb11537d2dd",
+      "expected_account_count": 3,
+      "expected_holding_count": 7,
+      "expected_import_findings": [],
+      "purpose": "XLSX parsing, Account grouping, and income-oriented asset-class dashboard checks."
+    }
+  ]
+}

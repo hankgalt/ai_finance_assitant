@@ -49,6 +49,7 @@ function successfulFetch() {
       );
     }
     if (url.includes("/runs")) return response({ items: [] });
+    if (url.includes("/portfolios")) return response([]);
     if (url.includes("/telemetry/browser")) return response(undefined, 204);
     return response({});
   });

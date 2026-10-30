@@ -60,6 +60,7 @@ function importedPortfolio() {
 
 async function mockApi(page: Page) {
   let saved = false;
+  let savedRuns: unknown[] = [];
   let sessionSequence = 0;
   let archivedSessionIds: string[] = [];
   await page.route("**/api/**", async (route: Route) => {
@@ -152,7 +153,105 @@ async function mockApi(page: Page) {
       return route.fulfill({ status: 204 });
     }
     if (path.endsWith("/runs") && request.method() === "GET")
-      return json({ items: [] });
+      return json({ items: savedRuns });
+    if (path.endsWith("/runs") && request.method() === "POST") {
+      const payload = request.postDataJSON() as {
+        message: string;
+      };
+      const run = {
+        execution_id: "run-portfolio-question",
+        session_id: path.split("/").at(-2),
+        workflow_id: "finance-assistant",
+        workflow_version: "1",
+        status: "clarification",
+        request_message: payload.message,
+        result: {
+          schema_version: "1",
+          execution_id: "run-portfolio-question",
+          session_id: path.split("/").at(-2),
+          workflow_id: "finance-assistant",
+          workflow_version: "1",
+          status: "clarification",
+          selected_agent_ids: ["portfolio_analysis"],
+          agent_results: [],
+          summary: "Select the saved Portfolio you want me to analyze.",
+          warnings: [],
+          errors: [],
+          required_input: {
+            kind: "portfolio_selection",
+            agent_id: "portfolio_analysis",
+            selection_mode: "one_or_explicit_comparison",
+            prompt: "Select the saved Portfolio you want me to analyze.",
+          },
+          continuation_of_execution_id: null,
+          trace_id: null,
+          trace_unavailable_reason: "Fixture trace unavailable.",
+        },
+        created_at: now,
+        updated_at: now,
+      };
+      savedRuns = [run];
+      return json(run, 201);
+    }
+    if (path.endsWith("/continue") && request.method() === "POST") {
+      const payload = request.postDataJSON() as {
+        context_references: string[];
+      };
+      const hasPortfolioContext =
+        payload.context_references.includes("portfolio-demo");
+      const summary = hasPortfolioContext
+        ? "Demo portfolio has usable prices for 1 of its 1 holdings."
+        : "A selected Portfolio is unavailable in this Session.";
+      const run = {
+        execution_id: "run-portfolio-continuation",
+        session_id: path.split("/").at(-4),
+        workflow_id: "finance-assistant",
+        workflow_version: "1",
+        status: hasPortfolioContext ? "completed" : "failed",
+        request_message:
+          "How many holdings in this portfolio have usable prices?",
+        result: {
+          schema_version: "1",
+          execution_id: "run-portfolio-continuation",
+          session_id: path.split("/").at(-4),
+          workflow_id: "finance-assistant",
+          workflow_version: "1",
+          status: hasPortfolioContext ? "completed" : "failed",
+          selected_agent_ids: ["portfolio_analysis"],
+          agent_results: [
+            {
+              schema_version: "1",
+              agent_id: "portfolio_analysis",
+              status: hasPortfolioContext ? "ok" : "error",
+              summary,
+              facts: [],
+              evidence: [],
+              visualization: null,
+              as_of: now,
+              warnings: [],
+              errors: [],
+            },
+          ],
+          summary,
+          warnings: [],
+          errors: [],
+          required_input: null,
+          continuation_of_execution_id: "run-portfolio-question",
+          trace_id: null,
+          trace_unavailable_reason: "Fixture trace unavailable.",
+        },
+        created_at: now,
+        updated_at: now,
+      };
+      savedRuns = [run, ...savedRuns];
+      return json(run, 201);
+    }
+    if (path.endsWith("/stream"))
+      return route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: "",
+      });
     if (path.endsWith("/portfolios") && request.method() === "GET")
       return json(saved ? [importedPortfolio()] : []);
     if (path.endsWith("/portfolio-imports/validate")) {
@@ -193,6 +292,13 @@ async function mockApi(page: Page) {
         },
         201,
       );
+    }
+    if (
+      path.endsWith("/portfolios/portfolio-demo") &&
+      request.method() === "DELETE"
+    ) {
+      saved = false;
+      return route.fulfill({ status: 204 });
     }
     if (path.endsWith("/snapshots"))
       return json(
@@ -391,6 +497,24 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await capture(page, "../docs/evidence/m6/assistant-empty.png");
 
   await page.getByRole("button", { name: "Portfolio" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Saved portfolios" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Symbol")).toHaveCount(0);
+  const importPortfolioButton = page.getByRole("button", {
+    name: "Import portfolio",
+  });
+  await importPortfolioButton.click();
+  const importDialog = page.getByRole("dialog", { name: "Import positions" });
+  await expect(importDialog).toBeVisible();
+  await expect(
+    importDialog.getByRole("button", { name: "Close portfolio import" }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(importDialog).toBeHidden();
+  await expect(importPortfolioButton).toBeFocused();
+  await importPortfolioButton.click();
+  await expect(importDialog).toBeVisible();
   await page.getByLabel("Symbol").fill("BAD");
   await page.getByRole("button", { name: "Validate import" }).click();
   await expect(
@@ -408,10 +532,65 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await capture(page, "../docs/evidence/m6/portfolio-validation.png");
   await page.getByRole("button", { name: "Save validated portfolio" }).click();
   await expect(page.getByText("1 holding · MANUAL")).toBeVisible();
+  const savedNotice = page.getByRole("status").filter({
+    hasText: "Portfolio saved",
+  });
+  await expect(savedNotice).toBeVisible();
+  await capture(page, "../docs/evidence/m6/portfolio-library.png");
+  await expect(savedNotice).toBeHidden({ timeout: 5_000 });
+  await page.getByRole("button", { name: "Assistant" }).click();
+  await expect(page.getByLabel("Saved Portfolio")).toHaveCount(0);
+  await page
+    .getByLabel("Message the finance assistant")
+    .fill("How many holdings in this portfolio have usable prices?");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(
+    page.getByText("Select the saved Portfolio you want me to analyze."),
+  ).toBeVisible();
+  const portfolioContext = page.getByLabel("Saved Portfolio");
+  await expect(portfolioContext).toHaveValue("");
+  await portfolioContext.selectOption("portfolio-demo");
+  await page.getByRole("button", { name: "Continue analysis" }).click();
+  await expect(
+    page.getByText("Demo portfolio has usable prices for 1 of its 1 holdings."),
+  ).toBeVisible();
+  await capture(page, "../docs/evidence/m6/assistant-portfolio-context.png");
+  await page.getByRole("button", { name: "Portfolio" }).click();
   await page.getByRole("button", { name: "Analyze" }).click();
   await expect(
     page.getByRole("heading", { name: "Allocation and coverage" }),
   ).toBeVisible();
+  const deletePortfolioButton = page.getByRole("button", {
+    name: "Delete Demo portfolio",
+  });
+  await deletePortfolioButton.click();
+  const deletePortfolioConfirmation = page.getByRole("group", {
+    name: "Delete Demo portfolio?",
+  });
+  await expect(deletePortfolioConfirmation).toBeVisible();
+  await expect(
+    deletePortfolioConfirmation.getByRole("button", {
+      name: "Delete portfolio",
+    }),
+  ).toBeFocused();
+  await capture(page, "../docs/evidence/m6/portfolio-delete-confirmation.png");
+  await deletePortfolioConfirmation
+    .getByRole("button", { name: "Cancel" })
+    .click();
+  await expect(deletePortfolioConfirmation).toBeHidden();
+  await deletePortfolioButton.click();
+  await page.getByRole("button", { name: "Delete portfolio" }).click();
+  await expect(
+    page.getByText("Import a portfolio to begin analysis."),
+  ).toBeVisible();
+  const deletedNotice = page.getByRole("status").filter({
+    hasText: "Portfolio deleted",
+  });
+  await expect(deletedNotice).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Allocation and coverage" }),
+  ).toHaveCount(0);
+  await expect(deletedNotice).toBeHidden({ timeout: 5_000 });
 
   await page.getByRole("button", { name: "Market" }).click();
   await page.getByRole("button", { name: "View market data" }).click();

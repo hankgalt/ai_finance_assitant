@@ -8,6 +8,9 @@ Maintenance update: 2026-10-29 — routing now consumes a schema-validated Model
 the former lexical substring implementation has been removed. LangSmith root traces now use the
 Run's workflow identifier instead of the generic compiled-graph name. Default U.S. Finance
 retrieval now canonicalizes to the `US-Federal` jurisdiction used by the governed collection.
+Maintenance update: 2026-10-30 — the router now returns a bounded `out_of_scope` decision for
+unrelated general knowledge, and a conditional context gate stops Portfolio Analysis until an
+authorized saved-Portfolio selection is supplied.
 
 Scope: PR-001, PR-002, PR-004, PR-006, PR-007, PR-008; QR-004, QR-005, QR-007, QR-010, QR-012, QR-014, QR-015; EV-01, EV-02, EV-05–EV-11; ADR-001, ADR-002, ADR-005, ADR-008, ADR-009, ADR-011, ADR-012, ADR-018
 
@@ -22,14 +25,14 @@ Measured RunEvents cover Run, route, node, retrieval, provider tool, model, and 
 ## Delivered interfaces
 
 - `workflow.models.WorkflowRequest` and `WorkflowRunResult`: versioned Run input and terminal result.
-- `workflow.graph.FinanceState` and `FinanceWorkflow`: router, conditional fan-out, synthesis, deadline/hop limits, checkpoints, and actual Mermaid graph output.
+- `workflow.graph.FinanceState` and `FinanceWorkflow`: classifier entry, conditional context gate and fan-out, synthesis, deadline/hop limits, checkpoints, and actual Mermaid graph output.
 - `workflow.application.WorkflowApplication`: hides six-agent assembly and creates one selected provider bundle for each Run.
 - `agents.specialists`: the six documented specialist responsibilities and explicit clarification/error states.
 - `agents.runtime.AgentRuntime`: shared measured retrieval, structured-model, and allow-listed provider-tool execution.
 - `llm.ports.ModelAdapter`: structured external-model seam plus deterministic credential-free adapter.
 - `workflow.events.RunEventRecorder`: pre-persistence redaction, safe metadata filtering, monotonic sequence, parent links, and Session-scoped retrieval.
 - `observability`: no-op, in-memory, OpenTelemetry, safe failure wrapper, configuration factory, and optional privacy-hidden LangSmith context.
-- `data/workflow/routing_cases.v1.json`: 42 reviewable routing cases covering all six domains, multi-domain requests, clarification, and checkpoint follow-ups, including SEP IRA terminology.
+- `data/workflow/routing_cases.v1.json`: 44 reviewable routing cases covering all six domains, multi-domain requests, clarification, out-of-scope general knowledge, and checkpoint follow-ups, including SEP IRA terminology.
 
 No FastAPI workflow route, SSE stream, browser integration, durable user store, durable checkpoint store, or durable RunEvent store was added. Those are explicitly M5/M6 boundaries.
 
@@ -38,7 +41,7 @@ No FastAPI workflow route, SSE stream, browser integration, durable user store, 
 | Acceptance statement | Result and evidence |
 | --- | --- |
 | All six agents have distinct behavior | Direct contract tests exercise Finance/Tax evidence, deterministic Portfolio/Goal outputs, provider-backed Market/News outputs, attribution, assumptions, and prohibited prediction/guarantee behavior. |
-| Labeled routing contract is preserved | All 42 versioned cases exactly match their expected agent sets through scripted credential-free model outputs. This validates the router/model schema and graph fan-out, not live-model semantic accuracy. See `backend/artifacts/m4/routing-confusion-matrix.v1.json`. |
+| Labeled routing contract is preserved | All 44 versioned cases exactly match their expected agent sets and bounded reason categories through scripted credential-free model outputs. This validates the router/model schema and graph fan-out, not live-model semantic accuracy. See `backend/artifacts/m4/routing-confusion-matrix.v1.json`. |
 | Multi-agent boundaries and partial failure are preserved | Graph tests prove Finance/Tax fan-out, independent exception conversion, ordered typed results, and a partial terminal state without discarding the successful result. |
 | Bounds and restart behavior are explicit | Tests exercise expired deadlines, LangGraph recursion limits, reconstruction with a shared checkpointer, checkpoint follow-up routing, and cross-Session isolation. |
 | Evidence and hostile content stay bounded | Finance and Tax citations resolve to retrieved Evidence; Tax retrieval strictly filters an explicit year and labels the latest matching authoritative year when none is supplied; hostile retrieved instructions do not appear in output or events; malformed model output is rejected. |
@@ -80,7 +83,7 @@ Machine-readable evidence and the actual compiled graph are under `backend/artif
 - OpenTelemetry spans are generated and correlated, but no OTLP Collector/exporter or operational backend is configured in M4. That runtime integration belongs to M5. The captured evidence uses the SDK's in-memory exporter.
 - LangSmith remains optional. A post-qualification synthetic trace verified external delivery and root naming; it is not evidence of live-model quality or a substitute for authoritative RunEvents.
 - The deterministic model adapter is intentionally not represented as a production LLM. M4.1 records the selected live model/provider policy, while ordinary tests remain external-call-free.
-- The 42-case scripted suite validates schema handling, ordering, clarification, follow-up state, and graph selection. It does not measure whether a live LLM semantically classifies those messages correctly. M8 must run and independently review live-model routing, groundedness, injection, and financial-safety evaluation.
+- The 44-case scripted suite validates schema handling, ordering, clarification, out-of-scope handling, follow-up state, and graph selection. It does not measure whether a live LLM semantically classifies those messages correctly. M8 must run and independently review live-model routing, groundedness, injection, and financial-safety evaluation.
 - Focused M4 tests use static permitted Evidence and credential-free providers. M1 separately owns active-Qdrant integration evidence, while M3 separately owns conditional live-provider qualification and rights gates.
 - Context-free News defaults recognize uppercase ticker-shaped tokens only. Natural-language company names or broader public topics still require an authorized `NewsAgentContext`; otherwise the agent clarifies without calling Tavily.
 - Repository coverage is 87%, above the preserved coursework fallback target but below its aspirational 90% tier. M8/M9 must report final scope-adjusted coverage honestly; this milestone does not claim the top tier.

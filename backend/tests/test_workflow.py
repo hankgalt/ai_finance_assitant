@@ -2,6 +2,10 @@ from datetime import UTC, datetime, timedelta
 
 from langgraph.checkpoint.memory import InMemorySaver
 
+from ai_finance_assistant.agents.context import (
+    InMemoryAgentContextRepository,
+    PortfolioAgentContext,
+)
 from ai_finance_assistant.contracts.agents import (
     AgentId,
     AgentRequest,
@@ -9,6 +13,7 @@ from ai_finance_assistant.contracts.agents import (
     AgentResultStatus,
 )
 from ai_finance_assistant.contracts.errors import ErrorCategory, SafeError
+from ai_finance_assistant.finance.models import ImportedPortfolio
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
 from ai_finance_assistant.llm.models import RoutingModelOutput, RoutingReason
 from ai_finance_assistant.observability.memory import InMemoryObservability
@@ -59,17 +64,21 @@ class StubAgent:
 def router_for(
     message: str | None = None,
     *selected_agent_ids: AgentId,
+    reason_category: RoutingReason | None = None,
 ) -> IntentRouter:
     responses = {}
     if message is not None:
         responses[message] = RoutingModelOutput(
             selected_agent_ids=selected_agent_ids,
             reason_category=(
-                RoutingReason.CLARIFICATION_REQUIRED
+                reason_category or RoutingReason.CLARIFICATION_REQUIRED
                 if not selected_agent_ids
-                else RoutingReason.SINGLE_DOMAIN
-                if len(selected_agent_ids) == 1
-                else RoutingReason.MULTI_DOMAIN
+                else reason_category
+                or (
+                    RoutingReason.SINGLE_DOMAIN
+                    if len(selected_agent_ids) == 1
+                    else RoutingReason.MULTI_DOMAIN
+                )
             ),
         )
     return IntentRouter(model=DeterministicModelAdapter(routing_responses=responses))
@@ -81,6 +90,9 @@ def workflow_request(
     session_id: str = "session-1",
     message: str,
     deadline_at: datetime | None = None,
+    context_references: tuple[str, ...] = (),
+    continuation_of_execution_id: str | None = None,
+    continuation_agent_ids: tuple[AgentId, ...] = (),
 ) -> WorkflowRequest:
     return WorkflowRequest(
         execution_id=execution_id,
@@ -88,8 +100,53 @@ def workflow_request(
         workflow_id="finance-assistant",
         workflow_version="1",
         message=message,
+        context_references=context_references,
+        continuation_of_execution_id=continuation_of_execution_id,
+        continuation_agent_ids=continuation_agent_ids,
         deadline_at=deadline_at or datetime.now(UTC) + timedelta(minutes=1),
     )
+
+
+def portfolio_contexts() -> InMemoryAgentContextRepository:
+    contexts = InMemoryAgentContextRepository()
+    contexts.put(
+        "session-1",
+        PortfolioAgentContext(
+            context_id="portfolio-context",
+            portfolio=ImportedPortfolio.model_validate(
+                {
+                    "portfolio_id": "portfolio-1",
+                    "label": "Retirement portfolio",
+                    "base_currency": "USD",
+                    "imported_at": datetime.now(UTC),
+                    "source_kind": "manual",
+                    "source_file_hash": "a" * 64,
+                    "accounts": [
+                        {
+                            "account_id": "account-1",
+                            "portfolio_id": "portfolio-1",
+                            "account_type": "taxable",
+                            "holdings": [
+                                {
+                                    "holding_id": "holding-1",
+                                    "account_id": "account-1",
+                                    "source_row": 1,
+                                    "security": {
+                                        "identifier_type": "ticker",
+                                        "value": "DEMO",
+                                    },
+                                    "quantity": "1",
+                                    "currency": "USD",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ),
+            calculated_at=datetime.now(UTC),
+        ),
+    )
+    return contexts
 
 
 def test_workflow_routes_finance_question_through_langgraph() -> None:
@@ -209,6 +266,136 @@ def test_workflow_requests_clarification_for_unroutable_message() -> None:
     assert result.status == WorkflowStatus.CLARIFICATION
     assert result.selected_agent_ids == ()
     assert all(not agent.requests for agent in agents.values())
+
+
+def test_workflow_returns_bounded_response_for_out_of_scope_question() -> None:
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        router=router_for(
+            "How's the weather?",
+            reason_category=RoutingReason.OUT_OF_SCOPE,
+        ),
+    )
+
+    result = workflow.run(
+        workflow_request(execution_id="run-out-of-scope-1", message="How's the weather?")
+    )
+
+    assert result.status == WorkflowStatus.COMPLETED
+    assert result.selected_agent_ids == ()
+    assert "can't answer unrelated general-knowledge questions" in result.summary
+    assert all(not agent.requests for agent in agents.values())
+
+
+def test_portfolio_route_conditionally_requests_context_before_agent_execution() -> None:
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    events = InMemoryRunEventRepository()
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=events,
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        router=router_for(
+            "How many holdings have usable prices?",
+            AgentId.PORTFOLIO_ANALYSIS,
+        ),
+    )
+
+    result = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-context-required",
+            message="How many holdings have usable prices?",
+        )
+    )
+
+    assert result.status == WorkflowStatus.CLARIFICATION
+    assert result.required_input is not None
+    assert result.required_input.kind.value == "portfolio_selection"
+    assert not agents[AgentId.PORTFOLIO_ANALYSIS].requests
+    recorded = events.list_for_run(
+        "run-portfolio-context-required",
+        session_id="session-1",
+    )
+    assert any(event.node_id == "context_gate" for event in recorded)
+    assert any(event.node_id == "portfolio_context_required" for event in recorded)
+
+
+def test_portfolio_continuation_enters_context_gate_without_reclassification() -> None:
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    events = InMemoryRunEventRepository()
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=events,
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        router=router_for(),
+        contexts=portfolio_contexts(),
+    )
+
+    result = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-continuation",
+            message="How many holdings have usable prices?",
+            context_references=("portfolio-context",),
+            continuation_of_execution_id="run-portfolio-context-required",
+            continuation_agent_ids=(AgentId.PORTFOLIO_ANALYSIS,),
+        )
+    )
+
+    assert result.status == WorkflowStatus.COMPLETED
+    assert result.continuation_of_execution_id == "run-portfolio-context-required"
+    assert len(agents[AgentId.PORTFOLIO_ANALYSIS].requests) == 1
+    recorded = events.list_for_run("run-portfolio-continuation", session_id="session-1")
+    assert not any(event.node_id == "router" for event in recorded)
+    assert any(event.node_id == "context_gate" for event in recorded)
+
+
+def test_portfolio_context_gate_does_not_reuse_a_checkpointed_agent_result() -> None:
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        router=router_for(
+            "How many holdings have usable prices?",
+            AgentId.PORTFOLIO_ANALYSIS,
+        ),
+        contexts=portfolio_contexts(),
+    )
+
+    completed = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-with-context",
+            message="How many holdings have usable prices?",
+            context_references=("portfolio-context",),
+        )
+    )
+    clarification = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-needs-new-context",
+            message="How many holdings have usable prices?",
+        )
+    )
+
+    assert completed.status == WorkflowStatus.COMPLETED
+    assert len(completed.agent_results) == 1
+    assert clarification.status == WorkflowStatus.CLARIFICATION
+    assert clarification.required_input is not None
+    assert clarification.agent_results == ()
+    assert len(agents[AgentId.PORTFOLIO_ANALYSIS].requests) == 1
 
 
 def test_workflow_enforces_deadline_before_agent_execution() -> None:

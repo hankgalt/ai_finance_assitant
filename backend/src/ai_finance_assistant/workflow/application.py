@@ -109,6 +109,7 @@ class WorkflowApplication:
             event_recorder=self._event_recorder,
             observability=self._observability,
             router=IntentRouter(model=model),
+            contexts=self._contexts,
             checkpointer=self._checkpointer,
             maximum_graph_hops=self._settings.workflow_maximum_graph_hops,
         )

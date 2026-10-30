@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUp, BookOpen, RefreshCw } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -8,7 +8,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { StateNotice } from "../../components/StateNotice";
 import { api, ClientApiError, readRunStream } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
-import type { RunRecord } from "../../types/contracts";
+import type { ImportedPortfolio, RunRecord } from "../../types/contracts";
 
 function MarkdownNarrative({ children }: { children: string }) {
   return (
@@ -23,9 +23,11 @@ function MarkdownNarrative({ children }: { children: string }) {
 export function RunCard({
   run,
   isLatest,
+  children,
 }: {
   run: RunRecord;
   isLatest: boolean;
+  children?: ReactNode;
 }) {
   const result = run.result;
   const positionLabel = isLatest ? "Latest response" : "Earlier response";
@@ -121,6 +123,7 @@ export function RunCard({
           ))}
         </section>
       ))}
+      {children}
       {workflowWarnings.map((warning) => (
         <p className="inline-warning" key={warning}>
           {warning}
@@ -133,6 +136,100 @@ export function RunCard({
   );
 }
 
+function PortfolioSelectionPrompt({
+  run,
+  portfolios,
+  isResolved,
+  isLoading,
+  isPending,
+  error,
+  onContinue,
+}: {
+  run: RunRecord;
+  portfolios: ImportedPortfolio[];
+  isResolved: boolean;
+  isLoading: boolean;
+  isPending: boolean;
+  error: string | null;
+  onContinue: (contextReferences: string[]) => void;
+}) {
+  const [selection, setSelection] = useState("");
+  const allPortfoliosValue = `all:${run.execution_id}`;
+  const contextReferences =
+    selection === allPortfoliosValue
+      ? portfolios.map((portfolio) => portfolio.portfolio_id)
+      : selection
+        ? [selection]
+        : [];
+
+  if (isResolved) {
+    return (
+      <p className="required-input-resolved" role="status">
+        Portfolio selection submitted in a later response.
+      </p>
+    );
+  }
+
+  return (
+    <fieldset className="required-input-card">
+      <legend>Portfolio selection required</legend>
+      {isLoading ? (
+        <p>Loading saved Portfolios…</p>
+      ) : portfolios.length ? (
+        <>
+          <label htmlFor={`portfolio-selection-${run.execution_id}`}>
+            Saved Portfolio
+          </label>
+          <div className="required-input-controls">
+            <select
+              id={`portfolio-selection-${run.execution_id}`}
+              onChange={(event) => setSelection(event.target.value)}
+              value={selection}
+            >
+              <option value="">Select a Portfolio</option>
+              {portfolios.map((portfolio) => (
+                <option
+                  key={portfolio.portfolio_id}
+                  value={portfolio.portfolio_id}
+                >
+                  {portfolio.label ?? portfolio.portfolio_id}
+                </option>
+              ))}
+              {portfolios.length > 1 ? (
+                <option value={allPortfoliosValue}>
+                  All saved Portfolios — compare separately
+                </option>
+              ) : null}
+            </select>
+            <button
+              className="primary-button"
+              disabled={!contextReferences.length || isPending}
+              onClick={() => onContinue(contextReferences)}
+              type="button"
+            >
+              {isPending ? "Analyzing…" : "Continue analysis"}
+            </button>
+          </div>
+          <p>
+            The selected Portfolio stays Session-scoped. Comparisons report each
+            Portfolio separately.
+          </p>
+        </>
+      ) : (
+        <p>
+          No saved Portfolios are available. Import one in the Portfolio view,
+          then return here to continue.
+        </p>
+      )}
+      {error ? (
+        <p className="clear-session-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </fieldset>
+  );
+}
+
 export function AssistantExperience({ sessionId }: { sessionId: string }) {
   const [message, setMessage] = useState("");
   const [recoveryNote, setRecoveryNote] = useState<string | null>(null);
@@ -141,24 +238,58 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
     queryKey: ["runs", sessionId],
     queryFn: () => api.listRuns(sessionId),
   });
+  const runItems = runs.data?.items ?? [];
+  const continuedExecutionIds = new Set(
+    runItems.flatMap((run) =>
+      run.result?.continuation_of_execution_id
+        ? [run.result.continuation_of_execution_id]
+        : [],
+    ),
+  );
+  const needsPortfolioSelection = runItems.some(
+    (run) =>
+      run.result?.required_input?.kind === "portfolio_selection" &&
+      !continuedExecutionIds.has(run.execution_id),
+  );
+  const portfolios = useQuery({
+    queryKey: ["portfolios", sessionId],
+    queryFn: () => api.listPortfolios(sessionId),
+    enabled: needsPortfolioSelection,
+  });
+  const savedPortfolios = portfolios.data ?? [];
+
+  const synchronizeRun = async (run: RunRecord) => {
+    await queryClient.invalidateQueries({ queryKey: ["runs", sessionId] });
+    try {
+      const frames = await readRunStream(sessionId, run.execution_id);
+      setRecoveryNote(
+        frames.length
+          ? `Stream synchronized through event ${frames.at(-1)?.id}.`
+          : "The authoritative Run result was loaded; no additional stream events were available.",
+      );
+    } catch {
+      setRecoveryNote(
+        "Streaming was interrupted. The saved Run result remains available above.",
+      );
+    }
+  };
+
   const send = useMutation({
     mutationFn: (value: string) => api.createRun(sessionId, value),
     onSuccess: async (run) => {
       setMessage("");
-      await queryClient.invalidateQueries({ queryKey: ["runs", sessionId] });
-      try {
-        const frames = await readRunStream(sessionId, run.execution_id);
-        setRecoveryNote(
-          frames.length
-            ? `Stream synchronized through event ${frames.at(-1)?.id}.`
-            : "The authoritative Run result was loaded; no additional stream events were available.",
-        );
-      } catch {
-        setRecoveryNote(
-          "Streaming was interrupted. The saved Run result remains available above.",
-        );
-      }
+      await synchronizeRun(run);
     },
+  });
+  const continueRun = useMutation({
+    mutationFn: ({
+      executionId,
+      contextReferences,
+    }: {
+      executionId: string;
+      contextReferences: string[];
+    }) => api.continueRun(sessionId, executionId, contextReferences),
+    onSuccess: synchronizeRun,
   });
 
   const submit = (event: FormEvent) => {
@@ -206,8 +337,38 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
               </p>
             </div>
           ) : null}
-          {runs.data?.items.map((run, index) => (
-            <RunCard key={run.execution_id} run={run} isLatest={index === 0} />
+          {runItems.map((run, index) => (
+            <RunCard key={run.execution_id} run={run} isLatest={index === 0}>
+              {run.result?.required_input?.kind === "portfolio_selection" ? (
+                <PortfolioSelectionPrompt
+                  error={
+                    portfolios.isError
+                      ? "Saved Portfolios are unavailable. Try loading them again."
+                      : continueRun.isError &&
+                          continueRun.variables?.executionId ===
+                            run.execution_id
+                        ? continueRun.error instanceof ClientApiError
+                          ? continueRun.error.message
+                          : "The Portfolio selection could not be submitted."
+                        : null
+                  }
+                  isPending={
+                    continueRun.isPending &&
+                    continueRun.variables?.executionId === run.execution_id
+                  }
+                  isResolved={continuedExecutionIds.has(run.execution_id)}
+                  isLoading={portfolios.isPending}
+                  onContinue={(contextReferences) =>
+                    continueRun.mutate({
+                      executionId: run.execution_id,
+                      contextReferences,
+                    })
+                  }
+                  portfolios={savedPortfolios}
+                  run={run}
+                />
+              ) : null}
+            </RunCard>
           ))}
           {send.isError ? (
             <StateNotice tone="error" title="Your message was not processed">
@@ -226,7 +387,7 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
           <label htmlFor="assistant-message">
             Message the finance assistant
           </label>
-          <div>
+          <div className="composer-message-row">
             <textarea
               id="assistant-message"
               maxLength={20000}

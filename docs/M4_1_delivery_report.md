@@ -67,7 +67,7 @@ later-milestone behavior was added.
 |---|---|
 | Structured success and provider-reported token usage | `test_structured_success_uses_responses_parse_without_storage_or_fact_rewrite` |
 | Complete narrative preservation and warning semantics | `test_structured_success_preserves_a_complete_educational_narrative`, `test_generation_prompt_keeps_internal_mechanics_out_of_user_warnings`, and the M5 API persistence/SSE regression |
-| Structured LLM routing without a lexical table | `test_routing_uses_model_structured_output_without_lexical_classification` and the 42-case scripted contract suite |
+| Structured LLM routing without a lexical table | `test_routing_uses_model_structured_output_without_lexical_classification` and the 44-case scripted contract suite, including explicit out-of-scope decisions |
 | Fixed reasoning policy for all six agents | `test_reasoning_policy_is_fixed_by_agent` |
 | Authentication, rate limit, timeout, and outage mapping | adapter parameterized failure tests |
 | Refusal, incomplete, malformed, extra, or missing output | structured non-success tests; all fail closed |

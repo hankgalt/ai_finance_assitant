@@ -3,7 +3,7 @@
 This directory contains privacy-safe evidence for the M4 LangGraph and six-agent milestone.
 
 - `graph.mermaid` is emitted from the compiled graph definition.
-- `routing-confusion-matrix.v1.json` summarizes the versioned 42-case scripted model-routing contract dataset. It is not evidence of live-model semantic accuracy.
+- `routing-confusion-matrix.v1.json` summarizes the versioned 44-case scripted model-routing contract dataset, including two explicit out-of-scope cases. It is not evidence of live-model semantic accuracy.
 - `run-event-trace-sample.v1.json` captures one credential-free Finance Q&A execution and its correlated OpenTelemetry spans. It contains fixture identifiers and no prompt, holding, transaction, credential, or hidden-reasoning payload.
 - `failure-examples.v1.json` maps bounded failure behavior to automated tests.
 - `test-results.json` records the final focused and repository qualification commands.

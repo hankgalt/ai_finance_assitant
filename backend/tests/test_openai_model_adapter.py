@@ -167,7 +167,9 @@ def test_routing_uses_model_structured_output_without_lexical_classification() -
     assert call["store"] is False
     assert "What is a SEP IRA?" in str(call["input"])
     assert "tax_education" in str(call["instructions"])
-    assert OPENAI_ROUTING_PROMPT_VERSION == "openai-routing-system-v1"
+    assert "weather" in str(call["instructions"])
+    assert "out_of_scope" in str(call["instructions"])
+    assert OPENAI_ROUTING_PROMPT_VERSION == "openai-routing-system-v2"
 
 
 @pytest.mark.parametrize(

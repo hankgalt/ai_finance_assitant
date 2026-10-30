@@ -172,6 +172,15 @@ export interface WorkflowRunResult {
   summary: string;
   warnings: string[];
   errors: SafeError[];
+  required_input?: {
+    kind: "portfolio_selection";
+    agent_id: "portfolio_analysis";
+    selection_mode: "one_or_explicit_comparison";
+    prompt: string;
+  } | null;
+  continuation_of_execution_id?: string | null;
+  locale?: string;
+  jurisdiction?: string;
   trace_id: string | null;
   trace_unavailable_reason: string | null;
 }

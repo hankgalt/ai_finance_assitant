@@ -119,6 +119,8 @@ M5 REST/SSE contracts, isolation, idempotency, restart/deletion/retention, migra
 
 M6 product workflows, Active Session archiving, archived history and permanent deletion, browser contract mocks, accessibility states, responsive layouts, and browser telemetry are exercised by `make m6-check`.
 
+Synthetic JSON, CSV, and XLSX files for exercising portfolio validation and dashboard analysis are available in [examples/portfolios](examples/portfolios/README.md). Each file includes explicit synthetic user prices, so the dashboard can be verified without live market-provider calls.
+
 Set `AIFA_MARKET_DATA_PROVIDER=alpha_vantage|massive` before a live workflow. After the selected market provider and Tavily credentials, terms flags, and entitlement descriptions are configured in `backend/.env`, run `make provider-live-check` for the explicitly marked, quota-bounded live smoke tests. Selection is explicit per workflow; quota failure never silently switches providers. Massive individual-plan data is owner-only, so a demo shown to viewers or testers requires separately approved Business/commercial rights. Ordinary `pytest`, `make backend-check`, `make verify`, and `make m3-check` runs exclude the `live_provider` marker and make no live-provider calls.
 
 ## Local security posture

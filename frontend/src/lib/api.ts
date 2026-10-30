@@ -186,12 +186,33 @@ export const api = {
       "runs",
       "assistant",
     ),
-  createRun: (sessionId: string, message: string) =>
+  createRun: (
+    sessionId: string,
+    message: string,
+    contextReferences: string[] = [],
+  ) =>
     apiRequest<RunRecord>(
       `/api/v1/sessions/${sessionId}/runs`,
       "runs",
       "assistant",
-      jsonBody({ message }, `run-${randomHex(12)}`),
+      jsonBody(
+        { message, context_references: contextReferences },
+        `run-${randomHex(12)}`,
+      ),
+    ),
+  continueRun: (
+    sessionId: string,
+    executionId: string,
+    contextReferences: string[],
+  ) =>
+    apiRequest<RunRecord>(
+      `/api/v1/sessions/${sessionId}/runs/${executionId}/continue`,
+      "runs",
+      "assistant",
+      jsonBody(
+        { context_references: contextReferences },
+        `run-continuation-${randomHex(12)}`,
+      ),
     ),
   validatePortfolio: (sessionId: string, request: PortfolioImportApiRequest) =>
     apiRequest<PortfolioImportResult>(
@@ -212,6 +233,13 @@ export const api = {
       `/api/v1/sessions/${sessionId}/portfolios`,
       "portfolios",
       "portfolio",
+    ),
+  deletePortfolio: (sessionId: string, portfolioId: string) =>
+    apiRequest<void>(
+      `/api/v1/sessions/${sessionId}/portfolios/${portfolioId}`,
+      "portfolios",
+      "portfolio",
+      { method: "DELETE" },
     ),
   createSnapshot: (sessionId: string, portfolioId: string) =>
     apiRequest<PortfolioSnapshot>(

@@ -18,8 +18,10 @@ from pydantic import BaseModel
 from ai_finance_assistant.agents.context import GoalAgentContext, PortfolioAgentContext
 from ai_finance_assistant.api.errors import ApiProblem
 from ai_finance_assistant.api.services import ApplicationServices
+from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.contracts.api import (
     BrowserTelemetryEvent,
+    ContinueRunRequest,
     CreateRunRequest,
     CreateSessionRequest,
     CreateSnapshotRequest,
@@ -60,6 +62,7 @@ from ai_finance_assistant.providers.models import (
     QuoteResult,
 )
 from ai_finance_assistant.workflow.models import (
+    RequiredInputKind,
     WorkflowRequest,
     WorkflowRunResult,
     WorkflowStatus,
@@ -72,6 +75,94 @@ IdempotencyHeader = Annotated[
     str | None,
     Header(alias="Idempotency-Key", min_length=1, max_length=128),
 ]
+
+
+def _create_and_execute_run(
+    *,
+    services: ApplicationServices,
+    session_id: str,
+    message: str,
+    context_references: tuple[str, ...],
+    locale: str,
+    jurisdiction: str,
+    continuation_of_execution_id: str | None,
+    continuation_agent_ids: tuple[AgentId, ...],
+    idempotency_key: str | None,
+    request_hash: str,
+    response: Response,
+) -> RunRecord:
+    execution_id = f"run-{uuid4().hex}"
+    try:
+        record, created = services.application_repository.create_run(
+            execution_id=execution_id,
+            session_id=session_id,
+            workflow_id="finance-assistant",
+            workflow_version="1",
+            request_message=message,
+            idempotency_key=idempotency_key,
+            request_hash=request_hash,
+        )
+    except IdempotencyConflict as exc:
+        raise ApiProblem(
+            409,
+            "IDEMPOTENCY_CONFLICT",
+            ErrorCategory.CONFLICT,
+            str(exc),
+        ) from exc
+    if not created:
+        response.status_code = status.HTTP_200_OK
+        return record
+
+    session_token = set_session_id(session_id)
+    execution_token = set_execution_id(record.execution_id)
+    try:
+        try:
+            result = services.workflow.run(
+                WorkflowRequest(
+                    execution_id=record.execution_id,
+                    session_id=session_id,
+                    workflow_id=record.workflow_id,
+                    workflow_version=record.workflow_version,
+                    message=message,
+                    context_references=context_references,
+                    continuation_of_execution_id=continuation_of_execution_id,
+                    continuation_agent_ids=continuation_agent_ids,
+                    locale=locale,
+                    jurisdiction=jurisdiction,
+                    deadline_at=datetime.now(UTC)
+                    + timedelta(seconds=services.settings.api_run_deadline_seconds),
+                )
+            )
+        except Exception:
+            logger.exception("workflow_run_failed")
+            result = WorkflowRunResult(
+                execution_id=record.execution_id,
+                session_id=session_id,
+                workflow_id=record.workflow_id,
+                workflow_version=record.workflow_version,
+                status=WorkflowStatus.FAILED,
+                selected_agent_ids=continuation_agent_ids,
+                agent_results=(),
+                summary="The Run could not be completed.",
+                errors=(
+                    SafeError(
+                        code="RUN_EXECUTION_FAILED",
+                        category=ErrorCategory.INTERNAL,
+                        message="The Run failed safely before a result was available.",
+                        retryable=True,
+                    ),
+                ),
+                continuation_of_execution_id=continuation_of_execution_id,
+                locale=locale,
+                jurisdiction=jurisdiction,
+                trace_unavailable_reason=("The unexpected failure prevented trace correlation."),
+            )
+        finished = services.application_repository.finish_run(result)
+    finally:
+        reset_execution_id(execution_token)
+        reset_session_id(session_token)
+    response.status_code = status.HTTP_201_CREATED
+    return finished
 
 
 def _services(request: Request) -> ApplicationServices:
@@ -178,73 +269,110 @@ def create_run(
 ) -> RunRecord:
     services = _services(request)
     _require_active_session(services, session_id)
-    execution_id = f"run-{uuid4().hex}"
+    return _create_and_execute_run(
+        services=services,
+        session_id=session_id,
+        message=body.message,
+        context_references=body.context_references,
+        locale=body.locale,
+        jurisdiction=body.jurisdiction,
+        continuation_of_execution_id=None,
+        continuation_agent_ids=(),
+        idempotency_key=idempotency_key,
+        request_hash=_request_hash(body),
+        response=response,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/runs/{execution_id}/continue",
+    response_model=RunRecord,
+)
+def continue_run(
+    session_id: str,
+    execution_id: str,
+    body: ContinueRunRequest,
+    request: Request,
+    response: Response,
+    idempotency_key: IdempotencyHeader = None,
+) -> RunRecord:
+    services = _services(request)
+    _require_active_session(services, session_id)
     try:
-        record, created = services.application_repository.create_run(
-            execution_id=execution_id,
+        source = services.application_repository.get_run(
+            execution_id,
             session_id=session_id,
-            workflow_id="finance-assistant",
-            workflow_version="1",
-            request_message=body.message,
-            idempotency_key=idempotency_key,
-            request_hash=_request_hash(body),
         )
-    except IdempotencyConflict as exc:
+    except PermissionError as exc:
+        raise ApiProblem(
+            403,
+            "RUN_SCOPE_DENIED",
+            ErrorCategory.AUTHORIZATION,
+            "The Run is outside the requested Session scope.",
+        ) from exc
+    if source is None:
+        raise ApiProblem(
+            404,
+            "RUN_NOT_FOUND",
+            ErrorCategory.AUTHORIZATION,
+            "Run not found.",
+        )
+    result = source.result
+    if (
+        result is None
+        or result.required_input is None
+        or result.required_input.kind != RequiredInputKind.PORTFOLIO_SELECTION
+        or source.request_message is None
+    ):
         raise ApiProblem(
             409,
-            "IDEMPOTENCY_CONFLICT",
+            "RUN_CONTINUATION_NOT_AVAILABLE",
             ErrorCategory.CONFLICT,
-            str(exc),
-        ) from exc
-    if not created:
+            "This Run is not waiting for a Portfolio selection.",
+        )
+    existing = next(
+        (
+            item
+            for item in services.application_repository.list_runs(session_id=session_id)
+            if item.result is not None and item.result.continuation_of_execution_id == execution_id
+        ),
+        None,
+    )
+    if existing is not None:
         response.status_code = status.HTTP_200_OK
-        return record
-
-    session_token = set_session_id(session_id)
-    execution_token = set_execution_id(record.execution_id)
-    try:
-        try:
-            result = services.workflow.run(
-                WorkflowRequest(
-                    execution_id=record.execution_id,
-                    session_id=session_id,
-                    workflow_id=record.workflow_id,
-                    workflow_version=record.workflow_version,
-                    message=body.message,
-                    context_references=body.context_references,
-                    locale=body.locale,
-                    jurisdiction=body.jurisdiction,
-                    deadline_at=datetime.now(UTC)
-                    + timedelta(seconds=services.settings.api_run_deadline_seconds),
-                )
-            )
-        except Exception:
-            logger.exception("workflow_run_failed")
-            result = WorkflowRunResult(
-                execution_id=record.execution_id,
-                session_id=session_id,
-                workflow_id=record.workflow_id,
-                workflow_version=record.workflow_version,
-                status=WorkflowStatus.FAILED,
-                selected_agent_ids=(),
-                agent_results=(),
-                summary="The Run could not be completed.",
-                errors=(
-                    SafeError(
-                        code="RUN_EXECUTION_FAILED",
-                        category=ErrorCategory.INTERNAL,
-                        message="The Run failed safely before a result was available.",
-                        retryable=True,
-                    ),
-                ),
-                trace_unavailable_reason="The unexpected failure prevented trace correlation.",
-            )
-        finished = services.application_repository.finish_run(result)
-    finally:
-        reset_execution_id(execution_token)
-        reset_session_id(session_token)
-    response.status_code = status.HTTP_201_CREATED
-    return finished
+        return existing
+    context_references = tuple(dict.fromkeys(body.context_references))
+    if any(
+        not isinstance(
+            services.context_repository.get(session_id, reference),
+            PortfolioAgentContext,
+        )
+        for reference in context_references
+    ):
+        raise ApiProblem(
+            403,
+            "PORTFOLIO_CONTEXT_DENIED",
+            ErrorCategory.AUTHORIZATION,
+            "A selected Portfolio is unavailable in this Session.",
+        )
+    return _create_and_execute_run(
+        services=services,
+        session_id=session_id,
+        message=source.request_message,
+        context_references=context_references,
+        locale=result.locale,
+        jurisdiction=result.jurisdiction,
+        continuation_of_execution_id=execution_id,
+        continuation_agent_ids=result.selected_agent_ids,
+        idempotency_key=idempotency_key,
+        request_hash=_request_hash(
+            {
+                "continuation_of_execution_id": execution_id,
+                "context_references": context_references,
+            }
+        ),
+        response=response,
+    )
 
 
 @router.get("/sessions/{session_id}/runs", response_model=RunList)

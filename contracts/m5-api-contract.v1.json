@@ -10,6 +10,7 @@
     "/api/v1/sessions/{session_id}/archive": ["post"],
     "/api/v1/sessions/{session_id}/runs": ["get", "post"],
     "/api/v1/sessions/{session_id}/runs/{execution_id}": ["get"],
+    "/api/v1/sessions/{session_id}/runs/{execution_id}/continue": ["post"],
     "/api/v1/sessions/{session_id}/runs/{execution_id}/events": ["get"],
     "/api/v1/sessions/{session_id}/runs/{execution_id}/stream": ["get"],
     "/api/v1/sessions/{session_id}/traces/{execution_id}": ["get"],

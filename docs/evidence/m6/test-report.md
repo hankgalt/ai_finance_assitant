@@ -77,3 +77,53 @@ The Run-card spacing regression renders an Agent result with no saved request me
 and one supplemental warning. It verifies at least 16 px between Run metadata and the agent divider,
 and at least 24 px between the citation list and the first supplemental message. The pre-correction
 metadata-to-divider measurement was 0 px.
+
+The Portfolio Snapshot warning regression drives the public Portfolio experience through its saved
+Portfolio and Analyze controls using two Holding-scoped warnings with the same code and message. The
+pre-correction focused command, `pnpm exec vitest run
+src/features/portfolio/PortfolioExperience.test.tsx`, failed because two `USER PRICE USED` notices
+were rendered instead of one. After grouping at the UI boundary, the same command passes and verifies
+one notice, the affected-Holding count, and preserved Holding scope. `pnpm format:check`, `pnpm lint`,
+`pnpm typecheck`, all 16 Vitest tests in 6 files, and `pnpm build` pass. The first sandboxed
+`pnpm test:e2e` attempt could not bind the Vite loopback port (`EPERM`) and executed no browser test;
+the authorized local rerun passed all 6 Chrome journeys.
+
+The Portfolio hierarchy regression verifies that Saved Portfolios remains visible as the primary
+view while import fields are absent until the Import Portfolio action opens a named modal dialog.
+The Chrome journey additionally verifies initial close-button focus, Escape dismissal, focus return,
+reopening, validation correction, explicit save, and the resulting full-width library. The final
+maintenance gate passes `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, all 17 Vitest tests in 6
+files, `pnpm build`, and all 6 Chrome Playwright journeys with no critical or serious Axe findings.
+
+The saved Portfolio deletion regression verifies a named confirmation, non-mutating Cancel path,
+Session-scoped DELETE request, refreshed empty library, success notice, and removal of the deleted
+Portfolio's displayed Snapshot. The browser journey repeats the complete import, analyze, cancel,
+confirm, and delete flow with focus on the destructive action. Backend qualification separately
+proves cross-Session denial, database cascade, agent-context cleanup through the repository path, and
+same-idempotency-key re-import after deletion. The final gates pass 11 focused M5 API tests, Ruff,
+mypy over 110 source files, Prettier, ESLint, TypeScript, all 19 Vitest tests in 6 files, the Vite
+production build, and all 6 Chrome Playwright journeys.
+
+The Portfolio success-notice follow-up uses one four-second timer for both save and delete outcomes.
+The maintained Chrome journey asserts that each status is visible after the authoritative operation
+and becomes hidden within five seconds. The final frontend gate passes Prettier, ESLint, TypeScript,
+all 19 Vitest tests in 6 files, the production build, and all 6 Chrome Playwright journeys.
+
+The Assistant portfolio-context regression now verifies the full conditional flow. Before any
+relevant response, no selector is rendered and the Portfolio list is not requested. A classifier
+decision for Portfolio Analysis reaches the graph context gate, which returns typed required input
+without invoking a specialist. The UI then requires an explicit choice even when only one Portfolio
+exists; multiple saved Portfolios add an explicit separate-comparison option. The continuation API
+re-authorizes only the supplied identifiers, preserves the selected-agent set without a second
+classification, and persists a linked result. Separate backend cases prove that unrelated weather
+and political-office questions return `out_of_scope` with no specialist result.
+
+The maintained Chrome journey imports and saves `Demo portfolio`, confirms the Assistant initially
+has no selector, asks how many Holdings have usable prices, selects the Portfolio from the resulting
+Run, continues, and verifies the named answer. The first sandboxed Playwright attempt could not bind
+Vite to the loopback port (`EPERM`) and executed no browser tests; the authorized rerun passed all 6
+Chrome journeys in 23.2 seconds with no critical or serious Axe findings in the reviewed states.
+Backend Ruff, strict mypy, and the 47 focused routing/workflow/API/model-adapter tests pass. The
+offline backend suite passes 188 tests with 4 opt-in tests skipped by marker or environment.
+Frontend Prettier, ESLint, TypeScript, all 23 Vitest tests in 6 files, the production build, and all
+6 Chrome Playwright journeys pass.
