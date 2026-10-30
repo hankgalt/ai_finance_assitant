@@ -10,6 +10,8 @@ product-state evidence, not evidence of a live market-data call.
 - `market-success.png` — synthetic provider quote/history with provenance and table alternative.
 - `goals-success.png` — backend scenario chart, assumptions, warning, and table alternative.
 - `mobile-market.png` — 390 px navigation and responsive stale-data market result.
+- `session-clear-confirmation.png` — focused confirmation before the Active Session is archived and replaced.
+- `session-history.png` — Archived Session history with view and separately destructive delete actions.
 - `accessibility-review.md` — automated and manual review scope.
 - `test-report.md` — commands and actual results.
 - `contract-version-record.md` — OpenAPI/frontend contract authority.

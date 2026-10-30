@@ -1,11 +1,22 @@
 {
   "schema_version": "1",
-  "application_migration": {
-    "version": 1,
-    "name": "m5_initial_application_and_provider_cache",
-    "transactional": true,
-    "newer_schema_fails_closed": true
-  },
+  "application_schema_version": 3,
+  "application_migrations": [
+    {
+      "version": 1,
+      "name": "m5_initial_application_and_provider_cache"
+    },
+    {
+      "version": 2,
+      "name": "m5_session_archive_lifecycle"
+    },
+    {
+      "version": 3,
+      "name": "m5_run_request_message"
+    }
+  ],
+  "transactional": true,
+  "newer_schema_fails_closed": true,
   "sqlite_policy": {
     "journal_mode_file_backed": "WAL",
     "foreign_keys": true,
@@ -29,6 +40,7 @@
   "langgraph_tables": ["checkpoints", "writes"],
   "verification": {
     "restart": "passed",
+    "schema_one_archive_and_run_question_upgrade": "passed",
     "newer_schema_rejection": "passed",
     "expired_session_checkpoint_cleanup": "passed"
   }

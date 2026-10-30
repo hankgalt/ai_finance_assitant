@@ -2,9 +2,12 @@
   "schema_version": "1",
   "authority": "FastAPI OpenAPI",
   "frontend_type_file": "frontend/src/types/contracts.ts",
+  "response_narrative_max_characters": 4000,
+  "run_record_question_field": "request_message",
   "paths": {
     "/api/v1/sessions": ["get", "post"],
     "/api/v1/sessions/{session_id}": ["delete", "get"],
+    "/api/v1/sessions/{session_id}/archive": ["post"],
     "/api/v1/sessions/{session_id}/runs": ["get", "post"],
     "/api/v1/sessions/{session_id}/runs/{execution_id}": ["get"],
     "/api/v1/sessions/{session_id}/runs/{execution_id}/events": ["get"],
@@ -23,6 +26,7 @@
   },
   "required_frontend_types": [
     "SessionRecord",
+    "SessionList",
     "RunRecord",
     "RunEventHistory",
     "ProviderCacheLayer",

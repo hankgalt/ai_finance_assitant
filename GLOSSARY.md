@@ -14,6 +14,8 @@
 
 **Evidence:** Source material and provenance used to support an educational or analytical statement.
 
+**Evidence fingerprint:** A deterministic identity for the current retrieved Evidence used to qualify response reuse. It includes the active collection version and the ordered chunk identifiers and content hashes; it is not a substitute for the Evidence or its citations.
+
 **Financial account:** See Account.
 
 **Holding:** A position in a security or other asset within one Account at a stated quantity and currency.
@@ -37,13 +39,25 @@
 **Durable provider cache:** A server-side store of normalized provider observations retained across application restarts for bounded reuse. It remains derived provider data with freshness and rights metadata, not an authoritative market-data warehouse.
 _Avoid_: Market-data archive, source-of-truth price store
 
+**Response cache:** An optional application-owned acceleration store for reusing an eligible, schema-validated model output within the same authorized Session scope and under exact version, policy, and Evidence filters. It is not a Run store, conversation memory, knowledge base, or source of financial truth.
+_Avoid_: Answer database, agent memory
+
 **Production hardening:** Controls required before operating as a public multi-user financial product, beyond the initial local release.
 
 **Run:** One orchestrated execution of a user request. A Run has an execution identifier and belongs to a Session and Workflow.
 
 **Security reference information:** Provider-supplied facts about an instrument, such as name, asset class, sector, currency, and expense ratio. It remains distinct from user input.
 
-**Session:** An isolated conversational and application context belonging to one user context. A Session can contain multiple Runs.
+**Session:** An isolated conversational and application context belonging to one user context. A Session is either Active or Archived and can contain multiple Runs.
+
+**Active Session:** The current mutable Session that may receive new Runs and artifacts. Clearing it means archiving it and opening a new Active Session.
+_Avoid_: Current thread, live chat
+
+**Archived Session:** A read-only historical Session retained until explicit permanent deletion or retention expiry. Its saved Runs and artifacts remain available for history views.
+_Avoid_: Cleared Session, deleted Session
+
+**Permanent Session deletion:** The irreversible cascade removal of an Archived Session, its owned artifacts, and checkpoint thread. An Active Session must be archived first.
+_Avoid_: Clear Session, archive
 
 **Source registry:** The governed inventory of permitted knowledge sources, their ownership or use terms, retrieval location, review cadence, and content status.
 

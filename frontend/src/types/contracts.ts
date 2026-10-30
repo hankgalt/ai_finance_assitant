@@ -120,9 +120,11 @@ export interface RunEvent {
 export interface SessionRecord {
   session_id: string;
   label: string | null;
+  state: "active" | "archived";
   created_at: string;
   updated_at: string;
   expires_at: string;
+  archived_at: string | null;
 }
 
 export type StoredRunStatus =
@@ -180,6 +182,7 @@ export interface RunRecord {
   workflow_id: string;
   workflow_version: string;
   status: StoredRunStatus;
+  request_message: string | null;
   result: WorkflowRunResult | null;
   created_at: string;
   updated_at: string;
@@ -471,7 +474,14 @@ export interface GoalProjectionResult {
 export interface BrowserTelemetryEvent {
   schema_version: "1";
   kind: "navigation" | "api_timing" | "web_vital" | "error_boundary";
-  page: "shell" | "assistant" | "portfolio" | "market" | "goals" | "inspector";
+  page:
+    | "shell"
+    | "assistant"
+    | "portfolio"
+    | "market"
+    | "goals"
+    | "history"
+    | "inspector";
   api_route?: string;
   status_class?: "2xx" | "4xx" | "5xx" | "network_error";
   failure_category?: string;

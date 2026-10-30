@@ -127,7 +127,9 @@ def test_workflow_routes_finance_question_through_langgraph() -> None:
 
 
 def test_workflow_result_preserves_response_while_run_events_exclude_it() -> None:
-    private_response = "MODEL_RESPONSE_SENTINEL must remain outside persisted RunEvents."
+    private_response = " ".join(
+        ["MODEL_RESPONSE_SENTINEL must remain outside persisted RunEvents."] * 20
+    )
     agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
     agents[AgentId.FINANCE_QA] = StubAgent(
         AgentId.FINANCE_QA,

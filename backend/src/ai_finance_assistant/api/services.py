@@ -139,7 +139,7 @@ class ApplicationServices:
         )
 
     def delete_session(self, session_id: str) -> bool:
-        deleted = self.application_repository.delete_session(session_id)
+        deleted = self.application_repository.delete_archived_session(session_id)
         if deleted:
             self.checkpointer.delete_thread(f"{session_id}:finance-assistant")
         return deleted

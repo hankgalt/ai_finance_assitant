@@ -117,6 +117,26 @@ def test_governed_tax_registry_includes_publication_560_for_sep_education() -> N
     assert sep_case.filters.jurisdiction == "US-Federal"
 
 
+def test_governed_finance_registry_covers_mutual_fund_and_etf_comparison() -> None:
+    data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
+    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    source = next(
+        item
+        for item in registry.sources
+        if item.source_id == "investor-mutual-fund-etf-characteristics"
+    )
+    qrels = _load_qrels(data_dir / "qrels.finance.v1.json")
+    comparison_case = next(item for item in qrels if item.case_id == "finance-mutual-funds-vs-etfs")
+
+    assert source.status == SourceStatus.APPROVED
+    assert source.ingestion_enabled is True
+    assert source.jurisdiction == "US-Federal"
+    assert source.permitted_use.ai_processing_allowed is True
+    assert source.permitted_use.redistribution_allowed is True
+    assert comparison_case.expected_document_ids == (source.source_id,)
+    assert comparison_case.filters.jurisdiction == "US-Federal"
+
+
 def test_source_cache_reuses_checksum_verified_body(tmp_path: Path) -> None:
     source = _source("cached-source")
     original = _html("This approved fixture is stable across repeat offline ingestion runs.")

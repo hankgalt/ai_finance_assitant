@@ -19,7 +19,10 @@ def _canonical_jurisdiction(
     logical_kb: LogicalKnowledgeBase,
     jurisdiction: str,
 ) -> str:
-    if logical_kb == LogicalKnowledgeBase.TAX and jurisdiction == "US":
+    if jurisdiction == "US" and logical_kb in {
+        LogicalKnowledgeBase.FINANCE,
+        LogicalKnowledgeBase.TAX,
+    }:
         return "US-Federal"
     return jurisdiction
 

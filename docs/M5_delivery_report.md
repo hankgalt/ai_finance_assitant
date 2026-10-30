@@ -1,9 +1,9 @@
 # M5 delivery report — FastAPI integration and durable local persistence
 
-Date: 2026-10-28  
+Date: 2026-10-29
 Status: Complete for the production-oriented private local demonstration  
 Scope: PR-004, PR-006, PR-010–PR-013; QR-001–QR-007, QR-010, QR-011,
-QR-014, QR-015; ADR-003, ADR-007, ADR-011, ADR-014, ADR-019, ADR-026
+QR-014, QR-015; ADR-003, ADR-007, ADR-011, ADR-014, ADR-019, ADR-026, ADR-027
 
 ## Outcome
 
@@ -13,11 +13,15 @@ executes the existing six-agent graph; stable REST resources carry terminal stat
 SSE carries persisted RunEvents plus a terminal response chunk. `Last-Event-ID` resumes after a
 known event without replaying it, and REST history remains the recovery source.
 
-Application schema version 1 stores local resources and normalized historical daily bars in
+Application schema version 3 stores local resources and normalized historical daily bars in
 SQLite. The official LangGraph SQLite saver persists checkpoints through a dedicated connection to
 the same file using strict deserialization. Startup applies transactional migrations, rejects a
 newer schema, purges expired records/cache rows, and removes checkpoint threads for expired
-Sessions. Session deletion cascades owned data and explicitly removes its checkpoint thread.
+Sessions. Schema version 1 upgrades in place by adding Archived Session state, and version 3 adds a
+nullable submitted request message to Run records so legacy history remains readable. Clearing an Active
+Session archives it as read-only history while preserving owned data and its checkpoint; permanent
+deletion is rejected until archive, then cascades owned data and explicitly removes the checkpoint
+thread. Archived Sessions remain subject to the configured retention expiry.
 
 The ADR-026 cache uses a bounded exact-request memory tier over a relational range cache. It
 isolates provider, instrument, interval, currency, adjustment basis, schema, and policy; reuses
@@ -38,7 +42,7 @@ history or operational metrics.
 
 - `api/routes/v1.py`: versioned resources, stable safe errors, idempotency, authorized history,
   replayable SSE, and administrative cache purge.
-- `persistence/`: schema/migrations, repositories, deletion/retention behavior, and official
+- `persistence/`: schema/migrations, repositories, archive/history/deletion/retention behavior, and official
   `SqliteSaver` construction.
 - `providers/durable_cache.py`: two-tier historical range cache and provenance transitions.
 - `observability/factory.py` and API middleware: OTLP-capable runtime, FastAPI/HTTPX
@@ -58,7 +62,7 @@ until a token is configured. Credential-free mode is deterministic and requires 
 | Gate | Result |
 | --- | --- |
 | API contract, idempotency, errors, CORS, limits, and concurrent Sessions/Runs | Passed |
-| Session/history/stream isolation, restart, deletion, expiry, and checkpoint cleanup | Passed |
+| Session/history/stream isolation, restart, archive/read-only history, deletion, expiry, and checkpoint cleanup | Passed |
 | SSE framing, stable IDs, replay cursor, and REST recovery | Passed |
 | Migration compatibility and newer-schema rejection | Passed |
 | Exact/overlap/restart cache reuse and gap-only provider calls | Passed |
@@ -73,18 +77,25 @@ Evidence is under `backend/artifacts/m5/`. The authoritative interface manifest 
 
 ## Verification record
 
-- `make m5-check` — passed: 107 backend source/test files formatted, Ruff clean, 107 source files
-  type-checked, and 31 focused tests passed in 0.73 seconds.
-- `make backend-check` — passed: 114 files formatted, Ruff clean, 107 source files type-checked,
-  157 tests passed, 1 Qdrant integration test skipped, 3 opt-in live tests deselected, and 87%
+- `make m5-check` — passed: 109 backend source/test files formatted, Ruff clean, 109 source files
+  type-checked, and 32 focused tests passed in 1.35 seconds.
+- `make backend-check` — passed: 117 files formatted, Ruff clean, 109 source files type-checked,
+  169 tests passed, 1 Qdrant integration test skipped, 3 opt-in live tests deselected, and 87%
   total coverage.
-- `make frontend-check` — passed: Prettier, ESLint, TypeScript, 3 Vitest tests, and the Vite
+- `make frontend-check` — passed: Prettier, ESLint, TypeScript, 13 Vitest tests, and the Vite
   production build.
 - `docker compose --profile observability config --quiet` — passed.
 
 No live provider, OpenAI, LangSmith, Qdrant, or telemetry-backend call was required or made by
 these final M5 gates. The Qdrant skip is intentional when no opt-in integration URL is supplied;
 M1 records its separate integration evidence. Live provider/model tests remain explicit markers.
+
+Post-completion response-contract maintenance added a distinct 4,000-character user narrative
+bound to the M5 interface manifest and FastAPI schemas. A 1,399-character deterministic narrative
+regression proves exact preservation through the Agent result, Workflow result, SQLite Run record,
+REST recovery, and SSE response chunk; RunEvents remain short and response-free. The current full
+offline gate passes 175 backend tests with 87% coverage and 15 frontend tests. The separately
+approved one-call OpenAI semantic replay is recorded with M4.1 evidence, not as an M5 gate.
 
 ## Security, privacy, and lifecycle impact
 
@@ -93,8 +104,13 @@ M1 records its separate integration evidence. Live provider/model tests remain e
 - Request bodies, prompts, portfolio rows, provider payloads, credentials, hidden reasoning, and
   unrestricted results are absent from logs, metric attributes, and operational spans. Persisted
   RunEvents use the existing redaction/allow-list path.
+- New Run records persist the submitted request message for authorized conversation history. It
+  follows Session retention/archive/deletion, remains absent from logs/metrics/operational traces,
+  and is unavailable rather than inferred for pre-migration Runs.
 - SQLite is a local private-demo store. It is not encrypted by this application and has no backup,
   disaster recovery, distributed locking, or multi-instance coordination.
+- Archive is not indefinite preservation: Archived Sessions follow the same configured 30-day
+  Session retention and can be removed by expiry or explicit permanent deletion.
 - Provider cache rows contain normalized derived bars and coverage plus provenance, entitlement,
   retention label, and expiry. They exclude raw payloads, credentials, news bodies, and user
   portfolio context.
@@ -116,4 +132,4 @@ M1 records its separate integration evidence. Live provider/model tests remain e
   shared operation remains blocked until an approved rights decision changes readiness state.
 - Frontend product experiences and browser telemetry remain M6; the Inspector remains M7.
 
-M5 has satisfied its acceptance gate. M6 is the next permitted milestone.
+M5 remains within its acceptance gate. M6 has since completed; M7 is the next permitted milestone.

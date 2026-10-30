@@ -12,8 +12,17 @@
     "portfolio": 365,
     "eligible_historical_bar_maximum": 3650
   },
+  "persisted_run_content": {
+    "new_runs": ["submitted request message", "terminal structured result"],
+    "legacy_request_message": "unavailable",
+    "session_scoped": true,
+    "excluded_from_logs_metrics_and_operational_traces": true
+  },
   "deletion": {
+    "active_session_archive_required": true,
+    "archive_preserves_user_artifacts_and_checkpoint": true,
     "session_cascades_user_artifacts": true,
+    "session_cascades_run_request_messages": true,
     "session_deletes_checkpoint_thread": true,
     "portfolio_cascades_snapshots": true,
     "provider_cache_requires_admin_token": true

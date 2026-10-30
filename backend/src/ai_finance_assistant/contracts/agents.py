@@ -4,7 +4,7 @@ from enum import StrEnum
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, model_validator
 
-from ai_finance_assistant.contracts.common import Identifier, ShortText
+from ai_finance_assistant.contracts.common import Identifier, NarrativeText, ShortText
 from ai_finance_assistant.contracts.errors import SafeError
 
 
@@ -56,7 +56,7 @@ class AgentResult(BaseModel):
     schema_version: str = Field(default="1", pattern=r"^1$")
     agent_id: AgentId
     status: AgentResultStatus
-    summary: ShortText
+    summary: NarrativeText
     facts: tuple[dict[str, JsonValue], ...] = ()
     evidence: tuple[EvidenceReference, ...] = ()
     visualization: dict[str, JsonValue] | None = None

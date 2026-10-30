@@ -46,7 +46,7 @@ def test_application_creates_one_provider_bundle_per_run() -> None:
         document_version="v1",
         content_hash="a" * 64,
         fetched_at=now,
-        jurisdiction="US",
+        jurisdiction="US-Federal",
     )
     telemetry = InMemoryObservability()
     application = WorkflowApplication(

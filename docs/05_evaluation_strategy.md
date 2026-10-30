@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.1 | Status: Product evaluation baseline | 2026-10-28
+Version 1.2 | Status: Product evaluation baseline including M6.1 response-cache qualification | 2026-10-29
 
 ## 1. Evaluation principles
 
@@ -29,6 +29,7 @@ Maintain reviewable datasets with stable case IDs:
 - API/streaming: versioned REST/SSE transcripts, duplicate/out-of-order/reconnect cases;
 - UI/accessibility: deterministic end-to-end journeys, keyboard flows, and alternative chart/trace representations;
 - Inspector: synthetic schema fixtures and actual instrumented Runs with a backend truth record.
+- response cache: frozen exact repeats, safe paraphrases, near misses, cross-Session non-reuse, ambiguous/personalized exclusions, evidence/version invalidation, malformed entries, archive/delete/administrative purge, expiry, outage, and concurrent-miss cases.
 
 Dataset size targets can grow after difficulty and independence review. Do not inflate corpus or test counts with paraphrases that exercise the same behavior.
 
@@ -54,7 +55,7 @@ Thresholds below are initial candidate gates. M8 must calibrate noncritical stat
 | EVAL-14 | Frontend interaction | Core journeys, error recovery, data/assumption display, responsive and accessibility checks | All critical journeys pass in supported browsers; no backend/visual mismatch; WCAG 2.2 AA target exceptions documented |
 | EVAL-15 | Inspector fidelity | Event-to-list/graph reconciliation, identity/order/status/duration, redaction, missing data, replay | 100% displayed dynamic nodes/edges map to recorded events; zero sensitive-field exposure or inferred execution |
 | EVAL-16 | Regression | Previously fixed defect and contract suites on every relevant change | No open critical regression; quarantine needs owner, rationale, and expiry |
-| EVAL-17 | Latency and API cost | p50/p95/end-to-end and per-module timing, memory/durable cache hit, avoided/fetched provider ranges, tokens, and monetary cost with availability/method | Actual baseline and configuration reported; milestone-approved budgets must pass once set |
+| EVAL-17 | Latency and API cost | p50/p95/end-to-end and per-module timing, provider/response-cache outcome, avoided/fetched provider ranges, avoided model calls/tokens, tokens, and monetary cost with availability/method | Actual cache-disabled/exact-hit/qualified-semantic-hit/near-miss baselines and configuration reported; milestone-approved budgets and response-cache false-hit gate must pass once set |
 | EVAL-18 | Persistence/privacy lifecycle | Restart, retention, administrative provider-cache purge, deletion, cross-session, and log/trace data-flow review | 100% isolation/deletion/purge critical cases pass; uploaded temporary data cleanup verified |
 
 ## 4. Retrieval evaluation and collection activation
@@ -107,7 +108,8 @@ Failure and recovery cases include:
 - invalid import type/size/content, cleanup after parser failure, and duplicate idempotency key;
 - checkpoint and event-store restart, migration mismatch, and deletion;
 - simultaneous Sessions/Runs, guessed identifiers, unauthorized SSE/history, and connection loss;
-- malformed model output, exhausted retry, overall deadline, and independent-agent partial result.
+- malformed model output, exhausted retry, overall deadline, and independent-agent partial result;
+- response-cache disabled, exact hit, qualified semantic hit, near miss, cross-Session non-reuse, version/evidence invalidation, expiry/purge, unavailable or malformed Redis, and concurrent identical misses; cached work must not fabricate model events.
 
 Tests assert on returned resources, stored lifecycle, measured events, and user-visible states rather than log text alone.
 

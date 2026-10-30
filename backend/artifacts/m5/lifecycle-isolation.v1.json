@@ -15,11 +15,15 @@
     },
     {
       "behavior": "Restart",
-      "result": "Sessions, Runs, RunEvents, and checkpoint follow-up state survived process reconstruction"
+      "result": "Sessions, Run request messages and results, RunEvents, and checkpoint follow-up state survived process reconstruction"
     },
     {
-      "behavior": "Session deletion",
-      "result": "owned Runs, events, contexts, Portfolios, Snapshots, idempotency records, and checkpoint thread were removed"
+      "behavior": "Session archive",
+      "result": "the Active Session became read-only while owned Runs, artifacts, and checkpoint history remained readable"
+    },
+    {
+      "behavior": "Archived Session deletion",
+      "result": "permanent deletion was rejected for the Active Session; after archive, owned Runs, events, contexts, Portfolios, Snapshots, idempotency records, and checkpoint thread were removed"
     },
     {
       "behavior": "Retention expiry",

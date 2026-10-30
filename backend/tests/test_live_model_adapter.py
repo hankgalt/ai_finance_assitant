@@ -189,7 +189,7 @@ def _evidence(
         content_hash="a" * 64,
         fetched_at=now,
         tax_years=(2026,) if logical_kb == LogicalKnowledgeBase.TAX else (),
-        jurisdiction="US",
+        jurisdiction="US-Federal",
     )
 
 

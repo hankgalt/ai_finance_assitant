@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.3 | Status: Product architecture baseline through M6 | 2026-10-29
+Version 1.5 | Status: Product architecture baseline through M6 plus M6.1 response-cache design | 2026-10-29
 
 ## 1. Architecture principles
 
@@ -31,6 +31,9 @@ flowchart TD
   QA --> RET[Retrieval module]
   TAX --> RET
   RET --> QD[(Persistent Qdrant)]
+  ROUTER -. qualified exact-route reuse .-> RC[ModelResponseCache]
+  QA -. evidence-bound generation reuse .-> RC
+  RC --> REDIS[(Loopback Redis)]
 
   PORT --> PM[Portfolio analysis module]
   PORT --> MDP[Market-data adapter]
@@ -56,6 +59,8 @@ flowchart TD
 One Run follows: normalize and validate request → apply access and safety policy → classify intent → select one or more agents → execute independent agents concurrently where safe → synthesize structured results → validate citations, provenance, and safety → persist terminal state. Dependent work remains ordered; for example, a portfolio must be validated before enrichment and valued before a news question can be contextualized to its holdings.
 
 Intent classification uses the Run's fixed ModelAdapter and a closed `RoutingModelOutput` schema containing only allowed Agent identifiers and a bounded reason category. The router supplies the untrusted user message and prior selected agents as data, enables no tools, records model identity/usage separately from the route outcome, and fails closed when the provider or schema is unavailable. Credential-free tests use scripted routing outputs at the same seam; they do not claim to measure live-model semantic accuracy.
+
+Under ADR-028, M6.1 may reuse an exact route only for a previously qualified standalone Finance Q&A request in the same opaque authorized Session scope and with no authorized context references. For a semantically similar question, normal routing still runs. Finance Q&A always performs current retrieval before a generation-cache lookup; a generation hit is valid only when its Session scope, exact version filters, and active-evidence fingerprint match, and citations are rebuilt from the current Evidence. Thus a cache can avoid model work without becoming routing authority, knowledge authority, conversation memory, or the source of a Run's citations.
 
 Execution has maximum graph hops, per-tool timeouts, an overall deadline, and model/token budgets. An independent agent failure can yield a partial result with structured warnings. Missing required user input yields a clarification result, not guessed data.
 
@@ -88,6 +93,7 @@ Multi-domain requests are decomposed by the router. Agents never call one anothe
 | CheckpointRepository | Load and save workflow state by authorized Session and Workflow version | In-memory test adapter and durable runtime adapter |
 | RunEventRepository | Append ordered events and read authorized run history/replay | In-memory fixture adapter and durable adapter where restart replay is required |
 | LLM | Return schema-validated model output and measured usage metadata when provided | Configured provider adapter plus deterministic fake |
+| ModelResponseCache | Reuse eligible schema-validated route/generation outputs under exact policy and evidence filters; never cache a complete Run | Disabled and deterministic in-memory adapters; loopback Redis 8/RedisVL private-demo adapter |
 
 Ports exist only at seams that genuinely vary, normally production and test adapters. Internal helpers are not exposed just to make tests easier; observable behavior is tested through each module’s interface.
 
@@ -102,6 +108,25 @@ provenance from their original code-owned values, never model-restated arithmeti
 prompt identifiers plus provider-reported token usage are allow-listed on measured events; model
 cost remains unavailable until an approved versioned calculator exists. See the
 [M4.1 selection record](research/M4_1_openai_model_selection.md).
+
+M6.1 places `ModelResponseCache` at the structured model boundary rather than wrapping the whole
+workflow or configuring a framework-global cache. Exact-route keys use the normalized qualified
+request, opaque server-derived Session scope, and routing contract versions. Finance Q&A semantic
+lookup happens only after retrieval and uses a pinned local encoder plus exact filters for agent, model/provider, prompt, Workflow, response
+schema, cache policy, locale/jurisdiction, and an evidence fingerprint over the active collection
+version and ordered chunk identifiers/content hashes. The initial Redis policy is loopback-only,
+non-persistent, administratively purgeable, and bounded to a 24-hour maximum TTL. It stores only a
+normalized policy-qualified public education query and validated structured response; raw Session
+identifiers are not stored and cross-Session reuse is prohibited. All other
+agents, multi-agent requests, context-dependent follow-ups, personalized inputs, and unsuccessful
+results bypass reuse. Redis failure is a bounded cache bypass, not a workflow failure.
+
+User-facing model summaries use a separate 4,000-character narrative contract across structured
+model output, Agent results, Workflow results, durable Run records, REST, and SSE. The 512-character
+`ShortText` contract remains for labels, warnings, errors, and bounded execution-event metadata;
+it must not be reused to clip an otherwise successful answer. Model warnings contain only
+user-relevant domain limitations or missing evidence. Provider incompleteness and generation
+failures remain typed application failures rather than model-authored warnings.
 
 ## 5. Portfolio model and data flow
 
@@ -218,7 +243,7 @@ Alpha Vantage quote currency is caller-supplied because the selected quote/daily
 
 The React application contains:
 
-- **Conversational Assistant:** streamed response, citations, uncertainty, follow-up continuity, and partial/failure states.
+- **Conversational Assistant:** streamed response, citations, uncertainty, follow-up continuity, and partial/failure states. A completed Run renders each agent narrative once; the Workflow summary is a fallback only when no agent result exists. Chunk-level evidence is grouped by canonical source URL for display, and supplemental agent/Workflow messages are shown once by first occurrence without changing stored provenance.
 - **Portfolio Dashboard:** manual/file import, validation review, snapshot selector, provenance, allocations/concentrations/expenses, warnings, and accessible tables.
 - **Market Overview:** security search, timestamped current/historical data, descriptive statistics, and stale/unavailable states.
 - **Goal Planning:** inputs, assumptions, deterministic scenario curves, contribution/growth decomposition, and accessible table.
@@ -229,7 +254,7 @@ TanStack Query owns remote server state; frontend state is limited to interactio
 Versioned interface groups:
 
 - health/readiness and configuration capabilities;
-- Sessions and deletion;
+- Active and Archived Sessions, history, archive, and permanent deletion;
 - chat Runs, final results, event history, and SSE;
 - portfolio import/validation, Portfolios, and Snapshots;
 - market query;
@@ -238,7 +263,7 @@ Versioned interface groups:
 
 REST returns authoritative resources and terminal Run status. SSE carries typed conversation chunks and RunEvents. A client reconnects with the last event identifier when replay is supported; otherwise it reloads authorized event history and final state over REST. OpenAPI is the contract source and generated or contract-tested TypeScript types prevent drift.
 
-M5 implements these interfaces under `/api/v1`. Artifact-creating requests accept bounded idempotency keys; reused keys return the original resource only when the request hash matches. RunEvents are persisted before replay, use stable sequence-derived event identifiers, and can be resumed with `Last-Event-ID`; the terminal conversational chunk has its own stable identifier. Every history, stream, Portfolio, Snapshot, and context lookup checks the requested Session scope. The local demo remains unauthenticated and loopback-only, so Session identifiers are isolation keys rather than proof of identity.
+M5 implements these interfaces under `/api/v1`. Artifact-creating requests accept bounded idempotency keys; reused keys return the original resource only when the request hash matches. RunEvents are persisted before replay, use stable sequence-derived event identifiers, and can be resumed with `Last-Event-ID`; the terminal conversational chunk has its own stable identifier. Every history, stream, Portfolio, Snapshot, and context lookup checks the requested Session scope. Clearing the Active Session archives it as read-only and opens a new Active Session. Archived Sessions can be listed and read; writes fail with a stable conflict. Permanent deletion requires an Archived Session and removes its owned records plus checkpoint thread. The local demo remains unauthenticated and loopback-only, so Session identifiers are isolation keys rather than proof of identity.
 
 FastAPI and outbound HTTPX calls are OpenTelemetry-instrumented with W3C propagation. JSON logs add request, trace, span, Session, and Run identifiers when available without bodies or headers. The optional loopback OTLP HTTP Collector receives traces and metrics and currently exports only to its debug sink. Bounded operational measurements cover HTTP status class/route, workflow status, retrieval strategy, provider operation/status/retry/rate-limit, cache outcome, and persistence operation/status. Health endpoints are excluded and protected or unbounded identifiers are not metric attributes. Export failure is isolated from product behavior; RunEvents remain the authoritative execution record.
 
@@ -262,12 +287,13 @@ Event types include run started/completed/partial/failed, route selected, node s
 
 Sequence is monotonically increasing within execution_id; event_id is stable for deduplication. started_at and completed_at are timezone-aware. duration_ms is derived only when both observations use a suitable clock. Missing token, cost, duration, or trace data is represented as unavailable with a reason, not zero.
 
-Instrumentation records events at LangGraph and module execution points. The event recorder redacts before persistence. The Inspector builds dynamic nodes and edges only from recorded identifiers and relationships. A static workflow-design overlay, if shown, is visually labeled as design rather than execution.
+Instrumentation records events at LangGraph and module execution points. The event recorder redacts before persistence. M6.1 records response-cache access using the existing tool lifecycle events with the allow-listed `model_response_cache` tool name and hit, miss, bypass, or error outcome metadata; it emits model lifecycle events only for an actual provider/model invocation. The Inspector builds dynamic nodes and edges only from recorded identifiers and relationships. A static workflow-design overlay, if shown, is visually labeled as design rather than execution.
 
 Staged delivery remains:
 
 - M0: schema, redaction policy, and versioned synthetic fixtures;
 - M4: actual LangGraph and module instrumentation;
+- M6.1: response-cache tool events, actual-model-call truth, and calibration fixtures;
 - M7: timeline, details, and React Flow views;
 - M8: fidelity, streaming, isolation, accessibility, and redaction evaluation.
 
@@ -280,14 +306,15 @@ Data classes and initial local policy:
 | Uploaded file bytes | Parse portfolio | Ephemeral; delete after safe parse or failure | Parser only; cleanup tested |
 | Imported Portfolio records | User analysis | Durable local store only when user saves; policy/version recorded | Owning Session/user context; delete cascades to derived user artifacts |
 | Enrichment and Snapshots | Reproducible analysis | Bounded by Portfolio retention and provider terms | Same owner; deletable |
-| Conversation checkpoints | Follow-up context | Durable local mode with documented retention | Owning Session; delete with Session |
-| Run events/traces | Inspector and audit | Privacy-filtered and time-bounded | Owning Session; deletion supported |
+| Conversation checkpoints | Follow-up context | Durable local mode with documented retention | Owning Session; preserve on archive and delete with permanent Session deletion |
+| Run records/events/traces | Conversation history, Inspector, and audit | New Run records retain the submitted request message and terminal result; legacy records may have no message; events/traces remain privacy-filtered and time-bounded | Owning Session; read-only after archive and deletion supported |
 | Knowledge sources/collections | Shared education evidence | Versioned according to source rights and rollback policy | Administrative ingestion role; user deletion does not remove shared sources |
 | Durable provider cache | Reliability, quota control, and reusable historical ranges | Normalized historical bars survive restart; recent bars are revalidated; quote/news retention stays endpoint-specific; local owner-only long retention requires explicit unverified-rights risk acceptance | Server only; provider/schema/policy scoped, administratively purgeable, and never presented without provenance |
+| Model response cache | Reduce repeated model latency/cost for qualified public Finance Q&A | Optional non-persistent loopback Redis; maximum 24-hour TTL; current evidence is rechecked before generation reuse | Server only; opaque Session/version/evidence scoped; purged on archive/deletion or administratively; no raw Session/Run identifiers, context references, or financial/provider payloads |
 
 The local demo is unauthenticated only when explicitly configured and bound for local use. Opaque identifiers are not authentication. Every resource lookup and stream still checks Session scope to prevent accidental cross-session leakage. A public deployment requires the ADR-019 production controls before release.
 
-M5 local persistence uses application schema version 1 in SQLite with foreign keys, WAL for file-backed databases, a five-second busy timeout, and transactional migrations. Application tables store Sessions, Runs, privacy-filtered RunEvents, saved Portfolios, Snapshots, authorized agent contexts, idempotency records, normalized market bars, and range coverage. The official LangGraph SQLite saver uses a dedicated connection to the same local file and strict allow-listed checkpoint deserialization. Startup rejects a newer schema, purges expired application/cache records, and removes expired Session checkpoint threads. Session deletion cascades user artifacts and explicitly deletes its checkpoint thread; provider cache purge is a separately token-protected local administrative operation.
+M5 local persistence uses application schema version 3 in SQLite with foreign keys, WAL for file-backed databases, a five-second busy timeout, and transactional migrations. Version 2 adds nullable `archived_at` state to Sessions; version 3 adds nullable `request_message` to Runs so new conversation history can display the submitted question while legacy Runs remain readable. Application tables store Sessions, Runs, privacy-filtered RunEvents, saved Portfolios, Snapshots, authorized agent contexts, idempotency records, normalized market bars, and range coverage. The official LangGraph SQLite saver uses a dedicated connection to the same local file and strict allow-listed checkpoint deserialization. Startup rejects a newer schema, purges expired application/cache records, and removes expired Session checkpoint threads. Archiving preserves Session-owned records and checkpoints; permanent Archived Session deletion cascades user artifacts, including submitted Run messages, and explicitly deletes its checkpoint thread. Provider cache purge is a separately token-protected local administrative operation.
 
 Default local retention is 30 days for Sessions and RunEvents and 365 days for saved Portfolios. Historical cache retention is at most 3,650 days, with a seven-day recent tail revalidated after six hours and a 128-entry/five-minute memory tier. These are private-demo defaults, not public legal-policy approval. A later public or multi-user store requires a new ADR, authentication/authorization, protected storage, enforced retention jobs, backup/recovery, and migration qualification.
 
@@ -332,6 +359,7 @@ backend/
   planning/            deterministic goal projection; future cash-flow interface
   knowledge/           retrieval interface, Qdrant adapter, readiness
   providers/           market/news/LLM ports and adapters, cache policy
+  response_cache/      eligibility, fingerprints, and optional Redis/in-memory adapters
   persistence/         checkpoints, portfolios, run events
   safety/              validation, redaction, policy, errors
   evaluation/          fixtures, runners, reports

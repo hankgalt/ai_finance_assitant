@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 2.3 | Status: Approved sequence; M0–M6 complete; M7 and later milestones planned | 2026-10-29
+Version 2.5 | Status: Approved sequence; M0–M6 complete; M6.1 and later milestones planned | 2026-10-29
 
 ## 1. Delivery rules
 
@@ -149,9 +149,9 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Deliverables**
 
-- Versioned REST resources for Sessions, chat Runs, Portfolios/import validation, Portfolio Snapshots, market queries, goal projections, and authorized trace history.
+- Versioned REST resources for Active and Archived Sessions, archive/history/permanent deletion, chat Runs, Portfolios/import validation, Portfolio Snapshots, market queries, goal projections, and authorized trace history.
 - SSE for conversational chunks and RunEvents with documented replay or REST recovery.
-- Durable local adapters for checkpoints, saved portfolios, run summaries/events, and deletion; idempotency for artifact-creating requests.
+- Durable local adapters for checkpoints, saved portfolios, run summaries/events, Session archive/history/permanent deletion, and retention; idempotency for artifact-creating requests.
 - An application-owned durable provider-cache port and relational adapter for normalized historical daily bars, with a bounded memory front cache, range-coverage and gap detection, recent-tail revalidation, provider/schema/policy isolation, concurrent-request deduplication, and administrative purge. Current quotes and news retain short endpoint-specific lifecycles unless separately approved.
 - OpenAPI-driven or contract-verified frontend types and readiness for storage/Qdrant/providers.
 - FastAPI and outbound-client OpenTelemetry instrumentation with W3C trace-context propagation; JSON logs enriched with trace, span, request, execution, and Run identifiers when available.
@@ -159,9 +159,9 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Dependencies:** M1–M4.1. ADR-026 validation must select the concrete local relational store and record provider-specific refresh, retention, migration, and risk-acceptance behavior before implementation.
 
-**Acceptance:** REST is authoritative; reconnect deduplicates events; cross-session reads/streams fail; restart behavior matches configured retention; deletion removes defined user artifacts; partial and not-ready states use stable errors; inbound and outbound trace context correlates with logs and RunEvents; telemetry remains non-blocking and no metric label or exported attribute exposes protected or unbounded identifiers. A complete, fresh historical range survives restart without a provider call; an overlapping or partially stale request fetches only missing/provider-approved refresh coverage; stored observations never cross provider, adjustment, currency, or schema/policy boundaries; and every response truthfully distinguishes memory hit, durable hit, partial hit, stale, and unavailable states. Owner-only unverified-rights retention requires explicit local risk acceptance and cannot pass shared-demo or public-deployment readiness.
+**Acceptance:** REST is authoritative; reconnect deduplicates events; cross-session reads/streams fail; restart behavior matches configured retention; clearing archives the Active Session without removing history; Archived Sessions are read-only and explicit permanent deletion removes defined user artifacts; partial and not-ready states use stable errors; inbound and outbound trace context correlates with logs and RunEvents; telemetry remains non-blocking and no metric label or exported attribute exposes protected or unbounded identifiers. A complete, fresh historical range survives restart without a provider call; an overlapping or partially stale request fetches only missing/provider-approved refresh coverage; stored observations never cross provider, adjustment, currency, or schema/policy boundaries; and every response truthfully distinguishes memory hit, durable hit, partial hit, stale, and unavailable states. Owner-only unverified-rights retention requires explicit local risk acceptance and cannot pass shared-demo or public-deployment readiness.
 
-**Tests:** OpenAPI snapshots/contracts, REST/SSE framing, last-event/recovery behavior, concurrent Runs, authorization scope, restart, idempotency, deletion, migration, CORS/local bind, resource limits, W3C context propagation, log/trace correlation, metric cardinality, health-endpoint exclusion, and unavailable Collector/exporter behavior. Provider-cache tests cover exact and overlapping ranges, gap-only fetches, recent-tail refresh, stale fallback, no-call restart reuse, concurrent request coalescing, provider/currency/adjustment/schema isolation, malformed or migrated rows, purge, retention expiry, and owner-only versus shared/public rights gates.
+**Tests:** OpenAPI snapshots/contracts, REST/SSE framing, last-event/recovery behavior, concurrent Runs, authorization scope, restart, idempotency, Active-to-Archived transitions, read-only history, permanent deletion, schema migration, CORS/local bind, resource limits, W3C context propagation, log/trace correlation, metric cardinality, health-endpoint exclusion, and unavailable Collector/exporter behavior. Provider-cache tests cover exact and overlapping ranges, gap-only fetches, recent-tail refresh, stale fallback, no-call restart reuse, concurrent request coalescing, provider/currency/adjustment/schema isolation, malformed or migrated rows, purge, retention expiry, and owner-only versus shared/public rights gates.
 
 **Evidence:** [M5 delivery report](M5_delivery_report.md), interface specification, migration records, contract test report, SSE transcript, lifecycle/isolation evidence, provider call-count and restart-reuse transcripts, cache schema and purge record, retention/rights configuration, correlated FastAPI/module trace sample, metric inventory, Collector/exporter configuration, and documented local security posture.
 
@@ -173,16 +173,40 @@ Telemetry configuration is environment-driven and disabled safely when no export
 - Manual/JSON/CSV/XLSX portfolio flows with validation review and no silent corrections.
 - TanStack Query integration, Recharts visuals and accessible tables, citations/provenance, freshness, coverage, and assumption displays.
 - Responsive, keyboard-accessible loading, empty, partial, success, stale, and failure states.
+- Confirmed Active Session archive, fresh-Session creation, read-only archived conversation history, and separately confirmed permanent deletion from History.
 - Privacy-safe frontend telemetry module for error-boundary events, Web Vitals, navigation, and API timing/failure categories, with W3C trace context and request correlation propagated to FastAPI.
 - First-party telemetry transport or protected Collector adapter; no LangSmith, provider, or telemetry credential is shipped to the browser, and telemetry contains no prompt or financial payload content.
 
 **Dependencies:** M5 interfaces and deterministic backend fixtures.
 
-**Acceptance:** Users complete core workflows without developer tools; UI never performs authoritative calculations or leaks credentials; chart/tabular values match backend resources; refresh/reconnect preserves intended state; frontend failures correlate to backend traces when sampled; disabled or failed telemetry has no user-visible functional effect.
+**Acceptance:** Users complete core workflows without developer tools; clearing an Active Session preserves it in History and opens a fresh Session; only an Archived Session exposes permanent deletion; UI never performs authoritative calculations or leaks credentials; chart/tabular values match backend resources; refresh/reconnect preserves intended state; frontend failures correlate to backend traces when sampled; disabled or failed telemetry has no user-visible functional effect.
 
-**Tests:** Component tests, API mock contracts, Playwright user journeys, keyboard/focus/semantic/contrast checks, responsive layouts, network failure and stale data, import error correction, error-boundary and Web-Vitals emission, trace/request-header propagation, payload redaction, CSP/CORS behavior, and unavailable telemetry transport.
+**Tests:** Component tests, API mock contracts, Playwright user journeys including archive/history/permanent deletion, keyboard/focus/semantic/contrast checks, responsive layouts, network failure and stale data, import error correction, error-boundary and Web-Vitals emission, trace/request-header propagation, payload redaction, CSP/CORS behavior, and unavailable telemetry transport.
 
 **Evidence:** [M6 delivery report](M6_delivery_report.md), browser-test report, accessibility review, screenshots for representative states, contract-version record, privacy-safe frontend telemetry sample, and browser-to-FastAPI correlation record under `docs/evidence/m6/`.
+
+### M6.1 — Evidence-bound response cache and M8 preparation
+
+This milestone implements ADR-028 for QR-001, QR-004, QR-006, QR-007, QR-010, QR-012, QR-014, and QR-015. It prepares the latency, cost, privacy, and trace-fidelity evidence that M8 will qualify; it does not claim that a cache hit is automatically safe or that the M8 release gate has passed.
+
+**Deliverables**
+
+- An application-owned `ModelResponseCache` port and versioned eligibility/key/fingerprint policy, with disabled and deterministic in-memory adapters plus a Redis 8/RedisVL private-demo adapter. Do not route the custom `ModelAdapter` through a framework-global cache.
+- Explicitly selected local infrastructure: loopback-only Redis, pinned container/dependency versions, persistence disabled, a maximum 24-hour TTL, bounded lookup timeout, administrative purge, and readiness that distinguishes an optional unavailable accelerator from a required product dependency.
+- Exact route reuse only for previously qualified standalone Finance Q&A requests, and semantic reuse only for successful schema-validated Finance Q&A generation after current Qdrant retrieval. Semantic matching uses a pinned local embedding adapter, initially the existing `BAAI/bge-small-en-v1.5` FastEmbed model if calibration accepts it, without an external embedding request.
+- Exact invalidation filters for an opaque server-derived Session scope, agent, model/provider, prompt, workflow, response schema, cache-policy version, locale/jurisdiction, and the active evidence fingerprint of collection version, retrieved chunk identifiers, and content hashes. A hit creates a new Run and rebuilds citations from the current Evidence; it never replays a cached Run or cached citations, and another Session cannot reuse it.
+- A deny-by-default eligibility policy excluding context references, checkpoint-dependent follow-ups, multi-agent requests, Tax, Portfolio, Market, Goal, News, personalized inputs, errors, partial/no-evidence results, and unqualified messages. Stored values contain only an opaque Session scope, the normalized policy-qualified public education query, and the validated structured response, never system prompts, raw Session/Run identifiers, or financial/provider payloads. Session archival/permanent deletion and administrative purge remove the applicable namespace.
+- Keyed request coalescing for identical in-flight eligible misses within the same Session scope and documented process boundary, plus fail-open bypass for Redis timeout, outage, corruption, or schema incompatibility.
+- Privacy-filtered RunEvents, OpenTelemetry spans/metrics, and optional LangSmith correlation for lookup outcome, bypass reason, entry age, policy version, bounded similarity-distance bucket, avoided model request/token availability, and actual model calls. Cache hits must not emit model-started/model-completed events for work that did not occur.
+- A frozen exact/paraphrase/near-miss/adversarial evaluation set and shadow-mode report used to calibrate the semantic threshold before serving semantic hits. The threshold, encoder identity, TTL, and eligibility rules are versioned configuration.
+
+**Dependencies:** Completed M1 collection/version contracts, M4/M4.1 structured routing and generation seams, M5 API/RunEvent/telemetry foundations, and M6 product journeys. M6.1 completes before M7 so the Inspector can render cache lookup, hit, miss, bypass, and actual-model-call events without inferring execution. Redis and RedisVL compatibility, image digest, package pin, local resource use, and license/security review must be recorded before implementation.
+
+**Acceptance:** Within one Active Session, a second identical eligible question creates a distinct Run, executes current Finance retrieval, rebuilds current citations, and avoids both routing and generation model calls; a calibrated paraphrase executes routing and current retrieval but may avoid generation only when all exact filters and the evidence fingerprint match. The same input in another Session, a frozen near-miss, or a changed collection/chunk/model/prompt/workflow/policy/schema value cannot reuse the entry. Archival and permanent deletion remove the Session namespace. Excluded or ambiguous requests always execute the normal path. A Redis outage or malformed entry is visible as a bounded bypass and produces the same functional result as cache-disabled mode. Cache events, model-call counts, usage availability, and latency are truthful and reconcilable across RunEvents and operational traces. On the same recorded fixture and hardware, exact and qualified semantic hits demonstrate lower end-to-end latency than cache-disabled runs. Semantic serving remains disabled unless the frozen near-miss/adversarial set has zero critical false hits and every proposed semantic hit in the calibration set has recorded human review; the selected threshold favors precision over hit rate.
+
+**Tests:** Port/adapter contracts; deterministic exact and semantic hit/miss behavior; route-only versus generation reuse; schema validation; evidence-fingerprint and every version-filter invalidation; cross-Session non-reuse; archive/delete/administrative purge; TTL/expiry; deny-by-default eligibility; privacy/redaction canaries; paraphrase/near-miss/adversarial fixtures; disabled/shadow/serving modes; Redis absence, timeout, corruption, and incompatible-index handling; same-Session concurrent identical-miss coalescing; Run/SSE/RunEvent identity and ordering; model-call/event truth; deterministic clean-environment behavior without Redis or credentials; and an opt-in real-Redis integration suite excluded from ordinary unit runs.
+
+**Evidence:** ADR-028 implementation record; response-cache schema and policy versions; pinned Redis/RedisVL/encoder manifest; threat/privacy data-flow review; purge and outage transcripts; fixed-set threshold calibration with false-hit review; cache-disabled/exact-hit/semantic-hit/near-miss benchmark including p50/p95 latency, model-call/token availability, and answer/citation comparison; correlated RunEvent/OpenTelemetry/LangSmith samples; actual commands/results/skips; known limitations; and an M6.1 delivery report. M8 consumes these artifacts and independently reruns the release qualification.
 
 ### M7 — Agent Execution Inspector
 
@@ -194,7 +218,7 @@ Telemetry configuration is environment-driven and disabled safely when no export
 - Event deduplication, out-of-order handling, reconnect behavior, and accessible list alternative.
 - Authorized correlation identifiers sufficient to locate the corresponding operational or LangSmith trace when configured; the Inspector continues to render only persisted RunEvents and never queries an external trace backend as its source of truth.
 
-**Dependencies:** M4 instrumentation, M5 history/SSE, M6 shared UI.
+**Dependencies:** M4 instrumentation, M5 history/SSE, M6 shared UI, and the M6.1 response-cache event contract.
 
 **Acceptance:** Every dynamic node and edge resolves to recorded events; failures/partial paths are truthful; synthetic fixtures are labeled; raw financial records, credentials, hidden reasoning, prompts, and unsafe payloads never render.
 
@@ -210,14 +234,15 @@ Telemetry configuration is environment-driven and disabled safely when no export
 - Privacy/security threat review, prompt-injection suite, safe-file suite, and session/access audit.
 - Reliability tests for providers, Qdrant, persistence, retries, load bounds, and restart.
 - Measured routing/retrieval/grounding/arithmetic/portfolio/import/citation/tax-year/UI/Inspector/latency/cost reports.
+- Response-cache qualification using M6.1's frozen exact/paraphrase/near-miss/adversarial set, including false-hit review, invalidation, cache-disabled equivalence, privacy/redaction, outage behavior, and measured avoided calls/tokens.
 - End-to-end observability qualification across browser, FastAPI, deterministic modules, providers/retrieval, LangGraph, and RunEvent persistence, including sampling, correlation, redaction, retention, metric cardinality, and exporter backpressure/outage behavior.
 - Operational runbooks for local failures and explicit production-hardening gap register.
 
-**Dependencies:** M1–M7 feature-complete candidate.
+**Dependencies:** M1–M7 feature-complete candidate, including M4.1 and M6.1.
 
-**Acceptance:** All critical release gates pass; no critical financial arithmetic, access, leakage, citation, or trace-fidelity defect remains open; metrics include configuration and unavailable values; a sampled request can be reconciled across frontend telemetry, backend spans/logs, LangSmith when enabled, and the authoritative RunEvent record; collector/exporter loss cannot corrupt or block product state; any noncritical exception has owner, rationale, and expiry.
+**Acceptance:** All critical release gates pass; no critical financial arithmetic, access, leakage, citation, response-cache false-hit, or trace-fidelity defect remains open; metrics include configuration and unavailable values; response-cache serving remains disabled unless cache-disabled equivalence, the zero-critical-false-hit gate, evidence/version invalidation, and measured latency benefit pass; a sampled request can be reconciled across frontend telemetry, backend spans/logs, LangSmith when enabled, and the authoritative RunEvent record; collector/exporter loss cannot corrupt or block product state; any noncritical exception has owner, rationale, and expiry.
 
-**Tests:** Full regression, adversarial, integration, browser, accessibility, benchmark, soak/concurrency within initial scale, clean-environment suite, sensitive-field canaries, sampling/retention, missing-parent/partial-trace handling, high-cardinality rejection, and Collector/LangSmith outage tests.
+**Tests:** Full regression, adversarial, integration, browser, accessibility, benchmark, response-cache false-hit/invalidation/outage/privacy suites, soak/concurrency within initial scale, clean-environment suite, sensitive-field canaries, sampling/retention, missing-parent/partial-trace handling, high-cardinality rejection, and Collector/LangSmith outage tests.
 
 **Evidence:** Immutable evaluation bundle, coverage report, threat model, dependency scan, benchmark/cost report, observability data-flow diagram, signal/attribute inventory, correlated cross-tier trace, redaction and exporter-failure reports, known-risk register, and release recommendation.
 
@@ -267,12 +292,12 @@ M0 → M1
 M0 → M2
 M0 → M3
 M1 + M2 + M3 → M4
-M4 → M4.1 → M5 → M6 → M7
-M1 through M7 → M8 → M9
+M4 → M4.1 → M5 → M6 → M6.1 → M7
+M1–M7 + M4.1 + M6.1 → M8 → M9
 M2 + M5 + M6 → M10 after M9 release approval
 ~~~
 
-M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
+M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. M6.1 defines the response-cache contracts and pre-qualification evidence before M7 consumes its events; M8 independently qualifies the feature for release. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
 
 ## 4. Mapping from the previous milestone plan
 
@@ -286,6 +311,7 @@ M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 wh
 | Old M5: News and Tax agents | New M1, M3, M4 | Tax knowledge belongs to M1, news provider to M3, and both agents to M4 |
 | Old M6: React views plus Inspector | New M6 and M7 | Separates core product journeys from trace fidelity while retaining their shared UI foundation |
 | Old M7: observability/safety/evaluation | New M0/M4 and M8 | Contracts/instrumentation move earlier; integrated qualification remains M8 |
+| Previously unsequenced response reuse | New M6.1 and M8 | Adds a bounded evidence-bound cache before Inspector work, then independently qualifies latency, privacy, event truth, and false-hit safety in M8 |
 | Old M8: MCP tools | New M9 | Kept as a coursework release obligation after validated core modules |
 | Old M9: documentation and demo | New M9 | Preserved and broadened into product release packaging |
 | Previously unsequenced PR-016 cash-flow implementation | New M10 | Adds a provider-independent JSON/CSV path after the initial/coursework release while preserving the M2 domain seam |
@@ -293,6 +319,6 @@ M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 wh
 
 ## 5. Release sequencing and stop conditions
 
-The **initial product release** requires M0 through M8, including M4.1, plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the planned post-release cash-flow implementation; it does not delay either release and does not require a banking-data provider. Public availability and remaining production-hardening controls stay out of scope until separately approved.
+The **initial product release** requires M0 through M8, including M4.1 and M6.1, plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the planned post-release cash-flow implementation; it does not delay either release and does not require a banking-data provider. Public availability and remaining production-hardening controls stay out of scope until separately approved.
 
 Stop a milestone when a critical dependency, source-use right, data-integrity policy, security decision, or external authority is missing. Record the blocker rather than substituting invented data, bypassing a gate, or weakening the requirement. Near-complete work is not milestone completion.

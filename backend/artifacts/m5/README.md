@@ -1,10 +1,10 @@
 # M5 evidence artifacts
 
 - `test-results.json` records the exact focused, backend, frontend, and Collector-config gates.
-- `migration-record.v1.json` records application schema version 1 and the durable table set.
+- `migration-record.v1.json` records application schema versions 1–3 and the durable table set.
 - `sse-replay-transcript.v1.json` records an actual credential-free Run, frame order, and replay
   cursor result without copying the full event payloads.
-- `lifecycle-isolation.v1.json` maps restart, expiry, deletion, idempotency, and Session-isolation
+- `lifecycle-isolation.v1.json` maps restart, archive, expiry, deletion, idempotency, and Session-isolation
   assertions to their tests.
 - `provider-cache-transcript.v1.json` records provider-call counts and durable range behavior.
 - `trace-correlation-sample.v1.json` records the deterministic W3C correlation assertion.

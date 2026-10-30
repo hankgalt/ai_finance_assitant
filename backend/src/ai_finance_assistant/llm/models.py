@@ -5,7 +5,7 @@ from enum import StrEnum
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from ai_finance_assistant.contracts.agents import AgentId
-from ai_finance_assistant.contracts.common import Identifier, ShortText
+from ai_finance_assistant.contracts.common import Identifier, NarrativeText, ShortText
 
 
 class ModelEvidence(BaseModel):
@@ -32,8 +32,17 @@ class ModelOutput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: str = Field(default="1", pattern=r"^1$")
-    summary: ShortText
-    warnings: tuple[ShortText, ...] = Field(default=(), max_length=20)
+    summary: NarrativeText = Field(
+        description="Complete user-facing narrative grounded in the supplied evidence and facts."
+    )
+    warnings: tuple[ShortText, ...] = Field(
+        default=(),
+        max_length=20,
+        description=(
+            "User-relevant domain limitations or missing evidence only; never internal model or "
+            "provider mechanics."
+        ),
+    )
 
 
 class ModelUsage(BaseModel):

@@ -64,7 +64,7 @@ def evidence(*, logical_kb: LogicalKnowledgeBase, text: str) -> Evidence:
         content_hash="a" * 64,
         fetched_at=NOW,
         tax_years=(2026,) if logical_kb == LogicalKnowledgeBase.TAX else (),
-        jurisdiction=("US-Federal" if logical_kb == LogicalKnowledgeBase.TAX else "US"),
+        jurisdiction="US-Federal",
     )
 
 
@@ -123,6 +123,34 @@ def test_finance_agent_grounds_response_and_treats_retrieved_instructions_as_dat
     completed = next(event for event in recorded if event.event_type == EventType.MODEL_COMPLETED)
     assert completed.usage.cost_amount is None
     assert completed.usage.cost_unavailable_reason == "Model cost is not available."
+
+
+def test_finance_agent_matches_federal_evidence_for_default_us_jurisdiction() -> None:
+    comparison_evidence = evidence(
+        logical_kb=LogicalKnowledgeBase.FINANCE,
+        text=(
+            "Mutual funds and ETFs pool money from many investors. "
+            "ETF shares trade on exchanges during the day, while mutual fund shares "
+            "are purchased or redeemed at their next calculated net asset value."
+        ),
+    ).model_copy(update={"jurisdiction": "US-Federal"})
+    telemetry = InMemoryObservability()
+    runtime = AgentRuntime(
+        retrieval=StaticKnowledgeRetrieval({LogicalKnowledgeBase.FINANCE: (comparison_evidence,)}),
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+
+    result = FinanceQAAgent(runtime=runtime).invoke(
+        request(AgentId.FINANCE_QA, "What's the difference between ETFs and mutual funds?")
+    )
+
+    assert result.status == AgentResultStatus.OK, result
+    assert result.evidence[0].evidence_id == comparison_evidence.chunk_id
 
 
 def test_tax_agent_uses_latest_matching_year_and_canonical_jurisdiction() -> None:

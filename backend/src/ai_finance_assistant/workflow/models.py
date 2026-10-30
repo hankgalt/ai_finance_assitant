@@ -5,7 +5,7 @@ from enum import StrEnum
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from ai_finance_assistant.contracts.agents import AgentId, AgentResult
-from ai_finance_assistant.contracts.common import Identifier, ShortText
+from ai_finance_assistant.contracts.common import Identifier, NarrativeText, ShortText
 from ai_finance_assistant.contracts.errors import SafeError
 
 
@@ -42,7 +42,7 @@ class WorkflowRunResult(BaseModel):
     status: WorkflowStatus
     selected_agent_ids: tuple[AgentId, ...]
     agent_results: tuple[AgentResult, ...]
-    summary: ShortText
+    summary: NarrativeText
     warnings: tuple[ShortText, ...] = ()
     errors: tuple[SafeError, ...] = ()
     trace_id: Identifier | None = None

@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.0 | Status: Product architecture baseline; M0–M6 evidence recorded | 2026-10-29
+Version 2.2 | Status: Product architecture baseline; M0–M6 evidence recorded and M6.1 response-cache preparation planned | 2026-10-29
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -46,5 +46,5 @@ All controls and capabilities in these documents are requirements or designs unt
 
 ## Traceability convention
 
-Product requirements use PR and QR identifiers. Coursework criteria use CA identifiers. Decisions use ADR identifiers. Milestones use M0 through M10. Evaluation cases use EV identifiers. The requirements specification contains the cross-document traceability matrix; the coursework document contains the source-to-product mapping.
+Product requirements use PR and QR identifiers. Coursework criteria use CA identifiers. Decisions use ADR identifiers. Milestones use M0 through M10, with M4.1 and M6.1 as explicitly sequenced intermediate gates. Evaluation cases use EV identifiers. The requirements specification contains the cross-document traceability matrix; the coursework document contains the source-to-product mapping.
 

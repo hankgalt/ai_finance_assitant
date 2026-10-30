@@ -6,7 +6,8 @@ Completed: 2026-10-28
 
 Maintenance update: 2026-10-29 — routing now consumes a schema-validated ModelAdapter decision;
 the former lexical substring implementation has been removed. LangSmith root traces now use the
-Run's workflow identifier instead of the generic compiled-graph name.
+Run's workflow identifier instead of the generic compiled-graph name. Default U.S. Finance
+retrieval now canonicalizes to the `US-Federal` jurisdiction used by the governed collection.
 
 Scope: PR-001, PR-002, PR-004, PR-006, PR-007, PR-008; QR-004, QR-005, QR-007, QR-010, QR-012, QR-014, QR-015; EV-01, EV-02, EV-05–EV-11; ADR-001, ADR-002, ADR-005, ADR-008, ADR-009, ADR-011, ADR-012, ADR-018
 
@@ -100,3 +101,18 @@ used its generic `LangGraph` default as the root run name because the invocation
 collector regression records `finance-assistant`, and one privacy-hidden synthetic LangSmith trace
 was read back from project `ai_finance_assistant` with that root name. No OpenAI, market-data, or
 news-provider call was made. Historical traces retain their original names.
+
+## Post-completion Finance jurisdiction and fund-comparison correction — 2026-10-29
+
+Finance Q&A requests carried the public contract's default `US` jurisdiction while every enabled
+Finance source used the governed `US-Federal` value. Exact metadata filtering therefore produced
+no evidence even for covered topics. A FinanceQA regression now exercises the production metadata
+shape, and shared test fixtures use the same canonical value. The retrieval adapter maps default
+U.S. Finance and Tax requests to `US-Federal`; explicit other jurisdictions remain unchanged.
+
+The Finance source registry now includes the reviewed April 29, 2025 SEC/Investor.gov bulletin on
+mutual-fund and ETF characteristics, and the fixed qrels include the exact comparison question as a
+critical jurisdiction-filter case. Offline ingestion created and activated immutable collection
+`finance_education_v1_fcecb8c15493`, retaining `finance_education_v1_2fdf182ee6ab` for rollback.
+The active alias passes compatibility validation, and the exact question returns `ok` through the
+Qdrant-backed FinanceQA interface with evidence from the comparison and fee bulletins.

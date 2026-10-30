@@ -14,6 +14,15 @@ Identifier = Annotated[
     ),
 ]
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=512)]
+NARRATIVE_TEXT_MAX_LENGTH = 4_000
+NarrativeText = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=NARRATIVE_TEXT_MAX_LENGTH,
+    ),
+]
 CurrencyCode = Annotated[
     str,
     StringConstraints(strip_whitespace=True, to_upper=True, pattern=r"^[A-Z]{3}$"),

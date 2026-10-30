@@ -10,6 +10,7 @@ import type {
   QuoteResult,
   RunList,
   RunRecord,
+  SessionList,
   SessionRecord,
   SseFrame,
 } from "../types/contracts";
@@ -162,6 +163,23 @@ export const api = {
       "sessions",
       "shell",
     ),
+  listSessions: (state?: "active" | "archived") =>
+    apiRequest<SessionList>(
+      `/api/v1/sessions${state ? `?state=${state}` : ""}`,
+      "sessions",
+      "history",
+    ),
+  archiveSession: (sessionId: string) =>
+    apiRequest<SessionRecord>(
+      `/api/v1/sessions/${sessionId}/archive`,
+      "sessions",
+      "shell",
+      jsonBody({}),
+    ),
+  deleteSession: (sessionId: string) =>
+    apiRequest<void>(`/api/v1/sessions/${sessionId}`, "sessions", "shell", {
+      method: "DELETE",
+    }),
   listRuns: (sessionId: string) =>
     apiRequest<RunList>(
       `/api/v1/sessions/${sessionId}/runs`,

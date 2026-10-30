@@ -45,7 +45,12 @@ from ai_finance_assistant.finance.models import (
     PortfolioImportResult,
     PortfolioSnapshot,
 )
-from ai_finance_assistant.persistence.models import IdempotencyConflict, RunRecord, SessionRecord
+from ai_finance_assistant.persistence.models import (
+    IdempotencyConflict,
+    RunRecord,
+    SessionRecord,
+    SessionState,
+)
 from ai_finance_assistant.providers.models import (
     HistoricalRequest,
     HistoricalResult,
@@ -85,6 +90,21 @@ def _require_session(services: ApplicationServices, session_id: str) -> SessionR
     return session
 
 
+def _require_active_session(
+    services: ApplicationServices,
+    session_id: str,
+) -> SessionRecord:
+    session = _require_session(services, session_id)
+    if session.state == SessionState.ARCHIVED:
+        raise ApiProblem(
+            409,
+            "SESSION_ARCHIVED",
+            ErrorCategory.CONFLICT,
+            "The Session is archived and read-only.",
+        )
+    return session
+
+
 def _request_hash(model: object) -> str:
     if isinstance(model, BaseModel):
         payload = model.model_dump_json()
@@ -102,8 +122,11 @@ def create_session(body: CreateSessionRequest, request: Request) -> SessionRecor
 
 
 @router.get("/sessions", response_model=SessionList)
-def list_sessions(request: Request) -> SessionList:
-    return SessionList(items=_services(request).application_repository.list_sessions())
+def list_sessions(
+    request: Request,
+    state: Annotated[SessionState | None, Query()] = None,
+) -> SessionList:
+    return SessionList(items=_services(request).application_repository.list_sessions(state=state))
 
 
 @router.get("/sessions/{session_id}", response_model=SessionRecord)
@@ -111,9 +134,31 @@ def get_session(session_id: str, request: Request) -> SessionRecord:
     return _require_session(_services(request), session_id)
 
 
+@router.post("/sessions/{session_id}/archive", response_model=SessionRecord)
+def archive_session(session_id: str, request: Request) -> SessionRecord:
+    archived = _services(request).application_repository.archive_session(session_id)
+    if archived is None:
+        raise ApiProblem(
+            404,
+            "SESSION_NOT_FOUND",
+            ErrorCategory.AUTHORIZATION,
+            "The requested Session is unavailable.",
+        )
+    return archived
+
+
 @router.delete("/sessions/{session_id}", status_code=204)
 def delete_session(session_id: str, request: Request) -> Response:
-    if not _services(request).delete_session(session_id):
+    services = _services(request)
+    session = _require_session(services, session_id)
+    if session.state != SessionState.ARCHIVED:
+        raise ApiProblem(
+            409,
+            "SESSION_ARCHIVE_REQUIRED",
+            ErrorCategory.CONFLICT,
+            "Archive the Session before permanently deleting it.",
+        )
+    if not services.delete_session(session_id):
         raise ApiProblem(
             404,
             "SESSION_NOT_FOUND",
@@ -132,7 +177,7 @@ def create_run(
     idempotency_key: IdempotencyHeader = None,
 ) -> RunRecord:
     services = _services(request)
-    _require_session(services, session_id)
+    _require_active_session(services, session_id)
     execution_id = f"run-{uuid4().hex}"
     try:
         record, created = services.application_repository.create_run(
@@ -140,6 +185,7 @@ def create_run(
             session_id=session_id,
             workflow_id="finance-assistant",
             workflow_version="1",
+            request_message=body.message,
             idempotency_key=idempotency_key,
             request_hash=_request_hash(body),
         )
@@ -304,7 +350,7 @@ def validate_portfolio_import(
     request: Request,
 ) -> PortfolioImportResult:
     services = _services(request)
-    _require_session(services, session_id)
+    _require_active_session(services, session_id)
     return services.portfolio_import.import_portfolio(body.to_domain())
 
 
@@ -320,7 +366,7 @@ def create_portfolio(
     idempotency_key: IdempotencyHeader = None,
 ) -> PortfolioImportResult:
     services = _services(request)
-    _require_session(services, session_id)
+    _require_active_session(services, session_id)
     result = services.portfolio_import.import_portfolio(body.to_domain())
     if not result.accepted or result.portfolio is None:
         response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -389,6 +435,7 @@ def get_portfolio(session_id: str, portfolio_id: str, request: Request) -> Impor
 @router.delete("/sessions/{session_id}/portfolios/{portfolio_id}", status_code=204)
 def delete_portfolio(session_id: str, portfolio_id: str, request: Request) -> Response:
     services = _services(request)
+    _require_active_session(services, session_id)
     try:
         deleted = services.application_repository.delete_portfolio(
             portfolio_id,
@@ -423,6 +470,7 @@ def create_snapshot(
     request: Request,
 ) -> PortfolioSnapshot:
     services = _services(request)
+    _require_active_session(services, session_id)
     portfolio = get_portfolio(session_id, portfolio_id, request)
     calculated_at = datetime.now(UTC)
     snapshot = services.portfolio_analysis.analyze(
@@ -516,14 +564,14 @@ def search_instruments(
     request: Request,
 ) -> InstrumentSearchResult:
     services = _services(request)
-    _require_session(services, session_id)
+    _require_active_session(services, session_id)
     return services.market.search_instruments(body)
 
 
 @router.post("/sessions/{session_id}/market/quotes", response_model=QuoteResult)
 def market_quote(session_id: str, body: QuoteRequest, request: Request) -> QuoteResult:
     services = _services(request)
-    _require_session(services, session_id)
+    _require_active_session(services, session_id)
     return services.market.get_quote(body)
 
 
@@ -534,7 +582,7 @@ def market_history(
     request: Request,
 ) -> HistoricalResult:
     services = _services(request)
-    _require_session(services, session_id)
+    _require_active_session(services, session_id)
     return services.market.get_history(body)
 
 
@@ -548,7 +596,7 @@ def goal_projection(
     request: Request,
 ) -> GoalProjectionResult:
     services = _services(request)
-    _require_session(services, session_id)
+    _require_active_session(services, session_id)
     services.context_repository.put(
         session_id,
         GoalAgentContext(context_id=body.projection_id, projection=body),

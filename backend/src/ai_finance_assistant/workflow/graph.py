@@ -18,6 +18,7 @@ from ai_finance_assistant.contracts.agents import (
     AgentResult,
     AgentResultStatus,
 )
+from ai_finance_assistant.contracts.common import NARRATIVE_TEXT_MAX_LENGTH
 from ai_finance_assistant.contracts.errors import ErrorCategory, SafeError
 from ai_finance_assistant.contracts.events import (
     EventStatus,
@@ -451,7 +452,7 @@ class FinanceWorkflow:
             status = WorkflowStatus.CLARIFICATION
         else:
             status = WorkflowStatus.FAILED
-        summary = " ".join(item.summary for item in results)[:512]
+        summary = " ".join(item.summary for item in results)[:NARRATIVE_TEXT_MAX_LENGTH]
         warnings = tuple(warning for item in results for warning in item.warnings)
         return {
             "final_status": status,

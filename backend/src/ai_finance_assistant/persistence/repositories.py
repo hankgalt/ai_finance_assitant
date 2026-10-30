@@ -19,6 +19,7 @@ from ai_finance_assistant.persistence.models import (
     IdempotencyConflict,
     RunRecord,
     SessionRecord,
+    SessionState,
     StoredRunStatus,
 )
 from ai_finance_assistant.workflow.models import WorkflowRunResult
@@ -91,9 +92,11 @@ class SQLiteApplicationRepository:
         return SessionRecord(
             session_id=session_id,
             label=label,
+            state=SessionState.ACTIVE,
             created_at=observed,
             updated_at=observed,
             expires_at=expires,
+            archived_at=None,
         )
 
     def get_session(self, session_id: str) -> SessionRecord | None:
@@ -104,15 +107,55 @@ class SQLiteApplicationRepository:
             ).fetchone()
         return None if row is None else _session_from_row(row)
 
-    def list_sessions(self) -> tuple[SessionRecord, ...]:
+    def list_sessions(
+        self,
+        *,
+        state: SessionState | None = None,
+    ) -> tuple[SessionRecord, ...]:
+        clauses: list[str] = []
+        if state == SessionState.ACTIVE:
+            clauses.append("archived_at IS NULL")
+        elif state == SessionState.ARCHIVED:
+            clauses.append("archived_at IS NOT NULL")
+        query = "SELECT * FROM sessions"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY updated_at DESC"
         with self._database.read() as connection:
-            rows = connection.execute("SELECT * FROM sessions ORDER BY created_at DESC").fetchall()
+            rows = connection.execute(query).fetchall()
         return tuple(_session_from_row(row) for row in rows)
 
-    def delete_session(self, session_id: str) -> bool:
+    def archive_session(
+        self,
+        session_id: str,
+        *,
+        now: datetime | None = None,
+    ) -> SessionRecord | None:
+        observed = now or datetime.now(UTC)
+        with self._database.transaction() as connection:
+            existing = connection.execute(
+                "SELECT * FROM sessions WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+            if existing is None:
+                return None
+            if existing["archived_at"] is None:
+                connection.execute(
+                    "UPDATE sessions SET archived_at = ?, updated_at = ? "
+                    "WHERE session_id = ? AND archived_at IS NULL",
+                    (observed.isoformat(), observed.isoformat(), session_id),
+                )
+            row = connection.execute(
+                "SELECT * FROM sessions WHERE session_id = ?",
+                (session_id,),
+            ).fetchone()
+        assert row is not None
+        return _session_from_row(row)
+
+    def delete_archived_session(self, session_id: str) -> bool:
         with self._database.transaction() as connection:
             cursor = connection.execute(
-                "DELETE FROM sessions WHERE session_id = ?",
+                "DELETE FROM sessions WHERE session_id = ? AND archived_at IS NOT NULL",
                 (session_id,),
             )
         return cursor.rowcount > 0
@@ -124,13 +167,14 @@ class SQLiteApplicationRepository:
         session_id: str,
         workflow_id: str,
         workflow_version: str,
+        request_message: str,
         idempotency_key: str | None,
         request_hash: str,
         now: datetime | None = None,
     ) -> tuple[RunRecord, bool]:
         observed = now or datetime.now(UTC)
         with self._database.transaction() as connection:
-            _require_session(connection, session_id)
+            _require_active_session(connection, session_id)
             if idempotency_key is not None:
                 existing = _idempotent_resource(
                     connection,
@@ -149,13 +193,15 @@ class SQLiteApplicationRepository:
                     return _run_from_row(row), False
             connection.execute(
                 "INSERT INTO runs(execution_id, session_id, workflow_id, workflow_version, "
-                "status, result_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
+                "status, request_message, result_json, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)",
                 (
                     execution_id,
                     session_id,
                     workflow_id,
                     workflow_version,
                     StoredRunStatus.RUNNING.value,
+                    request_message,
                     observed.isoformat(),
                     observed.isoformat(),
                 ),
@@ -177,6 +223,7 @@ class SQLiteApplicationRepository:
                 workflow_id=workflow_id,
                 workflow_version=workflow_version,
                 status=StoredRunStatus.RUNNING,
+                request_message=request_message,
                 created_at=observed,
                 updated_at=observed,
             ),
@@ -244,7 +291,7 @@ class SQLiteApplicationRepository:
         observed = now or datetime.now(UTC)
         expires = observed + self._portfolio_retention
         with self._database.transaction() as connection:
-            _require_session(connection, session_id)
+            _require_active_session(connection, session_id)
             if idempotency_key is not None:
                 existing = _idempotent_resource(
                     connection,
@@ -301,6 +348,7 @@ class SQLiteApplicationRepository:
 
     def delete_portfolio(self, portfolio_id: str, *, session_id: str) -> bool:
         with self._database.transaction() as connection:
+            _require_active_session(connection, session_id)
             existing = _owned_portfolio(connection, portfolio_id, session_id)
             if existing is None:
                 return False
@@ -316,6 +364,7 @@ class SQLiteApplicationRepository:
 
     def save_snapshot(self, snapshot: PortfolioSnapshot, *, session_id: str) -> None:
         with self._database.transaction() as connection:
+            _require_active_session(connection, session_id)
             portfolio = _owned_portfolio(connection, snapshot.portfolio_id, session_id)
             if portfolio is None:
                 raise LookupError("Portfolio was not found.")
@@ -427,7 +476,7 @@ class SQLiteAgentContextRepository:
 
     def put(self, session_id: str, context: AuthorizedAgentContext) -> None:
         with self._database.transaction() as connection:
-            _require_session(connection, session_id)
+            _require_active_session(connection, session_id)
             connection.execute(
                 "INSERT INTO agent_contexts("
                 "session_id, context_id, kind, context_json, created_at) "
@@ -463,12 +512,15 @@ class SQLiteAgentContextRepository:
 
 
 def _session_from_row(row: sqlite3.Row) -> SessionRecord:
+    archived_at = row["archived_at"]
     return SessionRecord(
         session_id=row["session_id"],
         label=row["label"],
+        state=(SessionState.ARCHIVED if archived_at is not None else SessionState.ACTIVE),
         created_at=datetime.fromisoformat(row["created_at"]),
         updated_at=datetime.fromisoformat(row["updated_at"]),
         expires_at=datetime.fromisoformat(row["expires_at"]),
+        archived_at=(datetime.fromisoformat(archived_at) if archived_at is not None else None),
     )
 
 
@@ -480,6 +532,7 @@ def _run_from_row(row: sqlite3.Row) -> RunRecord:
         workflow_id=row["workflow_id"],
         workflow_version=row["workflow_version"],
         status=StoredRunStatus(row["status"]),
+        request_message=row["request_message"],
         result=(
             None if result_json is None else WorkflowRunResult.model_validate_json(result_json)
         ),
@@ -497,6 +550,17 @@ def _require_session(connection: sqlite3.Connection, session_id: str) -> None:
         is None
     ):
         raise LookupError("Session was not found.")
+
+
+def _require_active_session(connection: sqlite3.Connection, session_id: str) -> None:
+    row = connection.execute(
+        "SELECT archived_at FROM sessions WHERE session_id = ?",
+        (session_id,),
+    ).fetchone()
+    if row is None:
+        raise LookupError("Session was not found.")
+    if row["archived_at"] is not None:
+        raise PermissionError("Archived Sessions are read-only.")
 
 
 def _owned_portfolio(

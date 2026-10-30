@@ -10,18 +10,19 @@
     "backend_gate": {
       "command": "make backend-check",
       "result": "passed",
-      "summary": "117 files formatted; lint passed; mypy passed for 109 source/test files; 168 passed, 1 skipped, 3 deselected; 87% coverage"
+      "summary": "117 files formatted; lint passed; mypy passed for 109 source/test files; 174 passed, 1 skipped, 3 deselected; 87% coverage"
     }
   },
   "maintenance": {
     "model_backed_routing": "passed offline adapter, router, workflow, observability, and API regressions",
+    "complete_narrative_contract": "passed adapter, workflow, SQLite persistence, REST, SSE, OpenAPI-manifest, and frontend rendering regressions at a 4000-character bound",
     "ordinary_test_env": "backend/.test.env; backend/.env not read",
     "post_change_live_routing": "not run; seven-call aggregate approval required"
   },
   "live": {
-    "approved_request_budgets": [6, 6, 6],
-    "requests_made": 18,
-    "http_200_responses": 18,
+    "approved_request_budgets": [6, 6, 6, 1],
+    "requests_made": 19,
+    "http_200_responses": 19,
     "aggregate_attempt": {
       "command": "AIFA_RUN_LIVE_MODEL_TESTS=true AIFA_MODEL_MODE=openai_live uv run pytest -q -m live_model tests/test_live_model_adapter.py",
       "result": "post_call_fixture_failure",
@@ -46,6 +47,19 @@
       "result": "passed",
       "requests_made": 6,
       "summary": "1 passed in 6.46s"
+    },
+    "complete_narrative_replay": {
+      "result": "passed",
+      "requests_made": 1,
+      "question": "Whats the difference between ETFs & Mutual funds",
+      "evidence_count": 5,
+      "input_tokens": 2051,
+      "output_tokens": 392,
+      "summary_characters": 1547,
+      "summary_ends_with_terminal_punctuation": true,
+      "internal_generation_warning_present": false,
+      "prompt_version": "openai-agent-system-v2",
+      "raw_response_recorded": false
     },
     "secrets_recorded": false,
     "langsmith_external_trace": {

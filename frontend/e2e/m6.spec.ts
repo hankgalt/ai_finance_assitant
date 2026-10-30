@@ -60,6 +60,8 @@ function importedPortfolio() {
 
 async function mockApi(page: Page) {
   let saved = false;
+  let sessionSequence = 0;
+  let archivedSessionIds: string[] = [];
   await page.route("**/api/**", async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -80,25 +82,75 @@ async function mockApi(page: Page) {
       });
     if (path === "/api/v1/telemetry/browser")
       return route.fulfill({ status: 204 });
-    if (path === "/api/v1/sessions" && request.method() === "POST")
+    if (path === "/api/v1/sessions" && request.method() === "POST") {
+      sessionSequence += 1;
       return json(
         {
-          session_id: "session-e2e",
+          session_id: `session-e2e-${sessionSequence}`,
           label: "Local demo",
+          state: "active",
           created_at: now,
           updated_at: now,
           expires_at: "2026-10-30T12:00:00Z",
+          archived_at: null,
         },
         201,
       );
-    if (path === "/api/v1/sessions/session-e2e" && request.method() === "GET")
+    }
+    if (
+      path === "/api/v1/sessions" &&
+      request.method() === "GET" &&
+      url.searchParams.get("state") === "archived"
+    )
       return json({
-        session_id: "session-e2e",
+        items: archivedSessionIds.map((sessionId) => ({
+          session_id: sessionId,
+          label: "Local demo",
+          state: "archived",
+          created_at: now,
+          updated_at: now,
+          expires_at: "2026-10-30T12:00:00Z",
+          archived_at: now,
+        })),
+      });
+    if (
+      /^\/api\/v1\/sessions\/session-e2e-\d+\/archive$/.test(path) &&
+      request.method() === "POST"
+    ) {
+      const sessionId = path.split("/").at(-2) ?? "";
+      archivedSessionIds = [...archivedSessionIds, sessionId];
+      return json({
+        session_id: sessionId,
         label: "Local demo",
+        state: "archived",
         created_at: now,
         updated_at: now,
         expires_at: "2026-10-30T12:00:00Z",
+        archived_at: now,
       });
+    }
+    if (
+      /^\/api\/v1\/sessions\/session-e2e-\d+$/.test(path) &&
+      request.method() === "GET"
+    )
+      return json({
+        session_id: path.split("/").at(-1),
+        label: "Local demo",
+        state: "active",
+        created_at: now,
+        updated_at: now,
+        expires_at: "2026-10-30T12:00:00Z",
+        archived_at: null,
+      });
+    if (
+      /^\/api\/v1\/sessions\/session-e2e-\d+$/.test(path) &&
+      request.method() === "DELETE"
+    ) {
+      archivedSessionIds = archivedSessionIds.filter(
+        (sessionId) => sessionId !== path.split("/").at(-1),
+      );
+      return route.fulfill({ status: 204 });
+    }
     if (path.endsWith("/runs") && request.method() === "GET")
       return json({ items: [] });
     if (path.endsWith("/portfolios") && request.method() === "GET")
@@ -442,4 +494,329 @@ test("keeps navigation and core content usable at a narrow viewport", async ({
   await page.getByRole("button", { name: "View market data" }).click();
   await expect(page.getByText("Showing stale cached history")).toBeVisible();
   await capture(page, "../docs/evidence/m6/mobile-market.png");
+});
+
+test("wraps assistant table cells and keeps every column visible at a narrow viewport", async ({
+  page,
+}) => {
+  const markdown = `**ETFs and mutual funds both pool investors’ money.**
+
+| Feature | ETFs (exchange-traded funds) | Mutual funds |
+|---|---|---|
+| Buying and selling | Trade on an exchange through a brokerage account | Buy from or redeem with the fund or an intermediary |
+| Pricing | Market prices change during the trading day | Transactions use the daily net asset value |`;
+  const run = {
+    execution_id: "run-wide-table",
+    session_id: "session-e2e-1",
+    workflow_id: "finance-assistant",
+    workflow_version: "1",
+    status: "completed",
+    request_message: "What's the difference between ETFs and mutual funds?",
+    result: {
+      schema_version: "1",
+      execution_id: "run-wide-table",
+      session_id: "session-e2e-1",
+      workflow_id: "finance-assistant",
+      workflow_version: "1",
+      status: "completed",
+      selected_agent_ids: ["finance_qa"],
+      agent_results: [
+        {
+          schema_version: "1",
+          agent_id: "finance_qa",
+          status: "ok",
+          summary: markdown,
+          facts: [],
+          evidence: [],
+          visualization: null,
+          as_of: now,
+          warnings: [],
+          errors: [],
+        },
+      ],
+      summary: markdown,
+      warnings: [],
+      errors: [],
+      trace_id: null,
+      trace_unavailable_reason: null,
+    },
+    created_at: now,
+    updated_at: now,
+  };
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route(
+    /\/api\/v1\/sessions\/session-e2e-\d+\/runs$/,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [run] }),
+      });
+    },
+  );
+  await page.reload();
+
+  const runCard = page.locator(".run-card");
+  await expect(runCard).toBeVisible();
+  await expect(page.getByRole("table")).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const card = document.querySelector<HTMLElement>(".run-card");
+    const markdownNarrative = document.querySelector<HTMLElement>(
+      ".markdown-narrative",
+    );
+    const table = markdownNarrative?.querySelector<HTMLTableElement>("table");
+    const cells = table
+      ? [...table.querySelectorAll<HTMLTableCellElement>("th, td")]
+      : [];
+    if (!card || !markdownNarrative || !table || cells.length === 0)
+      throw new Error("Run card was not rendered");
+    const cardBounds = card.getBoundingClientRect();
+    const tableBounds = table.getBoundingClientRect();
+    return {
+      documentClientWidth: document.documentElement.clientWidth,
+      documentScrollWidth: document.documentElement.scrollWidth,
+      cardLeft: cardBounds.left,
+      cardRight: cardBounds.right,
+      tableLeft: tableBounds.left,
+      tableRight: tableBounds.right,
+      tableClientWidth: table.clientWidth,
+      tableScrollWidth: table.scrollWidth,
+      narrativeClientWidth: markdownNarrative.clientWidth,
+      narrativeScrollWidth: markdownNarrative.scrollWidth,
+      cellsStayWithinTable: cells.every((cell) => {
+        const bounds = cell.getBoundingClientRect();
+        return (
+          bounds.left >= tableBounds.left - 1 &&
+          bounds.right <= tableBounds.right + 1 &&
+          cell.scrollWidth <= cell.clientWidth + 1
+        );
+      }),
+      cellWhiteSpace: getComputedStyle(cells.at(-1)!).whiteSpace,
+      cellOverflowWrap: getComputedStyle(cells.at(-1)!).overflowWrap,
+    };
+  });
+
+  expect(layout.documentScrollWidth).toBeLessThanOrEqual(
+    layout.documentClientWidth,
+  );
+  expect(layout.cardLeft).toBeGreaterThanOrEqual(0);
+  expect(layout.cardRight).toBeLessThanOrEqual(layout.documentClientWidth);
+  expect(layout.tableLeft).toBeGreaterThanOrEqual(layout.cardLeft);
+  expect(layout.tableRight).toBeLessThanOrEqual(layout.cardRight);
+  expect(layout.tableScrollWidth).toBeLessThanOrEqual(layout.tableClientWidth);
+  expect(layout.narrativeScrollWidth).toBeLessThanOrEqual(
+    layout.narrativeClientWidth,
+  );
+  expect(layout.cellsStayWithinTable).toBe(true);
+  expect(layout.cellWhiteSpace).toBe("normal");
+  expect(layout.cellOverflowWrap).toBe("anywhere");
+});
+
+test("separates Run metadata, citations, and supplemental messages", async ({
+  page,
+}) => {
+  const run = {
+    execution_id: "run-spacing",
+    session_id: "session-e2e-1",
+    workflow_id: "finance-assistant",
+    workflow_version: "1",
+    status: "completed",
+    request_message: null,
+    result: {
+      schema_version: "1",
+      execution_id: "run-spacing",
+      session_id: "session-e2e-1",
+      workflow_id: "finance-assistant",
+      workflow_version: "1",
+      status: "completed",
+      selected_agent_ids: ["finance_qa"],
+      agent_results: [
+        {
+          schema_version: "1",
+          agent_id: "finance_qa",
+          status: "partial",
+          summary: "ETFs and mutual funds both pool investors’ money.",
+          facts: [],
+          evidence: [
+            {
+              evidence_id: "evidence-spacing",
+              title: "Fund characteristics",
+              publisher: "Investor.gov",
+              canonical_url: "https://www.investor.gov/fund-characteristics",
+              source_anchor: null,
+            },
+          ],
+          visualization: null,
+          as_of: now,
+          warnings: ["Additional context is unavailable."],
+          errors: [],
+        },
+      ],
+      summary: "ETFs and mutual funds both pool investors’ money.",
+      warnings: [],
+      errors: [],
+      trace_id: null,
+      trace_unavailable_reason: null,
+    },
+    created_at: now,
+    updated_at: now,
+  };
+
+  await page.route(
+    /\/api\/v1\/sessions\/session-e2e-\d+\/runs$/,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [run] }),
+      });
+    },
+  );
+  await page.reload();
+  await expect(
+    page.getByText("Additional context is unavailable."),
+  ).toBeVisible();
+
+  const spacing = await page.evaluate(() => {
+    const meta = document.querySelector<HTMLElement>(".run-meta");
+    const answer = document.querySelector<HTMLElement>(".agent-answer");
+    const citations = document.querySelector<HTMLElement>(".citation-list");
+    const message = document.querySelector<HTMLElement>(".inline-warning");
+    if (!meta || !answer || !citations || !message)
+      throw new Error("Run card spacing fixture was not rendered");
+    const metaBounds = meta.getBoundingClientRect();
+    const answerBounds = answer.getBoundingClientRect();
+    const citationBounds = citations.getBoundingClientRect();
+    const messageBounds = message.getBoundingClientRect();
+    return {
+      metaToDivider: answerBounds.top - metaBounds.bottom,
+      citationsToMessage: messageBounds.top - citationBounds.bottom,
+    };
+  });
+
+  expect(spacing.metaToDivider).toBeGreaterThanOrEqual(16);
+  expect(spacing.citationsToMessage).toBeGreaterThanOrEqual(24);
+});
+
+test("keeps the clear active session action visible beside a long conversation", async ({
+  page,
+}) => {
+  const longSummary = Array.from(
+    { length: 40 },
+    (_, index) =>
+      `Paragraph ${index + 1}. This saved response makes the conversation taller than the viewport.`,
+  ).join("\n\n");
+  const run = {
+    execution_id: "run-long-sidebar",
+    session_id: "session-e2e-1",
+    workflow_id: "finance-assistant",
+    workflow_version: "1",
+    status: "completed",
+    request_message: "Explain this topic in detail.",
+    result: {
+      schema_version: "1",
+      execution_id: "run-long-sidebar",
+      session_id: "session-e2e-1",
+      workflow_id: "finance-assistant",
+      workflow_version: "1",
+      status: "completed",
+      selected_agent_ids: [],
+      agent_results: [],
+      summary: longSummary,
+      warnings: [],
+      errors: [],
+      trace_id: null,
+      trace_unavailable_reason: null,
+    },
+    created_at: now,
+    updated_at: now,
+  };
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.route(
+    /\/api\/v1\/sessions\/session-e2e-\d+\/runs$/,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [run] }),
+      });
+    },
+  );
+  await page.reload();
+
+  const clearSession = page.getByRole("button", {
+    name: "Clear active session",
+  });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollHeight))
+    .toBeGreaterThan(1440);
+  await expect(clearSession).toBeInViewport();
+  const initialBounds = await clearSession.boundingBox();
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(0);
+  await expect(clearSession).toBeInViewport();
+  const scrolledBounds = await clearSession.boundingBox();
+
+  expect(initialBounds).not.toBeNull();
+  expect(scrolledBounds).not.toBeNull();
+  expect(Math.abs(scrolledBounds!.y - initialBounds!.y)).toBeLessThanOrEqual(1);
+  expect(scrolledBounds!.y + scrolledBounds!.height).toBeLessThanOrEqual(720);
+});
+
+test("archives the active session and deletes it only from history", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Clear active session" }).click();
+  await expect(
+    page.getByText(/Preserve this Session and its saved history/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Archive and start fresh" }),
+  ).toBeFocused();
+  await capture(page, "../docs/evidence/m6/session-clear-confirmation.png");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(
+    page.getByText(/Preserve this Session and its saved history/),
+  ).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem("aifa.local-session-id")),
+    )
+    .toBe("session-e2e-1");
+
+  await page.getByRole("button", { name: "Clear active session" }).click();
+  await page.getByRole("button", { name: "Archive and start fresh" }).click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem("aifa.local-session-id")),
+    )
+    .toBe("session-e2e-2");
+  await expect(
+    page.getByRole("heading", { name: "Ask, explore, decide" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("What would you like to understand?"),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "History" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Session history" }),
+  ).toBeVisible();
+  await expect(page.getByText("Archived Oct 29, 2026")).toBeVisible();
+  await capture(page, "../docs/evidence/m6/session-history.png");
+  await page.getByRole("button", { name: /^Delete$/ }).click();
+  await expect(
+    page.getByText("Permanently delete this Session?"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Delete permanently" }).click();
+  await expect(
+    page.getByRole("heading", { name: "No archived Sessions" }),
+  ).toBeVisible();
 });

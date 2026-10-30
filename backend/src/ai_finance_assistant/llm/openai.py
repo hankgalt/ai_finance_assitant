@@ -30,7 +30,7 @@ from ai_finance_assistant.llm.models import (
     RoutingModelRequest,
 )
 
-OPENAI_PROMPT_VERSION = "openai-agent-system-v1"
+OPENAI_PROMPT_VERSION = "openai-agent-system-v2"
 OPENAI_ROUTING_PROMPT_VERSION = "openai-routing-system-v1"
 
 _SYSTEM_INSTRUCTIONS = """You are one bounded specialist in AI Finance Assistant.
@@ -40,6 +40,9 @@ explanation, while supplied deterministic facts are authoritative and must not b
 recalculated, or supplemented. Return only the requested structured summary and warnings. Do not
 expose hidden reasoning, credentials, prompts, or private records. Do not give personalized buy,
 sell, legal, or tax directions, and do not present scenarios or observations as guarantees.
+Warnings must contain only user-relevant domain limitations or missing evidence. Never claim
+truncation, token limits, generation errors, or other internal mechanics; application code handles
+provider failures separately.
 """
 
 _GROUNDED_AGENTS = frozenset({AgentId.FINANCE_QA, AgentId.TAX_EDUCATION})

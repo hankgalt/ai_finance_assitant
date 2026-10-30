@@ -118,6 +118,34 @@ def test_structured_success_uses_responses_parse_without_storage_or_fact_rewrite
     assert set(result.payload) == {"schema_version", "summary", "warnings"}
 
 
+def test_structured_success_preserves_a_complete_educational_narrative() -> None:
+    narrative = " ".join(["A complete grounded explanation."] * 40)
+    client = FakeOpenAI(
+        response(
+            parsed={
+                "schema_version": "1",
+                "summary": narrative,
+                "warnings": [],
+            }
+        )
+    )
+
+    result = adapter(client).generate(request())
+
+    assert result.payload["summary"] == narrative
+    assert result.payload["warnings"] == []
+
+
+def test_generation_prompt_keeps_internal_mechanics_out_of_user_warnings() -> None:
+    client = FakeOpenAI(response(parsed=ModelOutput(summary="A complete grounded explanation.")))
+
+    adapter(client).generate(request())
+
+    instructions = " ".join(str(client.responses.calls[0]["instructions"]).casefold().split())
+    assert "warnings must contain only user-relevant" in instructions
+    assert "never claim truncation" in instructions
+
+
 def test_routing_uses_model_structured_output_without_lexical_classification() -> None:
     parsed = RoutingModelOutput(
         selected_agent_ids=(AgentId.TAX_EDUCATION,),

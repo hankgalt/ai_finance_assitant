@@ -12,7 +12,7 @@ from time import monotonic
 
 from ai_finance_assistant.observability.ports import NoOpObservability, Observability
 
-APPLICATION_SCHEMA_VERSION = 1
+APPLICATION_SCHEMA_VERSION = 3
 
 _MIGRATION_1 = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -142,8 +142,19 @@ CREATE INDEX market_coverage_lookup_idx ON market_coverage(
 CREATE INDEX market_coverage_expiry_idx ON market_coverage(expires_at);
 """
 
+_MIGRATION_2 = """
+ALTER TABLE sessions ADD COLUMN archived_at TEXT;
+CREATE INDEX sessions_state_updated_idx ON sessions(archived_at, updated_at DESC);
+"""
+
+_MIGRATION_3 = """
+ALTER TABLE runs ADD COLUMN request_message TEXT;
+"""
+
 MIGRATIONS: tuple[tuple[int, str, str], ...] = (
     (1, "m5_initial_application_and_provider_cache", _MIGRATION_1),
+    (2, "m5_session_archive_lifecycle", _MIGRATION_2),
+    (3, "m5_run_request_message", _MIGRATION_3),
 )
 
 

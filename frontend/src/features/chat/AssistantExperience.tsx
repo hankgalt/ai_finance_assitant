@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUp, BookOpen, RefreshCw } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { PageHeader } from "../../components/PageHeader";
 import { StateNotice } from "../../components/StateNotice";
@@ -8,7 +10,23 @@ import { api, ClientApiError, readRunStream } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
 import type { RunRecord } from "../../types/contracts";
 
-function RunCard({ run, isLatest }: { run: RunRecord; isLatest: boolean }) {
+function MarkdownNarrative({ children }: { children: string }) {
+  return (
+    <div className="markdown-narrative">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
+        {children}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+export function RunCard({
+  run,
+  isLatest,
+}: {
+  run: RunRecord;
+  isLatest: boolean;
+}) {
   const result = run.result;
   const positionLabel = isLatest ? "Latest response" : "Earlier response";
   if (!result) {
@@ -22,6 +40,35 @@ function RunCard({ run, isLatest }: { run: RunRecord; isLatest: boolean }) {
       </article>
     );
   }
+  const seenSourceUrls = new Set<string>();
+  const evidenceByAgent = new Map(
+    result.agent_results.map((agent) => [
+      agent.agent_id,
+      agent.evidence.filter((source) => {
+        if (seenSourceUrls.has(source.canonical_url)) return false;
+        seenSourceUrls.add(source.canonical_url);
+        return true;
+      }),
+    ]),
+  );
+  const seenSupplementalMessages = new Set<string>();
+  const supplementalMessagesByAgent = new Map(
+    result.agent_results.map((agent) => [
+      agent.agent_id,
+      [...agent.warnings, ...agent.errors.map((error) => error.message)].filter(
+        (message) => {
+          if (seenSupplementalMessages.has(message)) return false;
+          seenSupplementalMessages.add(message);
+          return true;
+        },
+      ),
+    ]),
+  );
+  const workflowWarnings = result.warnings.filter((warning) => {
+    if (seenSupplementalMessages.has(warning)) return false;
+    seenSupplementalMessages.add(warning);
+    return true;
+  });
   return (
     <article className="run-card">
       <div className="run-meta">
@@ -33,7 +80,15 @@ function RunCard({ run, isLatest }: { run: RunRecord; isLatest: boolean }) {
           <span>{formatDateTime(run.updated_at)}</span>
         </span>
       </div>
-      <h3>{result.summary}</h3>
+      {run.request_message ? (
+        <p className="run-question">
+          <span>You asked</span>
+          <strong>{run.request_message}</strong>
+        </p>
+      ) : null}
+      {result.agent_results.length === 0 ? (
+        <MarkdownNarrative>{result.summary}</MarkdownNarrative>
+      ) : null}
       {result.agent_results.map((agent) => (
         <section className="agent-answer" key={agent.agent_id}>
           <div className="agent-heading">
@@ -42,10 +97,10 @@ function RunCard({ run, isLatest }: { run: RunRecord; isLatest: boolean }) {
               <span>As of {formatDateTime(agent.as_of)}</span>
             ) : null}
           </div>
-          <p>{agent.summary}</p>
-          {agent.evidence.length ? (
+          <MarkdownNarrative>{agent.summary}</MarkdownNarrative>
+          {evidenceByAgent.get(agent.agent_id)?.length ? (
             <ul className="citation-list" aria-label="Sources">
-              {agent.evidence.map((source) => (
+              {evidenceByAgent.get(agent.agent_id)?.map((source) => (
                 <li key={source.evidence_id}>
                   <BookOpen aria-hidden="true" size={15} />
                   <a
@@ -59,17 +114,14 @@ function RunCard({ run, isLatest }: { run: RunRecord; isLatest: boolean }) {
               ))}
             </ul>
           ) : null}
-          {[
-            ...agent.warnings,
-            ...agent.errors.map((error) => error.message),
-          ].map((warning) => (
+          {supplementalMessagesByAgent.get(agent.agent_id)?.map((warning) => (
             <p className="inline-warning" key={warning}>
               {warning}
             </p>
           ))}
         </section>
       ))}
-      {result.warnings.map((warning) => (
+      {workflowWarnings.map((warning) => (
         <p className="inline-warning" key={warning}>
           {warning}
         </p>

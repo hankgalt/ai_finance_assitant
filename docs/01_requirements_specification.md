@@ -1,6 +1,6 @@
 # AI Finance Assistant — Product requirements specification
 
-Version 1.3 | Status: Product architecture baseline | 2026-10-28
+Version 1.5 | Status: Product architecture baseline through M6 plus planned M6.1 response cache | 2026-10-29
 
 ## 1. Mission and product posture
 
@@ -32,7 +32,7 @@ The **initial release** includes all six agents, persistent knowledge retrieval,
 | PR-010 | Initial | Provide a React/TypeScript application with Conversational Assistant, Portfolio Dashboard, Market Overview, Goal Planning, and Agent Execution Inspector experiences | Each experience has accessible loading, empty, success, partial, and failure states and communicates through FastAPI |
 | PR-011 | Initial | Stream conversational and measured execution events where appropriate while keeping ordinary operations on versioned REST interfaces | OpenAPI and event contract tests pass; reconnection never mixes sessions or duplicates rendered events |
 | PR-012 | Initial | Visualize actual LangGraph execution through an accessible timeline, details view, and React Flow graph | Every dynamic node maps to a recorded event; unavailable measurements are labeled; sensitive material is redacted |
-| PR-013 | Initial | Persist conversation checkpoints, run summaries, active knowledge collection metadata, and necessary user artifacts according to documented retention modes | Restart and session-isolation behavior is tested; local-demo limitations are visible |
+| PR-013 | Initial | Persist conversation checkpoints, run summaries, active knowledge collection metadata, and necessary user artifacts according to documented retention modes; clearing an Active Session archives it as read-only history before any permanent deletion | Restart, archive/history/delete, and session-isolation behavior is tested; local-demo limitations are visible |
 | PR-014 | Initial | Provide sample datasets, reproducible local development, product documentation, evaluation artifacts, and private-demo release instructions | A clean-environment verification record identifies exact commands, versions, results, limitations, provider mode, and a quota-safe demonstration path |
 | PR-015 | Coursework release | Expose approved read-only capabilities through MCP using the same validation and deterministic modules as the web application | Protocol and external-client tests demonstrate no bypass of authorization, validation, or provenance |
 | PR-016 | Planned enhancement | Add personal cash flow analysis from user-controlled, versioned JSON or CSV bank and credit-card imports as a deterministic domain module available to authorized agents, not as a seventh LLM agent | Equivalent JSON/CSV inputs produce reproducible normalized transactions, reconciliation, summaries, and authorized goal context without requiring a financial-data provider or changing existing agent identities |
@@ -134,7 +134,7 @@ The import path is provider-independent and must work locally without network ac
 | QR-003 Authentication/authorization | The private demo binds to an explicitly local interface and is labeled unauthenticated; any non-loopback private deployment requires separately approved strong authentication and per-resource authorization | Identity provider, strong authentication, per-resource authorization, administrative roles | Negative authorization, bind-mode, and cross-session tests |
 | QR-004 Session isolation | State, streams, caches, checkpoints, and traces are keyed and checked by user/session context | Tenant isolation review and penetration testing | Concurrent two-session regression suite |
 | QR-005 Secrets | Secrets come from environment or an approved local secret mechanism and are redacted from errors and traces | Managed secret store, rotation, least-privilege credentials | Repository scan and forced-error tests |
-| QR-006 Retention/deletion | Define local retention per artifact; support deletion of imported files, normalized records, sessions, runs, traces, and administrative purging of the durable provider cache; knowledge provenance is retained independently | User-facing export/deletion workflow, retention enforcement jobs, legal-policy review | Lifecycle, cache-purge, and deletion tests |
+| QR-006 Retention/deletion | Define local retention per artifact; archive a cleared Active Session as read-only history; permit permanent Session deletion only as an explicit action on an Archived Session; support deletion of imported files, normalized records, runs, traces, administrative provider-cache purge, and archive/delete/administrative purge of the Session-scoped response cache; knowledge provenance is retained independently | User-facing export/deletion workflow, retention enforcement jobs, legal-policy review | Archive/history/delete lifecycle, cache-purge, and deletion tests |
 | QR-007 Observability/auditability | Structured correlation, routing, provider/retrieval provenance, failure, latency, and measured usage events without hidden reasoning or raw financial records | Centralized access-controlled logs, alerting, audit retention, tamper controls | Trace-schema, redaction, and incident fixture tests |
 | QR-008 Retrieval quality | Fixed qrels, relevance thresholds, valid citations, collection/version reporting, and explicit no-evidence behavior | Drift monitoring and reviewed activation workflow | Recall/ranking/citation and historical-year tests |
 | QR-009 Calculation accuracy | Decimal or a documented numerical representation, explicit rounding/currency policy, deterministic results, and 100% pass on approved golden cases | Independent financial-model validation and change control | Golden, property, metamorphic, and edge tests |
@@ -142,7 +142,7 @@ The import path is provider-independent and must work locally without network ac
 | QR-011 Provider limits/caching | Provider-specific rate policy, a bounded memory cache, a durable normalized cache for reusable historical market observations, provenance/freshness, circuit behavior, and a predeclared private-demo request budget that stays within the configured entitlement | Distributed quota coordination, contractual retention/display rights, and reviewed provider-specific retention | Restart reuse, overlapping-range gap fetch, budget exhaustion, 429, stale-cache, invalid-data, and outage tests |
 | QR-012 LLM quality and safety | Versioned prompts/models, structured results, grounding checks, tool allow-lists, bounded steps, prompt-injection treatment of external text as data, and financial safety review | Continuous red-team program, model-risk governance, abuse controls | Labeled routing/grounding/injection/advice suite |
 | QR-013 Accessibility | WCAG 2.2 AA design target; keyboard access, semantic labels, focus management, contrast, and nonvisual tables for charts/graphs | Formal accessibility audit with assistive technologies | Automated checks plus keyboard/screen-reader review |
-| QR-014 Performance/cost | Record p50/p95 task latency, provider/cache timing, tokens and estimated cost when supplied; show “not available” otherwise | Calibrated objectives, capacity tests, budgets and alerts | Versioned benchmark report |
+| QR-014 Performance/cost | Record p50/p95 task latency, provider/response-cache timing and outcome, avoided model calls/tokens, tokens and estimated cost when supplied; show “not available” otherwise | Calibrated objectives, capacity tests, budgets and alerts | Versioned cache-disabled/hit/near-miss benchmark report |
 | QR-015 Reproducibility | Pinned tools/dependencies, deterministic fixtures, documented setup, an explicitly labeled credential-free demo mode, migration and collection version checks | Reproducible deployment artifacts and supply-chain controls | Clean-environment and quota-safe demo runs plus artifact hashes |
 
 ## 9. Core acceptance scenarios
@@ -163,7 +163,8 @@ The import path is provider-independent and must work locally without network ac
 | EV-12 | The Inspector’s timeline and graph match recorded events, handle reconnect/deduplication, and redact protected fields |
 | EV-13 | Startup with an absent or incompatible Qdrant collection reports not ready without embedding documents |
 | EV-14 | A collection update re-indexes only changed documents, passes fixed retrieval evaluation, activates atomically, and can roll back |
-| EV-15 | Deleting a local user artifact removes its defined stored forms without deleting the independent source registry |
+| EV-15 | Clearing an Active Session archives its Runs, artifacts, and checkpoint as read-only history and opens a fresh Active Session; explicit permanent deletion from history removes the Archived Session's defined stored forms without deleting the independent source registry |
+| EV-16 | In one Session, an eligible repeated Finance Q&A question can reuse its exact route and evidence-bound generation while rebuilding current citations; a qualified paraphrase can reuse only generation after current retrieval, and another Session, a near miss, or changed evidence/version executes the normal model path |
 
 ## 10. Out of scope without separate approval
 
@@ -179,11 +180,11 @@ Brokerage execution, automated financial transactions, custody, bank aggregation
 | PR-005 | ADR-009; design §6 | M2, M6 | EV-06 |
 | PR-007–PR-008 | ADR-016/017; design §7–8 | M1, M4 | EV-01/02/08/13/14 |
 | PR-010–PR-012 | ADR-007/013/014/015; design §10–11 | M5–M7 | EV-12 and browser/contract suites |
-| PR-013 | ADR-003/019; design §12 | M0, M5, M8 | EV-11/15 |
+| PR-013 | ADR-003/019/027; design §12 | M0, M5–M6, M8 | EV-11/15 |
 | PR-014 | ADR-011; docs index | M8–M9 | clean-environment and product release audit |
 | PR-015 | ADR-010; coursework criteria | M9 | MCP protocol/client and coursework evidence |
 | PR-016 | ADR-020/022; design §13 | Interface in M2; provider-independent implementation in M10 | cash-flow import, reconciliation, lifecycle, and summary suites |
-| QR-001–QR-015 | ADR-011/012/019; design §12 | Every milestone; consolidated M8 | security, quality, reliability, and benchmark suites |
+| QR-001–QR-015 | ADR-011/012/019/028; design §12 | Every milestone, including M6.1; consolidated M8 | security, quality, reliability, response-cache, and benchmark suites |
 
 ## 12. Resolved conflicts and open decisions
 

@@ -82,7 +82,7 @@ class Settings(BaseSettings):
     model_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     model_maximum_input_characters: int = Field(default=40_000, ge=1_000, le=200_000)
     storage_path: Path = Path("data/ai_finance_assistant.sqlite3")
-    storage_expected_schema_version: int = Field(default=1, ge=1, le=1000)
+    storage_expected_schema_version: int = Field(default=3, ge=1, le=1000)
     local_deployment_audience: Literal["owner_only", "shared_demo", "public"] = "owner_only"
     local_admin_token: SecretStr | None = None
     session_retention_days: int = Field(default=30, ge=1, le=3650)

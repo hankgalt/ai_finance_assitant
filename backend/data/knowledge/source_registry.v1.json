@@ -108,6 +108,27 @@
       "ingestion_enabled": true
     },
     {
+      "source_id": "investor-mutual-fund-etf-characteristics",
+      "logical_kb": "finance_education",
+      "title": "Characteristics of Mutual Funds and Exchange-Traded Funds (ETFs) — Investor Bulletin",
+      "publisher": "U.S. Securities and Exchange Commission — Investor.gov",
+      "canonical_url": "https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/characteristics-mutual-funds-exchange-traded-funds",
+      "source_type": "html",
+      "jurisdiction": "US-Federal",
+      "tax_years": [],
+      "status": "approved",
+      "permitted_use": {
+        "basis": "SEC public information may be copied and redistributed; the April 29, 2025 Investor Bulletin was reviewed as SEC-authored investor education.",
+        "reviewer": "repository-owner",
+        "ai_processing_allowed": true,
+        "redistribution_allowed": true,
+        "attribution_required": true,
+        "restrictions": ["Exclude SEC marks, logos, stock art, and linked third-party material.", "Do not imply SEC endorsement.", "Preserve the bulletin's staff-view and no-legal-force limitation."],
+        "reviewed_at": "2026-10-29T00:00:00Z"
+      },
+      "ingestion_enabled": true
+    },
+    {
       "source_id": "cfpb-emergency-fund",
       "logical_kb": "finance_education",
       "title": "An Essential Guide to Building an Emergency Fund",

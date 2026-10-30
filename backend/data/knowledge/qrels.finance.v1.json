@@ -26,5 +26,12 @@
     "filters": {"logical_kb": "finance_education", "tax_year": null, "jurisdiction": "US-Federal"},
     "expected_document_ids": ["investor-investment-options"],
     "critical_filter": false
+  },
+  {
+    "case_id": "finance-mutual-funds-vs-etfs",
+    "query": "What's the difference between ETFs and mutual funds?",
+    "filters": {"logical_kb": "finance_education", "tax_year": null, "jurisdiction": "US-Federal"},
+    "expected_document_ids": ["investor-mutual-fund-etf-characteristics"],
+    "critical_filter": true
   }
 ]

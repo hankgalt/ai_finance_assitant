@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ai_finance_assistant.contracts.common import Identifier
+from ai_finance_assistant.contracts.common import Identifier, NarrativeText
 from ai_finance_assistant.contracts.errors import SafeError
 from ai_finance_assistant.contracts.events import RunEvent
 from ai_finance_assistant.finance.models import (
@@ -111,7 +111,7 @@ class ResponseChunk(BaseModel):
 
     execution_id: Identifier
     chunk_id: Identifier
-    text: str = Field(max_length=512)
+    text: NarrativeText
     terminal: bool = True
 
 
@@ -132,7 +132,15 @@ class PurgeResult(BaseModel):
 
 
 BrowserTelemetryKind = Literal["navigation", "api_timing", "web_vital", "error_boundary"]
-BrowserPage = Literal["shell", "assistant", "portfolio", "market", "goals", "inspector"]
+BrowserPage = Literal[
+    "shell",
+    "assistant",
+    "portfolio",
+    "market",
+    "goals",
+    "history",
+    "inspector",
+]
 BrowserApiRoute = Literal[
     "health",
     "sessions",

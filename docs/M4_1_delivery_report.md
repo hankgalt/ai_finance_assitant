@@ -8,6 +8,8 @@ ADR-005, ADR-008, ADR-009, ADR-011, ADR-012, ADR-018, ADR-023
 
 Maintenance update: 2026-10-29 — the shared OpenAI adapter now produces both specialist
 `ModelOutput` and router `RoutingModelOutput`; ordinary tests are isolated in `backend/.test.env`.
+The specialist prompt is now `openai-agent-system-v2`: user-facing summaries have a distinct
+4,000-character contract, while warnings exclude internal provider and generation mechanics.
 
 ## Outcome
 
@@ -34,6 +36,12 @@ proves that the response remains in `WorkflowRunResult` while every RunEvent exc
 approved aggregate run passed every live assertion, including the corrected privacy check. M4.1 is
 complete and its dependency no longer blocks M5.
 
+Post-completion maintenance corrected a response-contract defect that clipped successful model
+output at 512 characters and could surface a model-authored generation warning. The narrative
+contract now remains intact through the model adapter, Agent result, Workflow result, persistence,
+REST, and SSE. A one-call live Finance QA replay produced a complete 1,547-character answer with
+terminal punctuation and no internal-generation warning.
+
 ## Interfaces and files changed
 
 - `ai_finance_assistant.llm.openai.OpenAIModelAdapter`: Responses structured-output adapter.
@@ -58,6 +66,7 @@ later-milestone behavior was added.
 | Behavior | Evidence |
 |---|---|
 | Structured success and provider-reported token usage | `test_structured_success_uses_responses_parse_without_storage_or_fact_rewrite` |
+| Complete narrative preservation and warning semantics | `test_structured_success_preserves_a_complete_educational_narrative`, `test_generation_prompt_keeps_internal_mechanics_out_of_user_warnings`, and the M5 API persistence/SSE regression |
 | Structured LLM routing without a lexical table | `test_routing_uses_model_structured_output_without_lexical_classification` and the 42-case scripted contract suite |
 | Fixed reasoning policy for all six agents | `test_reasoning_policy_is_fixed_by_agent` |
 | Authentication, rate limit, timeout, and outage mapping | adapter parameterized failure tests |
@@ -110,11 +119,11 @@ Offline gates:
 
 - `make m4-1-check` — passed: formatting, lint, mypy, and 49 focused tests.
 - `make backend-check` — passed: 117 files formatted, lint clean, mypy passed for 109 source/test
-  files, 168 tests passed, 1 Qdrant integration test skipped, 3 live tests deselected, and 87% total
+  files, 174 tests passed, 1 Qdrant integration test skipped, 3 live tests deselected, and 87% total
   coverage. The live-model and live-provider markers were excluded.
 
-Historical live calls, exactly eighteen total across three explicit six-call approvals before
-model-backed routing:
+Live calls total exactly nineteen: eighteen historical calls across three explicit six-call
+approvals before model-backed routing, plus one post-completion narrative replay:
 
 1. Aggregate six-agent command — five HTTP 200 responses; the former deterministic router stopped
    because “market history” did not match its “historical price” keyword. That lexical router has
@@ -129,9 +138,13 @@ model-backed routing:
 4. Final corrected aggregate command — six HTTP 200 responses and `1 passed in 6.46s`; all six
    live agent contracts, deterministic authority, metadata/usage, credential exclusion, and
    RunEvent response-exclusion assertions passed.
+5. Post-completion Finance QA replay — one HTTP 200 response using five retrieved evidence items;
+   2,051 input tokens and 392 output tokens produced a 1,547-character, terminally punctuated
+   answer under `openai-agent-system-v2`, with no internal-generation warning. No raw response was
+   recorded in the evidence artifact.
 
 The exact commands and machine-readable outcomes are recorded in
-`backend/artifacts/m4_1/test-results.json`. No nineteenth call was made.
+`backend/artifacts/m4_1/test-results.json`.
 
 ## Limitations and unresolved decisions
 

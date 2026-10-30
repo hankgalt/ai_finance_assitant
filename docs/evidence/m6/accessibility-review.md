@@ -7,6 +7,9 @@ Verified behavior:
 
 - the first keyboard Tab reaches “Skip to content,” and Enter moves focus to `main`;
 - navigation exposes `aria-current` and remains operable in the 390 px drawer;
+- opening the Session-clear confirmation moves keyboard focus to the archive action, while Cancel
+  leaves the Active Session untouched; Archived Session deletion has its own focused destructive
+  confirmation in History;
 - inputs have programmatic labels and validation/status content uses live status or alert roles;
 - chart containers have concise accessible names and every chart has a backend-matching table;
 - tables use captions, column headers, and row headers;

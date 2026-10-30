@@ -7,7 +7,40 @@ from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 
 from ai_finance_assistant.api.app import create_app
+from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.core.config import Settings
+from ai_finance_assistant.llm.models import (
+    ModelAdapterResult,
+    ModelOutput,
+    ModelRequest,
+    RoutingModelOutput,
+    RoutingModelRequest,
+    RoutingReason,
+)
+
+LONG_EDUCATIONAL_NARRATIVE = " ".join(
+    ["ETFs and mutual funds share features but differ in trading and pricing."] * 20
+)
+
+
+class LongNarrativeModelAdapter:
+    provider_id = "long-narrative-fixture"
+    model_id = "long-narrative-fixture-v1"
+    prompt_version = "long-narrative-fixture-v1"
+    routing_prompt_version = "long-narrative-routing-fixture-v1"
+
+    def generate(self, request: ModelRequest) -> ModelAdapterResult:
+        del request
+        output = ModelOutput(summary=LONG_EDUCATIONAL_NARRATIVE)
+        return ModelAdapterResult(payload=output.model_dump(mode="json"))
+
+    def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
+        del request
+        output = RoutingModelOutput(
+            selected_agent_ids=(AgentId.NEWS_SYNTHESIZER,),
+            reason_category=RoutingReason.SINGLE_DOMAIN,
+        )
+        return ModelAdapterResult(payload=output.model_dump(mode="json"))
 
 
 def _session(client: TestClient, label: str = "test") -> str:
@@ -89,7 +122,52 @@ def test_run_idempotency_session_scope_and_sse_recovery(client: TestClient) -> N
     assert completed_stream.text == ""
 
 
-def test_portfolio_snapshot_goal_and_deletion_lifecycle(client: TestClient) -> None:
+def test_run_record_preserves_the_asked_question(client: TestClient) -> None:
+    session_id = _session(client, "question history")
+    question = "What's the difference between ETFs and mutual funds?"
+
+    created = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={"message": question},
+    )
+
+    assert created.status_code == 201
+    execution_id = created.json()["execution_id"]
+    assert created.json()["request_message"] == question
+    persisted = client.get(f"/api/v1/sessions/{session_id}/runs/{execution_id}")
+    assert persisted.json()["request_message"] == question
+    listed = client.get(f"/api/v1/sessions/{session_id}/runs")
+    assert listed.json()["items"][0]["request_message"] == question
+
+
+def test_complete_narrative_persists_and_streams_without_truncation(
+    client: TestClient,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    services = cast(Any, cast(Any, client.app).state.services)
+    monkeypatch.setattr(
+        services.workflow,
+        "_model_adapter_builder",
+        lambda _: LongNarrativeModelAdapter(),
+    )
+    session_id = _session(client, "long narrative")
+
+    created = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={"message": "What's the latest news on MSFT?"},
+    )
+
+    assert created.status_code == 201
+    execution_id = created.json()["execution_id"]
+    assert created.json()["result"]["agent_results"][0]["summary"] == (LONG_EDUCATIONAL_NARRATIVE)
+    persisted = client.get(f"/api/v1/sessions/{session_id}/runs/{execution_id}")
+    assert persisted.json()["result"]["summary"] == LONG_EDUCATIONAL_NARRATIVE
+    stream = client.get(f"/api/v1/sessions/{session_id}/runs/{execution_id}/stream")
+    assert LONG_EDUCATIONAL_NARRATIVE in stream.text
+    assert "truncated due to a generation error" not in stream.text
+
+
+def test_portfolio_snapshot_goal_archive_and_deletion_lifecycle(client: TestClient) -> None:
     session_id = _session(client)
     portfolio_id = "portfolio-api-1"
     payload = _portfolio_payload(portfolio_id)
@@ -137,7 +215,25 @@ def test_portfolio_snapshot_goal_and_deletion_lifecycle(client: TestClient) -> N
     assert goal.status_code == 200
     assert goal.json()["projection_id"] == "goal-api-1"
 
+    active_delete = client.delete(f"/api/v1/sessions/{session_id}")
+    archived = client.post(f"/api/v1/sessions/{session_id}/archive")
+    archived_sessions = client.get("/api/v1/sessions", params={"state": "archived"})
+    preserved = client.get(f"{path}/{portfolio_id}")
+    archived_write = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={"message": "What is a bond?"},
+    )
     deleted = client.delete(f"/api/v1/sessions/{session_id}")
+
+    assert active_delete.status_code == 409
+    assert active_delete.json()["error"]["code"] == "SESSION_ARCHIVE_REQUIRED"
+    assert archived.status_code == 200
+    assert archived.json()["state"] == "archived"
+    assert archived.json()["archived_at"] is not None
+    assert [item["session_id"] for item in archived_sessions.json()["items"]] == [session_id]
+    assert preserved.status_code == 200
+    assert archived_write.status_code == 409
+    assert archived_write.json()["error"]["code"] == "SESSION_ARCHIVED"
     assert deleted.status_code == 204
     assert client.get(f"{path}/{portfolio_id}").status_code == 404
 
@@ -167,6 +263,7 @@ def test_openapi_contains_m5_resources_without_secret_values(client: TestClient)
     assert document.status_code == 200
     paths = document.json()["paths"]
     assert "/api/v1/sessions" in paths
+    assert "/api/v1/sessions/{session_id}/archive" in paths
     assert "/api/v1/sessions/{session_id}/runs/{execution_id}/stream" in paths
     assert "/api/v1/sessions/{session_id}/portfolios" in paths
     assert "/api/v1/sessions/{session_id}/market/history" in paths

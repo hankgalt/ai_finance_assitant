@@ -1,27 +1,27 @@
 {
   "schema_version": "1",
-  "recorded_at": "2026-10-28",
+  "recorded_at": "2026-10-29",
   "credential_free": true,
   "gates": [
     {
       "command": "make m5-check",
       "result": "passed",
       "details": {
-        "formatted_files": 107,
+        "formatted_files": 109,
         "ruff": "passed",
-        "mypy_source_files": 107,
-        "tests_passed": 31,
-        "duration_seconds": 0.73
+        "mypy_source_files": 109,
+        "tests_passed": 32,
+        "duration_seconds": 1.35
       }
     },
     {
       "command": "make backend-check",
       "result": "passed",
       "details": {
-        "formatted_files": 114,
+        "formatted_files": 117,
         "ruff": "passed",
-        "mypy_source_files": 107,
-        "tests_passed": 157,
+        "mypy_source_files": 109,
+        "tests_passed": 175,
         "tests_skipped": 1,
         "tests_deselected": 3,
         "coverage_percent": 87
@@ -34,7 +34,7 @@
         "prettier": "passed",
         "eslint": "passed",
         "typescript": "passed",
-        "tests_passed": 3,
+        "tests_passed": 15,
         "production_build": "passed"
       }
     },
