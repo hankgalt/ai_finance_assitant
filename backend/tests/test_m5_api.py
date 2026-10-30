@@ -245,8 +245,7 @@ def test_run_uses_each_explicit_authorized_portfolio_context(
 
     other_session_id = _session(client, "other portfolio owner")
     denied = client.post(
-        f"/api/v1/sessions/{other_session_id}/runs/"
-        f"{clarification.json()['execution_id']}/continue",
+        f"/api/v1/sessions/{other_session_id}/runs/{clarification.json()['execution_id']}/continue",
         json={"context_references": [portfolio_ids[0]]},
     )
     missing_context = client.post(
@@ -314,6 +313,34 @@ def test_complete_narrative_persists_and_streams_without_truncation(
     stream = client.get(f"/api/v1/sessions/{session_id}/runs/{execution_id}/stream")
     assert LONG_EDUCATIONAL_NARRATIVE in stream.text
     assert "truncated due to a generation error" not in stream.text
+
+
+def test_broad_financial_news_run_does_not_require_a_ticker(
+    client: TestClient,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    services = cast(Any, cast(Any, client.app).state.services)
+    monkeypatch.setattr(
+        services.workflow,
+        "_model_adapter_builder",
+        lambda _: LongNarrativeModelAdapter(),
+    )
+    session_id = _session(client, "broad financial news")
+
+    created = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={"message": "Whats the latest in financial news?"},
+    )
+
+    assert created.status_code == 201
+    result = created.json()["result"]
+    assert result["status"] == "completed"
+    assert result["selected_agent_ids"] == ["news_synthesizer"]
+    assert result["agent_results"][0]["status"] == "ok"
+    assert result["agent_results"][0]["summary"] == LONG_EDUCATIONAL_NARRATIVE
+    assert result["agent_results"][0]["warnings"] == [
+        "No date window was specified; using the latest 7 days for public financial news."
+    ]
 
 
 def test_portfolio_snapshot_goal_archive_and_deletion_lifecycle(client: TestClient) -> None:

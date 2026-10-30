@@ -260,6 +260,66 @@ def test_news_agent_derives_minimized_public_ticker_query_and_bounded_window() -
     )
 
 
+def test_news_agent_accepts_broad_public_financial_news_topic() -> None:
+    telemetry = InMemoryObservability()
+    news = RecordingNewsProvider()
+    runtime = AgentRuntime(
+        retrieval=StaticKnowledgeRetrieval({}),
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+    before = datetime.now(UTC).date()
+
+    result = NewsSynthesizerAgent(
+        runtime=runtime,
+        contexts=InMemoryAgentContextRepository(),
+        news=news,
+    ).invoke(
+        request(
+            AgentId.NEWS_SYNTHESIZER,
+            "Whats the latest in financial news?",
+        )
+    )
+    after = datetime.now(UTC).date()
+
+    assert result.status == AgentResultStatus.OK, result
+    assert news.request is not None
+    assert news.request.query == "latest financial news"
+    assert news.request.symbols == ()
+    assert news.request.end_date in {before, after}
+    assert (news.request.end_date - news.request.start_date).days == 7
+    assert result.warnings == (
+        "No date window was specified; using the latest 7 days for public financial news.",
+    )
+
+
+def test_news_agent_does_not_turn_an_unbounded_nonfinancial_topic_into_a_provider_query() -> None:
+    telemetry = InMemoryObservability()
+    news = RecordingNewsProvider()
+    runtime = AgentRuntime(
+        retrieval=StaticKnowledgeRetrieval({}),
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+
+    result = NewsSynthesizerAgent(
+        runtime=runtime,
+        contexts=InMemoryAgentContextRepository(),
+        news=news,
+    ).invoke(request(AgentId.NEWS_SYNTHESIZER, "Give me the latest news."))
+
+    assert result.status == AgentResultStatus.CLARIFICATION
+    assert news.request is None
+
+
 def test_remaining_specialists_use_only_their_approved_domain_modules() -> None:
     tax_evidence = evidence(
         logical_kb=LogicalKnowledgeBase.TAX,

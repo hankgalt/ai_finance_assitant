@@ -418,14 +418,15 @@ class NewsSynthesizerAgent:
         context = _context(request, self._contexts, NewsAgentContext)
         warnings: tuple[str, ...] = ()
         if context is None:
-            search_request = _default_public_ticker_news_request(request.message)
+            search_request = _default_public_news_request(request.message)
             if search_request is None:
                 return _clarification_result(
                     self.agent_id,
-                    "Provide a public topic or uppercase ticker for news synthesis.",
+                    "Ask for broad financial news or provide an uppercase ticker.",
                 )
             warnings = (
-                "No date window was specified; using the latest 7 days for public ticker news.",
+                "No date window was specified; using the latest 7 days for "
+                f"{'public ticker' if search_request.symbols else 'public financial'} news.",
             )
         else:
             search_request = NewsSearchRequest(
@@ -694,13 +695,30 @@ def _portfolio_snapshot_fact(
     }
 
 
-def _default_public_ticker_news_request(message: str) -> NewsSearchRequest | None:
+def _default_public_news_request(message: str) -> NewsSearchRequest | None:
     symbols = tuple(dict.fromkeys(re.findall(r"\b[A-Z][A-Z0-9.-]{0,9}\b", message)))[:10]
-    if not symbols:
+    normalized_words = set(re.findall(r"[a-z]+", message.casefold()))
+    is_broad_financial_news = "news" in normalized_words and bool(
+        normalized_words
+        & {
+            "business",
+            "economic",
+            "economy",
+            "finance",
+            "financial",
+            "investing",
+            "investment",
+            "market",
+            "markets",
+        }
+    )
+    if not symbols and not is_broad_financial_news:
         return None
     end_date = datetime.now(UTC).date()
     return NewsSearchRequest(
-        query=f"{' '.join(symbols)} company financial news",
+        query=(
+            f"{' '.join(symbols)} company financial news" if symbols else "latest financial news"
+        ),
         symbols=symbols,
         start_date=end_date - timedelta(days=7),
         end_date=end_date,

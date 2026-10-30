@@ -123,7 +123,7 @@ has no selector, asks how many Holdings have usable prices, selects the Portfoli
 Run, continues, and verifies the named answer. The first sandboxed Playwright attempt could not bind
 Vite to the loopback port (`EPERM`) and executed no browser tests; the authorized rerun passed all 6
 Chrome journeys in 23.2 seconds with no critical or serious Axe findings in the reviewed states.
-Backend Ruff, strict mypy, and the 47 focused routing/workflow/API/model-adapter tests pass. The
-offline backend suite passes 188 tests with 4 opt-in tests skipped by marker or environment.
+Backend Ruff, strict mypy, and the 48 focused routing/workflow/API/model-adapter tests pass. The
+offline backend suite passes 191 tests with 4 opt-in tests skipped by marker or environment.
 Frontend Prettier, ESLint, TypeScript, all 23 Vitest tests in 6 files, the production build, and all
 6 Chrome Playwright journeys pass.

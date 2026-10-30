@@ -1,6 +1,6 @@
 # M3 provider policy and activation gate
 
-Version: `provider-policy-v2`
+Version: `provider-policy-v3`
 
 Status: Implemented for credential-free use; live activation remains entitlement-gated
 
@@ -51,7 +51,7 @@ Before live mode may be called, record for each exact provider account:
 5. secret owner/rotation and a privacy review of outbound fields;
 6. a declared demo call plan with headroom below every applicable limit.
 
-The Tavily query must contain public topics/security symbols only. An authorized `NewsAgentContext` supplies an explicit public query and bounded window. For a context-free Assistant request containing an uppercase ticker, News Synthesis constructs a minimized `<TICKER> company financial news` query and labels a seven-day default window; it does not forward the raw user message. Without either safe shape it clarifies before calling Tavily. Portfolio rows, positions, account identifiers, transactions, payment-card data, tax data, user prompts containing financial context, and credentials must not be sent. Returned links/snippets remain untrusted third-party data and require source attribution; Tavily discovery does not confer republication rights. Massive credentials are sent only in the authorization header, and no captured market payload is committed.
+The Tavily query must contain public topics/security symbols only. An authorized `NewsAgentContext` supplies an explicit public query and bounded window. For a context-free Assistant request containing an uppercase ticker, News Synthesis constructs a minimized `<TICKER> company financial news` query. A routed request that explicitly asks for broad finance, financial, market, business, economic, or investing news uses the fixed minimized query `latest financial news`; it never forwards the raw user message. Both context-free shapes label a seven-day default window. Without an approved safe shape the agent clarifies before calling Tavily. Portfolio rows, positions, account identifiers, transactions, payment-card data, tax data, user prompts containing financial context, and credentials must not be sent. Returned links/snippets remain untrusted third-party data and require source attribution; Tavily discovery does not confer republication rights. Massive credentials are sent only in the authorization header, and no captured market payload is committed.
 
 No live call was made for M3 qualification because account-specific credentials and approvals were not available. The live-mode transcript therefore proves safe preflight refusal and zero external calls. This is within budget but is not evidence that live access, latency, data quality, or public-production rights are operational.
 

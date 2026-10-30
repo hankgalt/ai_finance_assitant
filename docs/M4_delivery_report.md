@@ -18,7 +18,7 @@ Scope: PR-001, PR-002, PR-004, PR-006, PR-007, PR-008; QR-004, QR-005, QR-007, Q
 
 M4 delivers a typed, bounded LangGraph workflow with exactly six specialist nodes: Finance Q&A, Portfolio Analysis, Market Analysis, Goal Planning, News Synthesizer, and Tax Education. The router may select several independent nodes, agents never call one another, and every selected result remains separately typed through synthesis. Goal Planning consumes explicit deterministic projection assumptions and remains separate from Market Analysis.
 
-Finance and Tax use the M1 retrieval seam and return Run-scoped evidence references. Explicit tax years are exact-match constraints; when a tax year is omitted, Tax Education uses the latest year present in matching authoritative evidence and labels that choice. Portfolio and Goal delegate arithmetic to M2 modules. Market and News consume one M3 ProviderBundle created for each Run. News uses an authorized typed context when supplied; otherwise an uppercase ticker can produce a minimized public provider query with a labeled seven-day default, while requests without a safe public topic still clarify before any provider call. Routing and specialist generation use the same fixed per-Run ModelAdapter. Credential-free tests and demonstrations use scripted structured outputs; M4.1 owns the selected live OpenAI adapter.
+Finance and Tax use the M1 retrieval seam and return Run-scoped evidence references. Explicit tax years are exact-match constraints; when a tax year is omitted, Tax Education uses the latest year present in matching authoritative evidence and labels that choice. Portfolio and Goal delegate arithmetic to M2 modules. Market and News consume one M3 ProviderBundle created for each Run. News uses an authorized typed context when supplied; otherwise an uppercase ticker or explicit broad financial-news request can produce a fixed minimized public provider query with a labeled seven-day default, while requests without a safe public topic still clarify before any provider call. Routing and specialist generation use the same fixed per-Run ModelAdapter. Credential-free tests and demonstrations use scripted structured outputs; M4.1 owns the selected live OpenAI adapter.
 
 Measured RunEvents cover Run, route, node, retrieval, provider tool, model, and terminal lifecycles. They remain the authoritative product execution record. A vendor-neutral observability interface supplies disabled, in-memory, and OpenTelemetry adapters. Trace identifiers correlate exported spans with RunEvents; telemetry fields are allow-listed before recording/export, and failed telemetry cannot fail product execution. Optional LangSmith tracing is disabled by default and hides all inputs and outputs when enabled.
 
@@ -85,7 +85,7 @@ Machine-readable evidence and the actual compiled graph are under `backend/artif
 - The deterministic model adapter is intentionally not represented as a production LLM. M4.1 records the selected live model/provider policy, while ordinary tests remain external-call-free.
 - The 44-case scripted suite validates schema handling, ordering, clarification, out-of-scope handling, follow-up state, and graph selection. It does not measure whether a live LLM semantically classifies those messages correctly. M8 must run and independently review live-model routing, groundedness, injection, and financial-safety evaluation.
 - Focused M4 tests use static permitted Evidence and credential-free providers. M1 separately owns active-Qdrant integration evidence, while M3 separately owns conditional live-provider qualification and rights gates.
-- Context-free News defaults recognize uppercase ticker-shaped tokens only. Natural-language company names or broader public topics still require an authorized `NewsAgentContext`; otherwise the agent clarifies without calling Tavily.
+- Context-free News defaults recognize uppercase ticker-shaped tokens and explicit broad finance/market/business/economic/investing-news intent. Natural-language company names and other public topics still require an authorized `NewsAgentContext`; otherwise the agent clarifies without calling Tavily.
 - Repository coverage is 87%, above the preserved coursework fallback target but below its aspirational 90% tier. M8/M9 must report final scope-adjusted coverage honestly; this milestone does not claim the top tier.
 
 The implementation plan now assigns production-model selection, adapter implementation, and live-model qualification to M4.1. M4.1 is a required dependency of M5 rather than an activity deferred to M8 evaluation.
@@ -95,6 +95,18 @@ These limitations do not invalidate the completed credential-free M4 graph and s
 ## Post-completion context-free ticker-news correction — 2026-10-29
 
 The Assistant question “what's the latest news on MSFT” routed to News Synthesis but returned clarification because the specialist required a pre-created `NewsAgentContext`, while the conversational Run interface supplied only the message. A regression now proves that a context-free uppercase ticker creates only the minimized public query `MSFT company financial news`, never forwards the raw message, applies a seven-day bounded window, and surfaces the default as a warning. The exact credential-free reproduction returns `ok`; a single opt-in Tavily verification returned `ok` with five attributed results. No OpenAI call, raw provider payload, credential, or unrestricted user text was recorded during that verification.
+
+## Post-completion broad financial-news correction — 2026-10-30
+
+The Assistant question “Whats the latest in financial news?” correctly routed to News Synthesis but
+the context-free query builder accepted only uppercase ticker tokens, contradicting its public-topic
+clarification. News Synthesis now maps an explicit broad financial-news request to the fixed public
+query `latest financial news`, applies and labels the same seven-day default, and never forwards the
+raw prompt to the provider. Direct specialist and FastAPI Run regressions cover the reported phrase;
+an unbounded nonfinancial “latest news” request still clarifies with zero provider calls. No live
+provider or model call was required for this correction. The 12 focused Agent tests and 48 focused
+routing/workflow/API/model-adapter tests pass; the complete offline backend gate passes 191 tests
+with 4 opt-in/environment tests skipped.
 
 ## Post-completion LangSmith root-name correction — 2026-10-29
 
