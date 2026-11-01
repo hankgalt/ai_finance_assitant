@@ -76,6 +76,7 @@ class WorkflowRunResult(BaseModel):
     errors: tuple[SafeError, ...] = ()
     required_input: RequiredInput | None = None
     continuation_of_execution_id: Identifier | None = None
+    portfolio_context_references: tuple[Identifier, ...] = Field(default=(), max_length=20)
     locale: str = Field(default="en-US", min_length=2, max_length=35)
     jurisdiction: str = Field(default="US", min_length=2, max_length=32)
     trace_id: Identifier | None = None

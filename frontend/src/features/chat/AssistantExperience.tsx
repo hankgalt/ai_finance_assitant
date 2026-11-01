@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, BookOpen, RefreshCw } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { ArrowUp, BookOpen, RefreshCw, X } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -23,10 +29,12 @@ function MarkdownNarrative({ children }: { children: string }) {
 export function RunCard({
   run,
   isLatest,
+  suppressResultSummary = false,
   children,
 }: {
   run: RunRecord;
   isLatest: boolean;
+  suppressResultSummary?: boolean;
   children?: ReactNode;
 }) {
   const result = run.result;
@@ -71,6 +79,7 @@ export function RunCard({
     seenSupplementalMessages.add(warning);
     return true;
   });
+  const hasMultipleSpecialists = result.agent_results.length > 1;
   return (
     <article className="run-card">
       <div className="run-meta">
@@ -88,18 +97,36 @@ export function RunCard({
           <strong>{run.request_message}</strong>
         </p>
       ) : null}
-      {result.agent_results.length === 0 ? (
+      {result.agent_results.length === 0 && !suppressResultSummary ? (
         <MarkdownNarrative>{result.summary}</MarkdownNarrative>
+      ) : null}
+      {hasMultipleSpecialists ? (
+        <section className="agent-answer combined-answer">
+          <div className="agent-heading">
+            <strong>Combined response</strong>
+          </div>
+          <MarkdownNarrative>{result.summary}</MarkdownNarrative>
+        </section>
       ) : null}
       {result.agent_results.map((agent) => (
         <section className="agent-answer" key={agent.agent_id}>
           <div className="agent-heading">
-            <strong>{agent.agent_id.replaceAll("_", " ")}</strong>
+            <strong>
+              {agent.agent_id.replaceAll("_", " ")}
+              {hasMultipleSpecialists ? " sources and notes" : ""}
+            </strong>
             {agent.as_of ? (
               <span>As of {formatDateTime(agent.as_of)}</span>
             ) : null}
           </div>
-          <MarkdownNarrative>{agent.summary}</MarkdownNarrative>
+          {hasMultipleSpecialists ? (
+            <details className="specialist-details">
+              <summary>View specialist response</summary>
+              <MarkdownNarrative>{agent.summary}</MarkdownNarrative>
+            </details>
+          ) : (
+            <MarkdownNarrative>{agent.summary}</MarkdownNarrative>
+          )}
           {evidenceByAgent.get(agent.agent_id)?.length ? (
             <ul className="citation-list" aria-label="Sources">
               {evidenceByAgent.get(agent.agent_id)?.map((source) => (
@@ -170,57 +197,65 @@ function PortfolioSelectionPrompt({
     );
   }
 
+  if (isLoading) {
+    return (
+      <p className="portfolio-context-message">Checking saved Portfolios…</p>
+    );
+  }
+
+  if (!portfolios.length) {
+    return (
+      <p
+        className={
+          error
+            ? "portfolio-context-message clear-session-error"
+            : "portfolio-context-message"
+        }
+        role={error ? "alert" : "status"}
+      >
+        {error ??
+          "No saved Portfolios are available. Import one in the Portfolio view, then ask again."}
+      </p>
+    );
+  }
+
   return (
     <fieldset className="required-input-card">
       <legend>Portfolio selection required</legend>
-      {isLoading ? (
-        <p>Loading saved Portfolios…</p>
-      ) : portfolios.length ? (
-        <>
-          <label htmlFor={`portfolio-selection-${run.execution_id}`}>
-            Saved Portfolio
-          </label>
-          <div className="required-input-controls">
-            <select
-              id={`portfolio-selection-${run.execution_id}`}
-              onChange={(event) => setSelection(event.target.value)}
-              value={selection}
-            >
-              <option value="">Select a Portfolio</option>
-              {portfolios.map((portfolio) => (
-                <option
-                  key={portfolio.portfolio_id}
-                  value={portfolio.portfolio_id}
-                >
-                  {portfolio.label ?? portfolio.portfolio_id}
-                </option>
-              ))}
-              {portfolios.length > 1 ? (
-                <option value={allPortfoliosValue}>
-                  All saved Portfolios — compare separately
-                </option>
-              ) : null}
-            </select>
-            <button
-              className="primary-button"
-              disabled={!contextReferences.length || isPending}
-              onClick={() => onContinue(contextReferences)}
-              type="button"
-            >
-              {isPending ? "Analyzing…" : "Continue analysis"}
-            </button>
-          </div>
-          <p>
-            The selected Portfolio stays Session-scoped. Comparisons report each
-            Portfolio separately.
-          </p>
-        </>
-      ) : (
-        <p>
-          No saved Portfolios are available. Import one in the Portfolio view,
-          then return here to continue.
-        </p>
-      )}
+      <label htmlFor={`portfolio-selection-${run.execution_id}`}>
+        Saved Portfolio
+      </label>
+      <div className="required-input-controls">
+        <select
+          id={`portfolio-selection-${run.execution_id}`}
+          onChange={(event) => setSelection(event.target.value)}
+          value={selection}
+        >
+          <option value="">Select a Portfolio</option>
+          {portfolios.map((portfolio) => (
+            <option key={portfolio.portfolio_id} value={portfolio.portfolio_id}>
+              {portfolio.label ?? portfolio.portfolio_id}
+            </option>
+          ))}
+          {portfolios.length > 1 ? (
+            <option value={allPortfoliosValue}>
+              All saved Portfolios — compare separately
+            </option>
+          ) : null}
+        </select>
+        <button
+          className="primary-button"
+          disabled={!contextReferences.length || isPending}
+          onClick={() => onContinue(contextReferences)}
+          type="button"
+        >
+          {isPending ? "Analyzing…" : "Continue analysis"}
+        </button>
+      </div>
+      <p>
+        The selected Portfolio stays Session-scoped. Comparisons report each
+        Portfolio separately.
+      </p>
       {error ? (
         <p className="clear-session-error" role="alert">
           {error}
@@ -233,6 +268,11 @@ function PortfolioSelectionPrompt({
 export function AssistantExperience({ sessionId }: { sessionId: string }) {
   const [message, setMessage] = useState("");
   const [recoveryNote, setRecoveryNote] = useState<string | null>(null);
+  const [isChangingPortfolio, setIsChangingPortfolio] = useState(false);
+  const [portfolioOverrideReferences, setPortfolioOverrideReferences] =
+    useState<string[] | null>(null);
+  const [portfolioDialogSelection, setPortfolioDialogSelection] = useState("");
+  const portfolioDialogRef = useRef<HTMLDialogElement>(null);
   const queryClient = useQueryClient();
   const runs = useQuery({
     queryKey: ["runs", sessionId],
@@ -251,12 +291,85 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
       run.result?.required_input?.kind === "portfolio_selection" &&
       !continuedExecutionIds.has(run.execution_id),
   );
+  const latestPortfolioRun = runItems.find((run) =>
+    run.result?.selected_agent_ids.includes("portfolio_analysis"),
+  );
+  const activePortfolioReferences =
+    latestPortfolioRun?.result?.portfolio_context_references ?? [];
   const portfolios = useQuery({
     queryKey: ["portfolios", sessionId],
     queryFn: () => api.listPortfolios(sessionId),
-    enabled: needsPortfolioSelection,
+    enabled:
+      needsPortfolioSelection ||
+      Boolean(activePortfolioReferences.length) ||
+      isChangingPortfolio,
   });
   const savedPortfolios = portfolios.data ?? [];
+  const activePortfolioLabels = activePortfolioReferences.flatMap(
+    (reference) => {
+      const savedPortfolio = savedPortfolios.find(
+        (portfolio) => portfolio.portfolio_id === reference,
+      );
+      return savedPortfolio
+        ? [savedPortfolio.label ?? "Unnamed Portfolio"]
+        : [];
+    },
+  );
+  const allPortfoliosValue = `all:${sessionId}`;
+  const portfolioLabels = (references: string[]) =>
+    references.flatMap((reference) => {
+      const savedPortfolio = savedPortfolios.find(
+        (portfolio) => portfolio.portfolio_id === reference,
+      );
+      return savedPortfolio
+        ? [savedPortfolio.label ?? "Unnamed Portfolio"]
+        : [];
+    });
+  const pendingPortfolioLabels = portfolioLabels(
+    portfolioOverrideReferences ?? [],
+  );
+  const portfolioDialogReferences =
+    portfolioDialogSelection === allPortfoliosValue
+      ? savedPortfolios.map((portfolio) => portfolio.portfolio_id)
+      : portfolioDialogSelection
+        ? [portfolioDialogSelection]
+        : [];
+
+  const closePortfolioDialog = () => {
+    const dialog = portfolioDialogRef.current;
+    if (dialog?.open && typeof dialog.close === "function") {
+      dialog.close();
+      return;
+    }
+    setIsChangingPortfolio(false);
+  };
+
+  const openPortfolioDialog = () => {
+    const currentReferences =
+      portfolioOverrideReferences ?? activePortfolioReferences;
+    setPortfolioDialogSelection(
+      currentReferences.length === savedPortfolios.length &&
+        savedPortfolios.length > 1
+        ? allPortfoliosValue
+        : (currentReferences[0] ?? ""),
+    );
+    setIsChangingPortfolio(true);
+  };
+
+  useEffect(() => {
+    const dialog = portfolioDialogRef.current;
+    if (!isChangingPortfolio || dialog === null) return;
+
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+
+    return () => {
+      if (dialog.open && typeof dialog.close === "function") dialog.close();
+    };
+  }, [isChangingPortfolio]);
 
   const synchronizeRun = async (run: RunRecord) => {
     await queryClient.invalidateQueries({ queryKey: ["runs", sessionId] });
@@ -275,9 +388,22 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
   };
 
   const send = useMutation({
-    mutationFn: (value: string) => api.createRun(sessionId, value),
+    mutationFn: ({
+      value,
+      contextReferences,
+    }: {
+      value: string;
+      contextReferences: string[] | null;
+    }) =>
+      contextReferences?.length
+        ? api.createRun(sessionId, value, contextReferences)
+        : api.createRun(sessionId, value),
     onSuccess: async (run) => {
       setMessage("");
+      if (run.result?.portfolio_context_references?.length) {
+        setPortfolioOverrideReferences(null);
+        setIsChangingPortfolio(false);
+      }
       await synchronizeRun(run);
     },
   });
@@ -295,7 +421,12 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const value = message.trim();
-    if (value) send.mutate(value);
+    if (value) {
+      send.mutate({
+        value,
+        contextReferences: portfolioOverrideReferences,
+      });
+    }
   };
 
   return (
@@ -303,7 +434,7 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
       <PageHeader
         eyebrow="Six-agent finance workflow"
         title="Ask, explore, decide"
-        description="Educational guidance is routed through the backend workflow. Sources, partial results, and unavailable evidence stay visible."
+        description="Educational guidance. Sources, partial results, and unavailable evidence stay visible."
         action={<span className="milestone-chip">Session active</span>}
       />
       <div className="conversation-layout">
@@ -338,7 +469,14 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
             </div>
           ) : null}
           {runItems.map((run, index) => (
-            <RunCard key={run.execution_id} run={run} isLatest={index === 0}>
+            <RunCard
+              key={run.execution_id}
+              run={run}
+              isLatest={index === 0}
+              suppressResultSummary={
+                run.result?.required_input?.kind === "portfolio_selection"
+              }
+            >
               {run.result?.required_input?.kind === "portfolio_selection" ? (
                 <PortfolioSelectionPrompt
                   error={
@@ -384,6 +522,34 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
           ) : null}
         </section>
         <form className="composer" onSubmit={submit}>
+          {activePortfolioReferences.length ? (
+            <div className="active-portfolio-context">
+              <div>
+                <span>
+                  {portfolioOverrideReferences
+                    ? "Portfolio for next question"
+                    : "Portfolio context"}
+                </span>
+                <strong>
+                  {portfolios.isPending
+                    ? "Loading saved Portfolio…"
+                    : portfolioOverrideReferences &&
+                        pendingPortfolioLabels.length
+                      ? pendingPortfolioLabels.join(", ")
+                      : activePortfolioLabels.length
+                        ? activePortfolioLabels.join(", ")
+                        : "Saved Portfolio unavailable"}
+                </strong>
+              </div>
+              <button
+                className="text-button"
+                onClick={openPortfolioDialog}
+                type="button"
+              >
+                Change Portfolio
+              </button>
+            </div>
+          ) : null}
           <label htmlFor="assistant-message">
             Message the finance assistant
           </label>
@@ -410,6 +576,101 @@ export function AssistantExperience({ sessionId }: { sessionId: string }) {
             guarantee outcomes.
           </p>
         </form>
+        {isChangingPortfolio ? (
+          <dialog
+            aria-describedby="change-portfolio-description"
+            aria-labelledby="change-portfolio-heading"
+            className="import-dialog portfolio-context-dialog"
+            onClose={() => setIsChangingPortfolio(false)}
+            ref={portfolioDialogRef}
+          >
+            <div className="import-dialog-heading">
+              <div>
+                <p className="eyebrow">Assistant context</p>
+                <h3 id="change-portfolio-heading">Change Portfolio</h3>
+                <p id="change-portfolio-description">
+                  Choose the saved Portfolio for your next portfolio question.
+                  It becomes the active context after that question runs.
+                </p>
+              </div>
+              <button
+                aria-label="Close portfolio selection"
+                autoFocus
+                className="icon-button"
+                onClick={closePortfolioDialog}
+                type="button"
+              >
+                <X aria-hidden="true" size={20} />
+              </button>
+            </div>
+            <div className="import-dialog-body portfolio-context-dialog-body">
+              {portfolios.isPending ? (
+                <p>Loading saved Portfolios…</p>
+              ) : savedPortfolios.length ? (
+                <>
+                  <label htmlFor="portfolio-context-selection">
+                    Portfolio for next portfolio question
+                  </label>
+                  <select
+                    id="portfolio-context-selection"
+                    onChange={(event) =>
+                      setPortfolioDialogSelection(event.target.value)
+                    }
+                    value={portfolioDialogSelection}
+                  >
+                    {savedPortfolios.map((portfolio) => (
+                      <option
+                        key={portfolio.portfolio_id}
+                        value={portfolio.portfolio_id}
+                      >
+                        {portfolio.label ?? "Unnamed Portfolio"}
+                      </option>
+                    ))}
+                    {savedPortfolios.length > 1 ? (
+                      <option value={allPortfoliosValue}>
+                        All saved Portfolios — compare separately
+                      </option>
+                    ) : null}
+                  </select>
+                  <div className="portfolio-context-dialog-actions">
+                    <button
+                      className="secondary-button"
+                      onClick={closePortfolioDialog}
+                      type="button"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="primary-button"
+                      disabled={!portfolioDialogReferences.length}
+                      onClick={() => {
+                        const isCurrentScope =
+                          portfolioDialogReferences.length ===
+                            activePortfolioReferences.length &&
+                          portfolioDialogReferences.every(
+                            (reference, index) =>
+                              reference === activePortfolioReferences[index],
+                          );
+                        setPortfolioOverrideReferences(
+                          isCurrentScope ? null : portfolioDialogReferences,
+                        );
+                        closePortfolioDialog();
+                      }}
+                      type="button"
+                    >
+                      Use selected Portfolio
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p>
+                  No saved Portfolios are available. Import one in the Portfolio
+                  view, then return here.
+                </p>
+              )}
+            </div>
+          </dialog>
+        ) : null}
       </div>
     </>
   );

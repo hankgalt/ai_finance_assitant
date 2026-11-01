@@ -515,6 +515,16 @@ class SQLiteAgentContextRepository:
             return NewsAgentContext.model_validate_json(row["context_json"])
         raise RuntimeError("Stored agent context has an unsupported kind.")
 
+    def list_portfolios(self, session_id: str) -> tuple[PortfolioAgentContext, ...]:
+        with self._database.read() as connection:
+            rows = connection.execute(
+                "SELECT context_json FROM agent_contexts "
+                "WHERE session_id = ? AND kind = 'portfolio' "
+                "ORDER BY created_at, context_id",
+                (session_id,),
+            ).fetchall()
+        return tuple(PortfolioAgentContext.model_validate_json(row["context_json"]) for row in rows)
+
 
 def _session_from_row(row: sqlite3.Row) -> SessionRecord:
     archived_at = row["archived_at"]

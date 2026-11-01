@@ -1,9 +1,12 @@
 from datetime import UTC, datetime, timedelta
 
 from ai_finance_assistant.agents.context import InMemoryAgentContextRepository
+from ai_finance_assistant.contracts.agents import AgentId
+from ai_finance_assistant.contracts.events import EventType
 from ai_finance_assistant.core.config import Settings
 from ai_finance_assistant.knowledge.models import Evidence, LogicalKnowledgeBase
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
+from ai_finance_assistant.llm.models import RoutingModelOutput, RoutingReason
 from ai_finance_assistant.llm.ports import ModelAdapter
 from ai_finance_assistant.observability.memory import InMemoryObservability
 from ai_finance_assistant.providers.factory import credential_free_bundle
@@ -84,3 +87,99 @@ def test_application_creates_one_provider_bundle_per_run() -> None:
     assert calls == 2
     assert model_calls == 2
     assert all(result.status == WorkflowStatus.COMPLETED for result in results)
+
+
+def test_application_composes_finance_and_tax_results_through_synthesis() -> None:
+    message = "Explain diversification and U.S. federal tax considerations for taxable investing."
+    now = datetime(2026, 10, 31, 18, 0, tzinfo=UTC)
+    finance_evidence = Evidence(
+        chunk_id="finance-synthesis-chunk",
+        document_id="finance-synthesis-document",
+        title="Diversification basics",
+        publisher="Investor Education Test Publisher",
+        canonical_url="https://example.invalid/diversification",
+        section_path="Basics",
+        text="Diversification can reduce concentration risk but cannot prevent loss.",
+        score=0.95,
+        rank=1,
+        collection_name="finance_v1",
+        collection_version="v1",
+        document_version="v1",
+        content_hash="b" * 64,
+        fetched_at=now,
+        jurisdiction="US-Federal",
+    )
+    tax_evidence = Evidence(
+        chunk_id="tax-synthesis-chunk",
+        document_id="tax-synthesis-document",
+        title="Investment income tax basics",
+        publisher="Internal Revenue Service",
+        canonical_url="https://example.invalid/tax",
+        section_path="Capital gains",
+        text="Tax treatment depends on the account and transaction facts.",
+        score=0.96,
+        rank=1,
+        collection_name="tax_v1",
+        collection_version="v1",
+        document_version="v1",
+        content_hash="c" * 64,
+        fetched_at=now,
+        tax_years=(2026,),
+        jurisdiction="US-Federal",
+    )
+    telemetry = InMemoryObservability()
+    event_repository = InMemoryRunEventRepository()
+    application = WorkflowApplication(
+        settings=Settings(
+            mode="test",
+            provider_mode="credential_free",
+            model_mode="credential_free",
+            langsmith_tracing_enabled=False,
+        ),
+        retrieval=StaticKnowledgeRetrieval(
+            {
+                LogicalKnowledgeBase.FINANCE: (finance_evidence,),
+                LogicalKnowledgeBase.TAX: (tax_evidence,),
+            }
+        ),
+        contexts=InMemoryAgentContextRepository(),
+        model_adapter_builder=lambda _: DeterministicModelAdapter(
+            routing_responses={
+                message: RoutingModelOutput(
+                    selected_agent_ids=(AgentId.FINANCE_QA, AgentId.TAX_EDUCATION),
+                    reason_category=RoutingReason.MULTI_DOMAIN,
+                )
+            }
+        ),
+        event_recorder=RunEventRecorder(
+            repository=event_repository,
+            observability=telemetry,
+        ),
+        observability=telemetry,
+        provider_bundle_builder=lambda _: credential_free_bundle(),
+    )
+
+    result = application.run(
+        WorkflowRequest(
+            execution_id="run-application-synthesis",
+            session_id="session-application-synthesis",
+            workflow_id="finance-assistant",
+            workflow_version="1",
+            message=message,
+            deadline_at=datetime.now(UTC) + timedelta(minutes=1),
+        )
+    )
+
+    assert result.status == WorkflowStatus.COMPLETED
+    assert result.selected_agent_ids == (AgentId.FINANCE_QA, AgentId.TAX_EDUCATION)
+    assert len(result.agent_results) == 2
+    assert result.summary.startswith("Finance Qa:")
+    assert "Tax Education:" in result.summary
+    events = event_repository.list_for_run(
+        "run-application-synthesis",
+        session_id="session-application-synthesis",
+    )
+    assert any(
+        event.event_type == EventType.MODEL_COMPLETED and event.node_id == "synthesize"
+        for event in events
+    )

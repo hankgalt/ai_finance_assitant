@@ -30,20 +30,30 @@ from ai_finance_assistant.finance.models import (
     ImportSourceKind,
 )
 from ai_finance_assistant.finance.portfolio_analysis import PortfolioAnalysis
-from ai_finance_assistant.knowledge.models import Evidence, LogicalKnowledgeBase
+from ai_finance_assistant.knowledge.models import (
+    Evidence,
+    LogicalKnowledgeBase,
+    RetrievalStrategy,
+)
 from ai_finance_assistant.llm.errors import ModelErrorCode, ModelProviderError
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
 from ai_finance_assistant.llm.models import (
     ModelAdapterResult,
     ModelRequest,
     RoutingModelRequest,
+    SynthesisModelRequest,
 )
 from ai_finance_assistant.observability.memory import InMemoryObservability
 from ai_finance_assistant.providers.fake import FakeMarketDataProvider, FakeNewsProvider
-from ai_finance_assistant.providers.models import NewsSearchRequest, NewsSearchResult
+from ai_finance_assistant.providers.models import (
+    NewsSearchRequest,
+    NewsSearchResult,
+    ProviderError,
+    ProviderErrorCode,
+)
 from ai_finance_assistant.workflow.events import InMemoryRunEventRepository, RunEventRecorder
 from ai_finance_assistant.workflow.graph import SpecialistAgent
-from ai_finance_assistant.workflow.retrieval import StaticKnowledgeRetrieval
+from ai_finance_assistant.workflow.retrieval import RetrievalResult, StaticKnowledgeRetrieval
 
 NOW = datetime(2026, 10, 28, 18, 0, tzinfo=UTC)
 
@@ -185,7 +195,223 @@ def test_tax_agent_uses_latest_matching_year_and_canonical_jurisdiction() -> Non
     assert result.facts[0]["jurisdiction"] == "US-Federal"
     assert result.evidence[0].evidence_id == sep_evidence.chunk_id
     assert result.warnings == (
-        "No tax year was specified; using the latest matching authoritative tax year 2025.",
+        "No tax year was specified; using the best-supported matching authoritative tax year 2025.",
+    )
+
+
+def test_tax_agent_retrieves_again_for_selected_year_and_supplies_source_identity() -> None:
+    publication_17 = evidence(
+        logical_kb=LogicalKnowledgeBase.TAX,
+        text="For information on selling your home, see Publication 523.",
+    ).model_copy(
+        update={
+            "document_id": "irs-p17-2025",
+            "title": "Publication 17 (2025), Your Federal Income Tax",
+            "tax_years": (2025,),
+        }
+    )
+    publication_550 = evidence(
+        logical_kb=LogicalKnowledgeBase.TAX,
+        text="Investment property rules for an earlier tax year.",
+    ).model_copy(
+        update={
+            "document_id": "irs-p550-2024",
+            "title": "Publication 550 (2024), Investment Income and Expenses",
+            "tax_years": (2024,),
+        }
+    )
+    publication_523 = evidence(
+        logical_kb=LogicalKnowledgeBase.TAX,
+        text="Publication 523 explains the federal tax rules for selling a main home.",
+    ).model_copy(
+        update={
+            "document_id": "irs-p523-2025",
+            "title": "Publication 523 (2025), Selling Your Home",
+            "tax_years": (2025,),
+        }
+    )
+
+    class RecordingTaxRetrieval:
+        def __init__(self) -> None:
+            self.tax_years: list[int | None] = []
+
+        def retrieve(
+            self,
+            *,
+            logical_kb: LogicalKnowledgeBase,
+            text: str,
+            tax_year: int | None = None,
+            jurisdiction: str = "US",
+            limit: int = 5,
+        ) -> RetrievalResult:
+            del text, jurisdiction, limit
+            self.tax_years.append(tax_year)
+            candidates = (
+                (publication_17, publication_550) if tax_year is None else (publication_523,)
+            )
+            return RetrievalResult(
+                logical_kb=logical_kb,
+                strategy=RetrievalStrategy.HYBRID,
+                evidence=candidates,
+            )
+
+    class RecordingModelAdapter(DeterministicModelAdapter):
+        def __init__(self) -> None:
+            super().__init__()
+            self.requests: list[ModelRequest] = []
+
+        def generate(self, request: ModelRequest) -> ModelAdapterResult:
+            self.requests.append(request)
+            return super().generate(request)
+
+    retrieval = RecordingTaxRetrieval()
+    model = RecordingModelAdapter()
+    telemetry = InMemoryObservability()
+    runtime = AgentRuntime(
+        retrieval=retrieval,
+        model=model,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+
+    result = TaxEducationAgent(runtime=runtime).invoke(
+        request(
+            AgentId.TAX_EDUCATION,
+            "Can you explain tax related things to consider when selling a home?",
+        )
+    )
+
+    assert result.status == AgentResultStatus.OK, result
+    assert retrieval.tax_years == [None, 2025]
+    assert tuple(item.title for item in result.evidence) == (
+        "Publication 523 (2025), Selling Your Home",
+    )
+    assert model.requests[0].evidence[0].source_document_id == "irs-p523-2025"
+    assert model.requests[0].evidence[0].source_title == (
+        "Publication 523 (2025), Selling Your Home"
+    )
+    assert "reference to another publication" in model.requests[0].instructions
+
+
+def test_tax_agent_does_not_let_one_newer_year_result_override_dominant_evidence() -> None:
+    def tax_evidence(
+        *,
+        document_id: str,
+        title: str,
+        tax_year: int,
+        rank: int,
+        text: str,
+    ) -> Evidence:
+        return evidence(logical_kb=LogicalKnowledgeBase.TAX, text=text).model_copy(
+            update={
+                "chunk_id": f"{document_id}-chunk-{rank}",
+                "document_id": document_id,
+                "title": title,
+                "tax_years": (tax_year,),
+                "rank": rank,
+            }
+        )
+
+    publication_550 = tax_evidence(
+        document_id="irs-p550-2025",
+        title="Publication 550 (2025), Investment Income and Expenses",
+        tax_year=2025,
+        rank=1,
+        text="A general investment-income introduction.",
+    )
+    publication_505 = tax_evidence(
+        document_id="irs-p505-2026",
+        title="Publication 505 (2026), Tax Withholding and Estimated Tax",
+        tax_year=2026,
+        rank=2,
+        text="Pension and annuity withholding information.",
+    )
+    publication_17_first = tax_evidence(
+        document_id="irs-p17-2025",
+        title="Publication 17 (2025), Your Federal Income Tax",
+        tax_year=2025,
+        rank=3,
+        text="Pension and annuity income overview.",
+    )
+    publication_17_second = tax_evidence(
+        document_id="irs-p17-2025",
+        title="Publication 17 (2025), Your Federal Income Tax",
+        tax_year=2025,
+        rank=4,
+        text="Unrecovered investment in an annuity.",
+    )
+    publication_575 = tax_evidence(
+        document_id="irs-p575-2025",
+        title="Publication 575 (2025), Pension and Annuity Income",
+        tax_year=2025,
+        rank=5,
+        text="Tax treatment of pension and annuity income.",
+    )
+
+    class RecordingTaxRetrieval:
+        def __init__(self) -> None:
+            self.tax_years: list[int | None] = []
+
+        def retrieve(
+            self,
+            *,
+            logical_kb: LogicalKnowledgeBase,
+            text: str,
+            tax_year: int | None = None,
+            jurisdiction: str = "US",
+            limit: int = 5,
+        ) -> RetrievalResult:
+            del text, jurisdiction, limit
+            self.tax_years.append(tax_year)
+            candidates: tuple[Evidence, ...]
+            if tax_year is None:
+                candidates = (
+                    publication_550,
+                    publication_505,
+                    publication_17_first,
+                    publication_17_second,
+                    publication_575,
+                )
+            elif tax_year == 2025:
+                candidates = (publication_575,)
+            else:
+                candidates = (publication_505,)
+            return RetrievalResult(
+                logical_kb=logical_kb,
+                strategy=RetrievalStrategy.HYBRID,
+                evidence=candidates,
+            )
+
+    retrieval = RecordingTaxRetrieval()
+    telemetry = InMemoryObservability()
+    runtime = AgentRuntime(
+        retrieval=retrieval,
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+
+    result = TaxEducationAgent(runtime=runtime).invoke(
+        request(
+            AgentId.TAX_EDUCATION,
+            "Can you explain tax considerations for pension and annuity income?",
+        )
+    )
+
+    assert result.status == AgentResultStatus.OK, result
+    assert retrieval.tax_years == [None, 2025]
+    assert result.facts[0]["tax_year"] == 2025
+    assert tuple(item.title for item in result.evidence) == (
+        "Publication 575 (2025), Pension and Annuity Income",
+    )
+    assert result.warnings == (
+        "No tax year was specified; using the best-supported matching authoritative tax year 2025.",
     )
 
 
@@ -568,6 +794,84 @@ def test_portfolio_agent_keeps_explicit_multiple_portfolio_contexts_separate() -
     assert first_valuation["identifier"] == "DEMO"
 
 
+def test_portfolio_agent_keeps_full_saved_price_coverage_complete_when_enrichment_fails() -> None:
+    telemetry = InMemoryObservability()
+    runtime = AgentRuntime(
+        retrieval=StaticKnowledgeRetrieval({}),
+        model=DeterministicModelAdapter(),
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+    )
+    contexts = InMemoryAgentContextRepository()
+    contexts.put(
+        "session-1",
+        PortfolioAgentContext(
+            context_id="saved-price-portfolio",
+            portfolio=ImportedPortfolio(
+                portfolio_id="portfolio-saved-prices",
+                label="Saved price portfolio",
+                base_currency="USD",
+                imported_at=NOW,
+                source_kind=ImportSourceKind.MANUAL,
+                source_file_hash="e" * 64,
+                accounts=(
+                    ImportedAccount(
+                        account_id="account-saved-prices",
+                        portfolio_id="portfolio-saved-prices",
+                        account_type="taxable",
+                        holdings=(
+                            ImportedHolding(
+                                holding_id="holding-saved-price",
+                                account_id="account-saved-prices",
+                                source_row=1,
+                                security=SecurityIdentifier(
+                                    identifier_type=SecurityIdentifierType.TICKER,
+                                    value="DEMO",
+                                ),
+                                quantity=Decimal("2"),
+                                currency="USD",
+                                user_price=Decimal("10"),
+                                user_price_as_of=NOW,
+                                user_price_provenance="validated import fixture",
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            calculated_at=NOW,
+        ),
+    )
+    budget_error = ProviderError(
+        code=ProviderErrorCode.BUDGET_EXHAUSTED,
+        message="Configured workflow request budget is exhausted.",
+        retryable=False,
+    )
+    agent = PortfolioAnalysisAgent(
+        runtime=runtime,
+        contexts=contexts,
+        market=FakeMarketDataProvider(failures={"quote": budget_error}),
+        analysis=PortfolioAnalysis(),
+    )
+
+    result = agent.invoke(
+        request(
+            AgentId.PORTFOLIO_ANALYSIS,
+            "Review my saved portfolio.",
+            context_references=("saved-price-portfolio",),
+        )
+    )
+
+    assert result.status == AgentResultStatus.OK
+    assert result.facts[0]["priced_holding_count"] == 1
+    assert any(
+        warning.endswith("Configured workflow request budget is exhausted.")
+        for warning in result.warnings
+    )
+
+
 def test_portfolio_agent_requires_an_authorized_selected_context() -> None:
     telemetry = InMemoryObservability()
     agent = PortfolioAnalysisAgent(
@@ -601,6 +905,7 @@ class MalformedModelAdapter:
     model_id = "malformed-model-fixture"
     prompt_version = "fixture-v1"
     routing_prompt_version = "fixture-routing-v1"
+    synthesis_prompt_version = "fixture-synthesis-v1"
 
     def generate(self, request: ModelRequest) -> ModelAdapterResult:
         del request
@@ -609,6 +914,10 @@ class MalformedModelAdapter:
     def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
         del request
         raise AssertionError("agent test adapter must not route")
+
+    def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
+        del request
+        raise AssertionError("agent test adapter must not synthesize")
 
 
 def test_agent_rejects_malformed_structured_model_output() -> None:
@@ -638,6 +947,7 @@ class RateLimitedModelAdapter:
     model_id = "rate-limited-model-fixture"
     prompt_version = "fixture-v1"
     routing_prompt_version = "fixture-routing-v1"
+    synthesis_prompt_version = "fixture-synthesis-v1"
 
     def generate(self, request: ModelRequest) -> ModelAdapterResult:
         del request
@@ -651,6 +961,10 @@ class RateLimitedModelAdapter:
     def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
         del request
         raise AssertionError("agent test adapter must not route")
+
+    def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
+        del request
+        raise AssertionError("agent test adapter must not synthesize")
 
 
 def test_agent_preserves_typed_model_failure_and_safe_model_versions() -> None:

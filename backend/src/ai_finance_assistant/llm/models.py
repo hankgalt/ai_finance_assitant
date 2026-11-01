@@ -4,7 +4,11 @@ from enum import StrEnum
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, model_validator
 
-from ai_finance_assistant.contracts.agents import AgentId
+from ai_finance_assistant.contracts.agents import (
+    AgentId,
+    AgentResultStatus,
+    EvidenceReference,
+)
 from ai_finance_assistant.contracts.common import Identifier, NarrativeText, ShortText
 
 
@@ -12,6 +16,10 @@ class ModelEvidence(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     evidence_id: Identifier
+    source_document_id: Identifier
+    source_title: ShortText
+    source_publisher: ShortText
+    source_section: str = Field(min_length=1, max_length=2_000)
     content: str = Field(min_length=1, max_length=8_000)
 
 
@@ -58,6 +66,53 @@ class ModelAdapterResult(BaseModel):
 
     payload: dict[str, JsonValue]
     usage: ModelUsage = Field(default_factory=ModelUsage)
+
+
+class SynthesisAgentInput(BaseModel):
+    """Minimized, already-grounded specialist result supplied to synthesis."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    agent_id: AgentId
+    status: AgentResultStatus
+    summary: NarrativeText
+    evidence: tuple[EvidenceReference, ...] = Field(default=(), max_length=20)
+    warnings: tuple[ShortText, ...] = Field(default=(), max_length=20)
+
+    @model_validator(mode="after")
+    def validate_usable_status(self) -> "SynthesisAgentInput":
+        if self.status not in {AgentResultStatus.OK, AgentResultStatus.PARTIAL}:
+            raise ValueError("synthesis inputs must contain usable specialist results")
+        return self
+
+
+class SynthesisModelRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: str = Field(default="1", pattern=r"^1$")
+    user_message: str = Field(min_length=1, max_length=20_000)
+    agent_results: tuple[SynthesisAgentInput, ...] = Field(min_length=2, max_length=6)
+    max_output_tokens: int = Field(default=1_600, ge=1, le=4_000)
+    deadline_at: AwareDatetime
+
+    @model_validator(mode="after")
+    def validate_distinct_agents(self) -> "SynthesisModelRequest":
+        agent_ids = tuple(item.agent_id for item in self.agent_results)
+        if len(set(agent_ids)) != len(agent_ids):
+            raise ValueError("synthesis inputs cannot repeat a specialist")
+        return self
+
+
+class SynthesisModelOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: str = Field(default="1", pattern=r"^1$")
+    summary: NarrativeText = Field(
+        description=(
+            "One coherent user-facing answer grounded only in the supplied specialist results."
+        )
+    )
+    warnings: tuple[ShortText, ...] = Field(default=(), max_length=20)
 
 
 class RoutingReason(StrEnum):

@@ -11,6 +11,8 @@ from ai_finance_assistant.llm.models import (
     RoutingModelOutput,
     RoutingModelRequest,
     RoutingReason,
+    SynthesisModelOutput,
+    SynthesisModelRequest,
 )
 
 _SUMMARIES: dict[AgentId, str] = {
@@ -38,6 +40,7 @@ class DeterministicModelAdapter:
     model_id = "deterministic-model-v1"
     prompt_version = "deterministic-template-v1"
     routing_prompt_version = "deterministic-routing-fixture-v1"
+    synthesis_prompt_version = "deterministic-synthesis-fixture-v1"
 
     def __init__(
         self,
@@ -91,6 +94,26 @@ class DeterministicModelAdapter:
             ),
         )
 
+    def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
+        sections = tuple(
+            f"{_agent_label(item.agent_id)}: {item.summary}" for item in request.agent_results
+        )
+        output = SynthesisModelOutput(
+            summary="\n\n".join(sections),
+        )
+        return ModelAdapterResult(
+            payload=output.model_dump(mode="json"),
+            usage=ModelUsage(
+                input_tokens=len(request.agent_results),
+                output_tokens=sum(len(item.summary.split()) for item in request.agent_results),
+                method="deterministic_fixture_count_v1",
+            ),
+        )
+
 
 def _routing_key(message: str) -> str:
     return " ".join(message.casefold().split())
+
+
+def _agent_label(agent_id: AgentId) -> str:
+    return agent_id.value.replace("_", " ").title()

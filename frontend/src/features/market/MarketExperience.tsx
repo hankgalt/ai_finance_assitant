@@ -57,7 +57,7 @@ export function MarketExperience({ sessionId }: { sessionId: string }) {
       <PageHeader
         eyebrow="Provider-backed market evidence"
         title="Market overview"
-        description="Inspect a current quote and daily history with the provider, cache layer, freshness, and synthetic status always visible."
+        description="Provides a current quote and daily history with the provider."
         action={
           quote ? (
             <span

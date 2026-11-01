@@ -30,6 +30,7 @@
       "total_tokens": null,
       "cost_amount": null,
       "cost_currency": null,
+      "cost_unavailable_reason": "Model cost is not available.",
       "method": null,
       "unavailable_reason": "Synthetic M0 fixture has no model usage."
     },
@@ -74,6 +75,7 @@
       "total_tokens": null,
       "cost_amount": null,
       "cost_currency": null,
+      "cost_unavailable_reason": "Model cost is not available.",
       "method": null,
       "unavailable_reason": "Synthetic M0 fixture has no model usage."
     },

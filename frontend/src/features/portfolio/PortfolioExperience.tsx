@@ -285,7 +285,7 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
       <PageHeader
         eyebrow="Imported evidence + deterministic analysis"
         title="Portfolio dashboard"
-        description="Review every import finding before saving. Values and allocations come from the backend calculation policy, never browser arithmetic."
+        description="Review every import finding before saving. Values and allocations come from the backend calculation policy."
         action={
           <div className="portfolio-header-actions">
             <span className="milestone-chip">

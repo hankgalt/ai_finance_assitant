@@ -59,7 +59,7 @@ def test_openai_live_account_supports_all_six_agent_contracts() -> None:
     expected_agents = {only_agent} if only_agent is not None else set(AgentId)
     settings = settings.model_copy(
         update={
-            "model_request_budget": len(expected_agents) + 1,
+            "model_request_budget": len(expected_agents) + (2 if len(expected_agents) > 1 else 1),
             "model_maximum_attempts": 1,
             "provider_mode": "credential_free",
         }
@@ -155,10 +155,13 @@ def test_openai_live_account_supports_all_six_agent_contracts() -> None:
         session_id="session-live-model-m4-1",
     )
     model_events = [event for event in events if event.event_type == EventType.MODEL_COMPLETED]
-    assert len(model_events) == len(expected_agents) + 1
+    assert len(model_events) == len(expected_agents) + (2 if len(expected_agents) > 1 else 1)
     assert all(event.safe_metadata["provider"] == "openai" for event in model_events)
     assert all(event.safe_metadata["model_id"] == "gpt-6.1-sol" for event in model_events)
     assert any(event.node_id == "router" for event in model_events)
+    assert (any(event.node_id == "synthesize" for event in model_events)) == (
+        len(expected_agents) > 1
+    )
     assert all(
         event.usage.availability == MeasurementAvailability.MEASURED for event in model_events
     )

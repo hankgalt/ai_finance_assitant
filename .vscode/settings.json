@@ -4,6 +4,8 @@
   ],
   "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
   "python.analysis.diagnosticSeverityOverrides": {
-    "reportMissingTypeStubs": "none"
+    "reportMissingTypeStubs": "none",
+    "reportTypedDictNotRequiredAccess": "none",
+    "reportUnknownMemberType": "none"
   }
 }

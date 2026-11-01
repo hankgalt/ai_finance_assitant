@@ -112,6 +112,13 @@ several references. The model receives bounded deterministic facts for explanati
 combine Portfolio or currency totals. Focused agent regressions cover no-context, one-context, and
 explicit multi-context behavior without a live provider or model call.
 
+Explicit-label maintenance adds a deterministic server-side convenience before that clarification:
+after Portfolio Analysis is selected, one explicitly quoted label can resolve to its opaque context
+identifier only when exactly one saved Portfolio in the active Session matches after bounded
+normalization. The repository lookup is Session-scoped; duplicate, absent, multi-label, and
+cross-Session cases retain explicit selection. The API contract is unchanged, and natural-language
+classification remains the model's responsibility rather than a label substring router.
+
 Conditional Portfolio continuation maintenance adds the versioned
 `POST /sessions/{session_id}/runs/{execution_id}/continue` resource. It accepts only bounded opaque
 context identifiers for a source Run that is waiting on typed Portfolio input, re-authorizes every
@@ -119,6 +126,16 @@ identifier in the same Active Session, and creates a separately persisted Run li
 The continuation preserves the original selected-agent set and enters the graph at the context gate,
 so the classifier is not invoked twice. Repeated continuation attempts return the already linked Run;
 cross-Session, missing, non-Portfolio, and non-waiting contexts fail closed with safe errors.
+
+Portfolio follow-up maintenance preserves the last successfully authorized Portfolio references as
+checkpointed graph state under the existing Session-plus-Workflow thread key. Each later Portfolio
+route re-authorizes those opaque identifiers through the Session-scoped context repository before
+specialist execution. `WorkflowRunResult.portfolio_context_references` reports the resulting scope
+through the additive version-1 response contract; it contains no Portfolio rows or labels. A new
+Run may explicitly supply replacement references, which take precedence over the checkpoint only
+when every supplied reference is currently authorized. Invalid, deleted, mixed, or cross-Session
+replacement lists clear the stale scope and return typed selection rather than silently analyzing
+the old Portfolio. The contract manifest verifies the backend array bound and frontend consumer.
 
 ## Security, privacy, and lifecycle impact
 
@@ -139,6 +156,9 @@ cross-Session, missing, non-Portfolio, and non-waiting contexts fail closed with
   portfolio context.
 - Owner-only unverified-rights acceptance does not establish contractual permission. It cannot
   satisfy shared-demo or public readiness.
+- Active Portfolio checkpoint state contains only opaque context identifiers. Every reuse or
+  replacement is re-authorized against the current Session, and an invalid replacement cannot
+  silently fall back to the previously selected Portfolio.
 
 ## Limitations and unresolved decisions
 

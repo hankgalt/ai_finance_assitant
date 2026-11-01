@@ -175,12 +175,50 @@ Assistant portfolio-context maintenance connects the saved Portfolio library to 
 context requirement. The composer has no default selector and does not load saved Portfolios for an
 ordinary question. After the classifier selects Portfolio Analysis, the context gate returns a
 Portfolio-selection response when context is missing; only that Run renders the labeled selector.
-Even a single saved Portfolio requires an explicit choice, while multiple Portfolios also offer an
-explicit separate-comparison scope. Continuing creates a linked Run and removes the selection
-control from the resolved clarification. The Portfolio agent preserves every distinct authorized
-context, produces separate deterministic Snapshot facts, and instructs the model to name and report
-each Portfolio without blending totals. Component, API, workflow, and Chrome regressions cover the
-conditional single/multiple selection behavior and linked result.
+An explicitly quoted label now skips that round trip only when trusted backend code finds one exact,
+unique saved Portfolio in the active Session. Unquoted, absent, duplicate, multi-label, and
+cross-Session cases retain the selector, while multiple Portfolios also offer an explicit
+separate-comparison scope. Continuing creates a linked Run and removes the selection control from
+the resolved clarification. The Portfolio agent preserves every distinct authorized context,
+produces separate deterministic Snapshot facts, and instructs the model to name and report each
+Portfolio without blending totals. Component, API, and workflow regressions cover direct unique
+label resolution, conditional single/multiple selection behavior, and linked results.
+
+Portfolio conversation-continuity maintenance keeps the selector response-driven while removing
+repeat selection for ordinary follow-ups. Once a Portfolio Run establishes active scope, the fixed
+composer displays a compact `Portfolio context` label resolved from the authorized saved-Portfolio
+list. `Change Portfolio` opens a native modal dialog for one saved Portfolio or an explicit separate
+comparison, leaving the fixed composer at its compact height. Cancel, Escape, or the close control
+does not change pending context; confirmation stages the chosen opaque references for the next
+message, after which the backend re-authorizes them before replacing checkpoint scope. The control
+is absent before Portfolio scope exists. Archived/new Sessions get distinct component and
+checkpoint state, and unavailable or deleted scope returns to the existing clarification flow. The
+browser does not infer scope from message text or send Portfolio data to unrelated routes. The
+fixed composer is inset from the viewport bottom with matching conversation clearance instead of
+touching the page boundary.
+
+Empty Portfolio-context maintenance keeps the backend's typed clarification result while making
+the browser state truthful to the authorized saved-Portfolio list. While the list is loading, the
+Run shows bounded progress text. When it resolves empty, the generic “Select a saved Portfolio”
+summary and selection fieldset are suppressed and one import-then-ask-again message is shown.
+Existing one-Portfolio and explicit comparison selectors are unchanged.
+
+Portfolio-selector spacing maintenance replaces the browser-positioned native chevron in the
+required-input control with an equivalent CSS background chevron inset from the right edge. Extra
+right padding keeps option text clear of the control while preserving native keyboard and screen
+reader selection semantics.
+
+The focused component regression first reproduced both misleading selection elements, then passed
+with the empty-state presentation. Prettier, ESLint, TypeScript, all 35 Vitest tests, and the
+production build passed. The focused desktop-Chrome journey also passed and asserts that the import
+message is visible while the generic prompt, fieldset legend, and saved-Portfolio selector are
+absent. No live backend, model, provider, Qdrant, LangSmith, or external telemetry call was made.
+
+Portfolio-context modal and composer-inset maintenance is covered by the same 35-test frontend gate
+plus a focused desktop-Chrome journey. The component regression proves that selection is rendered
+inside the named dialog and that confirmation stages the explicit replacement sent with the next
+question. The browser journey verifies close-button focus, absence of the selector from the
+composer, the staged context label, and at least 15 pixels of measured viewport-bottom clearance.
 
 The same classifier maintenance rejects unrelated general knowledge such as weather or current
 political-office questions with a bounded finance-scope response and no specialist Agent result.
@@ -188,14 +226,47 @@ The semantic decision remains in the structured model prompt; deterministic code
 closed decision schema, enforces context authorization, and selects graph edges without maintaining
 a substring table.
 
+Unique Portfolio-label and complete-coverage maintenance verification on 2026-10-31:
+
+- `uv run pytest -q tests/test_workflow.py tests/test_agents.py tests/test_m5_api.py
+  tests/test_m5_persistence.py` — 52 passed.
+- `make backend-check` — formatting, Ruff, strict mypy, and coverage passed; 215 tests passed,
+  1 opt-in Qdrant test skipped, 3 live tests deselected, and total measured coverage was 88%.
+- `make frontend-check` — Prettier, ESLint, TypeScript, 32 Vitest tests, and the production build
+  passed.
+- The non-browser portion of `make m6-check` passed, including 19 focused M5/M6 contract and API
+  tests. The local Playwright run passed 5 of 7 journeys; the two Portfolio/Market lazy-route
+  journeys reached the existing Vite development error boundary before their headings rendered.
+  A focused rerun reproduced those two unrelated lazy-module failures. No frontend implementation
+  changed in this maintenance slice; the new user-visible routing behavior is covered through the
+  real FastAPI/SQLite integration test rather than a mocked browser response.
+- No live model, market-data, news, Qdrant, LangSmith, or external telemetry call was made.
+
+Portfolio conversation-continuity verification on 2026-10-31:
+
+- Full backend formatting, Ruff, strict mypy, and coverage gates passed: 220 tests passed, 1
+  opt-in Qdrant test skipped, 3 live tests deselected, and total measured coverage was 88%.
+- The focused Workflow/API/contract suite passed 38 tests, including checkpoint reuse, explicit
+  replacement, replacement persistence, cross-Session isolation, invalid-reference fail-closed
+  behavior, and non-disclosure to an unrelated specialist.
+- Frontend Prettier, ESLint, TypeScript, all 34 Vitest tests, and the production build passed.
+- The focused desktop-Chrome M6 product journey passed and verifies that active Portfolio scope is
+  visible only after selection and that Change Portfolio opens its on-demand selector.
+- No live model, provider, Qdrant, LangSmith, or external telemetry call was made.
+
 ## Security and privacy impact
 
 - Files remain untrusted: the browser only encodes bytes; backend size, type, schema, formula, and
   content checks remain authoritative. Validation findings are displayed without silent repair.
 - The browser stores only an opaque local Session identifier. It ships no OpenAI, provider,
   LangSmith, Collector, or other secret and never sends a prompt or financial payload to telemetry.
-- Portfolio context is selected from the authorized, Session-scoped saved list and transported as
-  opaque identifiers; labels or natural-language mentions are not treated as authorization.
+- Portfolio context remains an authorized, Session-scoped server lookup and is transported to the
+  specialist as an opaque identifier. An explicitly quoted label is only a lookup hint: trusted
+  backend code requires one exact unique match, never exposes or accepts the label as authorization,
+  and fails closed to explicit selection for ambiguity or another Session.
+- The browser resolves checkpoint-returned opaque identifiers through the authorized Portfolio
+  list only for display. Explicit replacement identifiers are re-authorized server-side and are
+  removed from non-Portfolio specialist requests.
 - Confirmed Session clearing uses the authoritative M5 archive endpoint. It preserves Session-owned
   artifacts and checkpoint history as read-only, and failure retains the browser identifier and
   active UI state. Permanent deletion is a separate History action and uses the guarded M5 cascade.

@@ -28,6 +28,38 @@ from ai_finance_assistant.knowledge.representations import RepresentationEncoder
 from ai_finance_assistant.knowledge.store import CandidateWriteResult, KnowledgeStore
 
 _WHITESPACE = re.compile(r"\s+")
+_MISSING_CHILD_MARKERS = (
+    "missing child",
+    "national center for missing & exploited children",
+)
+_MISSING_CHILD_CONTENT_MARKERS = (
+    *_MISSING_CHILD_MARKERS,
+    "ncmec",
+    "the-lost",
+    "bring these children home",
+    "recognize a child",
+)
+_MISSING_CHILD_NOTICE_PATTERNS = (
+    re.compile(
+        r"Photographs? of missing children selected by the Center may appear in this "
+        r"publication on pages that would otherwise be blank\.?",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"You can help bring these children home by looking at the photographs and calling "
+        r"1-800-THE-LOST \(1-800-843-5678\) if you recognize a child\.?",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?:The (?:Internal Revenue Service|IRS) is a proud partner with the )?"
+        r"National Center for Missing (?:&|and) Exploited Children(?:®)?"
+        r"(?: \(NCMEC\))?\.?",
+        re.IGNORECASE,
+    ),
+    re.compile(r"Photographs? of missing children\.?", re.IGNORECASE),
+    re.compile(r"1-800-THE-LOST \(1-800-843-5678\)", re.IGNORECASE),
+    re.compile(r"Missing children, photographs of(?: in IRS publications)?\s+\d+", re.IGNORECASE),
+)
 
 
 def _sha256(value: str | bytes) -> str:
@@ -50,8 +82,8 @@ def normalize_html(source: SourceDefinition, fetched: FetchedSource) -> Normaliz
     for element in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li"]):
         if not isinstance(element, Tag):
             continue
-        text = _WHITESPACE.sub(" ", element.get_text(" ", strip=True)).strip()
-        if not text:
+        text = _redact_third_party_photo_text(element.get_text(" ", strip=True))
+        if not text or _contains_third_party_photo_text(text):
             continue
         if element.name and element.name.startswith("h"):
             level = int(element.name[1])
@@ -78,14 +110,41 @@ def normalize_html(source: SourceDefinition, fetched: FetchedSource) -> Normaliz
     )
 
 
+def _is_third_party_photo_caption(text: str) -> bool:
+    """Exclude short IRS missing-child photo/caption pages from normalized text."""
+
+    lowered = text.lower()
+    return (
+        len(text) < 800
+        and "photograph" in lowered
+        and any(marker in lowered for marker in _MISSING_CHILD_MARKERS)
+    )
+
+
+def _redact_third_party_photo_text(text: str) -> str:
+    """Remove governed third-party photo notices while preserving adjacent tax text."""
+
+    redacted = text
+    for pattern in _MISSING_CHILD_NOTICE_PATTERNS:
+        redacted = pattern.sub(" ", redacted)
+    return _WHITESPACE.sub(" ", redacted).strip()
+
+
+def _contains_third_party_photo_text(text: str) -> bool:
+    """Identify residual governed photo material after noisy PDF column extraction."""
+
+    lowered = text.lower()
+    return any(marker in lowered for marker in _MISSING_CHILD_CONTENT_MARKERS)
+
+
 def normalize_pdf(source: SourceDefinition, fetched: FetchedSource) -> NormalizedDocument:
     """Extract page-bounded PDF text without executing embedded content."""
 
     reader = PdfReader(BytesIO(fetched.body), strict=True)
     sections: list[NormalizedSection] = []
     for page_number, page in enumerate(reader.pages, start=1):
-        text = _WHITESPACE.sub(" ", page.extract_text(extraction_mode="layout") or "").strip()
-        if len(text) < 20:
+        text = _redact_third_party_photo_text(page.extract_text(extraction_mode="layout") or "")
+        if len(text) < 20 or _is_third_party_photo_caption(text):
             continue
         sections.append(NormalizedSection(path=f"{source.title} > Page {page_number}", text=text))
     if not sections:
@@ -152,6 +211,8 @@ def chunk_document(
     for path in path_order:
         combined = "\n\n".join(grouped[path])
         for ordinal, text in enumerate(_window_text(combined, policy)):
+            if _contains_third_party_photo_text(text):
+                continue
             if len(text) < policy.min_chars and chunks:
                 continue
             content_hash = _sha256(text)

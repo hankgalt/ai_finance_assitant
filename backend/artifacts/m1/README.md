@@ -1,10 +1,10 @@
 # M1 evidence bundle
 
-Current active collections at M1 completion:
+Current active collections after the 2026-10-31 governed corpus-breadth, direct-source coverage, and requested IRS publication closure updates:
 
-- Finance: `finance_education_v1_fcecb8c15493`
-- Tax: `tax_education_v1_4cf0dfd5f870`
+- Finance: `finance_education_v1_755be30b6a2d` (18 documents / 106 chunks)
+- Tax: `tax_education_v1_9b31ab2354ea` (31 documents / 6,295 chunks)
 
-For each collection, `.manifest.json` records source/document versions and the ready collection contract, `.evaluation.json` records the dense/sparse/hybrid comparison, and `.run.json` records initial activation. Timestamped `.run-*.json` files are unchanged reruns and must show `created: false` and `points_written: 0`.
+For each collection, `.manifest.json` records source/document versions and the ready collection contract, `.evaluation.json` records the dense/sparse/hybrid comparison, and `.run.json` records initial candidate creation. Timestamped `.run-*.json` files record unchanged evaluations and activation; unchanged runs must show `created: false` and `points_written: 0`.
 
-The current Finance run record preserves `finance_education_v1_2fdf182ee6ab` as its previous collection after the ETF/mutual-fund comparison maintenance update. The `rollback-tax_education-20261027T224905Z.json` and `rollback-tax_education-20261027T224906Z.json` files are the retained Tax rollback-and-restore transcript. The current Tax run record preserves `tax_education_v1_77e7f3e03d50` as its previous collection. Earlier collection generations and rollback files are retained as development and recovery evidence; they are not the active release candidates.
+The timestamped activation records for the current collections preserve `finance_education_v1_fcecb8c15493` and `tax_education_v1_f2fef46b0f88` as their immediate rollback targets. The `rollback-tax_education-20261027T224905Z.json` and `rollback-tax_education-20261027T224906Z.json` files remain the retained exercised rollback-and-restore transcript. Earlier collection generations and rollback files are retained as development and recovery evidence; they are not active release candidates.

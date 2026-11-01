@@ -15,7 +15,7 @@
   },
   {
     "case_id": "finance-investment-fees",
-    "query": "How can small ongoing investment fees affect a portfolio over many years?",
+    "query": "How can mutual fund and ETF fees and expenses, including sales loads and ongoing expenses, reduce investment returns over time?",
     "filters": {"logical_kb": "finance_education", "tax_year": null, "jurisdiction": "US-Federal"},
     "expected_document_ids": ["investor-understanding-fees", "investor-mutual-fund-fees"],
     "critical_filter": false
@@ -33,5 +33,17 @@
     "filters": {"logical_kb": "finance_education", "tax_year": null, "jurisdiction": "US-Federal"},
     "expected_document_ids": ["investor-mutual-fund-etf-characteristics"],
     "critical_filter": true
-  }
+  },
+  {"case_id":"finance-product-comparison-factors","query":"What factors should I compare across investment products, including risk and return, fees, diversification, liquidity, and fraud risk?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-investment-products"],"critical_filter":false},
+  {"case_id":"finance-goals-time-horizon","query":"Why should a financial goal and its time frame guide the saving or investment option I choose?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-define-goals"],"critical_filter":false},
+  {"case_id":"finance-diversification-limits","query":"Can diversification reduce investment losses, and does it guarantee protection when markets fall?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-diversify-investments"],"critical_filter":false},
+  {"case_id":"finance-risk-tolerance-definition","query":"How should the time until I need my money and the possibility of losing principal affect risk tolerance for a long-term or five-year goal?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-risk-tolerance"],"critical_filter":false},
+  {"case_id":"finance-brokerage-cash-margin","query":"What is a brokerage account, and how do cash and margin brokerage accounts differ?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-brokerage-accounts"],"critical_filter":false},
+  {"case_id":"finance-annuities","query":"What is an annuity contract, and how do immediate and deferred annuities differ?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-annuities"],"critical_filter":false},
+  {"case_id":"finance-bond-basics","query":"What is a bond, and how do principal, interest, issuer, and maturity work?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-bonds"],"critical_filter":false},
+  {"case_id":"finance-etf-basics","query":"What is an exchange-traded fund, how is it registered, and how do ETF shares trade?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-etfs"],"critical_filter":false},
+  {"case_id":"finance-index-funds","query":"What is an index fund and how does it seek to track a market index?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-index-funds"],"critical_filter":false},
+  {"case_id":"finance-money-market-funds","query":"What is a money market fund and what short-term liquid debt instruments can it hold?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-money-market-funds"],"critical_filter":false},
+  {"case_id":"finance-mutual-fund-basics","query":"What is a mutual fund, how does it pool investor money, and how are shares redeemed at net asset value?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-mutual-funds"],"critical_filter":false},
+  {"case_id":"finance-stock-basics","query":"What does owning stock represent, and what risks can cause a stock price to rise or fall?","filters":{"logical_kb":"finance_education","tax_year":null,"jurisdiction":"US-Federal"},"expected_document_ids":["investor-stocks"],"critical_filter":false}
 ]

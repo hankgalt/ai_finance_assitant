@@ -4,7 +4,7 @@ Status: Complete
 
 Completed: 2026-10-27
 
-Maintenance update: 2026-10-29 (Publication 560 / SEP-IRA and ETF/mutual-fund comparison coverage)
+Maintenance updates: 2026-10-29 (SEP-IRA and ETF/mutual-fund coverage); 2026-10-31 (governed corpus breadth, Publication 505 rollover, direct home-sale and pension/annuity coverage, and requested IRS publication closure)
 
 Scope: PR-007, PR-008; QR-005, QR-007, QR-008, QR-012, QR-014, QR-015; ADR-011, ADR-012, ADR-016, ADR-017
 
@@ -16,10 +16,12 @@ Active aliases at completion:
 
 | Logical KB | Active physical collection | Documents | Points | Covered tax years |
 | --- | --- | ---: | ---: | --- |
-| Finance Education | `finance_education_v1_fcecb8c15493` | 6 | 30 | n/a |
-| Tax Education | `tax_education_v1_4cf0dfd5f870` | 9 | 3,549 | 2022–2025 |
+| Finance Education | `finance_education_v1_755be30b6a2d` | 18 | 106 | n/a |
+| Tax Education | `tax_education_v1_9b31ab2354ea` | 31 | 6,295 | 2022–2026 |
 
-The 3,579 total records are structure/page-bounded source chunks produced by the documented chunk policy. No records were added to inflate a coursework count.
+The 6,401 total records are structure/page-bounded source chunks produced by the documented chunk policy. No records were added to inflate a coursework count. CA-04 counts substantive records, not source URLs; the expansion was accepted for topic breadth and retrieval quality rather than to manufacture a document count.
+
+The 2026-10-31 maintenance added twelve individually reviewed SEC/Investor.gov sources and twenty-two pinned or edition-checked IRS sources across its successive slices. It also registered fourteen Bogleheads Wiki candidates as disabled `pending_review` records after first-party license statements proved ambiguous. Publication 505 (2025) now uses its immutable prior-year PDF, while the mutable current URL is represented separately as Publication 505 (2026). The explicit publication-closure slice verifies and indexes the requested 2025 editions of Publications 501, 523, 525, 544, 551, 554, 575, 721, 915, 925, 936, 970, and revision-dated Publication 1212; Publications 523, 551, and 575 were already active, so ten documents were newly added.
 
 ## Delivered interfaces and artifacts
 
@@ -50,13 +52,15 @@ Changing an enabled source definition, source content, chunk policy, model ident
 
 ## Source-use decisions
 
-- Enabled Finance sources are individually reviewed SEC/Investor.gov educational pages. The April 29, 2025 Investor Bulletin on mutual-fund and ETF characteristics is included for direct comparison coverage while preserving its staff-view/no-legal-force limitation. SEC marks, art, linked third-party content, and endorsement implications are excluded.
-- Enabled Tax sources are IRS-authored current publications, including Publication 560 for small-business retirement plans and SEP education, plus historical Publication 550 versions for 2022–2024. Tax year and federal jurisdiction remain explicit filters.
+- Enabled Finance sources are eighteen individually reviewed SEC/Investor.gov educational pages. The twelve-source breadth update covers goals, diversification, risk tolerance, accounts, stocks, bonds, annuities, and pooled-fund types. The April 29, 2025 Investor Bulletin remains included for direct ETF/mutual-fund comparison while preserving its staff-view/no-legal-force limitation. SEC marks, art, linked third-party content, and endorsement implications are excluded.
+- Enabled Tax sources are thirty-one IRS-authored publications and form instructions. The breadth updates cover filing/dependent/standard-deduction rules, taxable income, home sales, property dispositions and basis, senior filing, pension and civil-service annuities, Social Security, passive activities, mortgage interest, education benefits, original-issue discount, foreign-tax credit, interest/dividend and capital-gain reporting, nondeductible IRA basis, additional retirement-account taxes, and net-investment-income tax. Tax year and federal jurisdiction remain explicit filters; Publication 550 retains historical editions for 2022–2024.
+- Fourteen Bogleheads Wiki pages are registered as `pending_review` and disabled. The first-party copyright page states CC BY-SA 4.0 while the general disclaimer states noncommercial use, and the current evidence contract cannot propagate all revision/license/change/ShareAlike fields. No Bogleheads page was fetched, embedded, added to qrels, or activated.
+- Three additional IRS candidates remain disabled pending a demonstrated qrel gap or source-specific extraction review. Publication 571 still requires an exact applicability and source decision; Forms 4952 and 8815 remain unnecessary without exact-form qrel gaps.
 - Three CFPB entries are quarantined: the reviewed use policy was acceptable, but the bounded fetcher received HTTP 403 on 2026-10-27. M1 did not bypass that access control.
 - FINRA is `pending_review` and disabled because its general terms do not provide the required RAG storage/vectorization/redistribution permission.
 - Raw fetched bodies live only in ignored `backend/.cache/knowledge-sources/`; committed artifacts contain URLs, versions, hashes, and aggregate evidence rather than copied source bodies.
 
-The supporting primary-source research is [M1_qdrant_models_sources.md](research/M1_qdrant_models_sources.md). This engineering review is not legal advice.
+Supporting primary-source research is [M1_qdrant_models_sources.md](research/M1_qdrant_models_sources.md), [M1_corpus_expansion_sources.md](research/M1_corpus_expansion_sources.md), and [M1_irs_publication_expansion_2025.md](research/M1_irs_publication_expansion_2025.md). This engineering review is not legal advice.
 
 ## Retrieval evaluation
 
@@ -64,17 +68,17 @@ The same fixed qrels, filters, collection, top-k of 5, and RRF configuration wer
 
 | KB/strategy | Recall@5 | Precision@5 | MRR | Gate result |
 | --- | ---: | ---: | ---: | --- |
-| Finance dense | 0.90 | 0.64 | 1.00 | comparison |
-| Finance sparse | 0.90 | 0.56 | 0.90 | comparison |
-| Finance hybrid/RRF | 0.90 | 0.60 | 1.00 | pass |
-| Tax dense | 1.00 | 0.7778 | 0.8889 | comparison |
-| Tax sparse | 1.00 | 0.8667 | 0.8889 | comparison |
-| Tax hybrid/RRF | 1.00 | 0.8444 | 0.8704 | pass |
+| Finance dense | 1.00 | 0.5294 | 0.9314 | comparison |
+| Finance sparse | 1.00 | 0.4235 | 0.8235 | comparison |
+| Finance hybrid/RRF | 1.00 | 0.4941 | 0.9706 | pass |
+| Tax dense | 0.9063 | 0.5438 | 0.6703 | comparison |
+| Tax sparse | 1.00 | 0.6125 | 0.8396 | comparison |
+| Tax hybrid/RRF | 1.00 | 0.6313 | 0.7208 | pass |
 
 Both hybrid candidates exceeded the EVAL-07 Recall@5 threshold of 0.85. Citation identifiers and critical year/jurisdiction filters passed exactly. Machine-readable reports are:
 
-- `backend/artifacts/m1/finance_education_v1_fcecb8c15493.evaluation.json`
-- `backend/artifacts/m1/tax_education_v1_4cf0dfd5f870.evaluation.json`
+- `backend/artifacts/m1/finance_education_v1_755be30b6a2d.evaluation.json`
+- `backend/artifacts/m1/tax_education_v1_9b31ab2354ea.evaluation.json`
 
 ## Acceptance evidence
 
@@ -82,11 +86,11 @@ Both hybrid candidates exceeded the EVAL-07 Recall@5 threshold of 0.85. Citation
 | --- | --- |
 | Startup validates without fetching or embedding | FastAPI `/api/health/ready` returned 200 after restart using read-only alias/config/metadata calls. Missing or unavailable Qdrant remains 503 in tests. |
 | Unchanged rerun creates no duplicates | Timestamped final run artifacts for both active collections record `created: false` and `points_written: 0`. |
-| Changed document creates a new version | Fixture tests prove a content change changes document and collection versions. A separate regression proves enabled permitted-use changes create a new candidate while unchanged content keeps its document version. |
+| Changed document creates a new version | Fixture tests prove a content change changes document and collection versions. Regressions prove enabled permitted-use changes create a new candidate and a reviewed URL change invalidates the local source cache instead of reusing a body fetched from the old URL. |
 | Incompatible collection is not ready | Unit tests cover unavailable/mismatched readiness; the live integration test validates full schema/index/vector compatibility. |
 | Candidate activates only after gates | Store and integration tests reject unready activation. CLI calls `mark_ready` and alias activation only after the evaluation report passes. |
-| Rollback restores the prior alias | `rollback-tax_education-20261027T224905Z.json` switches to the retained prior compatible collection; `...224906Z.json` restores the final candidate. Both states passed validation. |
-| Restart preserves state | Qdrant was restarted through Compose; both aliases subsequently passed compatibility and FastAPI readiness returned HTTP 200. |
+| Rollback restores the prior alias | The 2026-10-31 activation records preserve `finance_education_v1_fcecb8c15493` and `tax_education_v1_f2fef46b0f88` as the immediate rollback targets. The retained 2026-10-27 rollback-and-restore transcript proves the same atomic alias path in both directions. |
+| Restart preserves state | Qdrant was restarted through Compose after the 2026-10-31 activation; the service returned healthy and both aliases subsequently passed the complete compatibility check. |
 
 The initial Tax upsert also exercised recovery: Qdrant rejected a 41.7 MB request above its 32 MB limit. The adapter now writes deterministic IDs in 128-point batches, detects incomplete candidates, resumes safely, and verifies the exact point count after the write. No incomplete collection was activated.
 
@@ -95,38 +99,41 @@ The initial Tax upsert also exercised recovery: Qdrant rejected a 41.7 MB reques
 Commands used during final qualification:
 
 ~~~bash
-UV_CACHE_DIR=/private/tmp/aifa-uv-cache make verify
-AIFA_TEST_QDRANT_URL=http://127.0.0.1:6333 uv run pytest -q tests/test_qdrant_integration.py
-uv run python -m ai_finance_assistant.knowledge.cli validate --kb finance_education
-uv run python -m ai_finance_assistant.knowledge.cli validate --kb tax_education
+UV_CACHE_DIR=/private/tmp/aifa-uv-cache make m1-check
+UV_CACHE_DIR=/private/tmp/aifa-uv-cache AIFA_TEST_QDRANT_URL=http://127.0.0.1:6333 uv run pytest -q tests/test_qdrant_integration.py
+UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli run --kb finance_education --qrels data/knowledge/qrels.finance.v1.json --activate
+UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli run --kb tax_education --qrels data/knowledge/qrels.tax.v1.json --activate
 docker compose restart qdrant
+UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli validate --kb finance_education
+UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli validate --kb tax_education
 ~~~
 
-Observed results after the 2026-10-29 maintenance qualification:
+Observed results after the 2026-10-31 maintenance qualification:
 
 - Backend formatting, Ruff, and strict mypy: pass.
-- Backend credential-free suite: 171 passed, 1 live-Qdrant test skipped by configuration, and 3 opt-in live tests deselected; measured repository coverage rounds to 87%.
-- Focused Qdrant integration: 1 passed against the loopback service; the active Finance alias passed the compatibility check.
-- The exact ETF-versus-mutual-fund question returned `ok` through the Qdrant-backed Finance Q&A agent with five evidence references, including four chunks from the direct comparison bulletin.
-- Frontend formatting, lint, typecheck, 13 tests, and production build: pass.
-- Both final aliases: compatible.
-- Exact commands are reproducible through `make verify`, `make qdrant-check`, and `make knowledge-validate`.
+- Backend credential-free suite: 205 passed, 1 live-Qdrant test skipped by configuration, and 3 opt-in live tests deselected; measured repository coverage rounds to 88%.
+- Focused local-Qdrant integration: 1 passed.
+- Finance: 18 documents, 106 chunks, 17 qrels, hybrid Recall@5 1.00, exact filter and citation gates pass.
+- Tax: 31 documents, 6,295 chunks, 32 qrels, hybrid Recall@5 1.00, exact filter and citation gates pass. All ten newly added requested publications are represented by fixed natural-language retrieval cases; the reported home-sale and pension/annuity questions retrieve Publications 523 and 575 respectively.
+- Both activation reruns wrote zero points and recorded their previous collections; both aliases remained compatible after Qdrant restart.
+- Unchanged frontend gate: formatting, lint, typecheck, 30 tests, and production build pass.
 
 ## Security, privacy, and observability impact
 
 - The Compose service publishes only on `127.0.0.1`; it is unauthenticated and must not be exposed publicly.
 - Offline fetching accepts only reviewed registry URLs, requires HTTPS, limits content type/size/time, and rejects redirects to unreviewed hosts.
+- Cached bodies are bound to the reviewed requested URL, so a registry URL rollover forces a new bounded fetch. HTML/PDF normalization redacts exact missing-child notice text and rejects residual noisy-column chunks carrying NCMEC, phone, caption, or index markers; all 6,295 activated payloads were scanned with zero governed-photo matches.
 - User files, portfolios, prompts, and credentials are not part of M1 data or evidence.
 - Payload provenance includes document/chunk/content versions, publisher, canonical URL, fetch/review time, use basis, jurisdiction, and tax year.
 - M1 artifacts are operational/evaluation evidence, not user-facing RunEvents. OpenTelemetry and optional LangSmith remain M4+ work under the approved observability plan.
 
 ## Limitations and unresolved decisions
 
-- Finance qrels contain 5 cases and Tax qrels contain 9, including direct ETF/mutual-fund comparison and SEP-IRA retrieval cases. They are sufficient for the M1 gate, not a statistically broad release evaluation; M8 must expand and freeze independent holdouts.
+- Finance qrels contain 17 cases and Tax qrels contain 32, including exact-term, semantic, direct comparison, publication-closure, form-number, SEP-IRA, and 2022–2026 year-filter cases. They are sufficient for the M1 activation gate, not a statistically broad independent release evaluation; M8 must freeze separate holdouts.
 - Only BGE-small plus BM25 were activated. MiniLM and SPLADE remain optional comparators if a later measured regression or hardware budget justifies them.
-- CFPB remains quarantined and FINRA remains excluded until an approved access/rights decision changes their registry status.
+- Bogleheads and FINRA remain excluded until an approved rights decision changes their registry status. CFPB remains quarantined until an approved access method is documented.
 - Retained-collection deletion count/age is not yet fixed. M1 keeps compatible prior generations and performs no automatic deletion.
 - Query latency, ingestion peak memory, and production capacity are not claimed. M8 owns benchmark and reliability qualification.
 - Local Qdrant lacks authentication, TLS, backup automation, replication, and production network isolation.
 
-No unresolved item blocks M1 completion. The next permitted implementation work is M2 deterministic financial modules or M3 provider contracts; M4 agent/observability implementation still depends on M1–M3.
+No unresolved item blocks this M1 maintenance activation. The Bogleheads license conflict blocks only those disabled candidates, not the approved SEC/IRS collections.

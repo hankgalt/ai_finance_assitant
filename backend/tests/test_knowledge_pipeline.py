@@ -6,7 +6,13 @@ from pydantic import ValidationError
 
 from ai_finance_assistant.knowledge.cli import _load_qrels, _next_run_path
 from ai_finance_assistant.knowledge.evaluation import evaluate_candidate
-from ai_finance_assistant.knowledge.ingestion import OfflineIngestionService, document_versions
+from ai_finance_assistant.knowledge.ingestion import (
+    OfflineIngestionService,
+    _contains_third_party_photo_text,
+    _is_third_party_photo_caption,
+    _redact_third_party_photo_text,
+    document_versions,
+)
 from ai_finance_assistant.knowledge.memory_store import InMemoryKnowledgeStore
 from ai_finance_assistant.knowledge.models import (
     ChunkingPolicy,
@@ -117,6 +123,85 @@ def test_governed_tax_registry_includes_publication_560_for_sep_education() -> N
     assert sep_case.filters.jurisdiction == "US-Federal"
 
 
+def test_governed_tax_registry_covers_home_sale_education_directly() -> None:
+    data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
+    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    source = next(item for item in registry.sources if item.source_id == "irs-p523-2025")
+    qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+    home_sale_case = next(item for item in qrels if item.case_id == "tax-2025-home-sale")
+
+    assert source.status == SourceStatus.APPROVED
+    assert source.ingestion_enabled is True
+    assert source.source_type == SourceType.PDF
+    assert str(source.canonical_url) == "https://www.irs.gov/pub/irs-prior/p523--2025.pdf"
+    assert source.tax_years == (2025,)
+    assert source.jurisdiction == "US-Federal"
+    assert source.permitted_use.ai_processing_allowed is True
+    assert source.permitted_use.redistribution_allowed is True
+    assert home_sale_case.expected_document_ids == (source.source_id,)
+    assert home_sale_case.filters.tax_year == 2025
+    assert home_sale_case.filters.jurisdiction == "US-Federal"
+
+
+def test_tax_qrels_cover_natural_language_pension_and_annuity_education() -> None:
+    data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
+    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    source = next(item for item in registry.sources if item.source_id == "irs-p575-2025")
+    qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+    case = next(
+        item for item in qrels if item.case_id == "tax-2025-pension-annuity-natural-language"
+    )
+
+    assert source.status == SourceStatus.APPROVED
+    assert source.ingestion_enabled is True
+    assert case.query == "Can you explain tax considerations for pension and annuity income?"
+    assert case.expected_document_ids == (source.source_id,)
+    assert case.filters.tax_year == 2025
+    assert case.filters.jurisdiction == "US-Federal"
+
+
+def test_requested_irs_publication_set_is_governed_and_qrel_covered() -> None:
+    data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
+    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    sources = {source.source_id: source for source in registry.sources}
+    qrels = {case.case_id: case for case in _load_qrels(data_dir / "qrels.tax.v1.json")}
+    expected = {
+        "irs-p501-2025": (
+            "p501",
+            "tax-2025-dependent-standard-deduction",
+        ),
+        "irs-p523-2025": ("p523", "tax-2025-home-sale"),
+        "irs-p525-2025": ("p525", "tax-2025-taxable-nontaxable-income"),
+        "irs-p544-2025": ("p544", "tax-2025-depreciable-property-disposition"),
+        "irs-p551-rev-2025-12": ("p551", "tax-2025-basis-of-assets"),
+        "irs-p554-2025": ("p554", "tax-2025-senior-filing-deductions"),
+        "irs-p575-2025": ("p575", "tax-2025-pension-annuity-natural-language"),
+        "irs-p721-2025": ("p721", "tax-2025-civil-service-annuity"),
+        "irs-p915-2025": ("p915", "tax-2025-social-security-taxability"),
+        "irs-p925-2025": ("p925", "tax-2025-at-risk-passive-order"),
+        "irs-p936-2025": ("p936", "tax-2025-home-equity-interest"),
+        "irs-p970-2025": ("p970", "tax-2025-education-benefit-coordination"),
+        "irs-p1212-rev-2025-12": ("p1212", "tax-2025-oid-acquisition-premium"),
+    }
+
+    for source_id, (product, case_id) in expected.items():
+        source = sources[source_id]
+        case = qrels[case_id]
+        assert source.status == SourceStatus.APPROVED
+        assert source.ingestion_enabled is True
+        assert source.source_type == SourceType.PDF
+        assert str(source.canonical_url) == (
+            f"https://www.irs.gov/pub/irs-prior/{product}--2025.pdf"
+        )
+        assert source.tax_years == (2025,)
+        assert source.jurisdiction == "US-Federal"
+        assert source.permitted_use.ai_processing_allowed is True
+        assert source.permitted_use.redistribution_allowed is True
+        assert case.expected_document_ids == (source_id,)
+        assert case.filters.tax_year == 2025
+        assert case.filters.jurisdiction == "US-Federal"
+
+
 def test_governed_finance_registry_covers_mutual_fund_and_etf_comparison() -> None:
     data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
     registry = load_source_registry(data_dir / "source_registry.v1.json")
@@ -137,6 +222,92 @@ def test_governed_finance_registry_covers_mutual_fund_and_etf_comparison() -> No
     assert comparison_case.filters.jurisdiction == "US-Federal"
 
 
+def test_corpus_expansion_keeps_pending_sources_out_of_ingestion_and_qrels() -> None:
+    data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
+    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    finance_qrels = _load_qrels(data_dir / "qrels.finance.v1.json")
+    tax_qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+
+    enabled = {source.source_id for source in registry.sources if source.ingestion_enabled}
+    qrel_document_ids = {
+        document_id
+        for case in (*finance_qrels, *tax_qrels)
+        for document_id in case.expected_document_ids
+    }
+    bogleheads = tuple(
+        source for source in registry.sources if source.source_id.startswith("bogleheads-")
+    )
+
+    assert len(bogleheads) == 14
+    assert all(source.status == SourceStatus.PENDING_REVIEW for source in bogleheads)
+    assert all(source.ingestion_enabled is False for source in bogleheads)
+    assert all(source.permitted_use.ai_processing_allowed is False for source in bogleheads)
+    assert not ({source.source_id for source in bogleheads} & qrel_document_ids)
+    assert qrel_document_ids <= enabled
+
+
+def test_corpus_expansion_pins_2025_publication_505_and_separates_2026() -> None:
+    data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
+    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    sources = {source.source_id: source for source in registry.sources}
+    qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+
+    prior = sources["irs-p505-2025"]
+    current = sources["irs-p505-2026"]
+    assert str(prior.canonical_url) == "https://www.irs.gov/pub/irs-prior/p505--2025.pdf"
+    assert prior.source_type == SourceType.PDF
+    assert prior.tax_years == (2025,)
+    assert str(current.canonical_url) == "https://www.irs.gov/publications/p505"
+    assert current.source_type == SourceType.HTML
+    assert current.tax_years == (2026,)
+    assert any(
+        case.filters.tax_year == 2025 and case.expected_document_ids == (prior.source_id,)
+        for case in qrels
+    )
+    assert any(
+        case.filters.tax_year == 2026 and case.expected_document_ids == (current.source_id,)
+        for case in qrels
+    )
+
+
+def test_pdf_extraction_excludes_third_party_missing_child_photo_captions() -> None:
+    assert _is_third_party_photo_caption(
+        "Photograph of a missing child selected by the National Center for Missing & "
+        "Exploited Children."
+    )
+    assert not _is_third_party_photo_caption(
+        "Publication 505 contains substantive federal tax guidance. " * 40
+        + "Photographs of missing children may appear on otherwise blank pages."
+    )
+
+
+def test_pdf_extraction_redacts_photo_notice_without_dropping_tax_text() -> None:
+    normalized = _redact_third_party_photo_text(
+        "Deductible home mortgage interest is limited. Photographs of missing children. "
+        "The IRS is a proud partner with the National Center for Missing & Exploited "
+        "Children® (NCMEC). Photographs of missing children selected by the Center may "
+        "appear in this publication on pages that would otherwise be blank. You can help "
+        "bring these children home by looking at the photographs and calling 1-800-THE-LOST "
+        "(1-800-843-5678) if you recognize a child. Acquisition-debt limits may apply."
+    )
+
+    assert normalized == (
+        "Deductible home mortgage interest is limited. Acquisition-debt limits may apply."
+    )
+
+
+@pytest.mark.parametrize(
+    "text",
+    (
+        "Missing children, photographs of in IRS publications 2",
+        "The National Center for Missing & Exploited Children appears in another column.",
+        "Call 1-800-THE-LOST if you recognize a child.",
+    ),
+)
+def test_pdf_extraction_rejects_residual_photo_text_from_noisy_columns(text: str) -> None:
+    assert _contains_third_party_photo_text(text)
+
+
 def test_source_cache_reuses_checksum_verified_body(tmp_path: Path) -> None:
     source = _source("cached-source")
     original = _html("This approved fixture is stable across repeat offline ingestion runs.")
@@ -146,6 +317,22 @@ def test_source_cache_reuses_checksum_verified_body(tmp_path: Path) -> None:
     second = CachedSourceFetcher(FixtureSourceFetcher({}), tmp_path).fetch(source)
 
     assert second == first
+
+
+def test_source_cache_refetches_when_reviewed_url_changes(tmp_path: Path) -> None:
+    source = _source("versioned-source")
+    original = _html("The original reviewed source body is stored in the cache.")
+    changed = _html("A registry URL change must fetch this newly reviewed source body.")
+    CachedSourceFetcher(FixtureSourceFetcher({source.source_id: original}), tmp_path).fetch(source)
+    changed_source = source.model_copy(
+        update={"canonical_url": "https://example.gov/versioned-source-replacement"}
+    )
+
+    fetched = CachedSourceFetcher(
+        FixtureSourceFetcher({source.source_id: changed}), tmp_path
+    ).fetch(changed_source)
+
+    assert fetched.body == changed
 
 
 def test_run_evidence_does_not_overwrite_an_existing_activation_record(

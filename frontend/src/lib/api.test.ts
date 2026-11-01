@@ -101,6 +101,30 @@ test("deletes a Session-scoped portfolio through the authoritative API", async (
   );
 });
 
+test("loads authorized persisted RunEvents for the Inspector", async () => {
+  const fetchMock = vi.fn(async () => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => "application/json" },
+    json: async () => ({
+      execution_id: "run-1",
+      events: [],
+      recovery: "Use Last-Event-ID to resume.",
+    }),
+  }));
+  vi.stubGlobal("fetch", fetchMock);
+
+  await expect(api.runEvents("session-1", "run-1")).resolves.toMatchObject({
+    execution_id: "run-1",
+  });
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/v1/sessions/session-1/runs/run-1/events",
+    expect.objectContaining({
+      headers: expect.objectContaining({ Accept: "application/json" }),
+    }),
+  );
+});
+
 test("submits only the explicitly selected contexts to the Run continuation", async () => {
   const fetchMock = vi.fn(
     async (_input: string | URL | Request, init: RequestInit) => {
@@ -126,5 +150,29 @@ test("submits only the explicitly selected contexts to the Run continuation", as
   );
   expect(JSON.parse(String(request?.body))).toEqual({
     context_references: ["portfolio-1", "portfolio-2"],
+  });
+});
+
+test("submits an explicit portfolio switch with a new Run", async () => {
+  const fetchMock = vi.fn(
+    async (_input: string | URL | Request, init: RequestInit) => ({
+      ok: true,
+      status: 201,
+      headers: { get: () => "application/json" },
+      json: async () => ({ execution_id: "run-2" }),
+      request: init,
+    }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+
+  await api.createRun("session-1", "Analyze the other portfolio", [
+    "portfolio-2",
+  ]);
+
+  const [url, request] = fetchMock.mock.calls[0]!;
+  expect(url).toBe("/api/v1/sessions/session-1/runs");
+  expect(JSON.parse(String(request?.body))).toEqual({
+    message: "Analyze the other portfolio",
+    context_references: ["portfolio-2"],
   });
 });

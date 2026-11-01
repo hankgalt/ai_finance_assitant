@@ -33,6 +33,14 @@ def test_frontend_contract_manifest_matches_openapi() -> None:
     assert {item.get("type") for item in question_schema["anyOf"]} == {"string", "null"}
     assert question_schema["anyOf"][0]["maxLength"] == 20_000
     assert "request_message: string | null;" in frontend_types
+    portfolio_context_field = manifest["run_result_portfolio_context_field"]
+    portfolio_context_schema = openapi["components"]["schemas"]["WorkflowRunResult"]["properties"][
+        portfolio_context_field
+    ]
+    assert portfolio_context_field == "portfolio_context_references"
+    assert portfolio_context_schema["type"] == "array"
+    assert portfolio_context_schema["maxItems"] == 20
+    assert "portfolio_context_references?: string[];" in frontend_types
     narrative_limit = manifest["response_narrative_max_characters"]
     assert narrative_limit == 4_000
     assert (

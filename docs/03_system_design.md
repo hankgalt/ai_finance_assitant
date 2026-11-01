@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.8 | Status: Product architecture baseline through M6 plus M6.1 response-cache design | 2026-10-30
+Version 1.14 | Status: Product architecture baseline through M7; M6.1 follows through the generic event seam | 2026-10-31
 
 ## 1. Architecture principles
 
@@ -71,13 +71,13 @@ All agents accept an AgentRequest containing Run, Session, Workflow, user-messag
 | Agent | Domain input | Output | Allowed tools/modules | Dependencies | Failure behavior | Interaction boundary |
 |---|---|---|---|---|---|---|
 | Finance Q&A | Educational question, declared experience level, conversation context | Grounded explanation, definitions, examples, risks, citations, uncertainty | Finance Education retrieval and grounded-response adapter | Active Finance KB, LLM adapter | No relevant evidence → say evidence is insufficient; incompatible collection → unavailable | Does not value portfolios, project goals, interpret personal taxes, or issue buy/sell instructions |
-| Portfolio Analysis | Authorized Portfolio identifier or validated import; analysis options; valuation time | Portfolio Snapshot, allocation/concentration/expense results, coverage, provenance, warnings, explanation | Portfolio import/validation, security enrichment, MarketDataProvider, deterministic portfolio analysis | Portfolio data, provider adapter/cache, calculation policy | Invalid rows → validation report; missing prices or classifications → partial coverage; provider outage → stale-labeled or unavailable values | Does not invent data, predict returns, make suitability decisions, or overwrite imports |
+| Portfolio Analysis | Authorized Portfolio identifier or validated import; analysis options; valuation time | Portfolio Snapshot, allocation/concentration/expense results, coverage, provenance, warnings, explanation | Portfolio import/validation, security enrichment, MarketDataProvider, deterministic portfolio analysis | Portfolio data, provider adapter/cache, calculation policy | Invalid rows → validation report; missing usable prices → partial coverage; optional enrichment unavailable with complete saved-price coverage → completed with provenance warning; provider and saved prices both unavailable → partial | Does not invent data, predict returns, make suitability decisions, or overwrite imports |
 | Market Analysis | Security identifiers, date range, requested statistics | Current/historical observations, descriptive statistics, provenance, freshness, limitations | MarketDataProvider and deterministic time-series statistics | Provider adapter/cache | Rate limit/timeout → bounded retry then stale cache or unavailable; invalid symbol → typed error | Describes history and context; does not turn performance into a guaranteed forecast or own goal assumptions |
 | Goal Planning | Goal amount/date, starting resources, contribution schedule, inflation/return scenarios, declared risk tolerance; optional authorized summaries | Deterministic scenarios, contributions/growth decomposition, shortfall/surplus, assumptions, warnings | Goal projection module; read-only Portfolio Snapshot and future CashFlowSummary access | Calculation policy and authorized summaries | Missing fields → clarification; invalid horizon/rate → validation error; incomplete summary → labeled partial scenario | Remains separate from Market Analysis; market history may inform education but does not silently set future-return assumptions |
 | News Synthesizer | Topic, security identifiers, time window, optional authorized portfolio summary | Dated attributed story summaries, fact/interpretation labels, relevance, limitations | NewsProvider; optional Market Analysis result supplied through graph | News provider and LLM adapter | Authorized context → use its query/window; uppercase ticker without context → construct a minimized ticker query; explicit broad financial-news intent → use the fixed `latest financial news` query; both defaults use a labeled seven-day window; no safe public topic → clarify; no recent stories → explicit empty state; provider failure → unavailable | Does not treat news as price prediction, retrieve unapproved sources, or expose portfolio records or raw user prompts to the provider |
-| Tax Education | U.S. federal tax-education question, requested tax year, account/investment concept, jurisdiction | Educational explanation, applicable year/jurisdiction, authoritative citations, caveats | Tax Education retrieval and grounded-response adapter | Active Tax KB and LLM adapter | Explicit year → exact-year evidence only; omitted year → use and label the latest matching authoritative year; no authoritative evidence → abstain; unsupported jurisdiction → out-of-scope | Does not calculate an individual return, make elections, provide legal advice, or silently apply current law to historical years |
+| Tax Education | U.S. federal tax-education question, requested tax year, account/investment concept, jurisdiction | Educational explanation, applicable year/jurisdiction, authoritative citations, caveats | Tax Education retrieval and grounded-response adapter | Active Tax KB and LLM adapter | Explicit year → exact-year evidence only; omitted year → select the best-supported year from ranked matching evidence, use unique-document and chunk coverage as tie-breakers, use the latest year only for a remaining tie, then retrieve that exact year and label the choice; no authoritative evidence → abstain; unsupported jurisdiction → out-of-scope | Does not calculate an individual return, make elections, provide legal advice, or silently apply current law to historical years |
 
-Multi-domain requests are decomposed by the router. Agents never call one another recursively; the graph supplies another agent’s structured result when composition is required. Goal Planning and Market Analysis always remain separate nodes and authorities.
+Multi-domain requests are decomposed by the router. Agents never call one another recursively; the graph supplies another agent’s structured result when composition is required. Goal Planning and Market Analysis always remain separate nodes and authorities. When at least two selected specialists return usable `ok` or `partial` results, the graph's synthesis node makes one bounded structured-model call over their summaries, warnings, and source identities. The synthesis prompt may organize only claims already present in those results and must preserve domain, tax-year, jurisdiction, freshness, provenance, and limitation boundaries. It cannot invent citations, recalculate deterministic facts, or act as a seventh agent. The original `AgentResult` objects remain authoritative and separately available. If synthesis fails, the Run becomes `partial`, retains every specialist result and typed failure, and returns their ordered summaries with an explicit fallback warning. Single-specialist Runs make no synthesis call.
 
 ## 4. Core modules and seams
 
@@ -99,11 +99,12 @@ Ports exist only at seams that genuinely vary, normally production and test adap
 
 M4.1 selects OpenAI `gpt-6.1-sol` as the conditional live adapter and keeps the deterministic
 adapter as the credential-free default. `WorkflowApplication` creates one fixed model adapter per
-Run and shares its seven-attempt budget across one routing decision and up to six specialist
-responses. The live adapter uses Responses structured output with `store=False`, no tools, bounded
-untrusted input assembly, deadline-aware timeout, and typed failures. Routing and the four
-non-grounded specialists use low reasoning effort; Finance and Tax use medium. Generated output is
-limited to explanation and warnings: agents return deterministic module facts and provider
+Run and shares its eight-attempt budget across one routing decision, up to six specialist
+responses, and one conditional multi-agent synthesis response. The live adapter uses Responses
+structured output with `store=False`, no tools, bounded untrusted input assembly, deadline-aware
+timeout, and typed failures. Routing and the four non-grounded specialists use low reasoning
+effort; Finance, Tax, and multi-agent synthesis use medium. Generated output is limited to
+explanation and warnings: agents return deterministic module facts and provider
 provenance from their original code-owned values, never model-restated arithmetic. Model and
 prompt identifiers plus provider-reported token usage are allow-listed on measured events; model
 cost remains unavailable until an approved versioned calculator exists. See the
@@ -266,16 +267,38 @@ REST returns authoritative resources and terminal Run status. SSE carries typed 
 M5 implements these interfaces under `/api/v1`. Artifact-creating requests accept bounded idempotency keys; reused keys return the original resource only when the request hash matches. RunEvents are persisted before replay, use stable sequence-derived event identifiers, and can be resumed with `Last-Event-ID`; the terminal conversational chunk has its own stable identifier. Every history, stream, Portfolio, Snapshot, and context lookup checks the requested Session scope. Clearing the Active Session archives it as read-only and opens a new Active Session. Archived Sessions can be listed and read; writes fail with a stable conflict. Permanent deletion requires an Archived Session and removes its owned records plus checkpoint thread. The local demo remains unauthenticated and loopback-only, so Session identifiers are isolation keys rather than proof of identity.
 
 Assistant portfolio questions use a graph context gate after model routing. When Portfolio Analysis
-is selected without an authorized Portfolio context, the graph does not start any specialist; it
-returns a typed `portfolio_selection` requirement. Only then does React load the Session-scoped
-saved-Portfolio list and render an explicit single-Portfolio or “all saved Portfolios — compare
-separately” choice inside that Run. Submitting the choice creates a linked continuation Run through
-the context gate, preserving the classifier's selected agents without paying for or risking a
-second classification. FastAPI re-authorizes every opaque context identifier against the source
-Run's Session. Portfolio Analysis calculates a separate deterministic Snapshot for every supplied
-Portfolio and gives the model bounded Snapshot facts for explanation; it never silently chooses the
-first reference or combines totals across Portfolios or currencies. The original clarification and
-linked result remain separately visible in history.
+is selected without an authorized Portfolio context, trusted application code may resolve one only
+when the message contains an explicitly quoted label that exactly matches one saved Portfolio in the
+active Session after Unicode, case, and whitespace normalization. The label is never treated as an
+opaque identifier or resolved by the model. Zero matches, duplicate labels, multiple quoted matches,
+or a label that exists only in another Session fail closed to the typed `portfolio_selection`
+requirement; the graph does not start a specialist. React then loads the Session-scoped list and
+renders an explicit single-Portfolio or “all saved Portfolios — compare separately” choice inside
+that Run when at least one saved Portfolio exists. An empty authorized list renders import guidance
+without the generic selection prompt, selector fieldset, or continuation action. Submitting a valid
+choice creates a linked continuation Run through the context gate,
+preserving the classifier's selected agents without paying for or risking a second classification.
+FastAPI re-authorizes every opaque context identifier against the source Run's Session. Portfolio
+Analysis calculates a separate deterministic Snapshot for every supplied Portfolio and gives the
+model bounded Snapshot facts for explanation; it never silently chooses the first ambiguous
+reference or combines totals across Portfolios or currencies. The original clarification and linked
+result remain separately visible in history.
+
+After a Portfolio continuation or direct authorized Portfolio Run completes, the graph records the
+selected opaque context identifiers as active Portfolio scope in the existing Session-plus-Workflow
+checkpoint. A later message that the model routes to Portfolio Analysis re-authorizes that scope
+against the current Session and reuses it without asking the user to select again. The scope is not
+injected into non-Portfolio specialist requests, is never reconstructed from raw chat text, and does
+not cross Session or Workflow checkpoint keys. Missing, deleted, or cross-Session references clear
+the active scope and return typed Portfolio selection instead of falling back to stale data. An
+explicitly supplied authorized context list, including the Assistant's contextual Change Portfolio
+control, replaces the active scope for the next Portfolio Run; a unique explicitly quoted saved
+label remains a second deterministic replacement path. `WorkflowRunResult` exposes only the active
+opaque Portfolio context identifiers so React can label the current scope from an authorized
+Session-scoped Portfolio-list response. The control appears only after Portfolio scope exists and
+opens a focus-contained modal offering one Portfolio or an explicit separately reported
+multi-Portfolio comparison. Closing the modal does not alter pending context; confirmation stages
+the selected opaque references for the next Portfolio question.
 
 FastAPI and outbound HTTPX calls are OpenTelemetry-instrumented with W3C propagation. JSON logs add request, trace, span, Session, and Run identifiers when available without bodies or headers. The optional loopback OTLP HTTP Collector receives traces and metrics and currently exports only to its debug sink. Bounded operational measurements cover HTTP status class/route, workflow status, retrieval strategy, provider operation/status/retry/rate-limit, cache outcome, and persistence operation/status. Health endpoints are excluded and protected or unbounded identifiers are not metric attributes. Export failure is isolated from product behavior; RunEvents remain the authoritative execution record.
 
@@ -297,7 +320,7 @@ RunEvent schema version 1 contains:
 
 Event types include run started/completed/partial/failed, route selected, node started/completed/failed/skipped, tool started/completed/failed, retrieval started/completed/failed, model started/completed/failed, and response chunk. Status values are pending, running, completed, partial, failed, and skipped.
 
-Sequence is monotonically increasing within execution_id; event_id is stable for deduplication. started_at and completed_at are timezone-aware. duration_ms is derived only when both observations use a suitable clock. Missing token, cost, duration, or trace data is represented as unavailable with a reason, not zero.
+Sequence is monotonically increasing within execution_id; event_id is stable for deduplication. started_at and completed_at are timezone-aware. duration_ms is derived only when both observations use a suitable clock. Missing token, cost, duration, or trace data is represented as unavailable with a reason, not zero. Each graph node lists the exact persisted sequence positions of its aggregated events. Only consecutive positions for that node are compressed into a range; gaps remain explicit because parallel or nested operations can interleave. Sequence positions never create graph edges or imply measured node duration.
 
 Instrumentation records events at LangGraph and module execution points. The event recorder redacts before persistence. M6.1 records response-cache access using the existing tool lifecycle events with the allow-listed `model_response_cache` tool name and hit, miss, bypass, or error outcome metadata; it emits model lifecycle events only for an actual provider/model invocation. The Inspector builds dynamic nodes and edges only from recorded identifiers and relationships. A static workflow-design overlay, if shown, is visually labeled as design rather than execution.
 
@@ -305,8 +328,8 @@ Staged delivery remains:
 
 - M0: schema, redaction policy, and versioned synthetic fixtures;
 - M4: actual LangGraph and module instrumentation;
-- M6.1: response-cache tool events, actual-model-call truth, and calibration fixtures;
 - M7: timeline, details, and React Flow views;
+- M6.1: response-cache tool events through the generic M7 rendering seam, actual-model-call truth, and calibration fixtures;
 - M8: fidelity, streaming, isolation, accessibility, and redaction evaluation.
 
 ## 12. Persistence, privacy, and security

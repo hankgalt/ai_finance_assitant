@@ -237,6 +237,9 @@ async function mockApi(page: Page) {
           errors: [],
           required_input: null,
           continuation_of_execution_id: "run-portfolio-question",
+          portfolio_context_references: hasPortfolioContext
+            ? ["portfolio-demo"]
+            : [],
           trace_id: null,
           trace_unavailable_reason: "Fixture trace unavailable.",
         },
@@ -479,6 +482,117 @@ test.beforeEach(async ({ page }) => {
   ).toBeVisible();
 });
 
+test("shows import guidance instead of a selector when no Portfolio exists", async ({
+  page,
+}) => {
+  await page
+    .getByLabel("Message the finance assistant")
+    .fill("Can you suggest a diversification strategy for my portfolio?");
+  await page.getByRole("button", { name: "Send message" }).click();
+
+  await expect(
+    page.getByText(
+      "No saved Portfolios are available. Import one in the Portfolio view, then ask again.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Select the saved Portfolio you want me to analyze."),
+  ).toHaveCount(0);
+  await expect(page.getByText("Portfolio selection required")).toHaveCount(0);
+  await expect(page.getByLabel("Saved Portfolio")).toHaveCount(0);
+});
+
+test("opens portfolio context selection in a modal and insets the composer", async ({
+  page,
+}) => {
+  const activeRun = {
+    execution_id: "run-active-portfolio",
+    session_id: "session-e2e-1",
+    workflow_id: "finance-assistant",
+    workflow_version: "1",
+    status: "completed",
+    request_message: "Review my portfolio.",
+    result: {
+      schema_version: "1",
+      execution_id: "run-active-portfolio",
+      session_id: "session-e2e-1",
+      workflow_id: "finance-assistant",
+      workflow_version: "1",
+      status: "completed",
+      selected_agent_ids: ["portfolio_analysis"],
+      agent_results: [],
+      summary: "Portfolio analysis complete.",
+      warnings: [],
+      errors: [],
+      required_input: null,
+      continuation_of_execution_id: null,
+      portfolio_context_references: ["portfolio-demo"],
+      trace_id: null,
+      trace_unavailable_reason: "Fixture trace unavailable.",
+    },
+    created_at: now,
+    updated_at: now,
+  };
+  const secondPortfolio = {
+    ...importedPortfolio(),
+    portfolio_id: "portfolio-taxable",
+    label: "Taxable portfolio",
+  };
+  await page.route(
+    /\/api\/v1\/sessions\/session-e2e-\d+\/runs$/,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [activeRun] }),
+      });
+    },
+  );
+  await page.route(
+    /\/api\/v1\/sessions\/session-e2e-\d+\/portfolios$/,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([importedPortfolio(), secondPortfolio]),
+      });
+    },
+  );
+  await page.reload();
+
+  await expect(
+    page.getByRole("button", { name: "Change Portfolio" }),
+  ).toBeVisible();
+  const composerBottomGap = await page
+    .locator(".composer")
+    .evaluate((element) => {
+      return window.innerHeight - element.getBoundingClientRect().bottom;
+    });
+  expect(composerBottomGap).toBeGreaterThanOrEqual(15);
+
+  await page.getByRole("button", { name: "Change Portfolio" }).click();
+  const dialog = page.getByRole("dialog", { name: "Change Portfolio" });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Close portfolio selection" }),
+  ).toBeFocused();
+  await expect(
+    page
+      .locator(".composer")
+      .getByLabel("Portfolio for next portfolio question"),
+  ).toHaveCount(0);
+  await dialog
+    .getByLabel("Portfolio for next portfolio question")
+    .selectOption("portfolio-taxable");
+  await dialog.getByRole("button", { name: "Use selected Portfolio" }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("Portfolio for next question")).toBeVisible();
+  await expect(page.locator(".active-portfolio-context strong")).toHaveText(
+    "Taxable portfolio",
+  );
+});
+
 test("completes all M6 product workflows with accessible alternatives", async ({
   page,
 }) => {
@@ -496,7 +610,7 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await expectNoSeriousAxeViolations(page);
   await capture(page, "../docs/evidence/m6/assistant-empty.png");
 
-  await page.getByRole("button", { name: "Portfolio" }).click();
+  await page.getByRole("button", { name: "Portfolio", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Saved portfolios" }),
   ).toBeVisible();
@@ -554,8 +668,17 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await expect(
     page.getByText("Demo portfolio has usable prices for 1 of its 1 holdings."),
   ).toBeVisible();
+  await expect(page.getByText("Portfolio context")).toBeVisible();
+  await expect(page.locator(".active-portfolio-context strong")).toHaveText(
+    "Demo portfolio",
+  );
+  await page.getByRole("button", { name: "Change Portfolio" }).click();
+  await expect(
+    page.getByLabel("Portfolio for next portfolio question"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
   await capture(page, "../docs/evidence/m6/assistant-portfolio-context.png");
-  await page.getByRole("button", { name: "Portfolio" }).click();
+  await page.getByRole("button", { name: "Portfolio", exact: true }).click();
   await page.getByRole("button", { name: "Analyze" }).click();
   await expect(
     page.getByRole("heading", { name: "Allocation and coverage" }),

@@ -4,6 +4,7 @@
   "frontend_type_file": "frontend/src/types/contracts.ts",
   "response_narrative_max_characters": 4000,
   "run_record_question_field": "request_message",
+  "run_result_portfolio_context_field": "portfolio_context_references",
   "paths": {
     "/api/v1/sessions": ["get", "post"],
     "/api/v1/sessions/{session_id}": ["delete", "get"],

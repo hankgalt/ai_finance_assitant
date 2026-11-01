@@ -3,7 +3,7 @@ QDRANT_URL ?= http://127.0.0.1:6333
 .PHONY: backend-sync backend-dev backend-check frontend-install frontend-dev frontend-check \
 	qdrant-up qdrant-status qdrant-stop qdrant-check knowledge-finance knowledge-tax \
 	knowledge-validate verify m1-check m2-check m3-check m4-check m4-1-check \
-	m5-check m6-check provider-live-check model-live-check observability-up observability-status \
+	m5-check m6-check m7-check provider-live-check model-live-check observability-up observability-status \
 	observability-stop
 
 backend-sync:
@@ -90,6 +90,13 @@ m6-check: frontend-check
 	cd backend && uv run mypy
 	cd backend && uv run pytest -q tests/test_m6_browser_contract.py tests/test_m6_contract_manifest.py tests/test_m5_api.py tests/test_m5_contract_manifest.py
 	cd frontend && pnpm test:e2e
+
+m7-check: frontend-check
+	cd backend && uv run ruff format --check src tests
+	cd backend && uv run ruff check src tests
+	cd backend && uv run mypy
+	cd backend && uv run pytest -q tests/test_m7_contract_manifest.py tests/test_m5_api.py tests/test_m5_persistence.py tests/test_m5_observability.py tests/test_contracts.py tests/test_redaction.py
+	cd frontend && pnpm exec playwright test e2e/m7.spec.ts
 
 observability-up:
 	docker compose --profile observability up -d otel-collector

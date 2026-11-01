@@ -8,6 +8,7 @@ import type {
   PortfolioImportResult,
   PortfolioSnapshot,
   QuoteResult,
+  RunEventHistory,
   RunList,
   RunRecord,
   SessionList,
@@ -22,6 +23,7 @@ type ApiRoute =
   | "health"
   | "sessions"
   | "runs"
+  | "run_events"
   | "run_stream"
   | "portfolio_imports"
   | "portfolios"
@@ -186,6 +188,12 @@ export const api = {
       "runs",
       "assistant",
     ),
+  runEvents: (sessionId: string, executionId: string) =>
+    apiRequest<RunEventHistory>(
+      `/api/v1/sessions/${sessionId}/runs/${executionId}/events`,
+      "run_events",
+      "inspector",
+    ),
   createRun: (
     sessionId: string,
     message: string,
@@ -287,9 +295,10 @@ export async function readRunStream(
   sessionId: string,
   executionId: string,
   lastEventId?: string,
+  page: BrowserPage = "assistant",
 ): Promise<SseFrame[]> {
   const path = `/api/v1/sessions/${sessionId}/runs/${executionId}/stream`;
-  const text = await apiRequest<string>(path, "run_stream", "assistant", {
+  const text = await apiRequest<string>(path, "run_stream", page, {
     headers: {
       Accept: "text/event-stream",
       ...(lastEventId ? { "Last-Event-ID": lastEventId } : {}),

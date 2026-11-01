@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 2.5 | Status: Approved sequence; M0–M6 complete; M6.1 and later milestones planned | 2026-10-29
+Version 2.6 | Status: Approved sequence; M0–M7 complete; M6.1 planned next | 2026-10-30
 
 ## 1. Delivery rules
 
@@ -200,7 +200,7 @@ This milestone implements ADR-028 for QR-001, QR-004, QR-006, QR-007, QR-010, QR
 - Privacy-filtered RunEvents, OpenTelemetry spans/metrics, and optional LangSmith correlation for lookup outcome, bypass reason, entry age, policy version, bounded similarity-distance bucket, avoided model request/token availability, and actual model calls. Cache hits must not emit model-started/model-completed events for work that did not occur.
 - A frozen exact/paraphrase/near-miss/adversarial evaluation set and shadow-mode report used to calibrate the semantic threshold before serving semantic hits. The threshold, encoder identity, TTL, and eligibility rules are versioned configuration.
 
-**Dependencies:** Completed M1 collection/version contracts, M4/M4.1 structured routing and generation seams, M5 API/RunEvent/telemetry foundations, and M6 product journeys. M6.1 completes before M7 so the Inspector can render cache lookup, hit, miss, bypass, and actual-model-call events without inferring execution. Redis and RedisVL compatibility, image digest, package pin, local resource use, and license/security review must be recorded before implementation.
+**Dependencies:** Completed M1 collection/version contracts, M4/M4.1 structured routing and generation seams, M5 API/RunEvent/telemetry foundations, M6 product journeys, and the M7 Inspector's generic persisted-event rendering seam. M6.1 adds response-cache events through the existing tool-event contract after M7; it does not require an Inspector-specific cache representation. Redis and RedisVL compatibility, image digest, package pin, local resource use, and license/security review must be recorded before implementation.
 
 **Acceptance:** Within one Active Session, a second identical eligible question creates a distinct Run, executes current Finance retrieval, rebuilds current citations, and avoids both routing and generation model calls; a calibrated paraphrase executes routing and current retrieval but may avoid generation only when all exact filters and the evidence fingerprint match. The same input in another Session, a frozen near-miss, or a changed collection/chunk/model/prompt/workflow/policy/schema value cannot reuse the entry. Archival and permanent deletion remove the Session namespace. Excluded or ambiguous requests always execute the normal path. A Redis outage or malformed entry is visible as a bounded bypass and produces the same functional result as cache-disabled mode. Cache events, model-call counts, usage availability, and latency are truthful and reconcilable across RunEvents and operational traces. On the same recorded fixture and hardware, exact and qualified semantic hits demonstrate lower end-to-end latency than cache-disabled runs. Semantic serving remains disabled unless the frozen near-miss/adversarial set has zero critical false hits and every proposed semantic hit in the calibration set has recorded human review; the selected threshold favors precision over hit rate.
 
@@ -218,7 +218,7 @@ This milestone implements ADR-028 for QR-001, QR-004, QR-006, QR-007, QR-010, QR
 - Event deduplication, out-of-order handling, reconnect behavior, and accessible list alternative.
 - Authorized correlation identifiers sufficient to locate the corresponding operational or LangSmith trace when configured; the Inspector continues to render only persisted RunEvents and never queries an external trace backend as its source of truth.
 
-**Dependencies:** M4 instrumentation, M5 history/SSE, M6 shared UI, and the M6.1 response-cache event contract.
+**Dependencies:** M4 instrumentation, M5 history/SSE, and the M6 shared UI. M6.1 is not a prerequisite: later response-cache activity must use the generic persisted tool-event contract and remains absent or unavailable until that milestone is implemented.
 
 **Acceptance:** Every dynamic node and edge resolves to recorded events; failures/partial paths are truthful; synthetic fixtures are labeled; raw financial records, credentials, hidden reasoning, prompts, and unsafe payloads never render.
 
@@ -292,12 +292,12 @@ M0 → M1
 M0 → M2
 M0 → M3
 M1 + M2 + M3 → M4
-M4 → M4.1 → M5 → M6 → M6.1 → M7
+M4 → M4.1 → M5 → M6 → M7 → M6.1
 M1–M7 + M4.1 + M6.1 → M8 → M9
 M2 + M5 + M6 → M10 after M9 release approval
 ~~~
 
-M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. M6.1 defines the response-cache contracts and pre-qualification evidence before M7 consumes its events; M8 independently qualifies the feature for release. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
+M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. M7 renders generic persisted RunEvents first. M6.1 later emits response-cache activity through that existing tool-event contract, and M8 independently qualifies both features for release. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
 
 ## 4. Mapping from the previous milestone plan
 
@@ -311,7 +311,7 @@ M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 wh
 | Old M5: News and Tax agents | New M1, M3, M4 | Tax knowledge belongs to M1, news provider to M3, and both agents to M4 |
 | Old M6: React views plus Inspector | New M6 and M7 | Separates core product journeys from trace fidelity while retaining their shared UI foundation |
 | Old M7: observability/safety/evaluation | New M0/M4 and M8 | Contracts/instrumentation move earlier; integrated qualification remains M8 |
-| Previously unsequenced response reuse | New M6.1 and M8 | Adds a bounded evidence-bound cache before Inspector work, then independently qualifies latency, privacy, event truth, and false-hit safety in M8 |
+| Previously unsequenced response reuse | New M6.1 and M8 | Adds a bounded evidence-bound cache through the Inspector's generic event seam, then independently qualifies latency, privacy, event truth, and false-hit safety in M8 |
 | Old M8: MCP tools | New M9 | Kept as a coursework release obligation after validated core modules |
 | Old M9: documentation and demo | New M9 | Preserved and broadened into product release packaging |
 | Previously unsequenced PR-016 cash-flow implementation | New M10 | Adds a provider-independent JSON/CSV path after the initial/coursework release while preserving the M2 domain seam |

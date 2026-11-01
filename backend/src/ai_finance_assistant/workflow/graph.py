@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Hashable, Mapping
+import re
+import unicodedata
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from datetime import UTC, datetime
 from time import monotonic
 from typing import Annotated, Any, Protocol, TypedDict, cast
@@ -33,6 +35,7 @@ from ai_finance_assistant.contracts.events import (
     UsageMetadata,
 )
 from ai_finance_assistant.llm.models import RoutingReason
+from ai_finance_assistant.llm.ports import ModelAdapter
 from ai_finance_assistant.observability.ports import Observability
 from ai_finance_assistant.workflow.events import EventIdentity, RunEventRecorder
 from ai_finance_assistant.workflow.models import (
@@ -44,6 +47,7 @@ from ai_finance_assistant.workflow.models import (
     WorkflowStatus,
 )
 from ai_finance_assistant.workflow.routing import IntentRouter
+from ai_finance_assistant.workflow.synthesis import MultiAgentSynthesizer, SynthesisFailure
 
 
 class SpecialistAgent(Protocol):
@@ -65,6 +69,7 @@ class FinanceState(TypedDict, total=False):
     workflow_version: str
     message: str
     context_references: tuple[str, ...]
+    active_portfolio_context_references: tuple[str, ...]
     locale: str
     jurisdiction: str
     deadline_at: datetime
@@ -87,7 +92,7 @@ class FinanceWorkflow:
         agents: Mapping[AgentId, SpecialistAgent],
         event_recorder: RunEventRecorder,
         observability: Observability,
-        router: IntentRouter,
+        model: ModelAdapter,
         contexts: AgentContextRepository | None = None,
         checkpointer: BaseCheckpointSaver[str] | None = None,
         maximum_graph_hops: int = 16,
@@ -97,7 +102,12 @@ class FinanceWorkflow:
         self._agents = dict(agents)
         self._events = event_recorder
         self._observability = observability
-        self._router = router
+        self._router = IntentRouter(model=model)
+        self._synthesizer = MultiAgentSynthesizer(
+            model=model,
+            event_recorder=event_recorder,
+            observability=observability,
+        )
         self._contexts = contexts or InMemoryAgentContextRepository()
         self._checkpointer = checkpointer or InMemorySaver()
         self._maximum_graph_hops = maximum_graph_hops
@@ -226,13 +236,14 @@ class FinanceWorkflow:
                 )
             )
             errors = state.get("final_errors", ())
+            failure_error = errors[0] if errors else None
             self._events.record(
                 identity,
                 event_type=terminal_event_type,
                 status=terminal_event_status,
                 node_id="workflow",
                 summary=f"Workflow finished with {status.value} status.",
-                error=errors[0] if terminal_event_status == EventStatus.FAILED else None,
+                error=failure_error if terminal_event_status == EventStatus.FAILED else None,
                 started_at=started.started_at,
                 completed=True,
                 parent_event_id=started.event_id,
@@ -260,6 +271,12 @@ class FinanceWorkflow:
                 errors=errors,
                 required_input=state.get("required_input"),
                 continuation_of_execution_id=state.get("continuation_of_execution_id"),
+                portfolio_context_references=(
+                    state.get("active_portfolio_context_references", ())
+                    if AgentId.PORTFOLIO_ANALYSIS in selected
+                    and state.get("required_input") is None
+                    else ()
+                ),
                 locale=state["locale"],
                 jurisdiction=state["jurisdiction"],
                 trace_id=trace.trace_id,
@@ -406,29 +423,85 @@ class FinanceWorkflow:
             summary="Authorized context requirements are being checked.",
         )
         selected = state.get("selected_agent_ids", ())
+        requested_context_references = state.get("context_references", ())
+        context_references = requested_context_references
         missing: tuple[AgentId, ...] = ()
+        portfolio_context_resolution = "not_applicable"
+        active_scope_update: tuple[str, ...] | None = None
         if AgentId.PORTFOLIO_ANALYSIS in selected:
-            has_portfolio_context = any(
-                isinstance(
-                    self._contexts.get(state["session_id"], reference),
-                    PortfolioAgentContext,
-                )
-                for reference in state.get("context_references", ())
+            available_portfolios = self._contexts.list_portfolios(state["session_id"])
+            provided_contexts = _authorized_portfolio_contexts(
+                requested_context_references,
+                available_portfolios,
             )
-            if not has_portfolio_context:
+            explicit_contexts = _explicit_portfolio_context_matches(
+                state["message"],
+                available_portfolios,
+            )
+            active_contexts = _authorized_portfolio_contexts(
+                state.get("active_portfolio_context_references", ()),
+                available_portfolios,
+            )
+            selected_contexts: tuple[PortfolioAgentContext, ...] = ()
+            distinct_requested_contexts = _distinct(requested_context_references)
+            if distinct_requested_contexts and len(provided_contexts) != len(
+                distinct_requested_contexts
+            ):
+                portfolio_context_resolution = "provided_invalid"
+            elif provided_contexts:
+                selected_contexts = provided_contexts
+                portfolio_context_resolution = "provided"
+            elif len(explicit_contexts) == 1:
+                selected_contexts = explicit_contexts
+                portfolio_context_resolution = "explicit_label"
+            elif len(explicit_contexts) > 1:
+                portfolio_context_resolution = "required"
+            elif active_contexts:
+                selected_contexts = active_contexts
+                portfolio_context_resolution = "checkpoint_follow_up"
+            else:
+                portfolio_context_resolution = "required"
+            if selected_contexts:
+                selected_context_references = tuple(
+                    context.context_id for context in selected_contexts
+                )
+                context_references = selected_context_references
+                active_scope_update = selected_context_references
+            else:
                 missing = (AgentId.PORTFOLIO_ANALYSIS,)
+                context_references = ()
+                active_scope_update = ()
+        elif requested_context_references:
+            portfolio_context_ids = {
+                context.context_id
+                for context in self._contexts.list_portfolios(state["session_id"])
+            }
+            context_references = tuple(
+                reference
+                for reference in requested_context_references
+                if reference not in portfolio_context_ids
+            )
         self._events.record(
             identity,
             event_type=EventType.NODE_COMPLETED,
             status=EventStatus.COMPLETED,
             node_id="context_gate",
             summary="Authorized context requirements were checked.",
-            safe_metadata={"required_input_count": len(missing)},
+            safe_metadata={
+                "required_input_count": len(missing),
+                "portfolio_context_resolution": portfolio_context_resolution,
+            },
             started_at=started.started_at,
             completed=True,
             parent_event_id=started.event_id,
         )
-        return {"missing_context_agent_ids": missing}
+        update: FinanceState = {
+            "context_references": context_references,
+            "missing_context_agent_ids": missing,
+        }
+        if active_scope_update is not None:
+            update["active_portfolio_context_references"] = active_scope_update
+        return update
 
     @staticmethod
     def _next_nodes(state: FinanceState) -> list[str]:
@@ -542,17 +615,46 @@ class FinanceWorkflow:
 
         return invoke
 
-    @staticmethod
-    def _synthesize_node(state: FinanceState) -> FinanceState:
+    def _synthesize_node(self, state: FinanceState) -> FinanceState:
+        identity = self._identity(state)
+        started = self._events.record(
+            identity,
+            event_type=EventType.NODE_STARTED,
+            status=EventStatus.RUNNING,
+            node_id="synthesize",
+            summary="Workflow result synthesis started.",
+        )
+
+        def finish(result: FinanceState) -> FinanceState:
+            final_status = result["final_status"]
+            self._events.record(
+                identity,
+                event_type=EventType.NODE_COMPLETED,
+                status=(
+                    EventStatus.PARTIAL
+                    if final_status == WorkflowStatus.PARTIAL
+                    else EventStatus.COMPLETED
+                ),
+                node_id="synthesize",
+                summary=f"Workflow result synthesis finished with {final_status.value} status.",
+                safe_metadata={"result_status": final_status.value},
+                started_at=started.started_at,
+                completed=True,
+                parent_event_id=started.event_id,
+            )
+            return result
+
         selected = state.get("selected_agent_ids", ())
         required_input = state.get("required_input")
         if required_input is not None:
-            return {
-                "final_status": WorkflowStatus.CLARIFICATION,
-                "final_summary": required_input.prompt,
-                "final_warnings": (),
-                "final_errors": (),
-            }
+            return finish(
+                {
+                    "final_status": WorkflowStatus.CLARIFICATION,
+                    "final_summary": required_input.prompt,
+                    "final_warnings": (),
+                    "final_errors": (),
+                }
+            )
         if not selected:
             if state.get("route_reason_category") == RoutingReason.OUT_OF_SCOPE.value:
                 summary = (
@@ -567,12 +669,14 @@ class FinanceWorkflow:
                     "market data, goal planning, news, or U.S. tax education."
                 )
                 status = WorkflowStatus.CLARIFICATION
-            return {
-                "final_status": status,
-                "final_summary": summary,
-                "final_warnings": (),
-                "final_errors": (),
-            }
+            return finish(
+                {
+                    "final_status": status,
+                    "final_summary": summary,
+                    "final_warnings": (),
+                    "final_errors": (),
+                }
+            )
         result_map = state.get("agent_results", {})
         results = tuple(result_map[item.value] for item in selected)
         ok_results = tuple(item for item in results if item.status == AgentResultStatus.OK)
@@ -591,14 +695,42 @@ class FinanceWorkflow:
             status = WorkflowStatus.CLARIFICATION
         else:
             status = WorkflowStatus.FAILED
-        summary = " ".join(item.summary for item in results)[:NARRATIVE_TEXT_MAX_LENGTH]
-        warnings = tuple(warning for item in results for warning in item.warnings)
-        return {
-            "final_status": status,
-            "final_summary": summary,
-            "final_warnings": warnings,
-            "final_errors": errors,
-        }
+        usable_results = tuple(
+            item
+            for item in results
+            if item.status in {AgentResultStatus.OK, AgentResultStatus.PARTIAL}
+        )
+        summary = _fallback_summary(results)
+        warnings = _distinct(warning for item in results for warning in item.warnings)
+        if len(usable_results) >= 2:
+            try:
+                synthesis = self._synthesizer.synthesize(
+                    identity=identity,
+                    user_message=state["message"],
+                    results=usable_results,
+                    deadline_at=state["deadline_at"],
+                )
+                summary = synthesis.summary
+                warnings = _distinct((*warnings, *synthesis.warnings))
+            except SynthesisFailure as failure:
+                errors = (*errors, failure.error)
+                warnings = _distinct(
+                    (
+                        *warnings,
+                        "A unified multi-domain summary is unavailable; the preserved "
+                        "specialist responses are returned without synthesis.",
+                    )
+                )
+                if status == WorkflowStatus.COMPLETED:
+                    status = WorkflowStatus.PARTIAL
+        return finish(
+            {
+                "final_status": status,
+                "final_summary": summary,
+                "final_warnings": warnings,
+                "final_errors": errors,
+            }
+        )
 
     @staticmethod
     def _identity(state: FinanceState) -> EventIdentity:
@@ -608,3 +740,51 @@ class FinanceWorkflow:
             workflow_id=state["workflow_id"],
             workflow_version=state["workflow_version"],
         )
+
+
+def _fallback_summary(results: tuple[AgentResult, ...]) -> str:
+    return "\n\n".join(item.summary for item in results)[:NARRATIVE_TEXT_MAX_LENGTH]
+
+
+def _distinct(values: Iterable[str]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(values))
+
+
+_EXPLICIT_REFERENCE_PATTERN = re.compile(r'["\u201c]([^"\u201c\u201d]{1,160})["\u201d]')
+_REFERENCE_TRAILING_PUNCTUATION = " ,.;:!?"
+
+
+def _explicit_portfolio_context_matches(
+    message: str,
+    portfolios: tuple[PortfolioAgentContext, ...],
+) -> tuple[PortfolioAgentContext, ...]:
+    explicit_labels: set[str] = set()
+    for match in _EXPLICIT_REFERENCE_PATTERN.finditer(message):
+        candidate = match.group(1).strip()
+        explicit_labels.add(_normalize_portfolio_label(candidate))
+        explicit_labels.add(
+            _normalize_portfolio_label(candidate.rstrip(_REFERENCE_TRAILING_PUNCTUATION))
+        )
+    explicit_labels.discard("")
+    return tuple(
+        context
+        for context in portfolios
+        if context.portfolio.label is not None
+        and _normalize_portfolio_label(context.portfolio.label) in explicit_labels
+    )
+
+
+def _authorized_portfolio_contexts(
+    references: tuple[str, ...],
+    portfolios: tuple[PortfolioAgentContext, ...],
+) -> tuple[PortfolioAgentContext, ...]:
+    by_context_id = {context.context_id: context for context in portfolios}
+    return tuple(
+        by_context_id[reference]
+        for reference in dict.fromkeys(references)
+        if reference in by_context_id
+    )
+
+
+def _normalize_portfolio_label(value: str) -> str:
+    return " ".join(unicodedata.normalize("NFKC", value).casefold().split())

@@ -12,7 +12,6 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { StateNotice } from "../components/StateNotice";
 import { HealthStatus } from "../features/health/HealthStatus";
-import { InspectorPlaceholder } from "../features/inspector/InspectorPlaceholder";
 import { useSession } from "../hooks/useSession";
 import { ClientApiError } from "../lib/api";
 import { recordNavigation, type BrowserPage } from "../lib/telemetry";
@@ -28,6 +27,11 @@ const AssistantExperience = lazy(() =>
 const GoalExperience = lazy(() =>
   import("../features/goals/GoalExperience").then((module) => ({
     default: module.GoalExperience,
+  })),
+);
+const InspectorExperience = lazy(() =>
+  import("../features/inspector/InspectorExperience").then((module) => ({
+    default: module.InspectorExperience,
   })),
 );
 const MarketExperience = lazy(() =>
@@ -115,7 +119,12 @@ export function App() {
       case "history":
         return <SessionHistoryExperience />;
       case "inspector":
-        return <InspectorPlaceholder />;
+        return (
+          <InspectorExperience
+            key={session.data.session_id}
+            sessionId={session.data.session_id}
+          />
+        );
       default:
         return (
           <AssistantExperience

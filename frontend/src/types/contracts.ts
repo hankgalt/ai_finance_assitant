@@ -97,6 +97,7 @@ export interface RunEvent {
     total_tokens: number | null;
     cost_amount: number | null;
     cost_currency: string | null;
+    cost_unavailable_reason: string | null;
     method: string | null;
     unavailable_reason: string | null;
   };
@@ -179,6 +180,7 @@ export interface WorkflowRunResult {
     prompt: string;
   } | null;
   continuation_of_execution_id?: string | null;
+  portfolio_context_references?: string[];
   locale?: string;
   jurisdiction?: string;
   trace_id: string | null;

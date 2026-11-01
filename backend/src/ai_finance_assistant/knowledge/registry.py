@@ -119,23 +119,22 @@ class CachedSourceFetcher:
         if not self._refresh and metadata_path.exists() and body_path.exists():
             body = body_path.read_bytes()
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-            fetched = FetchedSource.model_validate({**metadata, "body": body})
-            if fetched.source_id != source.source_id:
-                raise SourceFetchError(f"cache identity mismatch for {source.source_id}")
-            if fetched.content_checksum != hashlib.sha256(body).hexdigest():
-                raise SourceFetchError(f"cache checksum mismatch for {source.source_id}")
-            return fetched
+            requested_url = metadata.pop("requested_url", None)
+            if requested_url == str(source.canonical_url):
+                fetched = FetchedSource.model_validate({**metadata, "body": body})
+                if fetched.source_id != source.source_id:
+                    raise SourceFetchError(f"cache identity mismatch for {source.source_id}")
+                if fetched.content_checksum != hashlib.sha256(body).hexdigest():
+                    raise SourceFetchError(f"cache checksum mismatch for {source.source_id}")
+                return fetched
 
         fetched = self._delegate.fetch(source)
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         body_path.write_bytes(fetched.body)
+        metadata = fetched.model_dump(mode="json", exclude={"body"})
+        metadata["requested_url"] = str(source.canonical_url)
         metadata_path.write_text(
-            json.dumps(
-                fetched.model_dump(mode="json", exclude={"body"}),
-                indent=2,
-                sort_keys=True,
-            )
-            + "\n",
+            json.dumps(metadata, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         return fetched

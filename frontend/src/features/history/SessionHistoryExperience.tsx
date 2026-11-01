@@ -38,7 +38,7 @@ export function SessionHistoryExperience() {
       <PageHeader
         eyebrow="Session lifecycle"
         title="Session history"
-        description="Archived Sessions are read-only and retain their saved conversation until you permanently delete them or local retention expires."
+        description="Archived Sessions are read-only and retain their saved conversation until permanently deleted or their local retention expires."
         action={<span className="milestone-chip">Archived only</span>}
       />
 

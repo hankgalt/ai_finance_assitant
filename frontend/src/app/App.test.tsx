@@ -96,16 +96,18 @@ test("renders accessible navigation destinations and the assistant workflow", as
   }
 });
 
-test("labels the M7 inspector boundary without implying measured execution", async () => {
+test("opens the M7 Inspector without inventing execution for an empty Session", async () => {
   renderApp();
   await screen.findByRole("heading", { name: "Ask, explore, decide" });
   fireEvent.click(screen.getByRole("button", { name: "Inspector" }));
   expect(
-    screen.getByRole("heading", { name: "Agent execution inspector" }),
+    await screen.findByRole("heading", { name: "Agent execution inspector" }),
   ).toBeInTheDocument();
-  expect(screen.getByText("Scheduled for M7")).toBeInTheDocument();
+  expect(screen.getByText("M7 measured view")).toBeInTheDocument();
   expect(
-    screen.getByText(/No synthetic execution is shown/),
+    await screen.findByRole("heading", {
+      name: "No recorded Runs in this Session",
+    }),
   ).toBeInTheDocument();
 });
 

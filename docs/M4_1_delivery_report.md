@@ -8,20 +8,35 @@ ADR-005, ADR-008, ADR-009, ADR-011, ADR-012, ADR-018, ADR-023
 
 Maintenance update: 2026-10-29 — the shared OpenAI adapter now produces both specialist
 `ModelOutput` and router `RoutingModelOutput`; ordinary tests are isolated in `backend/.test.env`.
-The specialist prompt is now `openai-agent-system-v2`: user-facing summaries have a distinct
-4,000-character contract, while warnings exclude internal provider and generation mechanics.
+The 4,000-character summary contract and user-relevant warning policy introduced by
+`openai-agent-system-v2` remain in force.
+
+Maintenance update: 2026-10-31 — `openai-agent-system-v3` gives grounded agents explicit source
+document identity, title, publisher, and section metadata. It prohibits identifying or recommending
+a publication merely because an untrusted excerpt refers to it; the publication must itself be
+supplied as evidence. Credential-free regressions cover this contract. No new external model call
+was made for this maintenance update.
+
+Maintenance update: 2026-10-31 — `openai-multi-agent-synthesis-v1` adds a separate structured
+schema for the graph synthesis node. It receives only the user question plus already-grounded
+specialist summaries, warnings, and source identities; it may not add facts, recalculate values,
+invent citations, or erase tax-year, jurisdiction, freshness, provenance, and limitation
+boundaries. The maximum all-six path is now eight attempts: routing, six specialists, and one
+conditional synthesis call. Credential-free adapter and workflow regressions pass; this new live
+synthesis operation has not been externally requalified.
 
 ## Outcome
 
 M4.1 implements the shared conditional OpenAI adapter selected in the
 [model-selection record](research/M4_1_openai_model_selection.md). OpenAI `gpt-6.1-sol` uses the
-Responses API with Pydantic `ModelOutput` and `RoutingModelOutput` v1 parsing, `store=False`, no
+Responses API with Pydantic `ModelOutput`, `RoutingModelOutput`, and `SynthesisModelOutput` v1 parsing, `store=False`, no
 tools, fixed per-operation reasoning effort, deadline-aware timeouts, bounded backoff, and a
 thread-safe per-Run attempt budget. Credential-free mode remains the default and ordinary CI
 loads `backend/.test.env`, performs no external model call, and does not read `backend/.env`.
 
-`WorkflowApplication` constructs one model adapter per Run and supplies it to the router and all
-selected specialists, just as it constructs one provider bundle per Run. A failed live readiness
+`WorkflowApplication` constructs one model adapter per Run and supplies it to the workflow, which
+shares it across routing, selected specialists, and conditional multi-agent synthesis, just as it
+constructs one provider bundle per Run. A failed live readiness
 gate returns a typed model error and never substitutes the deterministic adapter. Specialist
 model output contains only summary and warning fields. All authoritative
 facts—especially Portfolio and Goal arithmetic plus Market and News provenance—remain the exact
@@ -50,6 +65,8 @@ terminal punctuation and no internal-generation warning.
 - `ModelRequest`/`ModelOutput`: deadline-aware request; explanation-only response schema.
 - `RoutingModelRequest`/`RoutingModelOutput`: prior-agent context and a closed set of selected
   agents plus reason categories; no free-form reasoning.
+- `SynthesisModelRequest`/`SynthesisModelOutput`: minimized successful specialist results and one
+  grounded combined narrative; original typed results remain available and authoritative.
 - `ModelProviderError`: stable not-ready, authentication, rate-limit, timeout, unavailable,
   refusal, incomplete, malformed, deadline, size, and request-budget states.
 - `AgentRuntime`: safe error mapping plus provider/model/prompt identity and measured usage events.
@@ -58,8 +75,10 @@ terminal punctuation and no internal-generation warning.
 - `live_model` marker, `make m4-1-check`, and `make model-live-check`.
 - `docs/research/M4_1_openai_model_selection.md` and `backend/artifacts/m4_1/` evidence.
 
-No FastAPI workflow route, SSE interface, durable checkpoint/event adapter, frontend feature, or
-later-milestone behavior was added.
+The original M4.1 slice added no FastAPI workflow route, SSE interface, durable checkpoint/event
+adapter, or frontend feature. The 2026-10-31 maintenance keeps the API contract unchanged and only
+updates the existing M6 `RunCard` consumer to present the combined summary while retaining each
+specialist's sources, warnings, and collapsible original response.
 
 ## Behavior and failure evidence
 
@@ -68,6 +87,7 @@ later-milestone behavior was added.
 | Structured success and provider-reported token usage | `test_structured_success_uses_responses_parse_without_storage_or_fact_rewrite` |
 | Complete narrative preservation and warning semantics | `test_structured_success_preserves_a_complete_educational_narrative`, `test_generation_prompt_keeps_internal_mechanics_out_of_user_warnings`, and the M5 API persistence/SSE regression |
 | Structured LLM routing without a lexical table | `test_routing_uses_model_structured_output_without_lexical_classification` and the 44-case scripted contract suite, including explicit out-of-scope decisions |
+| Grounded multi-agent synthesis | adapter test proves the separate schema, untrusted-data boundary, supplied-source identity, medium reasoning, and `store=False`; workflow tests prove success, event truth, single-agent bypass, and typed fallback |
 | Fixed reasoning policy for all six agents | `test_reasoning_policy_is_fixed_by_agent` |
 | Authentication, rate limit, timeout, and outage mapping | adapter parameterized failure tests |
 | Refusal, incomplete, malformed, extra, or missing output | structured non-success tests; all fail closed |
@@ -80,8 +100,8 @@ later-milestone behavior was added.
 | Optional LangSmith isolation | inputs/outputs hidden; client failure does not change product behavior |
 
 The live target defaults to one aggregate Run and fixes `model_maximum_attempts=1`. The current
-external-call ceiling is seven: one structured routing decision plus one response for each of six
-selected agents. This post-maintenance path has not been externally requalified; the historical
+external-call ceiling is eight: one structured routing decision, one response for each of six
+selected agents, and one conditional synthesis response. This post-maintenance path has not been externally requalified; the historical
 qualification below predates model-backed routing and used six calls per aggregate Run. The internal
 `AIFA_LIVE_MODEL_ONLY_AGENT` diagnostic selector exists only to isolate a failed agent without
 repeating the other five calls.
@@ -122,6 +142,15 @@ Offline gates:
   files, 174 tests passed, 1 Qdrant integration test skipped, 3 live tests deselected, and 87% total
   coverage. The live-model and live-provider markers were excluded.
 
+The 2026-10-31 conditional-synthesis maintenance reran the current gates:
+
+- `UV_CACHE_DIR=/tmp/aifa-uv-cache make m4-1-check` — 67 focused tests passed after formatting,
+  Ruff, and strict mypy.
+- `UV_CACHE_DIR=/tmp/aifa-uv-cache make backend-check` — 210 tests passed, 1 Qdrant integration
+  test skipped, 3 live tests deselected, and 88% coverage.
+- Frontend Prettier, ESLint, TypeScript, 31 Vitest tests, and the production build passed.
+- No external call was made; the new synthesis prompt remains live-unqualified as stated above.
+
 Live calls total exactly nineteen: eighteen historical calls across three explicit six-call
 approvals before model-backed routing, plus one post-completion narrative replay:
 
@@ -160,8 +189,8 @@ The exact commands and machine-readable outcomes are recorded in
   controls, and public-deployment privacy requirements remain unqualified.
 - The rolling `gpt-6.1-sol` identifier can change behavior. M8 must re-run fixed quality, safety,
   latency, and cost evaluations and reconsider a dated snapshot if one becomes available.
-- Live LLM routing has adapter-level contract coverage but has not been externally requalified
-  after the 2026-10-29 routing change. A seven-call aggregate rerun requires an explicit live-call
+- Live LLM routing and multi-agent synthesis have adapter-level contract coverage but have not been
+  externally requalified after their maintenance changes. An eight-call aggregate rerun requires an explicit live-call
   approval; ordinary test success is not represented as semantic routing evidence.
 
 ## Evidence paths

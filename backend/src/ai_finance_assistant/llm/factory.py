@@ -13,9 +13,12 @@ from ai_finance_assistant.llm.models import (
     ModelAdapterResult,
     ModelRequest,
     RoutingModelRequest,
+    SynthesisModelRequest,
 )
 from ai_finance_assistant.llm.openai import (
     OPENAI_PROMPT_VERSION,
+    OPENAI_ROUTING_PROMPT_VERSION,
+    OPENAI_SYNTHESIS_PROMPT_VERSION,
     OpenAIClient,
     OpenAIModelAdapter,
 )
@@ -25,7 +28,8 @@ from ai_finance_assistant.llm.ports import ModelAdapter
 class UnavailableModelAdapter:
     provider_id = "openai"
     prompt_version = OPENAI_PROMPT_VERSION
-    routing_prompt_version = "openai-routing-system-v1"
+    routing_prompt_version = OPENAI_ROUTING_PROMPT_VERSION
+    synthesis_prompt_version = OPENAI_SYNTHESIS_PROMPT_VERSION
 
     def __init__(self, *, model_id: str, error: ModelProviderError) -> None:
         self.model_id = model_id
@@ -36,6 +40,10 @@ class UnavailableModelAdapter:
         raise self._error
 
     def route(self, request: RoutingModelRequest) -> ModelAdapterResult:
+        del request
+        raise self._error
+
+    def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
         del request
         raise self._error
 

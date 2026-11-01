@@ -11,16 +11,24 @@ from ai_finance_assistant.contracts.agents import (
     AgentRequest,
     AgentResult,
     AgentResultStatus,
+    EvidenceReference,
 )
 from ai_finance_assistant.contracts.errors import ErrorCategory, SafeError
+from ai_finance_assistant.contracts.events import EventType
 from ai_finance_assistant.finance.models import ImportedPortfolio
+from ai_finance_assistant.llm.errors import ModelErrorCode, ModelProviderError
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
-from ai_finance_assistant.llm.models import RoutingModelOutput, RoutingReason
+from ai_finance_assistant.llm.models import (
+    ModelAdapterResult,
+    RoutingModelOutput,
+    RoutingReason,
+    SynthesisModelOutput,
+    SynthesisModelRequest,
+)
 from ai_finance_assistant.observability.memory import InMemoryObservability
 from ai_finance_assistant.workflow.events import InMemoryRunEventRepository, RunEventRecorder
 from ai_finance_assistant.workflow.graph import FinanceWorkflow
 from ai_finance_assistant.workflow.models import WorkflowRequest, WorkflowStatus
-from ai_finance_assistant.workflow.routing import IntentRouter
 
 
 class StubAgent:
@@ -31,11 +39,15 @@ class StubAgent:
         status: AgentResultStatus = AgentResultStatus.OK,
         raises: bool = False,
         summary: str | None = None,
+        evidence: tuple[EvidenceReference, ...] = (),
+        warnings: tuple[str, ...] = (),
     ) -> None:
         self.agent_id = agent_id
         self.status = status
         self.raises = raises
         self.summary = summary
+        self.evidence = evidence
+        self.warnings = warnings
         self.requests: list[AgentRequest] = []
 
     def invoke(self, request: AgentRequest) -> AgentResult:
@@ -57,15 +69,42 @@ class StubAgent:
             agent_id=self.agent_id,
             status=self.status,
             summary=self.summary or f"{self.agent_id.value} handled the request.",
+            evidence=self.evidence,
+            warnings=self.warnings,
             errors=errors,
         )
 
 
-def router_for(
+class RecordingSynthesisModel(DeterministicModelAdapter):
+    def __init__(
+        self,
+        *,
+        routing_responses: dict[str, RoutingModelOutput],
+        failure: ModelProviderError | None = None,
+    ) -> None:
+        super().__init__(routing_responses=routing_responses)
+        self.synthesis_requests: list[SynthesisModelRequest] = []
+        self.failure = failure
+
+    def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
+        self.synthesis_requests.append(request)
+        if self.failure is not None:
+            raise self.failure
+        output = SynthesisModelOutput(
+            summary=(
+                "Diversification describes investment-risk tradeoffs, while capital-gains "
+                "tax treatment depends on the account and transaction facts."
+            ),
+            warnings=("Tax treatment is limited to the supplied U.S. federal evidence.",),
+        )
+        return ModelAdapterResult(payload=output.model_dump(mode="json"))
+
+
+def model_for(
     message: str | None = None,
     *selected_agent_ids: AgentId,
     reason_category: RoutingReason | None = None,
-) -> IntentRouter:
+) -> DeterministicModelAdapter:
     responses = {}
     if message is not None:
         responses[message] = RoutingModelOutput(
@@ -81,7 +120,7 @@ def router_for(
                 )
             ),
         )
-    return IntentRouter(model=DeterministicModelAdapter(routing_responses=responses))
+    return DeterministicModelAdapter(routing_responses=responses)
 
 
 def workflow_request(
@@ -157,7 +196,7 @@ def test_workflow_routes_finance_question_through_langgraph() -> None:
         agents=agents,
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
-        router=router_for(
+        model=model_for(
             "What is an ETF and how does diversification work?",
             AgentId.FINANCE_QA,
         ),
@@ -198,7 +237,7 @@ def test_workflow_result_preserves_response_while_run_events_exclude_it() -> Non
         agents=agents,
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
-        router=router_for("What is diversification?", AgentId.FINANCE_QA),
+        model=model_for("What is diversification?", AgentId.FINANCE_QA),
     )
 
     result = workflow.run(
@@ -222,7 +261,7 @@ def test_workflow_preserves_multi_agent_result_when_one_agent_fails() -> None:
         agents=agents,
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
-        router=router_for(
+        model=model_for(
             "Explain an ETF and capital gain tax.",
             AgentId.FINANCE_QA,
             AgentId.TAX_EDUCATION,
@@ -247,6 +286,143 @@ def test_workflow_preserves_multi_agent_result_when_one_agent_fails() -> None:
     assert recorded[-1].event_type.value == "run_partial"
 
 
+def test_workflow_uses_grounded_synthesis_for_multiple_successful_agents() -> None:
+    message = "Explain diversification and the related capital-gains tax considerations."
+    source = EvidenceReference(
+        evidence_id="finance-source-1",
+        title="Diversification bulletin",
+        publisher="Investor Education Test Publisher",
+        canonical_url="https://example.invalid/diversification",
+    )
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    agents[AgentId.FINANCE_QA] = StubAgent(
+        AgentId.FINANCE_QA,
+        summary="Diversification can reduce concentration risk but cannot prevent loss.",
+        evidence=(source,),
+    )
+    agents[AgentId.TAX_EDUCATION] = StubAgent(
+        AgentId.TAX_EDUCATION,
+        summary="Capital-gains treatment depends on the account and transaction facts.",
+        warnings=("State and local taxes are outside the supplied evidence.",),
+    )
+    model = RecordingSynthesisModel(
+        routing_responses={
+            message: RoutingModelOutput(
+                selected_agent_ids=(AgentId.FINANCE_QA, AgentId.TAX_EDUCATION),
+                reason_category=RoutingReason.MULTI_DOMAIN,
+            )
+        }
+    )
+    events = InMemoryRunEventRepository()
+    telemetry = InMemoryObservability()
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(repository=events, observability=telemetry),
+        observability=telemetry,
+        model=model,
+    )
+
+    result = workflow.run(workflow_request(execution_id="run-synthesis-1", message=message))
+
+    assert result.status == WorkflowStatus.COMPLETED
+    assert result.summary.startswith("Diversification describes investment-risk tradeoffs")
+    assert [item.agent_id for item in result.agent_results] == [
+        AgentId.FINANCE_QA,
+        AgentId.TAX_EDUCATION,
+    ]
+    assert result.agent_results[0].evidence == (source,)
+    assert len(model.synthesis_requests) == 1
+    assert [item.agent_id for item in model.synthesis_requests[0].agent_results] == [
+        AgentId.FINANCE_QA,
+        AgentId.TAX_EDUCATION,
+    ]
+    assert result.warnings == (
+        "State and local taxes are outside the supplied evidence.",
+        "Tax treatment is limited to the supplied U.S. federal evidence.",
+    )
+    recorded = events.list_for_run("run-synthesis-1", session_id="session-1")
+    assert any(
+        event.event_type == EventType.MODEL_COMPLETED and event.node_id == "synthesize"
+        for event in recorded
+    )
+
+
+def test_workflow_preserves_specialist_results_when_synthesis_fails() -> None:
+    message = "Explain diversification and capital-gains tax."
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    agents[AgentId.FINANCE_QA] = StubAgent(
+        AgentId.FINANCE_QA,
+        summary="Finance specialist result.",
+    )
+    agents[AgentId.TAX_EDUCATION] = StubAgent(
+        AgentId.TAX_EDUCATION,
+        summary="Tax specialist result.",
+    )
+    model = RecordingSynthesisModel(
+        routing_responses={
+            message: RoutingModelOutput(
+                selected_agent_ids=(AgentId.FINANCE_QA, AgentId.TAX_EDUCATION),
+                reason_category=RoutingReason.MULTI_DOMAIN,
+            )
+        },
+        failure=ModelProviderError(
+            code=ModelErrorCode.RATE_LIMITED,
+            message="The model provider rate limit was reached.",
+            retryable=True,
+        ),
+    )
+    events = InMemoryRunEventRepository()
+    telemetry = InMemoryObservability()
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(repository=events, observability=telemetry),
+        observability=telemetry,
+        model=model,
+    )
+
+    result = workflow.run(workflow_request(execution_id="run-synthesis-failure-1", message=message))
+
+    assert result.status == WorkflowStatus.PARTIAL
+    assert result.summary == "Finance specialist result.\n\nTax specialist result."
+    assert len(result.agent_results) == 2
+    assert result.errors[-1].code == "MODEL_RATE_LIMITED"
+    assert "unified multi-domain summary is unavailable" in result.warnings[-1]
+    recorded = events.list_for_run("run-synthesis-failure-1", session_id="session-1")
+    assert any(
+        event.event_type == EventType.MODEL_FAILED and event.node_id == "synthesize"
+        for event in recorded
+    )
+
+
+def test_single_specialist_run_does_not_consume_synthesis_request() -> None:
+    message = "What is diversification?"
+    model = RecordingSynthesisModel(
+        routing_responses={
+            message: RoutingModelOutput(
+                selected_agent_ids=(AgentId.FINANCE_QA,),
+                reason_category=RoutingReason.SINGLE_DOMAIN,
+            )
+        }
+    )
+    telemetry = InMemoryObservability()
+    workflow = FinanceWorkflow(
+        agents={agent_id: StubAgent(agent_id) for agent_id in AgentId},
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=telemetry,
+        ),
+        observability=telemetry,
+        model=model,
+    )
+
+    result = workflow.run(
+        workflow_request(execution_id="run-single-no-synthesis-1", message=message)
+    )
+
+    assert result.status == WorkflowStatus.COMPLETED
+    assert model.synthesis_requests == []
+
+
 def test_workflow_requests_clarification_for_unroutable_message() -> None:
     agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
     workflow = FinanceWorkflow(
@@ -256,7 +432,7 @@ def test_workflow_requests_clarification_for_unroutable_message() -> None:
             observability=InMemoryObservability(),
         ),
         observability=InMemoryObservability(),
-        router=router_for(),
+        model=model_for(),
     )
 
     result = workflow.run(
@@ -277,7 +453,7 @@ def test_workflow_returns_bounded_response_for_out_of_scope_question() -> None:
             observability=InMemoryObservability(),
         ),
         observability=InMemoryObservability(),
-        router=router_for(
+        model=model_for(
             "How's the weather?",
             reason_category=RoutingReason.OUT_OF_SCOPE,
         ),
@@ -303,7 +479,7 @@ def test_portfolio_route_conditionally_requests_context_before_agent_execution()
             observability=InMemoryObservability(),
         ),
         observability=InMemoryObservability(),
-        router=router_for(
+        model=model_for(
             "How many holdings have usable prices?",
             AgentId.PORTFOLIO_ANALYSIS,
         ),
@@ -328,6 +504,115 @@ def test_portfolio_route_conditionally_requests_context_before_agent_execution()
     assert any(event.node_id == "portfolio_context_required" for event in recorded)
 
 
+def test_portfolio_route_resolves_unique_explicitly_quoted_session_label() -> None:
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    events = InMemoryRunEventRepository()
+    message = (
+        "Using my saved \u201cRetirement portfolio,\u201d provide an educational "
+        "diversification review."
+    )
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=events,
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=model_for(message, AgentId.PORTFOLIO_ANALYSIS),
+        contexts=portfolio_contexts(),
+    )
+
+    result = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-explicit-label",
+            message=message,
+        )
+    )
+
+    assert result.status == WorkflowStatus.COMPLETED
+    assert result.required_input is None
+    assert len(agents[AgentId.PORTFOLIO_ANALYSIS].requests) == 1
+    assert agents[AgentId.PORTFOLIO_ANALYSIS].requests[0].context_references == (
+        "portfolio-context",
+    )
+    recorded = events.list_for_run(
+        "run-portfolio-explicit-label",
+        session_id="session-1",
+    )
+    assert not any(event.node_id == "portfolio_context_required" for event in recorded)
+
+
+def test_portfolio_route_keeps_selection_for_ambiguous_explicit_label() -> None:
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    contexts = portfolio_contexts()
+    existing = contexts.get("session-1", "portfolio-context")
+    assert isinstance(existing, PortfolioAgentContext)
+    contexts.put(
+        "session-1",
+        existing.model_copy(
+            update={
+                "context_id": "portfolio-context-duplicate",
+                "portfolio": existing.portfolio.model_copy(
+                    update={"portfolio_id": "portfolio-duplicate"}
+                ),
+            }
+        ),
+    )
+    message = 'Analyze my saved "Retirement portfolio".'
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=model_for(message, AgentId.PORTFOLIO_ANALYSIS),
+        contexts=contexts,
+    )
+
+    result = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-ambiguous-label",
+            message=message,
+        )
+    )
+
+    assert result.status == WorkflowStatus.CLARIFICATION
+    assert result.required_input is not None
+    assert not agents[AgentId.PORTFOLIO_ANALYSIS].requests
+
+
+def test_portfolio_route_never_resolves_a_label_from_another_session() -> None:
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    contexts = portfolio_contexts()
+    existing = contexts.get("session-1", "portfolio-context")
+    assert isinstance(existing, PortfolioAgentContext)
+    contexts = InMemoryAgentContextRepository()
+    contexts.put("another-session", existing)
+    message = 'Analyze my saved "Retirement portfolio".'
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=model_for(message, AgentId.PORTFOLIO_ANALYSIS),
+        contexts=contexts,
+    )
+
+    result = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-cross-session-label",
+            message=message,
+        )
+    )
+
+    assert result.status == WorkflowStatus.CLARIFICATION
+    assert result.required_input is not None
+    assert not agents[AgentId.PORTFOLIO_ANALYSIS].requests
+
+
 def test_portfolio_continuation_enters_context_gate_without_reclassification() -> None:
     agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
     events = InMemoryRunEventRepository()
@@ -338,7 +623,7 @@ def test_portfolio_continuation_enters_context_gate_without_reclassification() -
             observability=InMemoryObservability(),
         ),
         observability=InMemoryObservability(),
-        router=router_for(),
+        model=model_for(),
         contexts=portfolio_contexts(),
     )
 
@@ -354,13 +639,14 @@ def test_portfolio_continuation_enters_context_gate_without_reclassification() -
 
     assert result.status == WorkflowStatus.COMPLETED
     assert result.continuation_of_execution_id == "run-portfolio-context-required"
+    assert result.portfolio_context_references == ("portfolio-context",)
     assert len(agents[AgentId.PORTFOLIO_ANALYSIS].requests) == 1
     recorded = events.list_for_run("run-portfolio-continuation", session_id="session-1")
     assert not any(event.node_id == "router" for event in recorded)
     assert any(event.node_id == "context_gate" for event in recorded)
 
 
-def test_portfolio_context_gate_does_not_reuse_a_checkpointed_agent_result() -> None:
+def test_portfolio_follow_up_reuses_scope_but_executes_a_new_agent_result() -> None:
     agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
     workflow = FinanceWorkflow(
         agents=agents,
@@ -369,7 +655,7 @@ def test_portfolio_context_gate_does_not_reuse_a_checkpointed_agent_result() -> 
             observability=InMemoryObservability(),
         ),
         observability=InMemoryObservability(),
-        router=router_for(
+        model=model_for(
             "How many holdings have usable prices?",
             AgentId.PORTFOLIO_ANALYSIS,
         ),
@@ -383,19 +669,203 @@ def test_portfolio_context_gate_does_not_reuse_a_checkpointed_agent_result() -> 
             context_references=("portfolio-context",),
         )
     )
-    clarification = workflow.run(
+    follow_up = workflow.run(
         workflow_request(
-            execution_id="run-portfolio-needs-new-context",
+            execution_id="run-portfolio-follow-up",
             message="How many holdings have usable prices?",
         )
     )
 
     assert completed.status == WorkflowStatus.COMPLETED
     assert len(completed.agent_results) == 1
-    assert clarification.status == WorkflowStatus.CLARIFICATION
-    assert clarification.required_input is not None
-    assert clarification.agent_results == ()
+    assert completed.portfolio_context_references == ("portfolio-context",)
+    assert follow_up.status == WorkflowStatus.COMPLETED
+    assert follow_up.required_input is None
+    assert follow_up.portfolio_context_references == ("portfolio-context",)
+    assert len(follow_up.agent_results) == 1
+    assert len(agents[AgentId.PORTFOLIO_ANALYSIS].requests) == 2
+    assert agents[AgentId.PORTFOLIO_ANALYSIS].requests[1].execution_id == (
+        "run-portfolio-follow-up"
+    )
+
+
+def test_portfolio_follow_up_can_switch_scope_with_a_unique_quoted_label() -> None:
+    first_message = "Analyze my portfolio."
+    second_message = 'Now analyze my saved "Taxable portfolio".'
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    contexts = portfolio_contexts()
+    existing = contexts.get("session-1", "portfolio-context")
+    assert isinstance(existing, PortfolioAgentContext)
+    contexts.put(
+        "session-1",
+        existing.model_copy(
+            update={
+                "context_id": "taxable-context",
+                "portfolio": existing.portfolio.model_copy(
+                    update={
+                        "portfolio_id": "taxable-portfolio",
+                        "label": "Taxable portfolio",
+                    }
+                ),
+            }
+        ),
+    )
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=DeterministicModelAdapter(
+            routing_responses={
+                first_message: RoutingModelOutput(
+                    selected_agent_ids=(AgentId.PORTFOLIO_ANALYSIS,),
+                    reason_category=RoutingReason.SINGLE_DOMAIN,
+                ),
+                second_message: RoutingModelOutput(
+                    selected_agent_ids=(AgentId.PORTFOLIO_ANALYSIS,),
+                    reason_category=RoutingReason.SINGLE_DOMAIN,
+                ),
+            }
+        ),
+        contexts=contexts,
+    )
+
+    first = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-active-first",
+            message=first_message,
+            context_references=("portfolio-context",),
+        )
+    )
+    switched = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-active-switch",
+            message=second_message,
+        )
+    )
+
+    assert first.portfolio_context_references == ("portfolio-context",)
+    assert switched.status == WorkflowStatus.COMPLETED
+    assert switched.portfolio_context_references == ("taxable-context",)
+    assert agents[AgentId.PORTFOLIO_ANALYSIS].requests[-1].context_references == (
+        "taxable-context",
+    )
+
+
+def test_invalid_explicit_portfolio_switch_does_not_fall_back_to_active_scope() -> None:
+    message = "Analyze my portfolio."
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=model_for(message, AgentId.PORTFOLIO_ANALYSIS),
+        contexts=portfolio_contexts(),
+    )
+
+    first = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-active-valid",
+            message=message,
+            context_references=("portfolio-context",),
+        )
+    )
+    invalid_switch = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-active-invalid-switch",
+            message=message,
+            context_references=("deleted-or-cross-session-context",),
+        )
+    )
+
+    assert first.status == WorkflowStatus.COMPLETED
+    assert invalid_switch.status == WorkflowStatus.CLARIFICATION
+    assert invalid_switch.portfolio_context_references == ()
     assert len(agents[AgentId.PORTFOLIO_ANALYSIS].requests) == 1
+
+
+def test_portfolio_override_is_not_disclosed_to_an_unrelated_specialist() -> None:
+    portfolio_message = "Analyze my portfolio."
+    finance_message = "What is diversification?"
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=DeterministicModelAdapter(
+            routing_responses={
+                portfolio_message: RoutingModelOutput(
+                    selected_agent_ids=(AgentId.PORTFOLIO_ANALYSIS,),
+                    reason_category=RoutingReason.SINGLE_DOMAIN,
+                ),
+                finance_message: RoutingModelOutput(
+                    selected_agent_ids=(AgentId.FINANCE_QA,),
+                    reason_category=RoutingReason.SINGLE_DOMAIN,
+                ),
+            }
+        ),
+        contexts=portfolio_contexts(),
+    )
+
+    workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-scope-established",
+            message=portfolio_message,
+            context_references=("portfolio-context",),
+        )
+    )
+    finance_result = workflow.run(
+        workflow_request(
+            execution_id="run-finance-with-pending-portfolio-switch",
+            message=finance_message,
+            context_references=("portfolio-context",),
+        )
+    )
+
+    assert finance_result.status == WorkflowStatus.COMPLETED
+    assert agents[AgentId.FINANCE_QA].requests[-1].context_references == ()
+
+
+def test_portfolio_active_scope_never_crosses_sessions() -> None:
+    message = "Analyze my portfolio."
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=model_for(message, AgentId.PORTFOLIO_ANALYSIS),
+        contexts=portfolio_contexts(),
+    )
+
+    session_one = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-session-one",
+            message=message,
+            context_references=("portfolio-context",),
+        )
+    )
+    session_two = workflow.run(
+        workflow_request(
+            execution_id="run-portfolio-session-two",
+            session_id="session-2",
+            message=message,
+        )
+    )
+
+    assert session_one.status == WorkflowStatus.COMPLETED
+    assert session_two.status == WorkflowStatus.CLARIFICATION
+    assert session_two.portfolio_context_references == ()
 
 
 def test_workflow_enforces_deadline_before_agent_execution() -> None:
@@ -408,7 +878,7 @@ def test_workflow_enforces_deadline_before_agent_execution() -> None:
             observability=telemetry,
         ),
         observability=telemetry,
-        router=router_for("What is an ETF?", AgentId.FINANCE_QA),
+        model=model_for("What is an ETF?", AgentId.FINANCE_QA),
     )
 
     result = workflow.run(
@@ -437,7 +907,7 @@ def test_checkpoint_restart_supports_follow_up_and_isolates_sessions() -> None:
                 observability=telemetry,
             ),
             observability=telemetry,
-            router=router_for("What is an ETF?", AgentId.FINANCE_QA),
+            model=model_for("What is an ETF?", AgentId.FINANCE_QA),
             checkpointer=checkpointer,
         )
 
@@ -468,7 +938,7 @@ def test_workflow_fails_safely_when_graph_hop_bound_is_too_small() -> None:
         agents={agent_id: StubAgent(agent_id) for agent_id in AgentId},
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
-        router=router_for("What is an ETF?", AgentId.FINANCE_QA),
+        model=model_for("What is an ETF?", AgentId.FINANCE_QA),
         maximum_graph_hops=2,
     )
 

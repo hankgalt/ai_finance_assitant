@@ -90,7 +90,7 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
       <PageHeader
         eyebrow="Deterministic scenario modeling"
         title="Plan toward a goal"
-        description="Compare editable assumptions without treating any scenario as a forecast. Every result is calculated by the versioned backend policy."
+        description="Compare editable assumptions without treating any scenario as a forecast."
         action={<span className="milestone-chip">Monthly contributions</span>}
       />
       <form className="goal-layout" onSubmit={submit}>

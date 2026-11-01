@@ -4,23 +4,29 @@
     "provider": "deterministic",
     "model_id": "deterministic-model-v1",
     "prompt_version": "deterministic-template-v1",
-    "routing_prompt_version": "deterministic-routing-fixture-v1"
+    "routing_prompt_version": "deterministic-routing-fixture-v1",
+    "synthesis_prompt_version": "deterministic-synthesis-fixture-v1"
   },
   "live": {
     "provider": "openai",
     "model_id": "gpt-6.1-sol",
     "api": "responses",
-    "prompt_version": "openai-agent-system-v2",
-    "routing_prompt_version": "openai-routing-system-v1",
+    "prompt_version": "openai-agent-system-v3",
+    "routing_prompt_version": "openai-routing-system-v2",
+    "synthesis_prompt_version": "openai-multi-agent-synthesis-v1",
     "response_schema": "ModelOutput-v1",
     "routing_response_schema": "RoutingModelOutput-v1",
+    "synthesis_response_schema": "SynthesisModelOutput-v1",
     "response_fields": ["schema_version", "summary", "warnings"],
     "response_narrative_max_characters": 4000,
+    "evidence_source_identity_fields": ["source_document_id", "source_title", "source_publisher", "source_section"],
+    "publication_grounding_policy": "A publication may be identified or recommended only when it is supplied in evidence source metadata; a publication mentioned inside excerpt content is not evidence from that publication.",
     "warning_policy": "User-relevant domain limitations or missing evidence only; internal provider and generation mechanics are excluded.",
     "store": false,
     "tools_enabled": false,
     "reasoning_effort": {
       "router": "low",
+      "multi_agent_synthesis": "medium",
       "finance_qa": "medium",
       "tax_education": "medium",
       "portfolio_analysis": "low",
@@ -29,11 +35,12 @@
       "news_synthesizer": "low"
     },
     "limits": {
-      "requests_per_run": 7,
+      "requests_per_run": 8,
       "maximum_attempts_per_call": 3,
       "timeout_seconds": 30,
       "maximum_input_characters": 40000,
-      "maximum_output_tokens": 1200
+      "maximum_output_tokens": 1200,
+      "maximum_synthesis_output_tokens": 1600
     }
   }
 }

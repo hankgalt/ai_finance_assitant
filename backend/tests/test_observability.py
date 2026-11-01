@@ -31,7 +31,6 @@ from ai_finance_assistant.workflow.events import (
 )
 from ai_finance_assistant.workflow.graph import FinanceWorkflow
 from ai_finance_assistant.workflow.models import WorkflowRequest, WorkflowStatus
-from ai_finance_assistant.workflow.routing import IntentRouter
 
 
 class SuccessfulAgent:
@@ -104,7 +103,7 @@ def test_run_events_correlate_with_exported_opentelemetry_trace() -> None:
         agents=_agents(),
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
-        router=IntentRouter(model=DeterministicModelAdapter()),
+        model=DeterministicModelAdapter(),
     )
 
     result = workflow.run(_request("run-otel-1"))
@@ -128,7 +127,7 @@ def test_langgraph_root_trace_uses_workflow_name() -> None:
             observability=telemetry,
         ),
         observability=telemetry,
-        router=IntentRouter(model=DeterministicModelAdapter()),
+        model=DeterministicModelAdapter(),
     )
 
     with collect_runs() as collected:
@@ -146,7 +145,7 @@ def test_failed_observability_adapter_does_not_change_product_behavior() -> None
         agents=_agents(),
         event_recorder=RunEventRecorder(repository=events, observability=telemetry),
         observability=telemetry,
-        router=IntentRouter(model=DeterministicModelAdapter()),
+        model=DeterministicModelAdapter(),
     )
 
     result = workflow.run(_request("run-exporter-failure-1"))

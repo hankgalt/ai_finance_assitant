@@ -16,6 +16,7 @@ from ai_finance_assistant.llm.models import (
     RoutingModelOutput,
     RoutingModelRequest,
     RoutingReason,
+    SynthesisModelRequest,
 )
 
 LONG_EDUCATIONAL_NARRATIVE = " ".join(
@@ -28,6 +29,7 @@ class LongNarrativeModelAdapter:
     model_id = "long-narrative-fixture-v1"
     prompt_version = "long-narrative-fixture-v1"
     routing_prompt_version = "long-narrative-routing-fixture-v1"
+    synthesis_prompt_version = "long-narrative-synthesis-fixture-v1"
 
     def generate(self, request: ModelRequest) -> ModelAdapterResult:
         del request
@@ -42,12 +44,16 @@ class LongNarrativeModelAdapter:
         )
         return ModelAdapterResult(payload=output.model_dump(mode="json"))
 
+    def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
+        raise AssertionError(f"No multi-agent synthesis expected for {len(request.agent_results)}")
+
 
 class PortfolioQuestionModelAdapter:
     provider_id = "portfolio-question-fixture"
     model_id = "portfolio-question-fixture-v1"
     prompt_version = "portfolio-question-fixture-v1"
     routing_prompt_version = "portfolio-question-routing-fixture-v1"
+    synthesis_prompt_version = "portfolio-question-synthesis-fixture-v1"
 
     def generate(self, request: ModelRequest) -> ModelAdapterResult:
         output = ModelOutput(
@@ -66,12 +72,16 @@ class PortfolioQuestionModelAdapter:
         )
         return ModelAdapterResult(payload=output.model_dump(mode="json"))
 
+    def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
+        raise AssertionError(f"No multi-agent synthesis expected for {len(request.agent_results)}")
+
 
 class OutOfScopeModelAdapter:
     provider_id = "out-of-scope-fixture"
     model_id = "out-of-scope-fixture-v1"
     prompt_version = "out-of-scope-fixture-v1"
     routing_prompt_version = "out-of-scope-routing-fixture-v1"
+    synthesis_prompt_version = "out-of-scope-synthesis-fixture-v1"
 
     def generate(self, request: ModelRequest) -> ModelAdapterResult:
         raise AssertionError(f"No specialist generation expected for {request.agent_id}")
@@ -84,6 +94,9 @@ class OutOfScopeModelAdapter:
         )
         return ModelAdapterResult(payload=output.model_dump(mode="json"))
 
+    def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
+        raise AssertionError(f"No multi-agent synthesis expected for {len(request.agent_results)}")
+
 
 def _session(client: TestClient, label: str = "test") -> str:
     response = client.post("/api/v1/sessions", json={"label": label})
@@ -91,11 +104,15 @@ def _session(client: TestClient, label: str = "test") -> str:
     return str(response.json()["session_id"])
 
 
-def _portfolio_payload(portfolio_id: str) -> dict[str, object]:
+def _portfolio_payload(
+    portfolio_id: str,
+    *,
+    label: str = "API fixture",
+) -> dict[str, object]:
     return {
         "metadata": {
             "portfolio_id": portfolio_id,
-            "label": "API fixture",
+            "label": label,
             "base_currency": "USD",
             "imported_at": datetime(2026, 10, 28, 12, 0, tzinfo=UTC).isoformat(),
         },
@@ -286,6 +303,131 @@ def test_run_uses_each_explicit_authorized_portfolio_context(
     )
     assert not_waiting.status_code == 409
     assert not_waiting.json()["error"]["code"] == "RUN_CONTINUATION_NOT_AVAILABLE"
+
+
+def test_run_resolves_a_unique_explicitly_quoted_saved_portfolio_label(
+    client: TestClient,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    services = cast(Any, cast(Any, client.app).state.services)
+    monkeypatch.setattr(
+        services.workflow,
+        "_model_adapter_builder",
+        lambda _: PortfolioQuestionModelAdapter(),
+    )
+    session_id = _session(client, "portfolio label resolution")
+    portfolio_id = "account-portfolio-json"
+    saved = client.post(
+        f"/api/v1/sessions/{session_id}/portfolios",
+        json=_portfolio_payload(portfolio_id, label="Account portfolio JSON"),
+        headers={"Idempotency-Key": "save-account-portfolio-json"},
+    )
+    assert saved.status_code == 201
+    message = (
+        "Using my saved \u201cAccount portfolio JSON,\u201d provide an educational "
+        "diversification review. My goal is retirement, my time horizon is 20 years, I have "
+        "moderate risk tolerance, and I do not expect withdrawals for at least five years. "
+        "Identify asset-class concentration and overlapping U.S. equity exposure, discuss the "
+        "trade-offs of increasing international equity or fixed income, and give an illustrative "
+        "rebalancing framework. Do not recommend specific securities or trades."
+    )
+
+    created = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={"message": message},
+    )
+
+    assert created.status_code == 201
+    result = created.json()["result"]
+    assert result["status"] == "completed"
+    assert result["required_input"] is None
+    assert result["continuation_of_execution_id"] is None
+    assert result["agent_results"][0]["facts"][0]["portfolio_id"] == portfolio_id
+
+
+def test_portfolio_follow_up_reuses_the_previously_authorized_selection(
+    client: TestClient,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    services = cast(Any, cast(Any, client.app).state.services)
+    monkeypatch.setattr(
+        services.workflow,
+        "_model_adapter_builder",
+        lambda _: PortfolioQuestionModelAdapter(),
+    )
+    session_id = _session(client, "portfolio follow-up")
+    portfolio_id = "technology-portfolio"
+    saved = client.post(
+        f"/api/v1/sessions/{session_id}/portfolios",
+        json=_portfolio_payload(portfolio_id, label="Technology portfolio csv"),
+        headers={"Idempotency-Key": "save-technology-portfolio"},
+    )
+    assert saved.status_code == 201
+    replacement_portfolio_id = "retirement-portfolio"
+    replacement_saved = client.post(
+        f"/api/v1/sessions/{session_id}/portfolios",
+        json=_portfolio_payload(
+            replacement_portfolio_id,
+            label="Retirement portfolio",
+        ),
+        headers={"Idempotency-Key": "save-retirement-portfolio"},
+    )
+    assert replacement_saved.status_code == 201
+
+    clarification = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={"message": "Can you suggest diversification strategy for my portfolio?"},
+    )
+    assert clarification.status_code == 201
+    assert clarification.json()["status"] == "clarification"
+    selected = client.post(
+        f"/api/v1/sessions/{session_id}/runs/{clarification.json()['execution_id']}/continue",
+        json={"context_references": [portfolio_id]},
+    )
+    assert selected.status_code == 201
+    assert selected.json()["result"]["portfolio_context_references"] == [portfolio_id]
+
+    follow_up = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={
+            "message": (
+                "My goal is retirement, my time horizon is 20 years, and I have moderate "
+                "risk tolerance. Give me an illustrative rebalancing framework."
+            )
+        },
+    )
+
+    assert follow_up.status_code == 201
+    result = follow_up.json()["result"]
+    assert result["status"] == "completed"
+    assert result["required_input"] is None
+    assert result["continuation_of_execution_id"] is None
+    assert result["portfolio_context_references"] == [portfolio_id]
+    assert result["agent_results"][0]["facts"][0]["portfolio_id"] == portfolio_id
+
+    switched = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={
+            "message": "Analyze the Portfolio I selected instead.",
+            "context_references": [replacement_portfolio_id],
+        },
+    )
+    assert switched.status_code == 201
+    switched_result = switched.json()["result"]
+    assert switched_result["status"] == "completed"
+    assert switched_result["portfolio_context_references"] == [replacement_portfolio_id]
+    assert switched_result["agent_results"][0]["facts"][0]["portfolio_id"] == (
+        replacement_portfolio_id
+    )
+
+    after_switch = client.post(
+        f"/api/v1/sessions/{session_id}/runs",
+        json={"message": "How many of its holdings have usable prices?"},
+    )
+    assert after_switch.status_code == 201
+    assert after_switch.json()["result"]["portfolio_context_references"] == [
+        replacement_portfolio_id
+    ]
 
 
 def test_complete_narrative_persists_and_streams_without_truncation(

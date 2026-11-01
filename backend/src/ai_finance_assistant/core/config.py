@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     )
     openai_model: str = Field(default="gpt-6.1-sol", min_length=1, max_length=128)
     openai_terms_approved: bool = False
-    model_request_budget: int = Field(default=7, ge=1, le=24)
+    model_request_budget: int = Field(default=8, ge=1, le=24)
     model_maximum_attempts: int = Field(default=3, ge=1, le=3)
     model_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     model_maximum_input_characters: int = Field(default=40_000, ge=1_000, le=200_000)

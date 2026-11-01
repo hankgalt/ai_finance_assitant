@@ -1,0 +1,36 @@
+{
+  "schema_version": "1",
+  "authority": "FastAPI OpenAPI and persisted RunEvent v1",
+  "frontend_type_file": "frontend/src/types/contracts.ts",
+  "inspector_model_file": "frontend/src/features/inspector/inspectorModel.ts",
+  "required_paths": {
+    "/api/v1/sessions/{session_id}/runs": ["get"],
+    "/api/v1/sessions/{session_id}/runs/{execution_id}/events": ["get"],
+    "/api/v1/sessions/{session_id}/runs/{execution_id}/stream": ["get"],
+    "/api/v1/sessions/{session_id}/traces/{execution_id}": ["get"]
+  },
+  "required_frontend_types": [
+    "RunRecord",
+    "RunEvent",
+    "RunEventHistory",
+    "SseFrame"
+  ],
+  "required_event_identity_fields": [
+    "event_id",
+    "execution_id",
+    "session_id",
+    "workflow_id",
+    "workflow_version",
+    "sequence",
+    "node_id",
+    "parent_event_id"
+  ],
+  "graph_node_sequence_evidence": "sequence",
+  "graph_edge_evidence": ["parent_event_id", "routing.selected_node_ids"],
+  "forbidden_inspector_sources": [
+    "final_response_inference",
+    "external_trace_backend",
+    "raw_prompt",
+    "hidden_reasoning"
+  ]
+}

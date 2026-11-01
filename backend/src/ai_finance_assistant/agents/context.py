@@ -61,6 +61,8 @@ AuthorizedAgentContext = (
 class AgentContextRepository(Protocol):
     def get(self, session_id: str, context_id: str) -> AuthorizedAgentContext | None: ...
 
+    def list_portfolios(self, session_id: str) -> tuple[PortfolioAgentContext, ...]: ...
+
 
 class InMemoryAgentContextRepository:
     def __init__(self) -> None:
@@ -71,3 +73,10 @@ class InMemoryAgentContextRepository:
 
     def get(self, session_id: str, context_id: str) -> AuthorizedAgentContext | None:
         return self._contexts.get((session_id, context_id))
+
+    def list_portfolios(self, session_id: str) -> tuple[PortfolioAgentContext, ...]:
+        return tuple(
+            context
+            for (stored_session_id, _), context in sorted(self._contexts.items())
+            if stored_session_id == session_id and isinstance(context, PortfolioAgentContext)
+        )

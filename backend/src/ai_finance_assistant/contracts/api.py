@@ -151,6 +151,7 @@ BrowserApiRoute = Literal[
     "health",
     "sessions",
     "runs",
+    "run_events",
     "run_stream",
     "portfolio_imports",
     "portfolios",

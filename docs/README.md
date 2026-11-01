@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.2 | Status: Product architecture baseline; M0–M6 evidence recorded and M6.1 response-cache preparation planned | 2026-10-29
+Version 2.3 | Status: Product architecture baseline; M0–M7 evidence recorded and M6.1 planned | 2026-10-30
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -15,11 +15,13 @@ This directory is the design authority for AI Finance Assistant. The product mis
 7. [Codex M0 starting prompt](06_codex_starting_prompt.md) is the bounded implementation prompt for the foundation milestone. It is an instruction artifact, not a record that M0 has been executed.
 8. [Domain glossary](../GLOSSARY.md) provides canonical product terminology.
 9. [M1 Qdrant, model, and source-use research](research/M1_qdrant_models_sources.md) records the primary-source evidence used for M1 decisions; it is not itself an ADR.
-10. [M2 calculation policy](M2_calculation_policy.md) records the implemented precision, import, coverage, and heuristic rules for deterministic finance modules.
-11. [M3 market and news provider candidate research](research/M3_provider_candidates.md) evaluates Tavily, Alpha Vantage, and yfinance against the provider seam; it is decision input, not an approved provider selection.
-12. [M3 provider policy](M3_provider_policy.md) records the implemented adapters, endpoint policies, rights gate, quota budget, and safe fallback behavior.
-13. [M3 Massive market-data adapter research](research/M3_massive_provider.md) evaluates Massive's technical fit, current Basic-plan limits, and owner-only individual-plan rights using official sources.
-14. [M4.1 OpenAI model selection](research/M4_1_openai_model_selection.md) records the approved private-demo model, data controls, limits, cost posture, and revisit triggers.
+10. [M1 corpus-expansion research](research/M1_corpus_expansion_sources.md) records the bounded Finance and Tax source review and disabled-source decisions.
+11. [M1 IRS publication closure research](research/M1_irs_publication_expansion_2025.md) verifies the requested 2025 editions, applicability, source-use boundaries, and retrieval cases.
+12. [M2 calculation policy](M2_calculation_policy.md) records the implemented precision, import, coverage, and heuristic rules for deterministic finance modules.
+13. [M3 market and news provider candidate research](research/M3_provider_candidates.md) evaluates Tavily, Alpha Vantage, and yfinance against the provider seam; it is decision input, not an approved provider selection.
+14. [M3 provider policy](M3_provider_policy.md) records the implemented adapters, endpoint policies, rights gate, quota budget, and safe fallback behavior.
+15. [M3 Massive market-data adapter research](research/M3_massive_provider.md) evaluates Massive's technical fit, current Basic-plan limits, and owner-only individual-plan rights using official sources.
+16. [M4.1 OpenAI model selection](research/M4_1_openai_model_selection.md) records the approved private-demo model, data controls, limits, cost posture, and revisit triggers.
 
 Milestone completion evidence is recorded separately from the design authority. See
 [M0 delivery report](M0_delivery_report.md) for the foundation milestone and
@@ -29,7 +31,8 @@ Milestone completion evidence is recorded separately from the design authority. 
 [M4 delivery report](M4_delivery_report.md) for the six-agent graph, measured RunEvents, checkpoint behavior, and observability evidence, and
 [M4.1 delivery report](M4_1_delivery_report.md) for the live model adapter and completed six-agent qualification evidence, and
 [M5 delivery report](M5_delivery_report.md) for versioned REST/SSE, durable local persistence, the historical provider cache, and operational telemetry transport, and
-[M6 delivery report](M6_delivery_report.md) for the responsive React product experiences, accessible chart/table evidence, portfolio import review, and privacy-safe browser telemetry.
+[M6 delivery report](M6_delivery_report.md) for the responsive React product experiences, accessible chart/table evidence, portfolio import review, and privacy-safe browser telemetry, and
+[M7 delivery report](M7_delivery_report.md) records the measured RunEvent Inspector, accessible timeline, graph reconciliation, reconnect behavior, and redaction evidence.
 
 If documents conflict, use this precedence: product requirements, accepted ADRs, system design, implementation plan, evaluation strategy, then the M0 prompt. Coursework criteria remain mandatory for the coursework release even when they do not constrain later product architecture. Resolve source-rubric ambiguities in the coursework criteria rather than weakening product requirements.
 
