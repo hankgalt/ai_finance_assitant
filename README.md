@@ -1,10 +1,10 @@
 # AI Finance Assistant
 
-AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository has completed **M6: React product experiences**. It has versioned Finance and Tax knowledge collections, safe portfolio import/calculation modules, deterministic goal projections, provider ports/adapters, a bounded six-agent LangGraph workflow, a qualified OpenAI model path, authoritative measured RunEvents, versioned REST/replayable SSE, durable private-demo storage, a historical provider cache, vendor-neutral operational telemetry, and responsive Assistant, Portfolio, Market, Goal, and Session History experiences. It does not yet provide the M7 execution Inspector, approved public-provider rights, public multi-user controls, or professional financial or tax advice.
+AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository has completed **M9: private-demo and coursework release packaging**. It has versioned Finance and Tax knowledge collections, safe Portfolio import/calculation modules, deterministic Goal projections, provider ports/adapters, a bounded six-agent LangGraph workflow, a qualified OpenAI model path, authoritative measured RunEvents, versioned REST/replayable SSE, durable private-demo storage, historical and public-RAG caches, vendor-neutral operational telemetry, responsive product/Inspector experiences, and a four-tool read-only MCP stdio adapter. It does not provide approved public-provider rights, public multi-user controls, professional financial or tax advice, or M10 cash-flow import.
 
 The planned initial release is a production-oriented private demonstration release for the owner and approved viewers, not a public launch. Live provider demonstrations must remain within approved API terms and configured quotas; a separately selected credential-free mode remains reproducible and clearly labeled synthetic.
 
-Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). Milestone reports are indexed in the documentation directory; M5 backend behavior is recorded in [docs/M5_delivery_report.md](docs/M5_delivery_report.md), and the M6 product experiences and browser evidence are recorded in [docs/M6_delivery_report.md](docs/M6_delivery_report.md).
+Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). The runnable release package starts at [docs/release/README.md](docs/release/README.md); milestone reports and evidence remain indexed by the documentation directory.
 
 ## Current capabilities
 
@@ -28,13 +28,13 @@ Read [docs/README.md](docs/README.md) before implementation work. Repository-wid
 - Privacy-filtered RunEvents plus in-memory and OpenTelemetry span/metric adapters with stable trace correlation and optional input/output-hidden LangSmith tracing.
 - Versioned `/api/v1` Session, Run, Portfolio, Snapshot, market, goal, and authorized trace resources with typed safe failures and artifact idempotency.
 - Replayable SSE for persisted RunEvents and terminal response chunks with `Last-Event-ID` recovery.
-- SQLite application schema v2, official durable LangGraph checkpoints, Active-to-Archived Session history, archive-before-permanent-deletion behavior, and a two-tier historical daily-bar cache with truthful memory/durable/provider/stale states.
+- SQLite application schema v3, official durable LangGraph checkpoints, Active-to-Archived Session history, archive-before-permanent-deletion behavior, and a two-tier historical daily-bar cache with truthful memory/durable/provider/stale states.
 - FastAPI and outbound HTTPX W3C instrumentation, bounded backend/provider/retrieval/cache/persistence metrics, structured correlation logs, and optional loopback OTLP Collector transport.
 - Responsive React Assistant, Portfolio, Market, Goal, and Session History experiences with accessible states, backend-authoritative calculations, archive/history/permanent deletion, and privacy-safe browser telemetry.
+- Measured React Flow Inspector, qualified Finance/Tax Redis semantic cache, and read-only MCP stdio tools for education retrieval, quote lookup, in-memory Portfolio analysis, and Goal projection.
+- M8 full release qualification plus the M9 user/developer/operator, coursework, clean-start, coverage, and eight-minute credential-free demonstration bundle.
 
-MCP and the Inspector UI belong to later milestones. Live providers are not enabled until the account-specific rights gate passes.
-
-M4.1 adds a conditional OpenAI `gpt-6.1-sol` ModelAdapter while retaining the deterministic credential-free default. M5 integrates it through the durable application boundary without changing deterministic authority or credential-free CI. M6 consumes that boundary in the React application. M7 is the next permitted milestone.
+Live providers are not enabled until the account-specific rights gate passes. The next planned product milestone is M10 provider-independent bank/card cash-flow import.
 
 ## Prerequisites
 
@@ -52,6 +52,8 @@ Dependencies are local to `backend/.venv` and `frontend/node_modules`. Qdrant da
 make backend-sync
 make frontend-install
 cp .env.example backend/.env
+make qdrant-up
+make response-cache-up
 ~~~
 
 The generated lockfiles are the reproducibility authority. The example configuration enables only the loopback Qdrant service and requires no credentials.
@@ -103,6 +105,7 @@ make qdrant-stop
 make verify
 make qdrant-check
 make knowledge-validate
+make m9-check
 ~~~
 
 `make verify` loads the tracked `backend/.test.env`, is credential-free, ignores the developer's `backend/.env`, and skips the live-Qdrant integration test. `make qdrant-check` explicitly exercises candidate creation, compatibility validation, atomic activation, rollback, and cleanup against the loopback service.
@@ -118,6 +121,8 @@ M4.1 structured-output, routing, failure, retry, request-budget, concurrency, pr
 M5 REST/SSE contracts, isolation, idempotency, restart/deletion/retention, migrations, cache reuse and rights gates, W3C propagation, metric cardinality, and readiness behavior are exercised by `make m5-check`. `make observability-up` starts the optional loopback OTLP Collector debug sink; network export remains disabled until `AIFA_OTEL_EXPORT_ENABLED=true` is deliberately configured.
 
 M6 product workflows, Active Session archiving, archived history and permanent deletion, browser contract mocks, accessibility states, responsive layouts, and browser telemetry are exercised by `make m6-check`.
+
+M7 Inspector fidelity is exercised by `make m7-check`. M6.1 response-cache behavior is exercised by `make m6-1-check`. M8's full EVAL-01–EVAL-18 qualification is exercised by `make m8-check`. `make m9-check` adds measured frontend coverage, regenerates the full qualification, invokes the MCP protocol/client and release-path audits, and validates Compose configuration. The release guide records exact scope, modes, budgets, rollback, observability, and limitations.
 
 Synthetic JSON, CSV, and XLSX files for exercising portfolio validation and dashboard analysis are available in [examples/portfolios](examples/portfolios/README.md). Each file includes explicit synthetic user prices, so the dashboard can be verified without live market-provider calls.
 

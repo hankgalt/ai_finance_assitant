@@ -9,7 +9,7 @@ Measured 2026-10-31 on the development host with 20 samples per path. The benchm
 | Qualified semantic hit | 21.55 ms | 22.68 ms | 20 | 0 | yes |
 | Semantic near miss | 34.73 ms | 34.99 ms | 20 | 20 | yes |
 
-Configuration: workflow `1`, policy `public-rag-evidence-bound-v2`, minimum similarity `0.92`, deterministic fixture usage method, monetary cost unavailable. The semantic-hit path used an approved test vector mapping solely to verify the serving mechanism; production configuration remains `shadow` pending the human review in [the calibration report](M6_1_semantic_calibration.md).
+Configuration: workflow `1`, policy `public-rag-evidence-bound-v2`, minimum similarity `0.92`, deterministic fixture usage method, monetary cost unavailable. The semantic-hit path used an approved test vector mapping solely to verify the serving mechanism. M8 subsequently approved the two frozen candidates and qualified `serving` for the owner-only private demo; see [the calibration report](M6_1_semantic_calibration.md).
 
 Reproduce with:
 
@@ -17,5 +17,7 @@ Reproduce with:
 make response-cache-benchmark
 ```
 
-M8 must repeat the benchmark with the release candidate, actual selected model/provider, active Qdrant collections, representative hardware, and cost methodology.
+M8 repeated the benchmark with the release candidate, selected model, active Qdrant collections,
+and recorded hardware/timing/token methodology in the M8 evidence packet. Monetary cost remains
+unavailable because no approved versioned provider-price calculator is configured.
 

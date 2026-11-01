@@ -105,9 +105,11 @@ def test_openai_live_account_supports_all_six_agent_contracts() -> None:
         AgentId.TAX_EDUCATION: "What is a SEP IRA for tax year 2026?",
     }
     all_agent_message = (
-        "Explain diversification and 2026 investment taxes, analyze my portfolio, "
-        "describe DEMO historical price data, project my goal scenario, and summarize recent "
-        "DEMO company news."
+        "Use all six finance-assistant capabilities for this synthetic qualification: "
+        "explain diversification generally; analyze the supplied authorized portfolio context; "
+        "describe the supplied authorized DEMO market-history context; project the supplied "
+        "authorized goal scenario; summarize the supplied authorized DEMO financial-news "
+        "context; and explain U.S. federal investment taxes for tax year 2026."
     )
     result = application.run(
         WorkflowRequest(

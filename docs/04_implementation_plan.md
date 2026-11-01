@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 2.7 | Status: Approved sequence; M0–M7 complete; M6.1 implemented with semantic serving gated by review | 2026-10-31
+Version 2.8 | Status: M0–M9 complete for the owner-only private demo/coursework release; M10 planned | 2026-10-31
 
 ## 1. Delivery rules
 
@@ -228,10 +228,10 @@ This milestone implements ADR-028 for QR-001, QR-004, QR-006, QR-007, QR-010, QR
 
 ### M8 — Evaluation, security, observability, and reliability
 
-**Current evidence status (2026-10-31):** the versioned runner and automated full qualification are
-implemented with zero critical automated failures. Private-demo release acceptance remains pending
-the explicitly recorded EVAL-01, EVAL-03, EVAL-08, EVAL-10, EVAL-12, and EVAL-17 live-model/human
-review gates; semantic response-cache mode remains `shadow`. See
+**Completed (2026-10-31):** the versioned full qualification reports all EVAL-01 through EVAL-18
+dimensions passed, zero critical failures, zero incomplete gates, and a passing private-demo
+release gate. The owner approved the selected-model review and the two frozen semantic candidates;
+semantic serving is qualified under the recorded policy. See
 [the M8 delivery report](M8_delivery_report.md).
 
 **Deliverables**
@@ -253,6 +253,11 @@ review gates; semantic response-cache mode remains `shadow`. See
 **Evidence:** Immutable evaluation bundle, coverage report, threat model, dependency scan, benchmark/cost report, observability data-flow diagram, signal/attribute inventory, correlated cross-tier trace, redaction and exporter-failure reports, known-risk register, and release recommendation.
 
 ### M9 — Product documentation, coursework packaging, demonstration, and release
+
+**Completed (2026-10-31):** the release bundle, evidence-path audit, frontend coverage report,
+credential-free demo, and four-tool read-only MCP stdio/client validation satisfy PR-014, PR-015,
+and CA-01 through CA-13 without changing the owner-only release boundary. See
+[M9 delivery report](M9_delivery_report.md).
 
 **Deliverables**
 

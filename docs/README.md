@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.5 | Status: Product architecture baseline; M0–M7/M6.1 complete; M8 automated evidence recorded with release review pending | 2026-10-31
+Version 2.6 | Status: M0–M9/M6.1 complete for the private-demo/coursework release; M10 planned | 2026-10-31
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -35,7 +35,13 @@ Milestone completion evidence is recorded separately from the design authority. 
 [M6 delivery report](M6_delivery_report.md) for the responsive React product experiences, accessible chart/table evidence, portfolio import review, and privacy-safe browser telemetry, and
 [M7 delivery report](M7_delivery_report.md) for the measured RunEvent Inspector, accessible timeline, graph reconciliation, reconnect behavior, and redaction evidence, and
 [M6.1 delivery report](M6_1_delivery_report.md) records the evidence-bound public Finance/Tax response-cache seam, Redis qualification, calibration gate, and measured call avoidance, and
-[M8 delivery report](M8_delivery_report.md) records the automated release qualification, threat/observability/reliability evidence, clean dependency scans, and the remaining live-model/human review gates.
+[M8 delivery report](M8_delivery_report.md) records the passing private-demo release qualification, owner-approved selected-model review, threat/observability/reliability evidence, and clean dependency scans, and
+[M9 delivery report](M9_delivery_report.md) records the product/coursework release package,
+read-only MCP client evidence, clean-start record, documentation, and demonstration bundle.
+
+The runnable release documentation is indexed by the [private-demo release
+bundle](release/README.md); M9 evidence is indexed separately under
+[docs/evidence/m9](evidence/m9/README.md).
 
 If documents conflict, use this precedence: product requirements, accepted ADRs, system design, implementation plan, evaluation strategy, then the M0 prompt. Coursework criteria remain mandatory for the coursework release even when they do not constrain later product architecture. Resolve source-rubric ambiguities in the coursework criteria rather than weakening product requirements.
 

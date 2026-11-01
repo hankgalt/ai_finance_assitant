@@ -100,9 +100,10 @@ class ApplicationServices:
         self._market_bundle = self._provider_bundle()
         self.market = self._market_bundle.market
         self.news = self._market_bundle.news
+        self.knowledge = self._knowledge_retrieval()
         self.workflow = WorkflowApplication(
             settings=settings,
-            retrieval=self._knowledge_retrieval(),
+            retrieval=self.knowledge,
             contexts=self.context_repository,
             event_recorder=self.event_recorder,
             observability=self.observability,

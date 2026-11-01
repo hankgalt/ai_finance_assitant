@@ -9,6 +9,7 @@ This directory is the human-readable evidence index for M8. The immutable case m
 - [Observability data flow](observability-data-flow.md)
 - [Signal inventory](signal-inventory.md)
 - [Human review worksheet](human-review.md)
+- [Selected-model review packet](live-model-review.md)
 - [Operational runbook](operational-runbook.md)
 - [Known-risk register](known-risk-register.md)
 - [Dependency scan](dependency-scan.md)

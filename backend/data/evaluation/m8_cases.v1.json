@@ -18,7 +18,7 @@
       "description": "Requalify semantic routing with the selected live model after the deterministic substring router was removed.",
       "check_ids": ["backend-tests"],
       "evidence_paths": ["docs/evidence/m8/human-review.md", "docs/M4_1_delivery_report.md"],
-      "review_status": "pending"
+      "review_status": "approved"
     },
     {
       "case_id": "six-agent-specialization",
@@ -43,7 +43,7 @@
       "description": "Requalify conditional multi-agent synthesis with the selected live model after the synthesis operation was added.",
       "check_ids": ["backend-tests"],
       "evidence_paths": ["docs/evidence/m8/human-review.md", "docs/M4_1_delivery_report.md"],
-      "review_status": "pending"
+      "review_status": "approved"
     },
     {
       "case_id": "deterministic-financial-arithmetic",
@@ -84,7 +84,7 @@
       "description": "Verify citation identifiers and collection evidence automatically, then review sampled factual claim support.",
       "check_ids": ["backend-tests", "qdrant-integration"],
       "evidence_paths": ["docs/evidence/m8/human-review.md", "docs/M1_delivery_report.md"],
-      "review_status": "pending"
+      "review_status": "approved"
     },
     {
       "case_id": "historical-tax-year-filtering",
@@ -101,7 +101,7 @@
       "description": "Review supported claims, contradiction, abstention, schema validity, and fabricated evidence on representative generated answers.",
       "check_ids": ["backend-tests"],
       "evidence_paths": ["docs/evidence/m8/human-review.md", "docs/M4_1_delivery_report.md"],
-      "review_status": "pending"
+      "review_status": "approved"
     },
     {
       "case_id": "untrusted-instruction-resistance",
@@ -118,7 +118,7 @@
       "description": "Review directive, guarantee, uncertainty, tax-jurisdiction, and risk-language boundaries.",
       "check_ids": ["backend-tests"],
       "evidence_paths": ["docs/evidence/m8/human-review.md", "docs/evidence/m8/threat-model.md"],
-      "review_status": "pending"
+      "review_status": "approved"
     },
     {
       "case_id": "api-reliability-and-restart",
@@ -159,7 +159,7 @@
       "description": "Qualify disabled, exact-hit, semantic-hit, and near-miss latency, call avoidance, equivalence, and zero-critical-false-hit gates.",
       "check_ids": ["backend-tests", "redis-integration"],
       "evidence_paths": ["backend/data/response_cache/calibration.v1.json", "docs/evidence/M6_1_response_cache_benchmark.md", "docs/evidence/M6_1_semantic_calibration.md", "docs/evidence/m8/human-review.md"],
-      "review_status": "pending"
+      "review_status": "approved"
     },
     {
       "case_id": "persistence-privacy-lifecycle",

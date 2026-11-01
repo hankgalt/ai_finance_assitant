@@ -8,9 +8,9 @@
         "--check",
         "."
       ],
-      "duration_seconds": 0.011,
+      "duration_seconds": 0.01,
       "exit_code": 0,
-      "output_tail": "141 files already formatted",
+      "output_tail": "147 files already formatted",
       "status": "passed"
     },
     {
@@ -20,7 +20,7 @@
         "check",
         "."
       ],
-      "duration_seconds": 0.009,
+      "duration_seconds": 0.014,
       "exit_code": 0,
       "output_tail": "All checks passed!",
       "status": "passed"
@@ -30,9 +30,9 @@
       "command": [
         ".venv/bin/mypy"
       ],
-      "duration_seconds": 0.338,
+      "duration_seconds": 0.346,
       "exit_code": 0,
-      "output_tail": "Success: no issues found in 132 source files",
+      "output_tail": "Success: no issues found in 137 source files",
       "status": "passed"
     },
     {
@@ -44,9 +44,9 @@
         "--cov-report=json:artifacts/m8/backend-coverage.json",
         "--junitxml=artifacts/m8/backend-junit.xml"
       ],
-      "duration_seconds": 15.995,
+      "duration_seconds": 18.034,
       "exit_code": 0,
-      "output_tail": "........................................................................ [ 27%]\n........................................................................ [ 54%]\n.........................................................s.............. [ 81%]\n.................................................                        [100%]\n================================ tests coverage ================================\n_______________ coverage: platform darwin, python 3.12.0-final-0 _______________\n\nCoverage JSON written to file artifacts/m8/backend-coverage.json\n264 passed, 1 skipped, 4 deselected in 15.24s",
+      "output_tail": "........................................................................ [ 26%]\n........................................................................ [ 52%]\n.................................................................s...... [ 78%]\n...........................................................              [100%]\n================================ tests coverage ================================\n_______________ coverage: platform darwin, python 3.12.0-final-0 _______________\n\nCoverage JSON written to file artifacts/m8/backend-coverage.json\n274 passed, 1 skipped, 4 deselected in 17.22s",
       "status": "passed"
     },
     {
@@ -55,7 +55,7 @@
         "pnpm",
         "format:check"
       ],
-      "duration_seconds": 0.921,
+      "duration_seconds": 0.915,
       "exit_code": 0,
       "output_tail": "Checking formatting...\nAll matched files use Prettier code style!\n\n$ prettier --check .",
       "status": "passed"
@@ -66,7 +66,7 @@
         "pnpm",
         "lint"
       ],
-      "duration_seconds": 1.523,
+      "duration_seconds": 1.762,
       "exit_code": 0,
       "output_tail": "$ eslint . --max-warnings=0",
       "status": "passed"
@@ -77,7 +77,7 @@
         "pnpm",
         "typecheck"
       ],
-      "duration_seconds": 1.691,
+      "duration_seconds": 1.687,
       "exit_code": 0,
       "output_tail": "$ tsc -b --pretty false",
       "status": "passed"
@@ -88,9 +88,9 @@
         "pnpm",
         "test"
       ],
-      "duration_seconds": 2.631,
+      "duration_seconds": 2.643,
       "exit_code": 0,
-      "output_tail": "RUN  v4.1.12 /Users/tvishal/Work/github.com/hankgalt/ai_finance_assitant/frontend\n\n\n Test Files  8 passed (8)\n      Tests  35 passed (35)\n   Start at  21:12:45\n   Duration  2.16s (transform 442ms, setup 975ms, import 912ms, tests 2.18s, environment 3.07s)\n\n\n$ vitest run",
+      "output_tail": "RUN  v4.1.12 /Users/tvishal/Work/github.com/hankgalt/ai_finance_assitant/frontend\n\n\n Test Files  8 passed (8)\n      Tests  35 passed (35)\n   Start at  21:52:29\n   Duration  2.18s (transform 458ms, setup 971ms, import 930ms, tests 2.18s, environment 3.04s)\n\n\n$ vitest run",
       "status": "passed"
     },
     {
@@ -99,9 +99,9 @@
         "pnpm",
         "build"
       ],
-      "duration_seconds": 1.968,
+      "duration_seconds": 1.947,
       "exit_code": 0,
-      "output_tail": "vite v8.3.5 building client environment for production...\ntransforming...\n\u2713 2576 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                     0.83 kB \u2502 gzip:  0.45 kB\ndist/assets/InspectorExperience-DLioOiRN.css       15.41 kB \u2502 gzip:  2.56 kB\ndist/assets/index-CxoDJOk9.css                     30.51 kB \u2502 gzip:  7.41 kB\ndist/assets/x-CZV4fCEK.js                           0.14 kB \u2502 gzip:  0.14 kB\ndist/assets/refresh-cw-Cn6LZDW8.js                  0.30 kB \u2502 gzip:  0.21 kB\ndist/assets/trash-2-D_WNHUev.js                     0.34 kB \u2502 gzip:  0.24 kB\ndist/assets/tooltipContext-C8e6rRFi.js              0.51 kB \u2502 gzip:  0.27 kB\ndist/assets/format-13NmG51Q.js                      0.77 kB \u2502 gzip:  0.41 kB\ndist/assets/SessionHistoryExperience-DJw93iGW.js    4.75 kB \u2502 gzip:  1.65 kB\ndist/assets/value-BT4ziP7K.js                      10.84 kB \u2502 gzip:  4.61 kB\ndist/assets/MarketExperience-CBN2Us8w.js           23.23 kB \u2502 gzip:  7.30 kB\ndist/assets/PortfolioExperience-DrLyy1IA.js        32.90 kB \u2502 gzip: 10.29 kB\ndist/assets/CartesianChart-Dq6snaZV.js             35.62 kB \u2502 gzip:  9.95 kB\ndist/assets/GoalExperience-4OAEeuGp.js             42.88 kB \u2502 gzip: 12.79 kB\ndist/assets/AssistantExperience-C7Mbgkzd.js       174.05 kB \u2502 gzip: 52.58 kB\ndist/assets/InspectorExperience-BY29vNwo.js       181.22 kB \u2502 gzip: 57.00 kB\ndist/assets/index-C8Ra0yK1.js                     278.84 kB \u2502 gzip: 87.66 kB\ndist/assets/CategoricalChart-CfxQfvj4.js          293.63 kB \u2502 gzip: 86.66 kB\n\n\u2713 built in 143ms\n\n$ tsc -b && vite build",
+      "output_tail": "vite v8.3.5 building client environment for production...\ntransforming...\n\u2713 2576 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                     0.83 kB \u2502 gzip:  0.45 kB\ndist/assets/InspectorExperience-DLioOiRN.css       15.41 kB \u2502 gzip:  2.56 kB\ndist/assets/index-CxoDJOk9.css                     30.51 kB \u2502 gzip:  7.41 kB\ndist/assets/x-CZV4fCEK.js                           0.14 kB \u2502 gzip:  0.14 kB\ndist/assets/refresh-cw-Cn6LZDW8.js                  0.30 kB \u2502 gzip:  0.21 kB\ndist/assets/trash-2-D_WNHUev.js                     0.34 kB \u2502 gzip:  0.24 kB\ndist/assets/tooltipContext-C8e6rRFi.js              0.51 kB \u2502 gzip:  0.27 kB\ndist/assets/format-13NmG51Q.js                      0.77 kB \u2502 gzip:  0.41 kB\ndist/assets/SessionHistoryExperience-DJw93iGW.js    4.75 kB \u2502 gzip:  1.65 kB\ndist/assets/value-BT4ziP7K.js                      10.84 kB \u2502 gzip:  4.61 kB\ndist/assets/MarketExperience-CBN2Us8w.js           23.23 kB \u2502 gzip:  7.30 kB\ndist/assets/PortfolioExperience-DrLyy1IA.js        32.90 kB \u2502 gzip: 10.29 kB\ndist/assets/CartesianChart-Dq6snaZV.js             35.62 kB \u2502 gzip:  9.95 kB\ndist/assets/GoalExperience-4OAEeuGp.js             42.88 kB \u2502 gzip: 12.79 kB\ndist/assets/AssistantExperience-C7Mbgkzd.js       174.05 kB \u2502 gzip: 52.58 kB\ndist/assets/InspectorExperience-BY29vNwo.js       181.22 kB \u2502 gzip: 57.00 kB\ndist/assets/index-C8Ra0yK1.js                     278.84 kB \u2502 gzip: 87.66 kB\ndist/assets/CategoricalChart-CfxQfvj4.js          293.63 kB \u2502 gzip: 86.66 kB\n\n\u2713 built in 141ms\n\n$ tsc -b && vite build",
       "status": "passed"
     },
     {
@@ -110,9 +110,9 @@
         "pnpm",
         "test:e2e"
       ],
-      "duration_seconds": 25.585,
+      "duration_seconds": 25.361,
       "exit_code": 0,
-      "output_tail": "Running 9 tests using 2 workers\n\n  \u2713  2 [desktop-chrome] \u203a e2e/m6.spec.ts:486:1 \u203a shows import guidance instead of a selector when no Portfolio exists (932ms)\n  \u2713  1 [desktop-chrome] \u203a e2e/m7.spec.ts:259:1 \u203a Inspector renders recorded success, partial, and failure paths accessibly (1.7s)\n  \u2713  3 [desktop-chrome] \u203a e2e/m6.spec.ts:506:1 \u203a opens portfolio context selection in a modal and insets the composer (1.3s)\n  \u2713  4 [desktop-chrome] \u203a e2e/m6.spec.ts:597:1 \u203a completes all M6 product workflows with accessible alternatives (13.2s)\n  \u2713  5 [desktop-chrome] \u203a e2e/m6.spec.ts:743:1 \u203a keeps navigation and core content usable at a narrow viewport (1.6s)\n  \u2713  6 [desktop-chrome] \u203a e2e/m6.spec.ts:802:1 \u203a wraps assistant table cells and keeps every column visible at a narrow viewport (1.2s)\n  \u2713  7 [desktop-chrome] \u203a e2e/m6.spec.ts:920:1 \u203a separates Run metadata, citations, and supplemental messages (1.2s)\n  \u2713  8 [desktop-chrome] \u203a e2e/m6.spec.ts:1006:1 \u203a keeps the clear active session action visible beside a long conversation (1.8s)\n  \u2713  9 [desktop-chrome] \u203a e2e/m6.spec.ts:1075:1 \u203a archives the active session and deletes it only from history (1.8s)\n\n  9 passed (25.0s)\n\n$ playwright test\n[WebServer] (node:21250) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n[WebServer] (Use `pnpm --trace-warnings ...` to show where the warning was created)\n[WebServer] $ vite --host 127.0.0.1 --port 4173 --strictPort --force\n[WebServer] (node:21290) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)\n(node:21321) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:21322) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)",
+      "output_tail": "Running 9 tests using 2 workers\n\n  \u2713  2 [desktop-chrome] \u203a e2e/m6.spec.ts:486:1 \u203a shows import guidance instead of a selector when no Portfolio exists (887ms)\n  \u2713  1 [desktop-chrome] \u203a e2e/m7.spec.ts:259:1 \u203a Inspector renders recorded success, partial, and failure paths accessibly (1.6s)\n  \u2713  3 [desktop-chrome] \u203a e2e/m6.spec.ts:506:1 \u203a opens portfolio context selection in a modal and insets the composer (1.3s)\n  \u2713  4 [desktop-chrome] \u203a e2e/m6.spec.ts:597:1 \u203a completes all M6 product workflows with accessible alternatives (13.1s)\n  \u2713  5 [desktop-chrome] \u203a e2e/m6.spec.ts:743:1 \u203a keeps navigation and core content usable at a narrow viewport (1.6s)\n  \u2713  6 [desktop-chrome] \u203a e2e/m6.spec.ts:802:1 \u203a wraps assistant table cells and keeps every column visible at a narrow viewport (1.2s)\n  \u2713  7 [desktop-chrome] \u203a e2e/m6.spec.ts:920:1 \u203a separates Run metadata, citations, and supplemental messages (1.2s)\n  \u2713  8 [desktop-chrome] \u203a e2e/m6.spec.ts:1006:1 \u203a keeps the clear active session action visible beside a long conversation (1.8s)\n  \u2713  9 [desktop-chrome] \u203a e2e/m6.spec.ts:1075:1 \u203a archives the active session and deletes it only from history (1.8s)\n\n  9 passed (24.8s)\n\n$ playwright test\n[WebServer] (node:60792) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n[WebServer] (Use `pnpm --trace-warnings ...` to show where the warning was created)\n[WebServer] $ vite --host 127.0.0.1 --port 4173 --strictPort --force\n[WebServer] (node:60828) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)\n(node:60856) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:60855) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)",
       "status": "passed"
     },
     {
@@ -122,9 +122,9 @@
         "-q",
         "tests/test_qdrant_integration.py"
       ],
-      "duration_seconds": 2.522,
+      "duration_seconds": 2.488,
       "exit_code": 0,
-      "output_tail": ".                                                                        [100%]\n1 passed in 1.99s",
+      "output_tail": ".                                                                        [100%]\n1 passed in 1.94s",
       "status": "passed"
     },
     {
@@ -136,14 +136,14 @@
         "redis",
         "tests/test_response_cache_redis.py"
       ],
-      "duration_seconds": 0.763,
+      "duration_seconds": 0.723,
       "exit_code": 0,
-      "output_tail": ".                                                                        [100%]\n1 passed in 0.35s",
+      "output_tail": ".                                                                        [100%]\n1 passed in 0.33s",
       "status": "passed"
     }
   ],
   "critical_failure_count": 0,
-  "critical_incomplete_count": 6,
+  "critical_incomplete_count": 0,
   "dataset_version": "m8-release-qualification-v1",
   "dimensions": [
     {
@@ -156,10 +156,8 @@
       "failed_check_ids": [],
       "missing_evidence_paths": [],
       "not_run_check_ids": [],
-      "pending_review_case_ids": [
-        "live-model-routing-review"
-      ],
-      "status": "review_required"
+      "pending_review_case_ids": [],
+      "status": "passed"
     },
     {
       "case_ids": [
@@ -183,10 +181,8 @@
       "failed_check_ids": [],
       "missing_evidence_paths": [],
       "not_run_check_ids": [],
-      "pending_review_case_ids": [
-        "live-model-synthesis-review"
-      ],
-      "status": "review_required"
+      "pending_review_case_ids": [],
+      "status": "passed"
     },
     {
       "case_ids": [
@@ -245,10 +241,8 @@
       "failed_check_ids": [],
       "missing_evidence_paths": [],
       "not_run_check_ids": [],
-      "pending_review_case_ids": [
-        "citation-claim-support-review"
-      ],
-      "status": "review_required"
+      "pending_review_case_ids": [],
+      "status": "passed"
     },
     {
       "case_ids": [
@@ -271,10 +265,8 @@
       "failed_check_ids": [],
       "missing_evidence_paths": [],
       "not_run_check_ids": [],
-      "pending_review_case_ids": [
-        "generated-answer-groundedness-review"
-      ],
-      "status": "review_required"
+      "pending_review_case_ids": [],
+      "status": "passed"
     },
     {
       "case_ids": [
@@ -297,10 +289,8 @@
       "failed_check_ids": [],
       "missing_evidence_paths": [],
       "not_run_check_ids": [],
-      "pending_review_case_ids": [
-        "financial-safety-human-review"
-      ],
-      "status": "review_required"
+      "pending_review_case_ids": [],
+      "status": "passed"
     },
     {
       "case_ids": [
@@ -359,10 +349,8 @@
       "failed_check_ids": [],
       "missing_evidence_paths": [],
       "not_run_check_ids": [],
-      "pending_review_case_ids": [
-        "response-cache-latency-cost-safety"
-      ],
-      "status": "review_required"
+      "pending_review_case_ids": [],
+      "status": "passed"
     },
     {
       "case_ids": [
@@ -377,8 +365,8 @@
       "status": "passed"
     }
   ],
-  "generated_at": "2026-11-01T04:13:18.688429Z",
+  "generated_at": "2026-11-01T04:53:02.124470Z",
   "profile": "full",
-  "release_gate_passed": false,
+  "release_gate_passed": true,
   "schema_version": "1"
 }

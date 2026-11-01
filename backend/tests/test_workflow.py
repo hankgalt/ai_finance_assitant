@@ -1,9 +1,10 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from langgraph.checkpoint.memory import InMemorySaver
 
 from ai_finance_assistant.agents.context import (
     InMemoryAgentContextRepository,
+    MarketAgentContext,
     PortfolioAgentContext,
 )
 from ai_finance_assistant.contracts.agents import (
@@ -787,6 +788,120 @@ def test_invalid_explicit_portfolio_switch_does_not_fall_back_to_active_scope() 
     assert invalid_switch.status == WorkflowStatus.CLARIFICATION
     assert invalid_switch.portfolio_context_references == ()
     assert len(agents[AgentId.PORTFOLIO_ANALYSIS].requests) == 1
+
+
+def test_portfolio_context_gate_accepts_authorized_mixed_agent_contexts() -> None:
+    message = "Analyze the supplied portfolio and describe the supplied market history."
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    contexts = portfolio_contexts()
+    contexts.put(
+        "session-1",
+        MarketAgentContext(
+            context_id="market-context",
+            symbol="DEMO",
+            currency="USD",
+            start_date=date(2026, 10, 23),
+            end_date=date(2026, 10, 26),
+        ),
+    )
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=model_for(message, AgentId.PORTFOLIO_ANALYSIS, AgentId.MARKET_ANALYSIS),
+        contexts=contexts,
+    )
+
+    result = workflow.run(
+        workflow_request(
+            execution_id="run-authorized-mixed-contexts",
+            message=message,
+            context_references=("portfolio-context", "market-context"),
+        )
+    )
+
+    assert result.status == WorkflowStatus.COMPLETED
+    assert result.portfolio_context_references == ("portfolio-context",)
+    assert agents[AgentId.PORTFOLIO_ANALYSIS].requests[-1].context_references == (
+        "portfolio-context",
+        "market-context",
+    )
+    assert agents[AgentId.MARKET_ANALYSIS].requests[-1].context_references == (
+        "portfolio-context",
+        "market-context",
+    )
+
+
+def test_portfolio_context_gate_preserves_mixed_context_with_active_portfolio() -> None:
+    first_message = "Analyze my portfolio."
+    follow_up = "Compare that analysis with the supplied market history."
+    agents = {agent_id: StubAgent(agent_id) for agent_id in AgentId}
+    contexts = portfolio_contexts()
+    contexts.put(
+        "session-1",
+        MarketAgentContext(
+            context_id="market-context",
+            symbol="DEMO",
+            currency="USD",
+            start_date=date(2026, 10, 23),
+            end_date=date(2026, 10, 26),
+        ),
+    )
+    model = DeterministicModelAdapter(
+        routing_responses={
+            first_message: RoutingModelOutput(
+                selected_agent_ids=(AgentId.PORTFOLIO_ANALYSIS,),
+                reason_category=RoutingReason.SINGLE_DOMAIN,
+            ),
+            follow_up: RoutingModelOutput(
+                selected_agent_ids=(
+                    AgentId.PORTFOLIO_ANALYSIS,
+                    AgentId.MARKET_ANALYSIS,
+                ),
+                reason_category=RoutingReason.MULTI_DOMAIN,
+            ),
+        }
+    )
+    workflow = FinanceWorkflow(
+        agents=agents,
+        event_recorder=RunEventRecorder(
+            repository=InMemoryRunEventRepository(),
+            observability=InMemoryObservability(),
+        ),
+        observability=InMemoryObservability(),
+        model=model,
+        contexts=contexts,
+        checkpointer=InMemorySaver(),
+    )
+
+    workflow.run(
+        workflow_request(
+            execution_id="run-active-portfolio",
+            message=first_message,
+            context_references=("portfolio-context",),
+        )
+    )
+    result = workflow.run(
+        workflow_request(
+            execution_id="run-active-portfolio-follow-up",
+            message=follow_up,
+            context_references=("market-context",),
+        )
+    )
+
+    assert result.status == WorkflowStatus.COMPLETED
+    assert result.portfolio_context_references == ("portfolio-context",)
+    assert agents[AgentId.PORTFOLIO_ANALYSIS].requests[-1].context_references == (
+        "portfolio-context",
+        "market-context",
+    )
+    assert agents[AgentId.MARKET_ANALYSIS].requests[-1].context_references == (
+        "portfolio-context",
+        "market-context",
+    )
 
 
 def test_portfolio_override_is_not_disclosed_to_an_unrelated_specialist() -> None:

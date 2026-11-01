@@ -15,6 +15,7 @@ from ai_finance_assistant.evaluation.models import (
     DimensionStatus,
     EvaluationDimension,
     EvaluationManifest,
+    ReviewStatus,
 )
 from ai_finance_assistant.evaluation.runner import CHECK_SPECS, build_report, load_manifest
 from ai_finance_assistant.observability.memory import InMemoryObservability
@@ -63,9 +64,42 @@ def test_m8_manifest_rejects_path_traversal() -> None:
         EvaluationManifest.model_validate(payload)
 
 
-def test_m8_report_keeps_human_review_visible_and_blocks_release() -> None:
+def test_m8_approved_manifest_passes_release_gate() -> None:
     report = build_report(
         load_manifest(MANIFEST_PATH),
+        profile="full",
+        repo_root=ROOT,
+        checks=_passed_checks(),
+    )
+
+    assert all(item.status == DimensionStatus.PASSED for item in report.dimensions)
+    assert report.release_gate_passed
+    assert report.critical_failure_count == 0
+    assert report.critical_incomplete_count == 0
+
+
+def test_m8_report_keeps_pending_human_review_visible_and_blocks_release() -> None:
+    manifest = load_manifest(MANIFEST_PATH)
+    review_case_ids = {
+        "live-model-routing-review",
+        "live-model-synthesis-review",
+        "citation-claim-support-review",
+        "generated-answer-groundedness-review",
+        "financial-safety-human-review",
+        "response-cache-latency-cost-safety",
+    }
+    pending_manifest = manifest.model_copy(
+        update={
+            "cases": tuple(
+                case.model_copy(update={"review_status": ReviewStatus.PENDING})
+                if case.case_id in review_case_ids
+                else case
+                for case in manifest.cases
+            )
+        }
+    )
+    report = build_report(
+        pending_manifest,
         profile="full",
         repo_root=ROOT,
         checks=_passed_checks(),

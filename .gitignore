@@ -26,6 +26,7 @@ htmlcov/
 .coverage
 .coverage.*
 coverage.xml
+/frontend/coverage/
 
 # Node, Vite, and package-manager output
 node_modules/

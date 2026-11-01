@@ -16,5 +16,13 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     css: true,
     exclude: ["e2e/**", "node_modules/**"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary"],
+      reportsDirectory: "../backend/artifacts/m9/frontend-coverage",
+      thresholds: {
+        lines: 80,
+      },
+    },
   },
 });

@@ -18,7 +18,10 @@ attribute set. Cache RunEvents retain only bounded operation/outcome/match/polic
 similarity buckets, and avoided-call truth. Raw query, Session/Run identity, and unbounded reason
 text are dropped.
 
-LangSmith is optional and was previously observed in the configured project with hidden inputs and
-outputs. No new external trace was created during this M8 run. The selected live routing/synthesis
-path still requires the explicitly pending external-call review, while RunEvents remain the
-authoritative Inspector record regardless of exporter availability.
+The selected-model review created privacy-hidden LangSmith Runs in the configured project. Root
+and child records exposed timing and bounded lifecycle metadata while inputs and outputs remained
+hidden. Four exact-hit roots were retained for p50/p95 comparison. The short-lived harness emitted
+background-export shutdown warnings and did not retain every repeated exact-hit trace; all
+first-party Run results and RunEvents completed. This demonstrates that optional exporter loss does
+not corrupt product state, while RunEvents remain the authoritative Inspector record. See
+[the selected-model review packet](live-model-review.md).

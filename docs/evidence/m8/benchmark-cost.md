@@ -17,7 +17,16 @@ backend plus real-Redis suites. It is not an OpenAI latency/cost claim. Monetary
 because no versioned provider price calculator is approved; token availability/method remains
 explicit in RunEvents.
 
-Selected-model p50/p95, tokens, monetary-cost availability/method, and the current model-backed
-routing/synthesis path require a newly approved external-call budget. EVAL-17 therefore remains
-`review_required`, semantic mode remains `shadow`, and these deterministic numbers are not used to
-open the private-demo release gate.
+## Selected-model review
+
+The approved M8 run used `gpt-6.1-sol`, active Finance/Tax collections, the pinned local encoder,
+and a dedicated Redis index. Five cold Runs measured p50 **7,866.71 ms** and p95 **14,539.40 ms**.
+Four privacy-hidden LangSmith exact-hit traces measured p50 **19.45 ms** and p95 **21.37 ms**;
+the full local set contained ten exact hits with p50 **23.69 ms** and zero model calls. The
+active-collection sequence recorded 19,512 input and 2,724 output tokens. Monetary cost remains
+unavailable because no approved versioned price calculator is configured.
+
+The live paraphrase safely missed because current retrieved evidence fingerprints differed. The
+frozen calibration reports two owner-approved equivalent paraphrases, zero critical false hits,
+zero unreviewed proposed hits, and a passing serving gate. The owner approved EVAL-17. Details are in
+[the selected-model review packet](live-model-review.md).

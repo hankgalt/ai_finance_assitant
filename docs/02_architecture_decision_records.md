@@ -40,9 +40,13 @@ Place model invocation behind a structured LLM adapter, record the model/prompt 
 
 Portfolio and goal arithmetic belongs in tested Python modules with validated inputs, documented precision/rounding, structured warnings, and returned results. LLMs may explain those results but cannot improvise authoritative arithmetic. This is a financial safety seam and applies to the planned cash-flow module as well.
 
-### ADR-010: Read-only MCP adapter after core product modules — Proposed
+### ADR-010: Read-only MCP adapter after core product modules — Accepted
 
 For the coursework release, expose approved education, quote, portfolio-analysis, and goal-projection interfaces through a read-only MCP adapter backed by the same modules as FastAPI. It cannot bypass validation, authorization, provenance, or secret handling. Its ambiguous rubric status is resolved conservatively as required pending instructor confirmation.
+
+M9 validated the decision with official-SDK in-memory and external stdio clients, bounded schemas,
+read-only/non-destructive annotations, deterministic shared-module results, provider provenance, and
+an explicit absence of persistence, administration, credential, Session, deletion, and trade tools.
 
 ### ADR-011: Observability and evaluation are product features — Accepted
 

@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "release_id": "private-demo-2026-10-31",
+  "release_scope": "owner-only private demonstration and coursework package",
+  "qualification_report": "backend/artifacts/m8/qualification-report.v1.json",
+  "release_documents": [
+    "docs/release/README.md",
+    "docs/release/user-guide.md",
+    "docs/release/developer-guide.md",
+    "docs/release/operator-runbook.md",
+    "docs/release/demo-script.md",
+    "docs/release/source-license-register.md",
+    "docs/release/version-register.md",
+    "docs/release/release-notes.md",
+    "docs/release/limitations.md"
+  ],
+  "release_evidence": [
+    "docs/evidence/m9/README.md",
+    "docs/evidence/m9/coursework-evidence-matrix.md",
+    "docs/evidence/m9/clean-start-record.md",
+    "docs/evidence/m9/mcp-client-record.md",
+    "docs/evidence/m9/completion-checklist.md",
+    "backend/artifacts/m9/frontend-coverage/coverage-summary.json"
+  ],
+  "sample_data": [
+    "examples/portfolios/manifest.v1.json",
+    "examples/portfolios/balanced_multi_account.json",
+    "examples/portfolios/concentrated_technology.csv",
+    "examples/portfolios/retirement_income.xlsx"
+  ],
+  "product_requirements": [
+    {"id": "PR-001", "evidence": ["docs/M4_delivery_report.md", "backend/tests/test_agents.py"]},
+    {"id": "PR-002", "evidence": ["docs/M4_delivery_report.md", "backend/tests/test_workflow.py"]},
+    {"id": "PR-003", "evidence": ["docs/M2_delivery_report.md", "backend/tests/test_portfolio_import.py"]},
+    {"id": "PR-004", "evidence": ["docs/M3_delivery_report.md", "backend/tests/test_provider_adapters.py"]},
+    {"id": "PR-005", "evidence": ["docs/M2_delivery_report.md", "backend/tests/test_goal_projection.py"]},
+    {"id": "PR-006", "evidence": ["docs/M3_delivery_report.md", "backend/tests/test_agents.py"]},
+    {"id": "PR-007", "evidence": ["docs/M1_delivery_report.md", "backend/tests/test_agents.py"]},
+    {"id": "PR-008", "evidence": ["docs/M1_delivery_report.md", "backend/tests/test_qdrant_integration.py"]},
+    {"id": "PR-009", "evidence": ["docs/M2_delivery_report.md", "backend/tests/test_portfolio_analysis.py"]},
+    {"id": "PR-010", "evidence": ["docs/M6_delivery_report.md", "frontend/e2e/m6.spec.ts"]},
+    {"id": "PR-011", "evidence": ["docs/M5_delivery_report.md", "backend/tests/test_m5_api.py"]},
+    {"id": "PR-012", "evidence": ["docs/M7_delivery_report.md", "frontend/e2e/m7.spec.ts"]},
+    {"id": "PR-013", "evidence": ["docs/M5_delivery_report.md", "backend/tests/test_m5_persistence.py"]},
+    {"id": "PR-014", "evidence": ["docs/M9_delivery_report.md", "docs/evidence/m9/clean-start-record.md"]},
+    {"id": "PR-015", "evidence": ["docs/evidence/m9/mcp-client-record.md", "backend/tests/test_mcp_adapter.py"]}
+  ],
+  "coursework_criteria": [
+    {"id": "CA-01", "evidence": ["docs/M4_delivery_report.md", "backend/tests/test_agents.py"]},
+    {"id": "CA-02", "evidence": ["docs/M4_delivery_report.md", "backend/tests/test_workflow.py"]},
+    {"id": "CA-03", "evidence": ["docs/M1_delivery_report.md", "backend/artifacts/m1/README.md"]},
+    {"id": "CA-04", "evidence": ["docs/M1_delivery_report.md", "backend/artifacts/m1/finance_education_v1_755be30b6a2d.manifest.json", "backend/artifacts/m1/tax_education_v1_9b31ab2354ea.manifest.json"]},
+    {"id": "CA-05", "evidence": ["docs/M3_delivery_report.md", "backend/tests/test_provider_adapters.py"]},
+    {"id": "CA-06", "evidence": ["docs/M6_delivery_report.md", "frontend/e2e/m6.spec.ts"]},
+    {"id": "CA-07", "evidence": ["docs/M2_delivery_report.md", "examples/portfolios/manifest.v1.json"]},
+    {"id": "CA-08", "evidence": ["docs/M2_delivery_report.md", "backend/tests/test_goal_projection.py"]},
+    {"id": "CA-09", "evidence": ["docs/M3_delivery_report.md", "backend/tests/test_agents.py"]},
+    {"id": "CA-10", "evidence": ["docs/M1_delivery_report.md", "backend/tests/test_agents.py"]},
+    {"id": "CA-11", "evidence": ["backend/artifacts/m8/qualification-report.v1.json", "docs/release/operator-runbook.md"]},
+    {"id": "CA-12", "evidence": ["docs/release/demo-script.md", "docs/evidence/m9/clean-start-record.md"]},
+    {"id": "CA-13", "evidence": ["docs/evidence/m9/mcp-client-record.md", "backend/tests/test_mcp_adapter.py"]}
+  ],
+  "mcp": {
+    "adapter_version": "read-only-mcp-v1",
+    "transport": "stdio",
+    "tools": ["search_education", "get_market_quote", "analyze_portfolio", "project_goal"],
+    "mutation_tools": []
+  }
+}

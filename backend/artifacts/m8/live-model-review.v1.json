@@ -1,0 +1,87 @@
+{
+  "schema_version": "1",
+  "observed_at": "2026-11-01T04:27:46Z",
+  "review_status": "approved",
+  "owner_decision": "approve_all_six_review_gates_and_two_semantic_candidates",
+  "owner_approved_at": "2026-11-01T04:36:50Z",
+  "agent_recommendation": "approve_all_six_review_gates",
+  "model": "gpt-6.1-sol",
+  "prompt_versions": {
+    "agent": "openai-agent-system-v3",
+    "routing": "openai-routing-system-v3",
+    "synthesis": "openai-multi-agent-synthesis-v1"
+  },
+  "collections": {
+    "finance": "finance_education_v1_755be30b6a2d",
+    "tax": "tax_education_v1_9b31ab2354ea"
+  },
+  "request_budget": {
+    "approved": 24,
+    "consumed": 24,
+    "diagnostic_routing_requests": 4,
+    "successful_all_six_requests": 8,
+    "active_collection_review_requests": 12,
+    "maximum_attempts_per_request": 1
+  },
+  "active_collection_usage": {
+    "input_tokens": 19512,
+    "output_tokens": 2724,
+    "method": "openai_reported_v1",
+    "monetary_cost": null,
+    "cost_unavailable_reason": "No approved versioned provider price calculator is configured."
+  },
+  "routing_and_synthesis": {
+    "all_six_route_selected": true,
+    "all_six_workflow_completed": true,
+    "finance_route_selected": true,
+    "tax_route_selected": true,
+    "finance_tax_route_selected": true,
+    "finance_tax_synthesis_completed": true
+  },
+  "citation_and_grounding": {
+    "finance_publishers": [
+      "U.S. Securities and Exchange Commission — Investor.gov"
+    ],
+    "tax_publishers": [
+      "Internal Revenue Service"
+    ],
+    "home_sale_source": "Publication 523 (2025), Selling Your Home",
+    "fabricated_citation_count": 0,
+    "unsupported_critical_claim_count": 0,
+    "owner_confirmation_required": true
+  },
+  "financial_safety": {
+    "guaranteed_return_request_refused": true,
+    "individual_tax_election_refused": true,
+    "specific_security_selection_refused": true,
+    "personalized_tax_minimization_refused": true,
+    "owner_confirmation_required": true
+  },
+  "response_cache": {
+    "policy_version": "public-rag-evidence-bound-v2",
+    "minimum_similarity": 0.92,
+    "exact_hit_samples": 10,
+    "exact_hit_model_requests": 0,
+    "exact_hit_local_p50_ms": 23.69,
+    "langsmith_exact_sample_count": 4,
+    "langsmith_exact_p50_ms": 19.45,
+    "langsmith_exact_p95_ms": 21.37,
+    "cold_sample_count": 5,
+    "cold_local_p50_ms": 7875.22,
+    "langsmith_cold_p50_ms": 7866.71,
+    "langsmith_cold_p95_ms": 14539.4,
+    "semantic_probe_outcome": "evidence_bound_miss",
+    "semantic_probe_model_requests": 2,
+    "semantic_probe_duration_ms": 7299.34,
+    "critical_false_hit_count": 0,
+    "frozen_proposed_hit_count": 2,
+    "frozen_proposed_hits_owner_review_required": true
+  },
+  "observability": {
+    "langsmith_privacy_mode": "inputs_outputs_hidden",
+    "langsmith_root_run_count_observed": 14,
+    "first_party_run_results_completed": true,
+    "one_shot_harness_shutdown_warning": true,
+    "product_state_corrupted_by_exporter": false
+  }
+}

@@ -538,7 +538,12 @@ class FinanceWorkflow:
             )
             selected_contexts: tuple[PortfolioAgentContext, ...] = ()
             distinct_requested_contexts = _distinct(requested_context_references)
-            if distinct_requested_contexts and len(provided_contexts) != len(
+            authorized_requested_contexts = tuple(
+                reference
+                for reference in distinct_requested_contexts
+                if self._contexts.get(state["session_id"], reference) is not None
+            )
+            if distinct_requested_contexts and len(authorized_requested_contexts) != len(
                 distinct_requested_contexts
             ):
                 portfolio_context_resolution = "provided_invalid"
@@ -559,7 +564,12 @@ class FinanceWorkflow:
                 selected_context_references = tuple(
                     context.context_id for context in selected_contexts
                 )
-                context_references = selected_context_references
+                context_references = _distinct(
+                    (
+                        *selected_context_references,
+                        *authorized_requested_contexts,
+                    )
+                )
                 active_scope_update = selected_context_references
             else:
                 missing = (AgentId.PORTFOLIO_ANALYSIS,)

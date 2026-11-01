@@ -1,6 +1,6 @@
 # Backend package
 
-FastAPI versioned resources, durable local persistence, the M1 offline knowledge pipeline, M2 deterministic finance modules, M3 provider ports/adapters, the M4 six-agent LangGraph workflow, the M4.1 OpenAI ModelAdapter, and the M5 historical provider cache/operational telemetry for AI Finance Assistant.
+FastAPI versioned resources, durable local persistence, the offline knowledge pipeline, deterministic finance modules, provider ports/adapters, the six-agent LangGraph workflow, conditional OpenAI adapter, historical and response caches, operational telemetry, and the M9 read-only MCP adapter for AI Finance Assistant.
 
 Runtime code performs read-only Qdrant compatibility checks and retrieval. Collection creation, source fetching, embedding, evaluation, activation, and rollback are available only through `python -m ai_finance_assistant.knowledge.cli` and the repository Make targets.
 
@@ -12,6 +12,8 @@ Runtime code performs read-only Qdrant compatibility checks and retrieval. Colle
 
 `ai_finance_assistant.observability` provides disabled, in-memory, and OpenTelemetry modes behind a small interface. RunEvents remain the authoritative product record. OpenTelemetry attributes are allow-listed and exporter failure is isolated. Optional LangSmith tracing is disabled by default and creates a client with inputs and outputs hidden when explicitly enabled. `AIFA_LANGSMITH_PROJECT` selects the LangSmith destination; the root trace name is the Run's stable workflow identifier rather than the project name. M5 instruments FastAPI, HTTPX, modules, cache, and persistence and supplies an optional loopback OTLP Collector debug sink; browser telemetry belongs to M6.
 
+`ai_finance_assistant.mcp_adapter` exposes exactly four read-only stdio tools: education search, market quote, in-memory Portfolio analysis, and Goal projection. It reuses application validation and deterministic/provider/retrieval modules, stores no Portfolio input, and exposes no Session, mutation, administration, credential, deletion, or trade interface. Run it with `make mcp-stdio`; verify it with `backend/tests/test_mcp_adapter.py`.
+
 The ordinary test suite loads the tracked, credential-free `backend/.test.env` and excludes tests marked `live_provider` and `live_model`; changes to `backend/.env` cannot alter those runs. With approved selected-market and Tavily credentials and terms flags in `backend/.env`, `make provider-live-check` explicitly opts into that file and enables two bounded smoke tests: at most three selected-market requests and one Tavily request. With an approved OpenAI key and terms flag, `make model-live-check` explicitly opts into `backend/.env`; an aggregate six-agent Run uses seven calls (one routing decision plus one response per specialist). Restart a running backend after changing an environment-selected adapter. For Massive, individual-plan data must remain owner-only unless Business/commercial display rights cover the demo audience.
 
-See the repository [README](../README.md), [documentation index](../docs/README.md), [M2 calculation policy](../docs/M2_calculation_policy.md), [M3 provider policy](../docs/M3_provider_policy.md), [M4 delivery report](../docs/M4_delivery_report.md), [M4.1 delivery report](../docs/M4_1_delivery_report.md), and [M5 delivery report](../docs/M5_delivery_report.md).
+See the repository [README](../README.md), [documentation index](../docs/README.md), [private-demo release bundle](../docs/release/README.md), and [M9 delivery report](../docs/M9_delivery_report.md).
