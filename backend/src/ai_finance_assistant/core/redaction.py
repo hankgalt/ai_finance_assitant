@@ -24,14 +24,22 @@ PROTECTED_KEY_PARTS: Final = frozenset(
 SAFE_PROTECTED_KEY_EXCEPTIONS: Final = frozenset({"prompt_version"})
 SAFE_METADATA_KEYS: Final = frozenset(
     {
+        "avoided_model_request",
         "cache_status",
         "collection_version",
         "duration_source",
+        "entry_age_bucket",
+        "match_kind",
         "model_id",
+        "operation",
+        "outcome",
+        "policy_version",
         "prompt_version",
         "provider",
         "record_count",
         "result_status",
+        "semantic_mode",
+        "similarity_bucket",
         "source_count",
         "strategy",
     }

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1",
+  "observed_at": "2026-11-01T04:04:00Z",
+  "backend": {
+    "tool": "pip-audit",
+    "method": "uv lock export with exact pins; --no-deps --disable-pip",
+    "initial_findings": [
+      "CVE-2026-119203",
+      "CVE-2026-119204",
+      "CVE-2026-119205"
+    ],
+    "affected_package": "pypdf 6.21.3",
+    "remediation": "lockfile updated to pypdf 6.21.4",
+    "final_known_vulnerability_count": 0
+  },
+  "frontend": {
+    "tool": "pnpm audit --prod --json",
+    "production_dependency_count": 165,
+    "final_known_vulnerability_count": 0
+  }
+}

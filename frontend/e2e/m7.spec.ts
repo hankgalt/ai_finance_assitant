@@ -279,28 +279,34 @@ test("Inspector renders recorded success, partial, and failure paths accessibly"
   await expect(
     page.getByText("This prompt is intentionally not rendered by Inspector."),
   ).toHaveCount(0);
-  await page.screenshot({
-    path: "../docs/evidence/m7/inspector-success.png",
-    fullPage: true,
-  });
+  if (process.env.AIFA_PLAYWRIGHT_CAPTURE_EVIDENCE !== "false") {
+    await page.screenshot({
+      path: "../docs/evidence/m7/inspector-success.png",
+      fullPage: true,
+    });
+  }
 
   const selector = page.getByLabel("Recorded Run");
   await selector.selectOption("run-partial");
   await expect(page.getByText("run partial", { exact: true })).toBeVisible();
-  await page.screenshot({
-    path: "../docs/evidence/m7/inspector-partial.png",
-    fullPage: true,
-  });
+  if (process.env.AIFA_PLAYWRIGHT_CAPTURE_EVIDENCE !== "false") {
+    await page.screenshot({
+      path: "../docs/evidence/m7/inspector-partial.png",
+      fullPage: true,
+    });
+  }
 
   await selector.selectOption("run-failure");
   await expect(page.getByText("WORKFLOW_FAILED")).toBeVisible();
   await expect(
     page.getByText("The workflow could not complete."),
   ).toBeVisible();
-  await page.screenshot({
-    path: "../docs/evidence/m7/inspector-failure.png",
-    fullPage: true,
-  });
+  if (process.env.AIFA_PLAYWRIGHT_CAPTURE_EVIDENCE !== "false") {
+    await page.screenshot({
+      path: "../docs/evidence/m7/inspector-failure.png",
+      fullPage: true,
+    });
+  }
 
   const axe = await new AxeBuilder({ page }).analyze();
   expect(

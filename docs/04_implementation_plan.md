@@ -228,6 +228,12 @@ This milestone implements ADR-028 for QR-001, QR-004, QR-006, QR-007, QR-010, QR
 
 ### M8 — Evaluation, security, observability, and reliability
 
+**Current evidence status (2026-10-31):** the versioned runner and automated full qualification are
+implemented with zero critical automated failures. Private-demo release acceptance remains pending
+the explicitly recorded EVAL-01, EVAL-03, EVAL-08, EVAL-10, EVAL-12, and EVAL-17 live-model/human
+review gates; semantic response-cache mode remains `shadow`. See
+[the M8 delivery report](M8_delivery_report.md).
+
 **Deliverables**
 
 - Versioned evaluation datasets and runner covering every dimension in [evaluation strategy](05_evaluation_strategy.md).

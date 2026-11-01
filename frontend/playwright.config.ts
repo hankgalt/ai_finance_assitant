@@ -11,7 +11,7 @@ export default defineConfig({
     ],
   ],
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: "http://127.0.0.1:4173",
     channel: "chrome",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
@@ -19,9 +19,9 @@ export default defineConfig({
   },
   projects: [{ name: "desktop-chrome", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm dev --host 127.0.0.1",
-    url: "http://127.0.0.1:5173",
-    reuseExistingServer: true,
+    command: "pnpm dev --host 127.0.0.1 --port 4173 --strictPort --force",
+    url: "http://127.0.0.1:4173",
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

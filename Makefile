@@ -5,7 +5,7 @@ QDRANT_URL ?= http://127.0.0.1:6333
 	knowledge-validate verify m1-check m2-check m3-check m4-check m4-1-check \
 	m5-check m6-check m7-check provider-live-check model-live-check observability-up observability-status \
 	observability-stop response-cache-up response-cache-status response-cache-stop \
-	response-cache-check response-cache-calibrate response-cache-benchmark m6-1-check
+	response-cache-check response-cache-calibrate response-cache-benchmark m6-1-check m8-check
 
 backend-sync:
 	cd backend && uv sync
@@ -122,6 +122,9 @@ m6-1-check:
 	cd backend && uv run ruff check src tests
 	cd backend && uv run mypy
 	cd backend && uv run pytest -q tests/test_response_cache.py tests/test_response_cache_workflow.py tests/test_response_cache_api.py tests/test_response_cache_evaluation.py tests/test_response_cache_benchmark.py tests/test_health.py tests/test_m5_api.py
+
+m8-check:
+	cd backend && .venv/bin/python -m ai_finance_assistant.evaluation.runner --manifest data/evaluation/m8_cases.v1.json --repo-root .. --output artifacts/m8/qualification-report.v1.json --profile full
 
 observability-up:
 	docker compose --profile observability up -d otel-collector

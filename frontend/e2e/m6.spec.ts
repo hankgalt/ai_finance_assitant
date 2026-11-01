@@ -470,6 +470,7 @@ async function expectNoSeriousAxeViolations(page: Page) {
 }
 
 async function capture(page: Page, path: string) {
+  if (process.env.AIFA_PLAYWRIGHT_CAPTURE_EVIDENCE === "false") return;
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path, fullPage: true });
 }
@@ -659,7 +660,7 @@ test("completes all M6 product workflows with accessible alternatives", async ({
     .fill("How many holdings in this portfolio have usable prices?");
   await page.getByRole("button", { name: "Send message" }).click();
   await expect(
-    page.getByText("Select the saved Portfolio you want me to analyze."),
+    page.getByRole("group", { name: "Portfolio selection required" }),
   ).toBeVisible();
   const portfolioContext = page.getByLabel("Saved Portfolio");
   await expect(portfolioContext).toHaveValue("");

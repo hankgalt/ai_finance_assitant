@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.4 | Status: Product architecture baseline; M0–M7 and M6.1 evidence recorded | 2026-10-31
+Version 2.5 | Status: Product architecture baseline; M0–M7/M6.1 complete; M8 automated evidence recorded with release review pending | 2026-10-31
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -34,7 +34,8 @@ Milestone completion evidence is recorded separately from the design authority. 
 [M5 delivery report](M5_delivery_report.md) for versioned REST/SSE, durable local persistence, the historical provider cache, and operational telemetry transport, and
 [M6 delivery report](M6_delivery_report.md) for the responsive React product experiences, accessible chart/table evidence, portfolio import review, and privacy-safe browser telemetry, and
 [M7 delivery report](M7_delivery_report.md) for the measured RunEvent Inspector, accessible timeline, graph reconciliation, reconnect behavior, and redaction evidence, and
-[M6.1 delivery report](M6_1_delivery_report.md) records the evidence-bound public Finance/Tax response-cache seam, Redis qualification, calibration gate, and measured call avoidance.
+[M6.1 delivery report](M6_1_delivery_report.md) records the evidence-bound public Finance/Tax response-cache seam, Redis qualification, calibration gate, and measured call avoidance, and
+[M8 delivery report](M8_delivery_report.md) records the automated release qualification, threat/observability/reliability evidence, clean dependency scans, and the remaining live-model/human review gates.
 
 If documents conflict, use this precedence: product requirements, accepted ADRs, system design, implementation plan, evaluation strategy, then the M0 prompt. Coursework criteria remain mandatory for the coursework release even when they do not constrain later product architecture. Resolve source-rubric ambiguities in the coursework criteria rather than weakening product requirements.
 
