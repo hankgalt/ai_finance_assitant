@@ -23,6 +23,7 @@ dependencies = [
   "pydantic-settings>=2.12,<3",
   "pypdf>=6.6,<7",
   "qdrant-client[fastembed]>=1.20,<1.21",
+  "redisvl==0.28.0",
   "uvicorn[standard]>=0.38,<1",
 ]
 
@@ -43,12 +44,13 @@ build-backend = "hatchling.build"
 packages = ["src/ai_finance_assistant"]
 
 [tool.pytest.ini_options]
-addopts = "--strict-config --strict-markers -m 'not live_provider and not live_model'"
+addopts = "--strict-config --strict-markers -m 'not live_provider and not live_model and not redis'"
 testpaths = ["tests"]
 markers = [
   "qdrant: requires the explicitly configured local Qdrant integration service",
   "live_provider: makes explicitly enabled calls to approved external provider accounts",
   "live_model: makes explicitly enabled calls to an approved external model account",
+  "redis: requires the explicitly configured local Redis response-cache service",
 ]
 
 [tool.ruff]
@@ -65,5 +67,5 @@ plugins = ["pydantic.mypy"]
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["openpyxl.*", "uvicorn.*"]
+module = ["openpyxl.*", "redisvl.*", "uvicorn.*"]
 ignore_missing_imports = true

@@ -34,9 +34,23 @@ from ai_finance_assistant.contracts.events import (
     RoutingMetadata,
     UsageMetadata,
 )
-from ai_finance_assistant.llm.models import RoutingReason
+from ai_finance_assistant.llm.models import (
+    PublicRagCacheEligibility,
+    RoutingModelOutput,
+    RoutingReason,
+)
 from ai_finance_assistant.llm.ports import ModelAdapter
 from ai_finance_assistant.observability.ports import Observability
+from ai_finance_assistant.response_cache.events import (
+    observe_cache_lookup,
+    observe_cache_store,
+)
+from ai_finance_assistant.response_cache.factory import disabled_response_cache_service
+from ai_finance_assistant.response_cache.models import CacheLookupOutcome
+from ai_finance_assistant.response_cache.service import (
+    ResponseCacheService,
+    RouteCacheContext,
+)
 from ai_finance_assistant.workflow.events import EventIdentity, RunEventRecorder
 from ai_finance_assistant.workflow.models import (
     RequiredInput,
@@ -75,6 +89,7 @@ class FinanceState(TypedDict, total=False):
     deadline_at: datetime
     selected_agent_ids: tuple[AgentId, ...]
     route_reason_category: str
+    route_cache_eligibility: str
     continuation_of_execution_id: str | None
     missing_context_agent_ids: tuple[AgentId, ...]
     required_input: RequiredInput | None
@@ -96,6 +111,7 @@ class FinanceWorkflow:
         contexts: AgentContextRepository | None = None,
         checkpointer: BaseCheckpointSaver[str] | None = None,
         maximum_graph_hops: int = 16,
+        response_cache: ResponseCacheService | None = None,
     ) -> None:
         if set(agents) != set(AgentId):
             raise ValueError("FinanceWorkflow requires exactly the six specialist agents")
@@ -111,6 +127,7 @@ class FinanceWorkflow:
         self._contexts = contexts or InMemoryAgentContextRepository()
         self._checkpointer = checkpointer or InMemorySaver()
         self._maximum_graph_hops = maximum_graph_hops
+        self._response_cache = response_cache or disabled_response_cache_service()
         self._graph = self._build_graph()
 
     def run(self, request: WorkflowRequest) -> WorkflowRunResult:
@@ -152,6 +169,9 @@ class FinanceWorkflow:
                     initial_state["selected_agent_ids"] = request.continuation_agent_ids
                     initial_state["route_reason_category"] = (
                         RoutingReason.CHECKPOINT_FOLLOW_UP.value
+                    )
+                    initial_state["route_cache_eligibility"] = (
+                        PublicRagCacheEligibility.INELIGIBLE.value
                     )
                 raw_state = self._graph.invoke(
                     initial_state,
@@ -323,6 +343,60 @@ class FinanceWorkflow:
         return "context_gate" if state.get("continuation_of_execution_id") is not None else "router"
 
     def _route_node(self, state: FinanceState) -> FinanceState:
+        if not self._response_cache.configured:
+            return self._route_model_node(state)
+        identity = self._identity(state)
+        model_metadata = self._router.model_metadata
+        context = RouteCacheContext(
+            session_id=state["session_id"],
+            message=state["message"],
+            locale=state["locale"],
+            jurisdiction=state["jurisdiction"],
+            workflow_version=state["workflow_version"],
+            provider_id=model_metadata["provider"],
+            model_id=model_metadata["model_id"],
+            prompt_version=model_metadata["prompt_version"],
+            has_context_references=bool(state.get("context_references", ())),
+            checkpoint_dependent=state.get("continuation_of_execution_id") is not None,
+        )
+        with self._response_cache.route_guard(context):
+            lookup = observe_cache_lookup(
+                events=self._events,
+                observability=self._observability,
+                cache=self._response_cache,
+                identity=identity,
+                node_id="router",
+                agent_id=None,
+                operation="route_lookup",
+                invoke=lambda: self._response_cache.lookup_route(context),
+            )
+            if lookup.outcome == CacheLookupOutcome.HIT and lookup.payload is not None:
+                output = RoutingModelOutput.model_validate(lookup.payload)
+                self._record_route_selected(identity, output)
+                return {
+                    "selected_agent_ids": output.selected_agent_ids,
+                    "route_reason_category": output.reason_category.value,
+                    "route_cache_eligibility": output.cache_eligibility.value,
+                }
+            result = self._route_model_node(state)
+            output = RoutingModelOutput(
+                selected_agent_ids=result.get("selected_agent_ids", ()),
+                reason_category=RoutingReason(result["route_reason_category"]),
+                cache_eligibility=PublicRagCacheEligibility(result["route_cache_eligibility"]),
+            )
+            observe_cache_store(
+                events=self._events,
+                observability=self._observability,
+                cache=self._response_cache,
+                identity=identity,
+                node_id="router",
+                agent_id=None,
+                operation="route_store",
+                invoke=lambda: self._response_cache.store_route(context, output),
+            )
+            return result
+
+    def _route_model_node(self, state: FinanceState) -> FinanceState:
         identity = self._identity(state)
         model_metadata = self._router.model_metadata
         started = self._events.record(
@@ -411,7 +485,27 @@ class FinanceWorkflow:
         return {
             "selected_agent_ids": decision.selected_agent_ids,
             "route_reason_category": decision.reason_category.value,
+            "route_cache_eligibility": decision.cache_eligibility.value,
         }
+
+    def _record_route_selected(
+        self,
+        identity: EventIdentity,
+        output: RoutingModelOutput,
+    ) -> None:
+        self._events.record(
+            identity,
+            event_type=EventType.ROUTE_SELECTED,
+            status=EventStatus.COMPLETED,
+            node_id="router",
+            summary="Routing decision recorded.",
+            routing=RoutingMetadata(
+                selected_node_ids=tuple(item.value for item in output.selected_agent_ids),
+                outcome="Selected specialist agents.",
+                reason_category=output.reason_category.value,
+            ),
+            completed=True,
+        )
 
     def _context_gate_node(self, state: FinanceState) -> FinanceState:
         identity = self._identity(state)
@@ -577,6 +671,18 @@ class FinanceWorkflow:
                     context_references=state.get("context_references", ()),
                     locale=state["locale"],
                     jurisdiction=state["jurisdiction"],
+                    public_rag_cache_eligible=(
+                        state.get("route_cache_eligibility")
+                        == PublicRagCacheEligibility.PUBLIC_RAG.value
+                        and len(state.get("selected_agent_ids", ())) == 1
+                        and not state.get("context_references", ())
+                        and state.get("continuation_of_execution_id") is None
+                    ),
+                    checkpoint_dependent=(
+                        state.get("continuation_of_execution_id") is not None
+                        or state.get("route_reason_category")
+                        == RoutingReason.CHECKPOINT_FOLLOW_UP.value
+                    ),
                     deadline_at=state["deadline_at"],
                 )
                 try:

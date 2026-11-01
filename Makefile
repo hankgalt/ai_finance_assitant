@@ -4,7 +4,8 @@ QDRANT_URL ?= http://127.0.0.1:6333
 	qdrant-up qdrant-status qdrant-stop qdrant-check knowledge-finance knowledge-tax \
 	knowledge-validate verify m1-check m2-check m3-check m4-check m4-1-check \
 	m5-check m6-check m7-check provider-live-check model-live-check observability-up observability-status \
-	observability-stop
+	observability-stop response-cache-up response-cache-status response-cache-stop \
+	response-cache-check response-cache-calibrate response-cache-benchmark m6-1-check
 
 backend-sync:
 	cd backend && uv sync
@@ -97,6 +98,30 @@ m7-check: frontend-check
 	cd backend && uv run mypy
 	cd backend && uv run pytest -q tests/test_m7_contract_manifest.py tests/test_m5_api.py tests/test_m5_persistence.py tests/test_m5_observability.py tests/test_contracts.py tests/test_redaction.py
 	cd frontend && pnpm exec playwright test e2e/m7.spec.ts
+
+response-cache-up:
+	docker compose up -d redis-response-cache
+
+response-cache-status:
+	docker compose ps redis-response-cache
+
+response-cache-stop:
+	docker compose stop redis-response-cache
+
+response-cache-check:
+	cd backend && AIFA_TEST_REDIS_URL=redis://127.0.0.1:6379/0 uv run pytest -q -m redis tests/test_response_cache_redis.py
+
+response-cache-calibrate:
+	cd backend && uv run python -m ai_finance_assistant.response_cache.evaluation --cases data/response_cache/calibration.v1.json --minimum-similarity 0.92
+
+response-cache-benchmark:
+	cd backend && uv run python -m ai_finance_assistant.response_cache.benchmark --samples 20 --model-delay-ms 10
+
+m6-1-check:
+	cd backend && uv run ruff format --check src tests
+	cd backend && uv run ruff check src tests
+	cd backend && uv run mypy
+	cd backend && uv run pytest -q tests/test_response_cache.py tests/test_response_cache_workflow.py tests/test_response_cache_api.py tests/test_response_cache_evaluation.py tests/test_response_cache_benchmark.py tests/test_health.py tests/test_m5_api.py
 
 observability-up:
 	docker compose --profile observability up -d otel-collector

@@ -47,6 +47,8 @@ class AgentRequest(BaseModel):
     context_references: tuple[Identifier, ...] = ()
     locale: str = Field(default="en-US", min_length=2, max_length=35)
     jurisdiction: str = Field(default="US", min_length=2, max_length=32)
+    public_rag_cache_eligible: bool = False
+    checkpoint_dependent: bool = False
     deadline_at: AwareDatetime
 
 

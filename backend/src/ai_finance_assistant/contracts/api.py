@@ -137,6 +137,12 @@ class PurgeResult(BaseModel):
     memory_cache_cleared: bool = True
 
 
+class ResponseCachePurgeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    deleted_entry_count: int = Field(ge=0)
+
+
 BrowserTelemetryKind = Literal["navigation", "api_timing", "web_vital", "error_boundary"]
 BrowserPage = Literal[
     "shell",

@@ -212,7 +212,8 @@ def test_routing_uses_model_structured_output_without_lexical_classification() -
     assert "tax_education" in str(call["instructions"])
     assert "weather" in str(call["instructions"])
     assert "out_of_scope" in str(call["instructions"])
-    assert OPENAI_ROUTING_PROMPT_VERSION == "openai-routing-system-v2"
+    assert "cache_eligibility" in str(call["instructions"])
+    assert OPENAI_ROUTING_PROMPT_VERSION == "openai-routing-system-v3"
 
 
 def test_multi_agent_synthesis_is_structured_grounded_and_not_stored() -> None:

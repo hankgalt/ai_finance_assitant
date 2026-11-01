@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.llm.models import (
     ModelUsage,
+    PublicRagCacheEligibility,
     RoutingModelOutput,
     RoutingModelRequest,
     RoutingReason,
@@ -19,6 +20,7 @@ class RouteDecision(BaseModel):
 
     selected_agent_ids: tuple[AgentId, ...] = Field(max_length=6)
     reason_category: RoutingReason
+    cache_eligibility: PublicRagCacheEligibility = PublicRagCacheEligibility.INELIGIBLE
     usage: ModelUsage = Field(default_factory=ModelUsage)
 
 
@@ -52,5 +54,6 @@ class IntentRouter:
         return RouteDecision(
             selected_agent_ids=output.selected_agent_ids,
             reason_category=output.reason_category,
+            cache_eligibility=output.cache_eligibility,
             usage=result.usage,
         )

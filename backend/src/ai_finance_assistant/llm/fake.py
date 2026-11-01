@@ -8,6 +8,7 @@ from ai_finance_assistant.llm.models import (
     ModelOutput,
     ModelRequest,
     ModelUsage,
+    PublicRagCacheEligibility,
     RoutingModelOutput,
     RoutingModelRequest,
     RoutingReason,
@@ -55,6 +56,7 @@ class DeterministicModelAdapter:
                     "What is an ETF?": RoutingModelOutput(
                         selected_agent_ids=(AgentId.FINANCE_QA,),
                         reason_category=RoutingReason.SINGLE_DOMAIN,
+                        cache_eligibility=PublicRagCacheEligibility.PUBLIC_RAG,
                     )
                 }
             ).items()

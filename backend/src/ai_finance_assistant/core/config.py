@@ -101,6 +101,26 @@ class Settings(BaseSettings):
         default="historical-daily-v1",
         pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
     )
+    response_cache_adapter: Literal["disabled", "in_memory", "redis"] = "disabled"
+    response_cache_semantic_mode: Literal["disabled", "shadow", "serving"] = "shadow"
+    response_cache_redis_url: str = Field(
+        default="redis://127.0.0.1:6379/0",
+        min_length=1,
+        max_length=512,
+    )
+    response_cache_index_name: str = Field(
+        default="aifa_model_response_cache_v1",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$",
+    )
+    response_cache_ttl_seconds: int = Field(default=86_400, ge=1, le=86_400)
+    response_cache_lookup_timeout_milliseconds: int = Field(default=100, ge=10, le=2_000)
+    response_cache_minimum_similarity: float = Field(default=0.92, ge=0.0, le=1.0)
+    response_cache_memory_max_entries: int = Field(default=1_000, ge=1, le=100_000)
+    response_cache_schema_version: str = Field(default="1", pattern=r"^1$")
+    response_cache_policy_version: str = Field(
+        default="public-rag-evidence-bound-v2",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+    )
     api_run_deadline_seconds: int = Field(default=60, ge=5, le=300)
     api_sse_replay_limit: int = Field(default=1000, ge=1, le=10_000)
     observability_mode: Literal["disabled", "in_memory", "opentelemetry"] = "opentelemetry"

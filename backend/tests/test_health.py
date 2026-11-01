@@ -39,6 +39,7 @@ def test_aggregate_health_is_live_but_truthfully_not_ready(client: TestClient) -
         "provider.market",
         "provider.news",
         "provider_cache.rights",
+        "response_cache.redis",
         "qdrant.finance_education",
         "qdrant.tax_education",
     }

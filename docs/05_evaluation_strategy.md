@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.2 | Status: Product evaluation baseline including M6.1 response-cache qualification | 2026-10-29
+Version 1.3 | Status: Product evaluation baseline including M6.1 response-cache qualification | 2026-10-31
 
 ## 1. Evaluation principles
 
@@ -29,7 +29,7 @@ Maintain reviewable datasets with stable case IDs:
 - API/streaming: versioned REST/SSE transcripts, duplicate/out-of-order/reconnect cases;
 - UI/accessibility: deterministic end-to-end journeys, keyboard flows, and alternative chart/trace representations;
 - Inspector: synthetic schema fixtures and actual instrumented Runs with a backend truth record.
-- response cache: frozen exact repeats, safe paraphrases, near misses, cross-Session non-reuse, ambiguous/personalized exclusions, evidence/version invalidation, malformed entries, archive/delete/administrative purge, expiry, outage, and concurrent-miss cases.
+- response cache: separate public Finance and U.S. Tax exact repeats, safe paraphrases, near misses, Tax year/jurisdiction changes, cross-Session non-reuse, ambiguous/personalized and non-RAG exclusions, evidence/version invalidation, malformed entries, archive/delete/administrative purge, expiry, outage, and concurrent-miss cases.
 
 Dataset size targets can grow after difficulty and independence review. Do not inflate corpus or test counts with paraphrases that exercise the same behavior.
 
@@ -109,7 +109,7 @@ Failure and recovery cases include:
 - checkpoint and event-store restart, migration mismatch, and deletion;
 - simultaneous Sessions/Runs, guessed identifiers, unauthorized SSE/history, and connection loss;
 - malformed model output, exhausted retry, overall deadline, and independent-agent partial result;
-- response-cache disabled, exact hit, qualified semantic hit, near miss, cross-Session non-reuse, version/evidence invalidation, expiry/purge, unavailable or malformed Redis, and concurrent identical misses; cached work must not fabricate model events.
+- response-cache disabled, Finance and Tax exact hit, qualified semantic hit, near miss, Tax year/jurisdiction mismatch, cross-Session non-reuse, version/evidence invalidation, expiry/purge, unavailable or malformed Redis, and concurrent identical misses; Portfolio, Market, News, Goals, multi-agent, context-bearing, and checkpoint-dependent work must bypass caching, and cached work must not fabricate model events.
 
 Tests assert on returned resources, stored lifecycle, measured events, and user-visible states rather than log text alone.
 

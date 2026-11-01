@@ -18,6 +18,7 @@ from ai_finance_assistant.observability.factory import (
 )
 from ai_finance_assistant.persistence.checkpoints import create_sqlite_checkpointer
 from ai_finance_assistant.persistence.database import SQLiteDatabase
+from ai_finance_assistant.persistence.models import SessionRecord
 from ai_finance_assistant.persistence.repositories import (
     SQLiteAgentContextRepository,
     SQLiteApplicationRepository,
@@ -31,6 +32,7 @@ from ai_finance_assistant.providers.durable_cache import (
 )
 from ai_finance_assistant.providers.factory import provider_bundle_from_settings
 from ai_finance_assistant.providers.ports import ProviderBundle
+from ai_finance_assistant.response_cache.factory import response_cache_service_from_settings
 from ai_finance_assistant.workflow.application import WorkflowApplication
 from ai_finance_assistant.workflow.events import RunEventRecorder
 from ai_finance_assistant.workflow.retrieval import (
@@ -50,6 +52,7 @@ class ApplicationServices:
         self.settings = settings
         self.telemetry = telemetry or telemetry_runtime_from_settings(settings)
         self.observability = self.telemetry.observability
+        self.response_cache = response_cache_service_from_settings(settings)
         self.database = SQLiteDatabase(
             settings.storage_path,
             expected_version=settings.storage_expected_schema_version,
@@ -65,6 +68,7 @@ class ApplicationServices:
         )
         for expired_session_id in self.application_repository.purge_expired():
             self.checkpointer.delete_thread(f"{expired_session_id}:finance-assistant")
+            self.response_cache.purge_session(expired_session_id)
         self.event_repository = SQLiteRunEventRepository(self.database)
         self.context_repository = SQLiteAgentContextRepository(self.database)
         self.provider_cache_repository = SQLiteHistoricalCacheRepository(self.database)
@@ -104,6 +108,7 @@ class ApplicationServices:
             observability=self.observability,
             provider_bundle_builder=lambda _: self._provider_bundle(),
             checkpointer=self.checkpointer,
+            response_cache=self.response_cache,
         )
 
     def _knowledge_retrieval(self) -> KnowledgeRetrieval:
@@ -138,10 +143,17 @@ class ApplicationServices:
             news=selected.news,
         )
 
+    def archive_session(self, session_id: str) -> SessionRecord | None:
+        archived = self.application_repository.archive_session(session_id)
+        if archived is not None:
+            self.response_cache.purge_session(session_id)
+        return archived
+
     def delete_session(self, session_id: str) -> bool:
         deleted = self.application_repository.delete_archived_session(session_id)
         if deleted:
             self.checkpointer.delete_thread(f"{session_id}:finance-assistant")
+            self.response_cache.purge_session(session_id)
         return deleted
 
     def purge_provider_cache(self, *, provider: str | None = None) -> int:
@@ -149,7 +161,11 @@ class ApplicationServices:
         self._memory_cache.clear()
         return count
 
+    def purge_response_cache(self) -> int:
+        return self.response_cache.purge_all()
+
     def close(self) -> None:
+        self.response_cache.close()
         self.telemetry.shutdown()
         self._checkpoint_connection.close()
         self.database.close()

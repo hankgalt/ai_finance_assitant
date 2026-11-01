@@ -105,6 +105,7 @@ class FinanceQAAgent:
                     for item in retrieval.evidence
                 ),
                 facts=facts,
+                cache_evidence=retrieval.evidence,
             )
         except AgentRuntimeFailure as failure:
             return _error_result(self.agent_id, failure.error)
@@ -592,6 +593,8 @@ class TaxEducationAgent:
                     for item in retrieval.evidence
                 ),
                 facts=facts,
+                cache_evidence=retrieval.evidence,
+                cache_tax_year=tax_year,
             )
         except AgentRuntimeFailure as failure:
             return _error_result(self.agent_id, failure.error)

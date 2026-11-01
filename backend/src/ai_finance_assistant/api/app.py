@@ -39,9 +39,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=resolved_settings.app_name,
         version=resolved_settings.app_version,
         description=(
-            "M5/M6 private-demo API with authoritative versioned REST, replayable SSE, durable "
+            "Private-demo API with authoritative versioned REST, replayable SSE, durable "
             "SQLite resources and checkpoints, deterministic finance modules, provider cache, "
-            "the six-agent LangGraph workflow, and bounded first-party browser telemetry."
+            "an evidence-bound optional response cache, the six-agent LangGraph workflow, and "
+            "bounded first-party browser telemetry."
         ),
         lifespan=lifespan,
     )

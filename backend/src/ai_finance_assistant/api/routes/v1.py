@@ -27,6 +27,7 @@ from ai_finance_assistant.contracts.api import (
     CreateSnapshotRequest,
     PortfolioImportApiRequest,
     PurgeResult,
+    ResponseCachePurgeResult,
     ResponseChunk,
     RunEventHistory,
     RunList,
@@ -227,7 +228,7 @@ def get_session(session_id: str, request: Request) -> SessionRecord:
 
 @router.post("/sessions/{session_id}/archive", response_model=SessionRecord)
 def archive_session(session_id: str, request: Request) -> SessionRecord:
-    archived = _services(request).application_repository.archive_session(session_id)
+    archived = _services(request).archive_session(session_id)
     if archived is None:
         raise ApiProblem(
             404,
@@ -757,6 +758,31 @@ def purge_provider_cache(
         )
     count = services.purge_provider_cache(provider=provider)
     return PurgeResult(provider=provider, deleted_bar_count=count)
+
+
+@router.delete("/admin/response-cache", response_model=ResponseCachePurgeResult)
+def purge_response_cache(
+    request: Request,
+    admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
+) -> ResponseCachePurgeResult:
+    services = _services(request)
+    configured = services.settings.local_admin_token
+    if configured is None:
+        raise ApiProblem(
+            503,
+            "ADMIN_PURGE_NOT_READY",
+            ErrorCategory.NOT_READY,
+            "Administrative purge is disabled until a local admin token is configured.",
+        )
+    supplied = admin_token or ""
+    if not hmac.compare_digest(configured.get_secret_value(), supplied):
+        raise ApiProblem(
+            403,
+            "ADMIN_SCOPE_DENIED",
+            ErrorCategory.AUTHORIZATION,
+            "Administrative authorization failed.",
+        )
+    return ResponseCachePurgeResult(deleted_entry_count=services.purge_response_cache())
 
 
 @router.post("/telemetry/browser", status_code=204)

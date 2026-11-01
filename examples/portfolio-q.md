@@ -1,0 +1,3 @@
+1. Can you suggest diversification strategy for my portfolio?
+2. My goal is retirement, my time horizon is 20 years, I have moderate risk tolerance, and I do not expect withdrawals for at least five years. Identify asset-class concentration and overlapping U.S. equity exposure, discuss the trade-offs of increasing international equity or fixed income, and give an illustrative rebalancing framework. Do not recommend specific securities or trades.
+3.

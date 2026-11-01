@@ -123,6 +123,13 @@ class RoutingReason(StrEnum):
     OUT_OF_SCOPE = "out_of_scope"
 
 
+class PublicRagCacheEligibility(StrEnum):
+    """Router-owned, deny-by-default cache qualification for public RAG questions."""
+
+    INELIGIBLE = "ineligible"
+    PUBLIC_RAG = "public_rag"
+
+
 class RoutingModelRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -138,6 +145,7 @@ class RoutingModelOutput(BaseModel):
     schema_version: str = Field(default="1", pattern=r"^1$")
     selected_agent_ids: tuple[AgentId, ...] = Field(default=(), max_length=6)
     reason_category: RoutingReason
+    cache_eligibility: PublicRagCacheEligibility = PublicRagCacheEligibility.INELIGIBLE
 
     @model_validator(mode="after")
     def validate_decision(self) -> "RoutingModelOutput":
@@ -162,4 +170,12 @@ class RoutingModelOutput(BaseModel):
             len(self.selected_agent_ids) > 1 and self.reason_category == RoutingReason.SINGLE_DOMAIN
         ):
             raise ValueError("multiple selected agents cannot use single_domain")
+        if self.cache_eligibility == PublicRagCacheEligibility.PUBLIC_RAG and (
+            len(self.selected_agent_ids) != 1
+            or self.selected_agent_ids[0] not in {AgentId.FINANCE_QA, AgentId.TAX_EDUCATION}
+            or self.reason_category != RoutingReason.SINGLE_DOMAIN
+        ):
+            raise ValueError(
+                "public_rag cache eligibility requires one Finance Q&A or Tax Education route"
+            )
         return self

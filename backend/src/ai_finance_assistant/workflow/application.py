@@ -27,6 +27,8 @@ from ai_finance_assistant.observability.langsmith import LangSmithTracing
 from ai_finance_assistant.observability.ports import Observability
 from ai_finance_assistant.providers.factory import provider_bundle_from_settings
 from ai_finance_assistant.providers.ports import ProviderBundle
+from ai_finance_assistant.response_cache.factory import disabled_response_cache_service
+from ai_finance_assistant.response_cache.service import ResponseCacheService
 from ai_finance_assistant.workflow.events import RunEventRecorder
 from ai_finance_assistant.workflow.graph import FinanceWorkflow, SpecialistAgent
 from ai_finance_assistant.workflow.models import WorkflowRequest, WorkflowRunResult
@@ -50,6 +52,7 @@ class WorkflowApplication:
         provider_bundle_builder: ProviderBundleBuilder = provider_bundle_from_settings,
         model_adapter_builder: ModelAdapterBuilder = model_adapter_from_settings,
         checkpointer: BaseCheckpointSaver[str] | None = None,
+        response_cache: ResponseCacheService | None = None,
     ) -> None:
         self._settings = settings
         self._retrieval = retrieval
@@ -59,6 +62,7 @@ class WorkflowApplication:
         self._provider_bundle_builder = provider_bundle_builder
         self._model_adapter_builder = model_adapter_builder
         self._checkpointer = checkpointer or InMemorySaver()
+        self._response_cache = response_cache or disabled_response_cache_service()
         self._langsmith = LangSmithTracing(
             enabled=settings.langsmith_tracing_enabled,
             project=settings.langsmith_project,
@@ -77,6 +81,7 @@ class WorkflowApplication:
             model=model,
             event_recorder=self._event_recorder,
             observability=self._observability,
+            response_cache=self._response_cache,
         )
         agents: dict[AgentId, SpecialistAgent] = {
             AgentId.FINANCE_QA: FinanceQAAgent(runtime=runtime),
@@ -111,6 +116,7 @@ class WorkflowApplication:
             contexts=self._contexts,
             checkpointer=self._checkpointer,
             maximum_graph_hops=self._settings.workflow_maximum_graph_hops,
+            response_cache=self._response_cache,
         )
         with self._langsmith.activate():
             return workflow.run(request)

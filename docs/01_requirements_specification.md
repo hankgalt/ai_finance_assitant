@@ -1,6 +1,6 @@
 # AI Finance Assistant — Product requirements specification
 
-Version 1.5 | Status: Product architecture baseline through M6 plus planned M6.1 response cache | 2026-10-29
+Version 1.6 | Status: Product architecture baseline through M6 plus implemented M6.1 response-cache seam | 2026-10-31
 
 ## 1. Mission and product posture
 
@@ -144,6 +144,8 @@ The import path is provider-independent and must work locally without network ac
 | QR-013 Accessibility | WCAG 2.2 AA design target; keyboard access, semantic labels, focus management, contrast, and nonvisual tables for charts/graphs | Formal accessibility audit with assistive technologies | Automated checks plus keyboard/screen-reader review |
 | QR-014 Performance/cost | Record p50/p95 task latency, provider/response-cache timing and outcome, avoided model calls/tokens, tokens and estimated cost when supplied; show “not available” otherwise | Calibrated objectives, capacity tests, budgets and alerts | Versioned cache-disabled/hit/near-miss benchmark report |
 | QR-015 Reproducibility | Pinned tools/dependencies, deterministic fixtures, documented setup, an explicitly labeled credential-free demo mode, migration and collection version checks | Reproducible deployment artifacts and supply-chain controls | Clean-environment and quota-safe demo runs plus artifact hashes |
+
+M6.1 response reuse is limited to standalone public Finance Q&A and U.S. federal Tax Education. It is Session-isolated, exact-version and evidence bound, and performs current domain retrieval before generation reuse; Tax also requires an exact resolved tax year and jurisdiction. Portfolio, Market, News, Goals, multi-agent, context-bearing, checkpoint-dependent, personalized, unsuccessful, and ambiguous requests bypass this cache. Semantic candidates require the versioned minimum relevance threshold and remain shadow-only until the frozen Finance-and-Tax review gate passes.
 
 ## 9. Core acceptance scenarios
 

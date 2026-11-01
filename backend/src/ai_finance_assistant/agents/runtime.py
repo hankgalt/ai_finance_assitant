@@ -21,7 +21,7 @@ from ai_finance_assistant.contracts.events import (
     ToolResultMetadata,
     UsageMetadata,
 )
-from ai_finance_assistant.knowledge.models import LogicalKnowledgeBase
+from ai_finance_assistant.knowledge.models import Evidence, LogicalKnowledgeBase
 from ai_finance_assistant.llm.errors import (
     ModelProviderError,
     model_failure_to_safe_error,
@@ -36,6 +36,16 @@ from ai_finance_assistant.providers.models import (
     ProviderErrorCode,
     ProviderStatus,
     QuoteResult,
+)
+from ai_finance_assistant.response_cache.events import (
+    observe_cache_lookup,
+    observe_cache_store,
+)
+from ai_finance_assistant.response_cache.factory import disabled_response_cache_service
+from ai_finance_assistant.response_cache.models import CacheLookupOutcome
+from ai_finance_assistant.response_cache.service import (
+    GenerationCacheContext,
+    ResponseCacheService,
 )
 from ai_finance_assistant.workflow.events import EventIdentity, RunEventRecorder
 from ai_finance_assistant.workflow.retrieval import KnowledgeRetrieval, RetrievalResult
@@ -58,11 +68,13 @@ class AgentRuntime:
         model: ModelAdapter,
         event_recorder: RunEventRecorder,
         observability: Observability,
+        response_cache: ResponseCacheService | None = None,
     ) -> None:
         self._retrieval = retrieval
         self._model = model
         self._events = event_recorder
         self._observability = observability
+        self._response_cache = response_cache or disabled_response_cache_service()
 
     def retrieve(
         self,
@@ -170,6 +182,74 @@ class AgentRuntime:
         instructions: str,
         evidence: tuple[ModelEvidence, ...] = (),
         facts: tuple[dict[str, JsonValue], ...] = (),
+        cache_evidence: tuple[Evidence, ...] = (),
+        cache_tax_year: int | None = None,
+    ) -> ModelOutput:
+        if not (
+            self._response_cache.configured and request.public_rag_cache_eligible and cache_evidence
+        ):
+            return self._generate_uncached(
+                request,
+                instructions=instructions,
+                evidence=evidence,
+                facts=facts,
+            )
+        context = GenerationCacheContext(
+            session_id=request.session_id,
+            agent_id=request.agent_id,
+            message=request.message,
+            locale=request.locale,
+            jurisdiction=request.jurisdiction,
+            workflow_version=request.workflow_version,
+            provider_id=self._model.provider_id,
+            model_id=self._model.model_id,
+            prompt_version=self._model.prompt_version,
+            instructions=instructions,
+            evidence=cache_evidence,
+            tax_year=cache_tax_year,
+            public_rag_eligible=request.public_rag_cache_eligible,
+            has_context_references=bool(request.context_references),
+            checkpoint_dependent=request.checkpoint_dependent,
+        )
+        identity = _identity(request)
+        with self._response_cache.generation_guard(context):
+            lookup = observe_cache_lookup(
+                events=self._events,
+                observability=self._observability,
+                cache=self._response_cache,
+                identity=identity,
+                node_id=request.agent_id.value,
+                agent_id=request.agent_id,
+                operation="generation_lookup",
+                invoke=lambda: self._response_cache.lookup_generation(context),
+            )
+            if lookup.outcome == CacheLookupOutcome.HIT and lookup.payload is not None:
+                return ModelOutput.model_validate(lookup.payload)
+            output = self._generate_uncached(
+                request,
+                instructions=instructions,
+                evidence=evidence,
+                facts=facts,
+            )
+            observe_cache_store(
+                events=self._events,
+                observability=self._observability,
+                cache=self._response_cache,
+                identity=identity,
+                node_id=request.agent_id.value,
+                agent_id=request.agent_id,
+                operation="generation_store",
+                invoke=lambda: self._response_cache.store_generation(context, output),
+            )
+            return output
+
+    def _generate_uncached(
+        self,
+        request: AgentRequest,
+        *,
+        instructions: str,
+        evidence: tuple[ModelEvidence, ...],
+        facts: tuple[dict[str, JsonValue], ...],
     ) -> ModelOutput:
         identity = _identity(request)
         model_metadata = {

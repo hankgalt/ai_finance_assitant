@@ -3,6 +3,7 @@
 import sqlite3
 
 from pydantic import JsonValue
+from redis import Redis
 
 from ai_finance_assistant.contracts.health import (
     CheckStatus,
@@ -102,7 +103,11 @@ def build_readiness(settings: Settings) -> Readiness:
     checks = (*_local_checks(settings), *qdrant_checks)
     status = (
         HealthStatus.OK
-        if all(check.status == CheckStatus.READY for check in checks)
+        if all(
+            check.status == CheckStatus.READY
+            for check in checks
+            if check.name != "response_cache.redis"
+        )
         else HealthStatus.NOT_READY
     )
     return Readiness(status=status, checks=checks)
@@ -115,6 +120,7 @@ def _local_checks(settings: Settings) -> tuple[DependencyCheck, ...]:
         _market_provider_check(settings),
         _news_provider_check(settings),
         _provider_cache_rights_check(settings),
+        _response_cache_check(settings),
     )
 
 
@@ -256,6 +262,51 @@ def _provider_cache_rights_check(settings: Settings) -> DependencyCheck:
             "audience": settings.local_deployment_audience,
             "retention_permission": settings.provider_cache_retention_permission,
         },
+    )
+
+
+def _response_cache_check(settings: Settings) -> DependencyCheck:
+    expected: dict[str, JsonValue] = {
+        "adapter": settings.response_cache_adapter,
+        "optional": True,
+        "policy_version": settings.response_cache_policy_version,
+        "semantic_mode": settings.response_cache_semantic_mode,
+    }
+    if settings.response_cache_adapter == "disabled":
+        return DependencyCheck(
+            name="response_cache.redis",
+            status=CheckStatus.READY,
+            detail="The optional model response cache is disabled.",
+            expected=expected,
+        )
+    if settings.response_cache_adapter == "in_memory":
+        return DependencyCheck(
+            name="response_cache.redis",
+            status=CheckStatus.READY,
+            detail="The deterministic process-local response cache is configured.",
+            expected=expected,
+        )
+    try:
+        client: Redis = Redis.from_url(
+            settings.response_cache_redis_url,
+            socket_connect_timeout=(settings.response_cache_lookup_timeout_milliseconds / 1_000),
+            socket_timeout=settings.response_cache_lookup_timeout_milliseconds / 1_000,
+        )
+        try:
+            available = bool(client.ping())
+        finally:
+            client.close()
+    except Exception:
+        available = False
+    return DependencyCheck(
+        name="response_cache.redis",
+        status=CheckStatus.READY if available else CheckStatus.FAILED,
+        detail=(
+            "The optional loopback Redis response cache is reachable."
+            if available
+            else "The optional response cache is unavailable; requests will execute normally."
+        ),
+        expected=expected,
     )
 
 

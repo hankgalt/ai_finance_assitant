@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.14 | Status: Product architecture baseline through M7; M6.1 follows through the generic event seam | 2026-10-31
+Version 1.15 | Status: Product architecture baseline through M7 with implemented M6.1 response-cache seam | 2026-10-31
 
 ## 1. Architecture principles
 
@@ -33,6 +33,7 @@ flowchart TD
   RET --> QD[(Persistent Qdrant)]
   ROUTER -. qualified exact-route reuse .-> RC[ModelResponseCache]
   QA -. evidence-bound generation reuse .-> RC
+  TAX -. year-and-evidence-bound generation reuse .-> RC
   RC --> REDIS[(Loopback Redis)]
 
   PORT --> PM[Portfolio analysis module]
@@ -60,7 +61,7 @@ One Run follows: normalize and validate request → apply access and safety poli
 
 Intent classification uses the Run's fixed ModelAdapter and a closed `RoutingModelOutput` schema containing only allowed Agent identifiers and a bounded reason category. The classifier is the normal graph entry path: it routes only explicit financial education, U.S. investment-tax education, financial news, saved-Portfolio, market-data, and financial-goal requests. Unrelated weather, politics, sports, entertainment, geography, and general-knowledge questions return `out_of_scope` with no specialist execution; an explicit financial connection is required before such a subject can route. The router supplies the untrusted user message and prior selected agents as data, enables no tools, records model identity/usage separately from the route outcome, and fails closed when the provider or schema is unavailable. Credential-free tests use scripted routing outputs at the same seam; they do not claim to measure live-model semantic accuracy.
 
-Under ADR-028, M6.1 may reuse an exact route only for a previously qualified standalone Finance Q&A request in the same opaque authorized Session scope and with no authorized context references. For a semantically similar question, normal routing still runs. Finance Q&A always performs current retrieval before a generation-cache lookup; a generation hit is valid only when its Session scope, exact version filters, and active-evidence fingerprint match, and citations are rebuilt from the current Evidence. Thus a cache can avoid model work without becoming routing authority, knowledge authority, conversation memory, or the source of a Run's citations.
+Under ADR-028, M6.1 may reuse an exact route only for a previously qualified standalone public Finance Q&A or U.S. Tax Education request in the same opaque authorized Session scope and with no authorized context references. For a semantically similar question, normal routing still runs. Each eligible agent performs current retrieval before a generation-cache lookup; Tax also resolves the applicable year first. A generation hit is valid only when its Session scope, exact agent/version/locale/jurisdiction/tax-year filters, and active-evidence fingerprint match, and citations are rebuilt from the current Evidence. Thus a cache can avoid model work without becoming routing authority, knowledge authority, conversation memory, or the source of a Run's citations.
 
 Execution has maximum graph hops, per-tool timeouts, an overall deadline, and model/token budgets. An independent agent failure can yield a partial result with structured warnings. Missing required user input yields a clarification result, not guessed data.
 
@@ -112,14 +113,16 @@ cost remains unavailable until an approved versioned calculator exists. See the
 
 M6.1 places `ModelResponseCache` at the structured model boundary rather than wrapping the whole
 workflow or configuring a framework-global cache. Exact-route keys use the normalized qualified
-request, opaque server-derived Session scope, and routing contract versions. Finance Q&A semantic
-lookup happens only after retrieval and uses a pinned local encoder plus exact filters for agent, model/provider, prompt, Workflow, response
+request, opaque server-derived Session scope, and routing contract versions. Finance Q&A and U.S.
+Tax Education semantic lookup happens only after corresponding current retrieval and uses a pinned
+local encoder plus exact filters for agent, model/provider, prompt, Workflow, response
 schema, cache policy, locale/jurisdiction, and an evidence fingerprint over the active collection
-version and ordered chunk identifiers/content hashes. The initial Redis policy is loopback-only,
+version and ordered chunk identifiers/content hashes; Tax also requires an exact resolved tax year.
+The initial Redis policy is loopback-only,
 non-persistent, administratively purgeable, and bounded to a 24-hour maximum TTL. It stores only a
 normalized policy-qualified public education query and validated structured response; raw Session
-identifiers are not stored and cross-Session reuse is prohibited. All other
-agents, multi-agent requests, context-dependent follow-ups, personalized inputs, and unsuccessful
+identifiers are not stored and cross-Session reuse is prohibited. Portfolio, Market, News, Goal,
+multi-agent requests, context-dependent follow-ups, personalized inputs, and unsuccessful
 results bypass reuse. Redis failure is a bounded cache bypass, not a workflow failure.
 
 User-facing model summaries use a separate 4,000-character narrative contract across structured
@@ -345,7 +348,7 @@ Data classes and initial local policy:
 | Run records/events/traces | Conversation history, Inspector, and audit | New Run records retain the submitted request message and terminal result; legacy records may have no message; events/traces remain privacy-filtered and time-bounded | Owning Session; read-only after archive and deletion supported |
 | Knowledge sources/collections | Shared education evidence | Versioned according to source rights and rollback policy | Administrative ingestion role; user deletion does not remove shared sources |
 | Durable provider cache | Reliability, quota control, and reusable historical ranges | Normalized historical bars survive restart; recent bars are revalidated; quote/news retention stays endpoint-specific; local owner-only long retention requires explicit unverified-rights risk acceptance | Server only; provider/schema/policy scoped, administratively purgeable, and never presented without provenance |
-| Model response cache | Reduce repeated model latency/cost for qualified public Finance Q&A | Optional non-persistent loopback Redis; maximum 24-hour TTL; current evidence is rechecked before generation reuse | Server only; opaque Session/version/evidence scoped; purged on archive/deletion or administratively; no raw Session/Run identifiers, context references, or financial/provider payloads |
+| Model response cache | Reduce repeated model latency/cost for qualified standalone public Finance Q&A and U.S. Tax Education | Optional non-persistent loopback Redis; maximum 24-hour TTL; current domain evidence is rechecked before generation reuse; Tax is exactly year/jurisdiction partitioned | Server only; opaque Session/version/evidence scoped; purged on archive/deletion or administratively; no raw Session/Run identifiers, context references, or financial/provider payloads |
 
 The local demo is unauthenticated only when explicitly configured and bound for local use. Opaque identifiers are not authentication. Every resource lookup and stream still checks Session scope to prevent accidental cross-session leakage. A public deployment requires the ADR-019 production controls before release.
 
