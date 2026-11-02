@@ -16,9 +16,12 @@ from ai_finance_assistant.contracts.agents import (
     AgentResultStatus,
 )
 from ai_finance_assistant.contracts.events import EventStatus, EventType
-from ai_finance_assistant.core.config import Settings
+from ai_finance_assistant.core.config import Settings, get_settings
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
-from ai_finance_assistant.observability.factory import observability_from_settings
+from ai_finance_assistant.observability.factory import (
+    observability_from_settings,
+    telemetry_runtime_from_settings,
+)
 from ai_finance_assistant.observability.langsmith import LangSmithTracing
 from ai_finance_assistant.observability.memory import InMemoryObservability
 from ai_finance_assistant.observability.opentelemetry import OpenTelemetryObservability
@@ -82,7 +85,7 @@ def _request(execution_id: str) -> WorkflowRequest:
     return WorkflowRequest(
         execution_id=execution_id,
         session_id="session-observability",
-        workflow_id="finance-assistant",
+        workflow_id=get_settings().workflow_id,
         workflow_version="1",
         message="What is an ETF?",
         deadline_at=datetime.now(UTC) + timedelta(minutes=1),
@@ -135,7 +138,7 @@ def test_langgraph_root_trace_uses_workflow_name() -> None:
 
     root_runs = [run for run in collected.traced_runs if run.parent_run_id is None]
     assert result.status == WorkflowStatus.COMPLETED
-    assert [run.name for run in root_runs] == ["finance-assistant"]
+    assert [run.name for run in root_runs] == [get_settings().workflow_id]
 
 
 def test_failed_observability_adapter_does_not_change_product_behavior() -> None:
@@ -167,7 +170,7 @@ def test_event_and_telemetry_metadata_are_redacted_and_allow_listed() -> None:
     identity = EventIdentity(
         execution_id="run-redaction-1",
         session_id="session-observability",
-        workflow_id="finance-assistant",
+        workflow_id=get_settings().workflow_id,
         workflow_version="1",
     )
 
@@ -275,3 +278,21 @@ def test_observability_modes_are_configuration_owned_and_safe_without_exporter()
     assert disabled_trace.trace_id is None
     assert memory_trace.trace_id is not None
     assert otel_trace.trace_id is not None
+
+
+def test_opentelemetry_resource_uses_configured_service_name() -> None:
+    settings = Settings(
+        mode="test",
+        observability_mode="opentelemetry",
+        otel_service_name="configured-telemetry-service",
+    )
+    runtime = telemetry_runtime_from_settings(settings)
+
+    try:
+        assert runtime.tracer_provider is not None
+        assert (
+            runtime.tracer_provider.resource.attributes["service.name"]
+            == "configured-telemetry-service"
+        )
+    finally:
+        runtime.shutdown()

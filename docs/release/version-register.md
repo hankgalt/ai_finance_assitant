@@ -22,10 +22,10 @@ Release ID: `private-demo-2026-10-31`
 | Historical provider cache | schema `1`, policy `historical-daily-v1` |
 | Public-RAG response cache | schema `1`, policy `public-rag-evidence-bound-v2`, cutoff `0.92` |
 | Redis image | `redis:8.10.2-alpine3.23` with pinned digest in Compose |
-| Qualification dataset | `m8-release-qualification-v1` |
+| Qualification dataset | `private-demo-release-qualification-v1` |
 
 The exact Python and JavaScript dependency versions are in the lockfiles. The current host
 environment and container digests are captured in
-[`environment-manifest.v1.json`](../../backend/artifacts/m8/environment-manifest.v1.json). A model,
+[`environment-manifest.v1.json`](../../backend/artifacts/release/environment-manifest.v1.json). A model,
 prompt, collection, encoder, policy, schema, or rights change invalidates only the evidence that
 declares that dependency and must be requalified before release.

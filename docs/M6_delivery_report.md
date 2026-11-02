@@ -51,7 +51,7 @@ backend-only.
   telemetry with no arbitrary payload field.
 - `backend/contracts/api.py` and `api/routes/v1.py`: bounded file-import transport and
   `POST /api/v1/telemetry/browser` collector.
-- `contracts/m6-frontend-contract.v1.json`: required M6 paths and frontend type names checked
+- `contracts/frontend/backend-consumption.v1.json`: required M6 paths and frontend type names checked
   against FastAPI OpenAPI.
 - `frontend/e2e/m6.spec.ts`: deterministic desktop/mobile journeys, import correction, semantic
   accessibility, keyboard focus, CSP, provenance, and chart/table assertions.
@@ -145,7 +145,9 @@ unchanged; one notice reports the affected-Holding count and exposes the individ
 identifiers in an expandable list, while portfolio-wide warnings retain a separate scope. The
 focused regression first reproduced two duplicate cards, then passed with one grouped notice.
 Prettier, ESLint, TypeScript, all 16 Vitest tests, the production build, and all 6 Chrome Playwright
-journeys pass.
+journeys pass. A subsequent visual-rhythm correction scopes compact typography to these grouped
+Snapshot warnings below the chart and table without reducing the prominence of import, deletion,
+or failure notices.
 
 Portfolio workflow hierarchy maintenance removes the implied mandatory Step 1/Step 2 sequence. The
 full-width saved Portfolio library is now the primary view, and the unchanged manual/file validation
@@ -220,6 +222,14 @@ inside the named dialog and that confirmation stages the explicit replacement se
 question. The browser journey verifies close-button focus, absence of the selector from the
 composer, the staged context label, and at least 15 pixels of measured viewport-bottom clearance.
 
+Goal Projection warning-presentation maintenance keeps the authoritative M2 result unchanged while
+normalizing equivalent warning text at the React presentation boundary. Distinct limitations render
+once in a compact, labeled list after the chart and its accessible table instead of as repeated
+full-width notices before the visualization. The component regression covers case/whitespace
+deduplication and document order. The focused desktop-Chrome journey verifies the rendered count,
+chart-relative placement, compact font size, and Axe accessibility; frontend formatting, lint,
+TypeScript, all 36 Vitest tests, and the production build also pass. No live service was called.
+
 The same classifier maintenance rejects unrelated general knowledge such as weather or current
 political-office questions with a bounded finance-scope response and no specialist Agent result.
 The semantic decision remains in the structured model prompt; deterministic code validates the
@@ -228,8 +238,8 @@ a substring table.
 
 Unique Portfolio-label and complete-coverage maintenance verification on 2026-10-31:
 
-- `uv run pytest -q tests/test_workflow.py tests/test_agents.py tests/test_m5_api.py
-  tests/test_m5_persistence.py` — 52 passed.
+- `uv run pytest -q tests/test_workflow.py tests/test_agents.py tests/test_http_api.py
+  tests/test_persistence.py` — 52 passed.
 - `make backend-check` — formatting, Ruff, strict mypy, and coverage passed; 215 tests passed,
   1 opt-in Qdrant test skipped, 3 live tests deselected, and total measured coverage was 88%.
 - `make frontend-check` — Prettier, ESLint, TypeScript, 32 Vitest tests, and the production build

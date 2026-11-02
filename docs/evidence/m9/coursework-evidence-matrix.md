@@ -19,7 +19,7 @@ Date: 2026-10-31
 | CA-13 — read-only MCP | MCP client record and `backend/tests/test_mcp_adapter.py` | External stdio list/invoke | Pass |
 
 Product PR-001 through PR-015 mappings are machine-checked in
-`backend/data/evaluation/m9_release_manifest.v1.json`. Every referenced evidence path exists, the
+`backend/data/qualification/release-manifest.v1.json`. Every referenced evidence path exists, the
 M8 qualification report passes, sample checksums reproduce, and the MCP surface declares no
 mutation tools.
 

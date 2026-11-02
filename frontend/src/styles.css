@@ -623,6 +623,16 @@ textarea:focus {
   background: #fff8e5;
   color: #614b1d;
 }
+.portfolio-snapshot-warnings {
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+.portfolio-snapshot-warnings .state-notice {
+  font-size: inherit;
+}
+.portfolio-snapshot-warnings .snapshot-warning-scope {
+  font-size: inherit;
+}
 .snapshot-warning-scope {
   margin-top: 0.45rem;
   font-size: 0.78rem;
@@ -1295,6 +1305,26 @@ tbody th {
   color: #4d5e57;
   font-size: 0.78rem;
   text-transform: capitalize;
+}
+.goal-warning-summary {
+  margin-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  color: #6b5725;
+  padding-top: 0.7rem;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+.goal-warning-summary > strong {
+  display: block;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.goal-warning-summary ul {
+  display: grid;
+  gap: 0.18rem;
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
 }
 
 .empty-state {

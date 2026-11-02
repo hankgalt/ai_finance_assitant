@@ -6,10 +6,37 @@ import pytest
 from fastapi.testclient import TestClient
 
 _BACKEND_ROOT = Path(__file__).parents[1]
+_TEST_ENV_FILE = Path(
+    os.environ.get(
+        "AIFA_TEST_ENV_FILE",
+        str(_BACKEND_ROOT / ".test.env"),
+    )
+)
 os.environ["AIFA_ENV_FILE"] = os.environ.get(
     "AIFA_TEST_ENV_FILE",
-    str(_BACKEND_ROOT / ".test.env"),
+    str(_TEST_ENV_FILE),
 )
+
+
+def _load_required_identity_settings(path: Path) -> None:
+    configured = {
+        key.strip(): value.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#") and "=" in line
+        for key, value in (line.split("=", 1),)
+    }
+    for name in (
+        "AIFA_WORKFLOW_ID",
+        "AIFA_OTEL_SERVICE_NAME",
+        "AIFA_LANGSMITH_PROJECT",
+    ):
+        value = configured.get(name)
+        if value is None:
+            raise RuntimeError(f"{name} must be configured in {path}")
+        os.environ.setdefault(name, value)
+
+
+_load_required_identity_settings(_TEST_ENV_FILE)
 
 
 @pytest.fixture

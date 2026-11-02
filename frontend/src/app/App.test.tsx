@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
+import { TEST_WORKFLOW_ID } from "../test/config";
 import { App } from "./App";
 
 function response(
@@ -138,14 +139,14 @@ test("distinguishes the latest assistant response from earlier run history", asy
   ) => ({
     execution_id: executionId,
     session_id: "session-test",
-    workflow_id: "finance-assistant",
+    workflow_id: TEST_WORKFLOW_ID,
     workflow_version: "1",
     status,
     result: {
       schema_version: "1",
       execution_id: executionId,
       session_id: "session-test",
-      workflow_id: "finance-assistant",
+      workflow_id: TEST_WORKFLOW_ID,
       workflow_version: "1",
       status,
       selected_agent_ids: [],
@@ -213,14 +214,14 @@ test("renders each response, source, and supplemental warning once", async () =>
               {
                 execution_id: "run-long-narrative",
                 session_id: "session-test",
-                workflow_id: "finance-assistant",
+                workflow_id: TEST_WORKFLOW_ID,
                 workflow_version: "1",
                 status: "completed",
                 result: {
                   schema_version: "1",
                   execution_id: "run-long-narrative",
                   session_id: "session-test",
-                  workflow_id: "finance-assistant",
+                  workflow_id: TEST_WORKFLOW_ID,
                   workflow_version: "1",
                   status: "completed",
                   selected_agent_ids: ["finance_qa"],

@@ -130,14 +130,28 @@ def benchmark(*, sample_count: int, model_delay_milliseconds: float) -> Benchmar
         raise ValueError("sample_count must be positive")
     if model_delay_milliseconds < 0:
         raise ValueError("model_delay_milliseconds cannot be negative")
+    settings = Settings(
+        workflow_id="benchmark-workflow",
+        mode="test",
+        provider_mode="credential_free",
+        model_mode="credential_free",
+        otel_service_name="benchmark-service",
+        langsmith_tracing_enabled=False,
+        langsmith_project="benchmark-project",
+    )
     delay_seconds = model_delay_milliseconds / 1_000
-    baseline = _run_sample(scenario="cache_disabled", delay_seconds=delay_seconds)[1]
+    baseline = _run_sample(
+        scenario="cache_disabled",
+        delay_seconds=delay_seconds,
+        settings=settings,
+    )[1]
     reports = tuple(
         _benchmark_scenario(
             scenario=scenario,
             sample_count=sample_count,
             delay_seconds=delay_seconds,
             baseline=baseline,
+            settings=settings,
         )
         for scenario in _SCENARIOS
     )
@@ -154,6 +168,7 @@ def _benchmark_scenario(
     sample_count: int,
     delay_seconds: float,
     baseline: WorkflowRunResult,
+    settings: Settings,
 ) -> ScenarioReport:
     durations: list[float] = []
     route_calls = 0
@@ -163,6 +178,7 @@ def _benchmark_scenario(
         elapsed, result, measured_route_calls, measured_generation_calls = _run_sample(
             scenario=scenario,
             delay_seconds=delay_seconds,
+            settings=settings,
         )
         durations.append(elapsed)
         results.append(result)
@@ -190,6 +206,7 @@ def _run_sample(
     *,
     scenario: Scenario,
     delay_seconds: float,
+    settings: Settings,
 ) -> tuple[float, WorkflowRunResult, int, int]:
     model = DelayedCountingModel(delay_seconds=delay_seconds)
     adapter: ModelResponseCache = (
@@ -197,9 +214,9 @@ def _run_sample(
         if scenario == "cache_disabled"
         else InMemoryModelResponseCache()
     )
-    app = _application(model=model, adapter=adapter)
+    app = _application(model=model, adapter=adapter, settings=settings)
     if scenario != "cache_disabled":
-        app.run(_request(_CANONICAL))
+        app.run(_request(_CANONICAL, workflow_id=settings.workflow_id))
     before_route = model.route_calls
     before_generation = model.generate_calls
     message = {
@@ -209,7 +226,7 @@ def _run_sample(
         "near_miss": _NEAR_MISS,
     }[scenario]
     started = monotonic()
-    result = app.run(_request(message))
+    result = app.run(_request(message, workflow_id=settings.workflow_id))
     elapsed = (monotonic() - started) * 1_000
     return (
         elapsed,
@@ -223,15 +240,11 @@ def _application(
     *,
     model: DelayedCountingModel,
     adapter: ModelResponseCache,
+    settings: Settings,
 ) -> WorkflowApplication:
     telemetry = InMemoryObservability()
     return WorkflowApplication(
-        settings=Settings(
-            mode="test",
-            provider_mode="credential_free",
-            model_mode="credential_free",
-            langsmith_tracing_enabled=False,
-        ),
+        settings=settings,
         retrieval=StaticKnowledgeRetrieval({LogicalKnowledgeBase.FINANCE: (_evidence(),)}),
         contexts=InMemoryAgentContextRepository(),
         model_adapter_builder=lambda _: model,
@@ -253,11 +266,11 @@ def _application(
     )
 
 
-def _request(message: str) -> WorkflowRequest:
+def _request(message: str, *, workflow_id: str) -> WorkflowRequest:
     return WorkflowRequest(
         execution_id=f"benchmark-{uuid4().hex}",
         session_id="benchmark-session",
-        workflow_id="finance-assistant",
+        workflow_id=workflow_id,
         workflow_version="1",
         message=message,
         deadline_at=datetime.now(UTC) + timedelta(minutes=1),

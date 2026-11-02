@@ -5,7 +5,7 @@ from ai_finance_assistant.response_cache.evaluation import evaluate_dataset, loa
 
 
 def test_frozen_calibration_set_covers_both_rags_and_critical_exclusions() -> None:
-    path = Path(__file__).parents[1] / "data/response_cache/calibration.v1.json"
+    path = Path(__file__).parents[1] / "data/response-cache/semantic-calibration.v1.json"
     dataset = load_dataset(path)
 
     assert len(dataset.cases) >= 16
@@ -23,7 +23,7 @@ def test_frozen_calibration_set_covers_both_rags_and_critical_exclusions() -> No
 
 
 def test_calibration_report_cannot_enable_unreviewed_semantic_hits() -> None:
-    path = Path(__file__).parents[1] / "data/response_cache/calibration.v1.json"
+    path = Path(__file__).parents[1] / "data/response-cache/semantic-calibration.v1.json"
     report = evaluate_dataset(
         load_dataset(path),
         encoder=DeterministicTestEncoder(),

@@ -8,7 +8,7 @@ Date: 2026-10-30
 | `backend/.venv/bin/ruff check .` | Passed |
 | `backend/.venv/bin/mypy` | Passed; 111 source files |
 | `backend/.venv/bin/pytest --cov=ai_finance_assistant --cov-report=term-missing` | Passed; 192 passed, 1 skipped, 3 deselected, 88% coverage |
-| `backend/.venv/bin/pytest tests/test_m7_contract_manifest.py tests/test_m5_api.py tests/test_m5_persistence.py -q` | Passed; 20 tests |
+| `backend/.venv/bin/pytest tests/test_inspector_contract.py tests/test_http_api.py tests/test_persistence.py -q` | Passed; 20 tests |
 | `pnpm format:check` | Passed |
 | `pnpm lint` | Passed |
 | `pnpm typecheck` | Passed |

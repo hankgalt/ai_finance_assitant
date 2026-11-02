@@ -67,7 +67,7 @@ The cache adds a short-lived copy of a normalized public education query and sch
 - [Dependency and infrastructure record](research/M6_1_response_cache_dependencies.md)
 - [Semantic calibration report](evidence/M6_1_semantic_calibration.md)
 - [Deterministic workflow benchmark](evidence/M6_1_response_cache_benchmark.md)
-- `backend/data/response_cache/calibration.v1.json`
+- `backend/data/response-cache/semantic-calibration.v1.json`
 - `backend/src/ai_finance_assistant/response_cache/`
 - `backend/tests/test_response_cache*.py`
 - `.env.example`, `backend/.test.env`, `compose.yaml`, and `Makefile`

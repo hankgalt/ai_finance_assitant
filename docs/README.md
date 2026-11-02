@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.6 | Status: M0–M9/M6.1 complete for the private-demo/coursework release; M10 planned | 2026-10-31
+Version 2.7 | Status: M0–M9.1/M6.1 complete; M10 planned | 2026-11-02
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -14,15 +14,17 @@ This directory is the design authority for AI Finance Assistant. The product mis
 6. [Coursework acceptance criteria](coursework_acceptance_criteria.md) preserves capstone and grading obligations separately from product requirements.
 7. [Codex M0 starting prompt](06_codex_starting_prompt.md) is the bounded implementation prompt for the foundation milestone. It is an instruction artifact, not a record that M0 has been executed.
 8. [Domain glossary](../GLOSSARY.md) provides canonical product terminology.
-9. [M1 Qdrant, model, and source-use research](research/M1_qdrant_models_sources.md) records the primary-source evidence used for M1 decisions; it is not itself an ADR.
-10. [M1 corpus-expansion research](research/M1_corpus_expansion_sources.md) records the bounded Finance and Tax source review and disabled-source decisions.
-11. [M1 IRS publication closure research](research/M1_irs_publication_expansion_2025.md) verifies the requested 2025 editions, applicability, source-use boundaries, and retrieval cases.
-12. [M2 calculation policy](M2_calculation_policy.md) records the implemented precision, import, coverage, and heuristic rules for deterministic finance modules.
-13. [M3 market and news provider candidate research](research/M3_provider_candidates.md) evaluates Tavily, Alpha Vantage, and yfinance against the provider seam; it is decision input, not an approved provider selection.
-14. [M3 provider policy](M3_provider_policy.md) records the implemented adapters, endpoint policies, rights gate, quota budget, and safe fallback behavior.
-15. [M3 Massive market-data adapter research](research/M3_massive_provider.md) evaluates Massive's technical fit, current Basic-plan limits, and owner-only individual-plan rights using official sources.
-16. [M4.1 OpenAI model selection](research/M4_1_openai_model_selection.md) records the approved private-demo model, data controls, limits, cost posture, and revisit triggers.
-17. [M6.1 response-cache dependency selection](research/M6_1_response_cache_dependencies.md) records the pinned Redis/RedisVL/encoder set, local security posture, licensing, and integration evidence.
+9. [Repository layout](repository_layout.md) defines capability ownership for committed data,
+   artifacts, machine contracts, tests, and cross-product release evidence.
+10. [M1 Qdrant, model, and source-use research](research/M1_qdrant_models_sources.md) records the primary-source evidence used for M1 decisions; it is not itself an ADR.
+11. [M1 corpus-expansion research](research/M1_corpus_expansion_sources.md) records the bounded Finance and Tax source review and disabled-source decisions.
+12. [M1 IRS publication closure research](research/M1_irs_publication_expansion_2025.md) verifies the requested 2025 editions, applicability, source-use boundaries, and retrieval cases.
+13. [M2 calculation policy](M2_calculation_policy.md) records the implemented precision, import, coverage, and heuristic rules for deterministic finance modules.
+14. [M3 market and news provider candidate research](research/M3_provider_candidates.md) evaluates Tavily, Alpha Vantage, and yfinance against the provider seam; it is decision input, not an approved provider selection.
+15. [M3 provider policy](M3_provider_policy.md) records the implemented adapters, endpoint policies, rights gate, quota budget, and safe fallback behavior.
+16. [M3 Massive market-data adapter research](research/M3_massive_provider.md) evaluates Massive's technical fit, current Basic-plan limits, and owner-only individual-plan rights using official sources.
+17. [M4.1 OpenAI model selection](research/M4_1_openai_model_selection.md) records the approved private-demo model, data controls, limits, cost posture, and revisit triggers.
+18. [M6.1 response-cache dependency selection](research/M6_1_response_cache_dependencies.md) records the pinned Redis/RedisVL/encoder set, local security posture, licensing, and integration evidence.
 
 Milestone completion evidence is recorded separately from the design authority. See
 [M0 delivery report](M0_delivery_report.md) for the foundation milestone and
@@ -38,6 +40,8 @@ Milestone completion evidence is recorded separately from the design authority. 
 [M8 delivery report](M8_delivery_report.md) records the passing private-demo release qualification, owner-approved selected-model review, threat/observability/reliability evidence, and clean dependency scans, and
 [M9 delivery report](M9_delivery_report.md) records the product/coursework release package,
 read-only MCP client evidence, clean-start record, documentation, and demonstration bundle.
+[M9.1 delivery report](M9_1_delivery_report.md) records the product-oriented repository-layout
+migration, integrity reconciliation, and passing release qualification.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under

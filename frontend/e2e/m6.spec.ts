@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+import { E2E_WORKFLOW_ID } from "./config";
+
 const now = "2026-10-29T12:00:00Z";
 
 function provenance() {
@@ -161,7 +163,7 @@ async function mockApi(page: Page) {
       const run = {
         execution_id: "run-portfolio-question",
         session_id: path.split("/").at(-2),
-        workflow_id: "finance-assistant",
+        workflow_id: E2E_WORKFLOW_ID,
         workflow_version: "1",
         status: "clarification",
         request_message: payload.message,
@@ -169,7 +171,7 @@ async function mockApi(page: Page) {
           schema_version: "1",
           execution_id: "run-portfolio-question",
           session_id: path.split("/").at(-2),
-          workflow_id: "finance-assistant",
+          workflow_id: E2E_WORKFLOW_ID,
           workflow_version: "1",
           status: "clarification",
           selected_agent_ids: ["portfolio_analysis"],
@@ -205,7 +207,7 @@ async function mockApi(page: Page) {
       const run = {
         execution_id: "run-portfolio-continuation",
         session_id: path.split("/").at(-4),
-        workflow_id: "finance-assistant",
+        workflow_id: E2E_WORKFLOW_ID,
         workflow_version: "1",
         status: hasPortfolioContext ? "completed" : "failed",
         request_message:
@@ -214,7 +216,7 @@ async function mockApi(page: Page) {
           schema_version: "1",
           execution_id: "run-portfolio-continuation",
           session_id: path.split("/").at(-4),
-          workflow_id: "finance-assistant",
+          workflow_id: E2E_WORKFLOW_ID,
           workflow_version: "1",
           status: hasPortfolioContext ? "completed" : "failed",
           selected_agent_ids: ["portfolio_analysis"],
@@ -341,7 +343,13 @@ async function mockApi(page: Page) {
           expense_metrics: [],
           diversification: [],
           unpriced_holding_ids: [],
-          warnings: [],
+          warnings: [
+            {
+              code: "USER_PRICE_USED",
+              message: "The valuation used the preserved user-supplied price.",
+              holding_id: "holding-1",
+            },
+          ],
         },
         201,
       );
@@ -440,7 +448,11 @@ async function mockApi(page: Page) {
             annual_fee_rate: "0.0025",
           },
         ],
-        warnings: ["Scenario results are estimates, not guarantees."],
+        warnings: [
+          "Scenario results are estimates, not guarantees.",
+          " Scenario results are estimates, not guarantees. ",
+          "Risk tolerance is context only and does not select investments.",
+        ],
       });
     return json(
       {
@@ -509,7 +521,7 @@ test("opens portfolio context selection in a modal and insets the composer", asy
   const activeRun = {
     execution_id: "run-active-portfolio",
     session_id: "session-e2e-1",
-    workflow_id: "finance-assistant",
+    workflow_id: E2E_WORKFLOW_ID,
     workflow_version: "1",
     status: "completed",
     request_message: "Review my portfolio.",
@@ -517,7 +529,7 @@ test("opens portfolio context selection in a modal and insets the composer", asy
       schema_version: "1",
       execution_id: "run-active-portfolio",
       session_id: "session-e2e-1",
-      workflow_id: "finance-assistant",
+      workflow_id: E2E_WORKFLOW_ID,
       workflow_version: "1",
       status: "completed",
       selected_agent_ids: ["portfolio_analysis"],
@@ -684,6 +696,15 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await expect(
     page.getByRole("heading", { name: "Allocation and coverage" }),
   ).toBeVisible();
+  const portfolioWarnings = page.getByRole("complementary", {
+    name: "Portfolio snapshot warnings",
+  });
+  await expect(portfolioWarnings).toBeVisible();
+  expect(
+    await portfolioWarnings.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).fontSize),
+    ),
+  ).toBeLessThanOrEqual(12);
   const deletePortfolioButton = page.getByRole("button", {
     name: "Delete Demo portfolio",
   });
@@ -736,6 +757,30 @@ test("completes all M6 product workflows with accessible alternatives", async ({
       name: "Backend-calculated scenario outcomes and assumptions",
     }),
   ).toBeVisible();
+  const goalChart = page.getByRole("img", {
+    name: "Nominal and inflation-adjusted goal scenario comparison bar chart",
+  });
+  const goalLimitations = page.getByRole("complementary", {
+    name: "Projection limitations",
+  });
+  await expect(goalLimitations.getByRole("listitem")).toHaveCount(2);
+  await expect(
+    goalLimitations.getByText(
+      "Scenario results are estimates, not guarantees.",
+    ),
+  ).toHaveCount(1);
+  const chartBounds = await goalChart.boundingBox();
+  const limitationsBounds = await goalLimitations.boundingBox();
+  expect(chartBounds).not.toBeNull();
+  expect(limitationsBounds).not.toBeNull();
+  expect(limitationsBounds!.y).toBeGreaterThan(
+    chartBounds!.y + chartBounds!.height,
+  );
+  expect(
+    await goalLimitations.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).fontSize),
+    ),
+  ).toBeLessThanOrEqual(12);
   await expectNoSeriousAxeViolations(page);
   await capture(page, "../docs/evidence/m6/goals-success.png");
 });
@@ -811,7 +856,7 @@ test("wraps assistant table cells and keeps every column visible at a narrow vie
   const run = {
     execution_id: "run-wide-table",
     session_id: "session-e2e-1",
-    workflow_id: "finance-assistant",
+    workflow_id: E2E_WORKFLOW_ID,
     workflow_version: "1",
     status: "completed",
     request_message: "What's the difference between ETFs and mutual funds?",
@@ -819,7 +864,7 @@ test("wraps assistant table cells and keeps every column visible at a narrow vie
       schema_version: "1",
       execution_id: "run-wide-table",
       session_id: "session-e2e-1",
-      workflow_id: "finance-assistant",
+      workflow_id: E2E_WORKFLOW_ID,
       workflow_version: "1",
       status: "completed",
       selected_agent_ids: ["finance_qa"],
@@ -923,7 +968,7 @@ test("separates Run metadata, citations, and supplemental messages", async ({
   const run = {
     execution_id: "run-spacing",
     session_id: "session-e2e-1",
-    workflow_id: "finance-assistant",
+    workflow_id: E2E_WORKFLOW_ID,
     workflow_version: "1",
     status: "completed",
     request_message: null,
@@ -931,7 +976,7 @@ test("separates Run metadata, citations, and supplemental messages", async ({
       schema_version: "1",
       execution_id: "run-spacing",
       session_id: "session-e2e-1",
-      workflow_id: "finance-assistant",
+      workflow_id: E2E_WORKFLOW_ID,
       workflow_version: "1",
       status: "completed",
       selected_agent_ids: ["finance_qa"],
@@ -1014,7 +1059,7 @@ test("keeps the clear active session action visible beside a long conversation",
   const run = {
     execution_id: "run-long-sidebar",
     session_id: "session-e2e-1",
-    workflow_id: "finance-assistant",
+    workflow_id: E2E_WORKFLOW_ID,
     workflow_version: "1",
     status: "completed",
     request_message: "Explain this topic in detail.",
@@ -1022,7 +1067,7 @@ test("keeps the clear active session action visible beside a long conversation",
       schema_version: "1",
       execution_id: "run-long-sidebar",
       session_id: "session-e2e-1",
-      workflow_id: "finance-assistant",
+      workflow_id: E2E_WORKFLOW_ID,
       workflow_version: "1",
       status: "completed",
       selected_agent_ids: [],

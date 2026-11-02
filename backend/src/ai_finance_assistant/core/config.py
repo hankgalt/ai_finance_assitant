@@ -20,6 +20,12 @@ class Settings(BaseSettings):
 
     app_name: str = "AI Finance Assistant API"
     app_version: str = "0.1.0"
+    workflow_id: str = Field(
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        validation_alias=AliasChoices("AIFA_WORKFLOW_ID", "workflow_id"),
+    )
     mode: Literal["local", "test", "production"] = "local"
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
@@ -124,6 +130,12 @@ class Settings(BaseSettings):
     api_run_deadline_seconds: int = Field(default=60, ge=5, le=300)
     api_sse_replay_limit: int = Field(default=1000, ge=1, le=10_000)
     observability_mode: Literal["disabled", "in_memory", "opentelemetry"] = "opentelemetry"
+    otel_service_name: str = Field(
+        min_length=1,
+        max_length=128,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        validation_alias=AliasChoices("AIFA_OTEL_SERVICE_NAME", "otel_service_name"),
+    )
     otel_export_enabled: bool = False
     otel_exporter_otlp_endpoint: str = Field(
         default="http://127.0.0.1:4318",
@@ -150,7 +162,6 @@ class Settings(BaseSettings):
         ),
     )
     langsmith_project: str = Field(
-        default="ai-finance-assistant-local",
         min_length=1,
         max_length=128,
         validation_alias=AliasChoices(

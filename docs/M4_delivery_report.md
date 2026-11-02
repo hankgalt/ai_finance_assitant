@@ -49,7 +49,7 @@ Measured RunEvents cover Run, route, node, retrieval, provider tool, model, and 
 - `llm.ports.ModelAdapter`: structured external-model seam plus deterministic credential-free adapter.
 - `workflow.events.RunEventRecorder`: pre-persistence redaction, safe metadata filtering, monotonic sequence, parent links, and Session-scoped retrieval.
 - `observability`: no-op, in-memory, OpenTelemetry, safe failure wrapper, configuration factory, and optional privacy-hidden LangSmith context.
-- `data/workflow/routing_cases.v1.json`: 44 reviewable routing cases covering all six domains, multi-domain requests, clarification, out-of-scope general knowledge, and checkpoint follow-ups, including SEP IRA terminology.
+- `data/assistant/routing-cases.v1.json`: 44 reviewable routing cases covering all six domains, multi-domain requests, clarification, out-of-scope general knowledge, and checkpoint follow-ups, including SEP IRA terminology.
 
 The original M4 slice added no FastAPI workflow route, SSE stream, browser integration, durable
 user store, durable checkpoint store, or durable RunEvent store; those remained M5/M6 boundaries.
@@ -61,7 +61,7 @@ The 2026-10-31 maintenance changes no API or persistence contract and only updat
 | Acceptance statement | Result and evidence |
 | --- | --- |
 | All six agents have distinct behavior | Direct contract tests exercise Finance/Tax evidence, deterministic Portfolio/Goal outputs, provider-backed Market/News outputs, attribution, assumptions, and prohibited prediction/guarantee behavior. |
-| Labeled routing contract is preserved | All 44 versioned cases exactly match their expected agent sets and bounded reason categories through scripted credential-free model outputs. This validates the router/model schema and graph fan-out, not live-model semantic accuracy. See `backend/artifacts/m4/routing-confusion-matrix.v1.json`. |
+| Labeled routing contract is preserved | All 44 versioned cases exactly match their expected agent sets and bounded reason categories through scripted credential-free model outputs. This validates the router/model schema and graph fan-out, not live-model semantic accuracy. See `backend/artifacts/assistant/routing-confusion-matrix.v1.json`. |
 | Multi-agent boundaries and partial failure are preserved | Graph tests prove Finance/Tax fan-out, grounded structured synthesis over successful results, unchanged single-agent behavior, independent exception conversion, measured synthesis events, and an ordered partial fallback without discarding specialist results or evidence. Portfolio tests separately prove complete saved-price coverage remains complete when optional enrichment fails, while genuinely unpriced Holdings remain partial. |
 | Bounds and restart behavior are explicit | Tests exercise expired deadlines, LangGraph recursion limits, reconstruction with a shared checkpointer, checkpoint follow-up routing, and cross-Session isolation. |
 | Evidence and hostile content stay bounded | Finance and Tax citations resolve to retrieved Evidence; Tax retrieval strictly filters an explicit year and labels the best-supported matching authoritative year when none is supplied; hostile retrieved instructions do not appear in output or events; malformed model output is rejected. |
@@ -87,7 +87,7 @@ Observed results:
 - The skip is the existing opt-in live-Qdrant integration test because no live test URL was supplied; M1 records its separate integration evidence.
 - No live provider, model, or LangSmith request was made during the 2026-10-29 maintenance qualification. Credential-free fake providers/models and the in-memory OpenTelemetry exporter supplied deterministic evidence.
 
-Machine-readable evidence and the actual compiled graph are under `backend/artifacts/m4/`.
+Machine-readable evidence and the actual compiled graph are under `backend/artifacts/assistant/`.
 
 Conditional-synthesis maintenance verification on 2026-10-31:
 

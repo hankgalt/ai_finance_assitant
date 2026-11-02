@@ -31,6 +31,7 @@ Context review is complete only when every planned code change maps to the ownin
 - Preserve provenance, freshness, tax year, jurisdiction, collection/model version, and partial/unavailable states across interfaces.
 - Run every relevant test and quality gate named by the milestone and [docs/05_evaluation_strategy.md](docs/05_evaluation_strategy.md). Record exact commands, actual results, failures, and skips.
 - Update contracts and their consumers together. If a public interface, domain term, or hard-to-reverse decision changes, update its single authoritative document or ADR in the same change.
+- Place committed data, generated artifacts, machine contracts, and tests under the product capability or release/quality owner defined in [docs/repository_layout.md](docs/repository_layout.md). Milestone identifiers belong only to planning and historical evidence.
 - Finish with the milestone evidence required by the implementation plan, including security/privacy impact, limitations, unresolved decisions, and artifact paths. Near-complete work does not satisfy an acceptance gate.
 
 Use [GLOSSARY.md](GLOSSARY.md) for canonical domain terms. Avoid copying specifications into code comments or new instruction files; link to the authoritative section instead.

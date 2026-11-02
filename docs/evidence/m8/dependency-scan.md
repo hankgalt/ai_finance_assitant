@@ -12,7 +12,7 @@ the fixed version. The existing `>=6.6,<7` constraint allowed the remediation; `
 test environment were updated to `pypdf 6.21.4`. The repeat scan reported **no known
 vulnerabilities**.
 
-Machine summary: `backend/artifacts/m8/dependency-scan.v1.json`. This is a point-in-time advisory
+Machine summary: `backend/artifacts/quality/dependency-scan.v1.json`. This is a point-in-time advisory
 database result, not a guarantee of absence. The first resolver-based pip-audit attempt failed while
 creating its temporary environment; that failure was retained as unavailable and followed by the
 documented exact-pin no-install mode rather than being misreported as clean.

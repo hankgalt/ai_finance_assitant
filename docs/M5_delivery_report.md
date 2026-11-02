@@ -47,7 +47,7 @@ history or operational metrics.
 - `providers/durable_cache.py`: two-tier historical range cache and provenance transitions.
 - `observability/factory.py` and API middleware: OTLP-capable runtime, FastAPI/HTTPX
   instrumentation, bounded metrics, and structured correlation logs.
-- `contracts/m5-api-contract.v1.json` and `frontend/src/types/contracts.ts`: exact `/api/v1`
+- `contracts/api/public-http.v1.json` and `frontend/src/types/contracts.ts`: exact `/api/v1`
   manifest plus contract-verified frontend resource/cache types.
 - `.env.example`, `compose.yaml`, `ops/otel-collector.yaml`, and `Makefile`: documented local
   storage/cache/telemetry settings and M5/Collector commands.
@@ -72,8 +72,8 @@ until a token is configured. Credential-free mode is deterministic and requires 
 | Inbound/outbound W3C propagation, route cardinality, health exclusion, and metric inventory | Passed |
 | Throwing telemetry/exporter adapter leaves product result unchanged | Passed in the existing M4 regression included by the full backend gate |
 
-Evidence is under `backend/artifacts/m5/`. The authoritative interface manifest is
-`contracts/m5-api-contract.v1.json`; Collector configuration is `ops/otel-collector.yaml`.
+Evidence is under `backend/artifacts/persistence/`. The authoritative interface manifest is
+`contracts/api/public-http.v1.json`; Collector configuration is `ops/otel-collector.yaml`.
 
 ## Verification record
 

@@ -20,6 +20,7 @@ from ai_finance_assistant.agents.specialists import (
 from ai_finance_assistant.contracts.agents import AgentId, AgentRequest, AgentResultStatus
 from ai_finance_assistant.contracts.events import EventType
 from ai_finance_assistant.contracts.portfolio import SecurityIdentifier, SecurityIdentifierType
+from ai_finance_assistant.core.config import get_settings
 from ai_finance_assistant.finance.goal_projection import GoalProjection
 from ai_finance_assistant.finance.models import (
     GoalProjectionRequest,
@@ -88,7 +89,7 @@ def request(
     return AgentRequest(
         execution_id=f"run-{agent_id.value}",
         session_id="session-1",
-        workflow_id="finance-assistant",
+        workflow_id=get_settings().workflow_id,
         workflow_version="1",
         agent_id=agent_id,
         message=message,

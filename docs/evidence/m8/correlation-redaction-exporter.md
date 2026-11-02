@@ -6,10 +6,10 @@ RunEvents:
 
 - `docs/evidence/m6/browser-fastapi-correlation.md` verifies browser `traceparent` and request
   correlation without promoting identifiers into metric dimensions.
-- `backend/artifacts/m5/trace-correlation-sample.v1.json` records input trace ID
+- `backend/artifacts/persistence/trace-correlation-sample.v1.json` records input trace ID
   `11111111111111111111111111111111` as the Run and persisted RunEvent trace ID and confirms
   outbound HTTPX propagation.
-- `tests/test_m5_observability.py` verifies actual OpenTelemetry span/RunEvent trace agreement,
+- `tests/test_api_observability.py` verifies actual OpenTelemetry span/RunEvent trace agreement,
   hidden LangSmith inputs/outputs, and product completion when every exporter operation fails.
 
 M8 adds sensitive-field canaries plus 128-session cardinality pressure. Prompt/message/token fields

@@ -3,7 +3,7 @@
 ## Educational corpus
 
 The machine-readable authority is
-[`source_registry.v1.json`](../../backend/data/knowledge/source_registry.v1.json). At this release it
+[`source-registry.v1.json`](../../backend/data/knowledge/source-registry.v1.json). At this release it
 contains 70 reviewed entries: 49 approved and ingestion-enabled (18 Finance, 31 Tax) and 21 disabled
 or pending entries. Enabled publishers are the U.S. Securities and Exchange Commission's
 Investor.gov and the Internal Revenue Service.

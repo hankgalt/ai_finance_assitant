@@ -65,7 +65,7 @@ This verification does not re-prove extraction correctness, content hashes, chun
 
 ## Natural-language retrieval qrels
 
-This matrix supplies one qrel for every requested publication. The three `verified existing` rows reproduce an already-indexed case from `qrels.tax.v1.json`; they should not be added a second time. The ten `proposed new` rows are candidates, not frozen evaluation assets. Every row uses filters `{"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"}` and still requires human review for overlap, answer-bearing chunk coverage, and independence.
+This matrix supplies one qrel for every requested publication. The three `verified existing` rows reproduce an already-indexed case from the tax-education retrieval cases; they should not be added a second time. The ten `proposed new` rows are candidates, not frozen evaluation assets. Every row uses filters `{"logical_kb": "tax_education", "tax_year": 2025, "jurisdiction": "US-Federal"}` and still requires human review for overlap, answer-bearing chunk coverage, and independence.
 
 | Case ID | Natural-language query | Expected document ID | Status |
 | --- | --- | --- | --- |

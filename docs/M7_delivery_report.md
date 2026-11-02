@@ -43,9 +43,9 @@ external trace-backend dependency.
 - `frontend/src/features/inspector/InspectorExperience.tsx`: Run selection, correlation, React Flow,
   ordered timeline, details, unavailable states, synthetic-fixture labeling, and reconnect controls.
 - `frontend/src/lib/api.ts`: authorized RunEvent history client and Inspector-labeled SSE recovery.
-- `contracts/m7-inspector-contract.v1.json`: required REST/SSE paths, frontend types, identity
+- `contracts/inspector/execution-inspector.v1.json`: required REST/SSE paths, frontend types, identity
   fields, graph evidence, and forbidden Inspector sources.
-- `backend/tests/test_m7_contract_manifest.py`: OpenAPI/frontend/model seam reconciliation.
+- `backend/tests/test_inspector_contract.py`: OpenAPI/frontend/model seam reconciliation.
 - `frontend/e2e/m7.spec.ts`: deterministic success, partial, and failed browser paths plus Axe and
   prompt non-rendering assertions.
 - `make m7-check`: repeatable focused milestone gate.

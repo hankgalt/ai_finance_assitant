@@ -13,6 +13,6 @@ request identities are intentionally excluded from metric attributes to prevent 
 labels; operational traces/log correlation carries them instead.
 
 `frontend/src/lib/api.test.ts` verifies valid W3C/header shapes and matching trace identities.
-`backend/tests/test_m6_browser_contract.py` verifies the collector records only bounded attributes
+`backend/tests/test_browser_telemetry.py` verifies the collector records only bounded attributes
 and does not record the request identifier or rejected content. Existing M5 observability tests
 verify inbound trace propagation and log/span correlation.

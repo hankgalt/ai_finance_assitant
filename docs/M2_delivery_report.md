@@ -18,9 +18,9 @@ The implementation resolves the three M2 policy decisions conservatively: negati
 - `PortfolioAnalysis.analyze(PortfolioAnalysisRequest) -> PortfolioSnapshot` performs valuation, allocation, expense coverage, classification concentration, and the versioned diversification heuristic.
 - `GoalProjection.project(GoalProjectionRequest) -> GoalProjectionResult` projects explicit, user-controlled scenarios month by month with recurring contributions, inflation, and modeled fees.
 - `CashFlowAnalysisService` is a Protocol with request, normalized transaction, categorization, recurring-expense, reconciliation, and minimized `CashFlowSummary` contracts. M2 intentionally supplies no implementation.
-- `backend/data/finance/` contains versioned valid, adversarial, and goal fixtures plus their SHA-256 manifest.
+- `backend/data/calculations/` contains versioned valid, adversarial, and goal fixtures plus their SHA-256 manifest.
 - `examples/portfolios/` contains user-importable synthetic JSON, CSV, and XLSX portfolios plus a checksum manifest and usage guide.
-- `backend/artifacts/m2/` contains calculation goldens, privacy-safe qualification results, and coverage evidence.
+- `backend/artifacts/calculations/` contains calculation goldens, privacy-safe qualification results, and coverage evidence.
 - `openpyxl` 3.1.5 is locked for bounded, read-only XLSX parsing.
 
 These interfaces are deliberately deep: callers use one import entry point, one portfolio-analysis entry point, and one goal-projection entry point. File-format parsing, precision, coverage, and partial-result rules remain internal to those modules.
@@ -40,7 +40,7 @@ Any incompatible formula, rounding rule, duplicate interpretation, accepted impo
 
 | Acceptance statement | Result and evidence |
 | --- | --- |
-| Approved goldens reproduce exactly | Portfolio and goal hand-worked cases pass under the Decimal/round-half-even policy. Versioned inputs and expected results are in `backend/artifacts/m2/calculation-goldens.v1.json` and `backend/data/finance/goal_cases.v1.json`. |
+| Approved goldens reproduce exactly | Portfolio and goal hand-worked cases pass under the Decimal/round-half-even policy. Versioned inputs and expected results are in `backend/artifacts/calculations/portfolio-analysis-goldens.v1.json` and `backend/data/calculations/goal-projection-cases.v1.json`. |
 | Four import modes converge | Manual, JSON, CSV, and generated XLSX representations produce the same normalized portfolio in `test_all_four_import_modes_share_one_validated_domain_result`. |
 | User-importable examples remain valid | Three synthetic JSON/CSV/XLSX examples pass the real importer and deterministic Portfolio analysis with complete price and classification coverage in `test_example_portfolios.py`. |
 | Errors aggregate safely | Adversarial fixtures report multiple row/field findings without echoing formula-like content. A rejected import returns no partial Portfolio. |
@@ -59,7 +59,7 @@ Final qualification commands:
 ~~~bash
 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make m2-check
 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make verify
-cd backend && UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run pytest -q --cov=ai_finance_assistant --cov-report=json:artifacts/m2/coverage.json --cov-report=term tests
+cd backend && UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run pytest -q --cov=ai_finance_assistant --cov-report=json:artifacts/quality/calculations-coverage.json --cov-report=term tests
 ~~~
 
 Final observed results:
@@ -72,7 +72,7 @@ Final observed results:
 - Failing or quarantined M2 cases: none.
 - Manually verified M2 cases: none; acceptance evidence is automated.
 
-Machine-readable results are `backend/artifacts/m2/test-results.json` and `backend/artifacts/m2/coverage.json`. The JSON test summary deliberately excludes local hostnames and absolute user paths. The sample manifest verifies hashes for all committed source fixtures and the hand-worked golden artifact.
+Machine-readable results are `backend/artifacts/quality/calculations-test-results.json` and `backend/artifacts/quality/calculations-coverage.json`. The JSON test summary deliberately excludes local hostnames and absolute user paths. The sample manifest verifies hashes for all committed source fixtures and the hand-worked golden artifact.
 
 Post-completion example-data verification on 2026-10-30: `uv run pytest tests/test_example_portfolios.py -q` passed 4 tests; Ruff and Ruff formatting checks passed for the new contract test. The example manifest verifies every end-user import file by SHA-256.
 

@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from ai_finance_assistant.agents.context import InMemoryAgentContextRepository
 from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.contracts.events import EventType
-from ai_finance_assistant.core.config import Settings
+from ai_finance_assistant.core.config import Settings, get_settings
 from ai_finance_assistant.knowledge.models import Evidence, LogicalKnowledgeBase
 from ai_finance_assistant.knowledge.representations import DeterministicTestEncoder
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
@@ -77,7 +77,7 @@ def run_request(
     return WorkflowRequest(
         execution_id=execution_id,
         session_id=session_id,
-        workflow_id="finance-assistant",
+        workflow_id=get_settings().workflow_id,
         workflow_version="1",
         message=message,
         deadline_at=datetime.now(UTC) + timedelta(minutes=1),
@@ -93,10 +93,13 @@ def application(
     telemetry = InMemoryObservability()
     return WorkflowApplication(
         settings=Settings(
+            workflow_id="test-workflow",
             mode="test",
             provider_mode="credential_free",
             model_mode="credential_free",
+            otel_service_name="test-service",
             langsmith_tracing_enabled=False,
+            langsmith_project="test-project",
         ),
         retrieval=StaticKnowledgeRetrieval(
             {

@@ -110,7 +110,7 @@ Use these restriction codes in the table:
 
 ### IRS publication and form-instruction candidates
 
-The table contains 30 candidates: the original 23-source review plus seven publications added by the explicit closure review. “Existing” means the source ID is already in `source_registry.v1.json`; it is not a new approval. In this table, “Same” means the IRS employee-created official-work basis shown in the first row: freely copy, with credit requested, subject to per-edition third-party-content review.
+The table contains 30 candidates: the original 23-source review plus seven publications added by the explicit closure review. “Existing” means the source ID is already in `source-registry.v1.json`; it is not a new approval. In this table, “Same” means the IRS employee-created official-work basis shown in the first row: freely copy, with credit requested, subject to per-edition third-party-content review.
 
 | Logical KB | Suggested source ID | Title | Canonical URL | Tax year | Rights basis | Restrictions | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- |

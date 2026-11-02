@@ -1,6 +1,6 @@
 # Backend and Inspector reconciliation
 
-Contract version: `contracts/m7-inspector-contract.v1.json`
+Contract version: `contracts/inspector/execution-inspector.v1.json`
 
 | Persisted RunEvent evidence | Inspector use |
 | --- | --- |

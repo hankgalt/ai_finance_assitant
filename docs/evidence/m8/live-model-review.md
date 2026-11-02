@@ -64,6 +64,6 @@ affected. This is consistent with the optional-exporter failure contract, while 
 remains the supported operating mode.
 
 The machine-readable, response-free record is
-`backend/artifacts/m8/live-model-review.v1.json`. It contains identifiers, counts, timings, source
+`backend/artifacts/release/live-model-review.v1.json`. It contains identifiers, counts, timings, source
 titles/publishers, and decisions, but no credential, system prompt, full generated answer, or user
 financial record.

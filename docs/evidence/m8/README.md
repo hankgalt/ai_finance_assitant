@@ -1,8 +1,8 @@
 # M8 qualification evidence
 
 This directory is the human-readable evidence index for M8. The immutable case map is
-`backend/data/evaluation/m8_cases.v1.json`; generated machine reports belong under
-`backend/artifacts/m8/` and are intentionally reproducible rather than hand-edited.
+`backend/data/qualification/release-cases.v1.json`; generated machine reports belong under
+`backend/artifacts/release/` and are intentionally reproducible rather than hand-edited.
 
 - [Qualification summary](qualification-summary.md)
 - [Threat model](threat-model.md)

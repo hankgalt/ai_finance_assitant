@@ -27,11 +27,11 @@ M9 also installs the Vitest V8 coverage provider. Frontend coverage is now measu
 
 - `docs/release/`: operating and demonstration bundle.
 - `docs/evidence/m9/`: coursework matrix, clean-start record, MCP evidence, and checklist.
-- `backend/data/evaluation/m9_release_manifest.v1.json`: machine-audited PR/CA/evidence map.
-- `backend/artifacts/m9/frontend-coverage/coverage-summary.json`: measured frontend coverage.
+- `backend/data/qualification/release-manifest.v1.json`: machine-audited PR/CA/evidence map.
+- `backend/artifacts/quality/frontend-coverage/coverage-summary.json`: measured frontend coverage.
 - `ai_finance_assistant.mcp_adapter`: read-only stdio adapter.
 - `backend/tests/test_mcp_adapter.py`: in-memory and external protocol/client tests.
-- `backend/tests/test_m9_release_bundle.py`: path, requirement, link, checksum, coverage, and MCP
+- `backend/tests/test_release_bundle.py`: path, requirement, link, checksum, coverage, and MCP
   release-surface audit.
 - `make m9-check`: final qualification/package entry point.
 

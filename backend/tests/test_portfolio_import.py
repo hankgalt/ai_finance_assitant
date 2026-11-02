@@ -23,7 +23,7 @@ from ai_finance_assistant.finance.portfolio_import import (
     PortfolioImport,
 )
 
-DATA_DIR = Path(__file__).parents[1] / "data" / "finance"
+DATA_DIR = Path(__file__).parents[1] / "data" / "calculations"
 IMPORTED_AT = datetime(2026, 10, 27, 12, 0, tzinfo=UTC)
 
 
@@ -37,7 +37,7 @@ def metadata() -> PortfolioImportMetadata:
 
 
 def valid_rows() -> list[dict[str, object]]:
-    raw = json.loads((DATA_DIR / "portfolio_rows.valid.v1.json").read_text(encoding="utf-8"))
+    raw = json.loads((DATA_DIR / "portfolio-import.valid.v1.json").read_text(encoding="utf-8"))
     return list(raw["rows"])
 
 
@@ -74,8 +74,8 @@ def normalized_positions(result: PortfolioImportResult) -> set[tuple[str, str, s
 
 def test_all_four_import_modes_share_one_validated_domain_result() -> None:
     rows = valid_rows()
-    json_content = (DATA_DIR / "portfolio_rows.valid.v1.json").read_bytes()
-    csv_content = (DATA_DIR / "portfolio_rows.valid.v1.csv").read_bytes()
+    json_content = (DATA_DIR / "portfolio-import.valid.v1.json").read_bytes()
+    csv_content = (DATA_DIR / "portfolio-import.valid.v1.csv").read_bytes()
     payloads = (
         ManualImportPayload(rows=tuple(rows)),
         JsonImportPayload(content=json_content),
@@ -98,7 +98,7 @@ def test_all_four_import_modes_share_one_validated_domain_result() -> None:
 
 def test_import_aggregates_adversarial_findings_and_performs_no_merge() -> None:
     payload = JsonImportPayload(
-        content=(DATA_DIR / "portfolio_rows.adversarial.v1.json").read_bytes()
+        content=(DATA_DIR / "portfolio-import.adversarial.v1.json").read_bytes()
     )
 
     result = PortfolioImport().import_portfolio(import_request(payload))
@@ -238,8 +238,8 @@ def test_import_serialization_retains_hash_and_records_but_not_uploaded_bytes() 
     assert result.portfolio.source_file_hash == result.source_file_hash
 
 
-def test_versioned_sample_manifest_hashes_match_the_evidence_files() -> None:
-    manifest = json.loads((DATA_DIR / "sample_manifest.v1.json").read_text(encoding="utf-8"))
+def test_versioned_fixture_manifest_hashes_match_the_evidence_files() -> None:
+    manifest = json.loads((DATA_DIR / "fixture-manifest.v1.json").read_text(encoding="utf-8"))
 
     for dataset in manifest["datasets"]:
         actual = hashlib.sha256((DATA_DIR / dataset["path"]).read_bytes()).hexdigest()

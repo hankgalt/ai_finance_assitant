@@ -6,7 +6,7 @@
 2. Start Qdrant and Redis: `docker compose up -d qdrant redis-response-cache`.
 3. Run `make m8-check`. The fixed runner strips application/model/provider tracing environment
    variables, then runs backend, frontend, browser, Qdrant, and Redis checks.
-4. Read `backend/artifacts/m8/qualification-report.v1.json`. A nonzero command is expected while a
+4. Read `backend/artifacts/release/qualification-report.v1.json`. A nonzero command is expected while a
    critical check fails, evidence is missing, or human review remains pending.
 5. Stop local dependencies when no longer needed: `docker compose stop qdrant redis-response-cache`.
 

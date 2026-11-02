@@ -824,36 +824,43 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
               </table>
             </div>
           </div>
-          {snapshotWarningGroups.map((warning) => (
-            <StateNotice
-              key={JSON.stringify([
-                warning.scope,
-                warning.code,
-                warning.message,
-              ])}
-              tone="warning"
-              title={warning.code.replaceAll("_", " ")}
+          {snapshotWarningGroups.length ? (
+            <aside
+              aria-label="Portfolio snapshot warnings"
+              className="portfolio-snapshot-warnings"
             >
-              <p>{warning.message}</p>
-              {warning.holdingIds.length === 1 ? (
-                <p className="snapshot-warning-scope">
-                  Holding: {warning.holdingIds[0]}.
-                </p>
-              ) : null}
-              {warning.holdingIds.length > 1 ? (
-                <details className="snapshot-warning-scope">
-                  <summary>
-                    Applies to {warning.holdingIds.length} holdings.
-                  </summary>
-                  <ul aria-label={`${warning.code} affected holdings`}>
-                    {warning.holdingIds.map((holdingId) => (
-                      <li key={holdingId}>{holdingId}</li>
-                    ))}
-                  </ul>
-                </details>
-              ) : null}
-            </StateNotice>
-          ))}
+              {snapshotWarningGroups.map((warning) => (
+                <StateNotice
+                  key={JSON.stringify([
+                    warning.scope,
+                    warning.code,
+                    warning.message,
+                  ])}
+                  tone="warning"
+                  title={warning.code.replaceAll("_", " ")}
+                >
+                  <p>{warning.message}</p>
+                  {warning.holdingIds.length === 1 ? (
+                    <p className="snapshot-warning-scope">
+                      Holding: {warning.holdingIds[0]}.
+                    </p>
+                  ) : null}
+                  {warning.holdingIds.length > 1 ? (
+                    <details className="snapshot-warning-scope">
+                      <summary>
+                        Applies to {warning.holdingIds.length} holdings.
+                      </summary>
+                      <ul aria-label={`${warning.code} affected holdings`}>
+                        {warning.holdingIds.map((holdingId) => (
+                          <li key={holdingId}>{holdingId}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
+                </StateNotice>
+              ))}
+            </aside>
+          ) : null}
         </section>
       ) : null}
     </>

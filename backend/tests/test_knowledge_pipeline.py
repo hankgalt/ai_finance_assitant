@@ -107,9 +107,9 @@ def test_registry_rejects_unreviewed_enabled_source() -> None:
 
 def test_governed_tax_registry_includes_publication_560_for_sep_education() -> None:
     data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
-    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    registry = load_source_registry(data_dir / "source-registry.v1.json")
     source = next(item for item in registry.sources if item.source_id == "irs-p560-2025")
-    qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+    qrels = _load_qrels(data_dir / "tax-education" / "retrieval-cases.v1.json")
     sep_case = next(item for item in qrels if item.case_id == "tax-2025-sep-ira")
 
     assert source.status == SourceStatus.APPROVED
@@ -125,9 +125,9 @@ def test_governed_tax_registry_includes_publication_560_for_sep_education() -> N
 
 def test_governed_tax_registry_covers_home_sale_education_directly() -> None:
     data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
-    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    registry = load_source_registry(data_dir / "source-registry.v1.json")
     source = next(item for item in registry.sources if item.source_id == "irs-p523-2025")
-    qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+    qrels = _load_qrels(data_dir / "tax-education" / "retrieval-cases.v1.json")
     home_sale_case = next(item for item in qrels if item.case_id == "tax-2025-home-sale")
 
     assert source.status == SourceStatus.APPROVED
@@ -145,9 +145,9 @@ def test_governed_tax_registry_covers_home_sale_education_directly() -> None:
 
 def test_tax_qrels_cover_natural_language_pension_and_annuity_education() -> None:
     data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
-    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    registry = load_source_registry(data_dir / "source-registry.v1.json")
     source = next(item for item in registry.sources if item.source_id == "irs-p575-2025")
-    qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+    qrels = _load_qrels(data_dir / "tax-education" / "retrieval-cases.v1.json")
     case = next(
         item for item in qrels if item.case_id == "tax-2025-pension-annuity-natural-language"
     )
@@ -162,9 +162,12 @@ def test_tax_qrels_cover_natural_language_pension_and_annuity_education() -> Non
 
 def test_requested_irs_publication_set_is_governed_and_qrel_covered() -> None:
     data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
-    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    registry = load_source_registry(data_dir / "source-registry.v1.json")
     sources = {source.source_id: source for source in registry.sources}
-    qrels = {case.case_id: case for case in _load_qrels(data_dir / "qrels.tax.v1.json")}
+    qrels = {
+        case.case_id: case
+        for case in _load_qrels(data_dir / "tax-education" / "retrieval-cases.v1.json")
+    }
     expected = {
         "irs-p501-2025": (
             "p501",
@@ -204,13 +207,13 @@ def test_requested_irs_publication_set_is_governed_and_qrel_covered() -> None:
 
 def test_governed_finance_registry_covers_mutual_fund_and_etf_comparison() -> None:
     data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
-    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    registry = load_source_registry(data_dir / "source-registry.v1.json")
     source = next(
         item
         for item in registry.sources
         if item.source_id == "investor-mutual-fund-etf-characteristics"
     )
-    qrels = _load_qrels(data_dir / "qrels.finance.v1.json")
+    qrels = _load_qrels(data_dir / "finance-education" / "retrieval-cases.v1.json")
     comparison_case = next(item for item in qrels if item.case_id == "finance-mutual-funds-vs-etfs")
 
     assert source.status == SourceStatus.APPROVED
@@ -224,9 +227,9 @@ def test_governed_finance_registry_covers_mutual_fund_and_etf_comparison() -> No
 
 def test_corpus_expansion_keeps_pending_sources_out_of_ingestion_and_qrels() -> None:
     data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
-    registry = load_source_registry(data_dir / "source_registry.v1.json")
-    finance_qrels = _load_qrels(data_dir / "qrels.finance.v1.json")
-    tax_qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+    registry = load_source_registry(data_dir / "source-registry.v1.json")
+    finance_qrels = _load_qrels(data_dir / "finance-education" / "retrieval-cases.v1.json")
+    tax_qrels = _load_qrels(data_dir / "tax-education" / "retrieval-cases.v1.json")
 
     enabled = {source.source_id for source in registry.sources if source.ingestion_enabled}
     qrel_document_ids = {
@@ -248,9 +251,9 @@ def test_corpus_expansion_keeps_pending_sources_out_of_ingestion_and_qrels() -> 
 
 def test_corpus_expansion_pins_2025_publication_505_and_separates_2026() -> None:
     data_dir = Path(__file__).resolve().parents[1] / "data" / "knowledge"
-    registry = load_source_registry(data_dir / "source_registry.v1.json")
+    registry = load_source_registry(data_dir / "source-registry.v1.json")
     sources = {source.source_id: source for source in registry.sources}
-    qrels = _load_qrels(data_dir / "qrels.tax.v1.json")
+    qrels = _load_qrels(data_dir / "tax-education" / "retrieval-cases.v1.json")
 
     prior = sources["irs-p505-2025"]
     current = sources["irs-p505-2026"]

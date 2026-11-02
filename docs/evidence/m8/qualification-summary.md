@@ -1,9 +1,9 @@
 # M8 qualification summary
 
-Dataset: `m8-release-qualification-v1` | Status: **passed; owner-approved private demo**
+Dataset: `private-demo-release-qualification-v1` | Status: **passed; owner-approved private demo**
 
 The fixed runner covers EVAL-01 through EVAL-18 and writes the machine-readable report to
-`backend/artifacts/m8/qualification-report.v1.json`. Its test environment strips live provider,
+`backend/artifacts/release/qualification-report.v1.json`. Its test environment strips live provider,
 model, and tracing variables and explicitly uses `backend/.test.env`.
 
 Full-profile results on the recorded environment:

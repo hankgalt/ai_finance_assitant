@@ -7,7 +7,7 @@ from ai_finance_assistant.finance.cash_flow import CashFlowSummary, MonthlyCashF
 from ai_finance_assistant.finance.goal_projection import GoalProjection
 from ai_finance_assistant.finance.models import GoalProjectionRequest, GoalScenario
 
-DATA_DIR = Path(__file__).parents[1] / "data" / "finance"
+DATA_DIR = Path(__file__).parents[1] / "data" / "calculations"
 
 
 def request_for(
@@ -28,7 +28,7 @@ def request_for(
 
 
 def test_versioned_hand_worked_goal_goldens_reproduce_exactly() -> None:
-    raw = json.loads((DATA_DIR / "goal_cases.v1.json").read_text(encoding="utf-8"))
+    raw = json.loads((DATA_DIR / "goal-projection-cases.v1.json").read_text(encoding="utf-8"))
     for case in raw["cases"]:
         request = GoalProjectionRequest(
             projection_id=case["case_id"],

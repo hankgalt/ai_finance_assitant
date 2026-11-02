@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 
+import { TEST_WORKFLOW_ID } from "../../test/config";
 import type { RunEvent } from "../../types/contracts";
 import { buildInspectorModel, formatSequencePositions } from "./inspectorModel";
 
@@ -15,7 +16,7 @@ function event(
     trace_id: "trace-1",
     trace_unavailable_reason: null,
     session_id: "session-1",
-    workflow_id: "finance-assistant",
+    workflow_id: TEST_WORKFLOW_ID,
     workflow_version: "1",
     sequence,
     node_id: nodeId,

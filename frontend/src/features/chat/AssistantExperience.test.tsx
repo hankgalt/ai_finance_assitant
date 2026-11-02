@@ -9,6 +9,7 @@ import {
 import { beforeEach, expect, test, vi } from "vitest";
 
 import { api, readRunStream } from "../../lib/api";
+import { TEST_WORKFLOW_ID } from "../../test/config";
 import type { ImportedPortfolio, RunRecord } from "../../types/contracts";
 import { AssistantExperience, RunCard } from "./AssistantExperience";
 
@@ -37,7 +38,7 @@ const portfolio = (portfolioId: string, label: string): ImportedPortfolio => ({
 const createdRun: RunRecord = {
   execution_id: "run-portfolio-question",
   session_id: "session-test",
-  workflow_id: "finance-assistant",
+  workflow_id: TEST_WORKFLOW_ID,
   workflow_version: "1",
   status: "running",
   request_message: "How many holdings have usable prices?",
@@ -128,7 +129,7 @@ test("shows the asked question and formats a safe Markdown response", () => {
   const run = {
     execution_id: "run-markdown",
     session_id: "session-test",
-    workflow_id: "finance-assistant",
+    workflow_id: TEST_WORKFLOW_ID,
     workflow_version: "1",
     status: "completed",
     request_message: question,
@@ -136,7 +137,7 @@ test("shows the asked question and formats a safe Markdown response", () => {
       schema_version: "1",
       execution_id: "run-markdown",
       session_id: "session-test",
-      workflow_id: "finance-assistant",
+      workflow_id: TEST_WORKFLOW_ID,
       workflow_version: "1",
       status: "completed",
       selected_agent_ids: ["finance_qa"],
@@ -197,7 +198,7 @@ test("shows a combined response while keeping specialist sources and details", (
   const run = {
     execution_id: "run-multi-domain",
     session_id: "session-test",
-    workflow_id: "finance-assistant",
+    workflow_id: TEST_WORKFLOW_ID,
     workflow_version: "1",
     status: "completed",
     request_message:
@@ -206,7 +207,7 @@ test("shows a combined response while keeping specialist sources and details", (
       schema_version: "1",
       execution_id: "run-multi-domain",
       session_id: "session-test",
-      workflow_id: "finance-assistant",
+      workflow_id: TEST_WORKFLOW_ID,
       workflow_version: "1",
       status: "completed",
       selected_agent_ids: ["finance_qa", "tax_education"],

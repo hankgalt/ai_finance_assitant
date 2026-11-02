@@ -42,13 +42,13 @@ configuration may therefore use semantic response-cache mode `serving` under the
 
 ## Delivered artifacts
 
-- `backend/data/evaluation/m8_cases.v1.json`: EVAL-01–EVAL-18 case/check/evidence manifest.
-- `backend/data/evaluation/security_cases.v1.json`: prompt-injection, safe-file, isolation,
+- `backend/data/qualification/release-cases.v1.json`: EVAL-01–EVAL-18 case/check/evidence manifest.
+- `backend/data/qualification/security-cases.v1.json`: prompt-injection, safe-file, isolation,
   redaction, cardinality, and outage vectors.
 - `ai_finance_assistant.evaluation`: strict models, fixed runner, safe test environment, dimension
   reconciliation, and release-gate report.
-- `backend/artifacts/m8/`: JUnit, coverage, environment, dependency, core, and full reports.
-- `backend/artifacts/m8/live-model-review.v1.json`: response-free selected-model review record.
+- `backend/artifacts/release/`: JUnit, coverage, environment, dependency, core, and full reports.
+- `backend/artifacts/release/live-model-review.v1.json`: response-free selected-model review record.
 - `docs/evidence/m8/`: threat model, observability flow, signal inventory, operational runbook,
   coverage, benchmark/cost, dependency, correlation/redaction/exporter, review worksheet,
   selected-model review, known-risk register, qualification summary, and release recommendation.
@@ -60,9 +60,9 @@ The final full runner executed:
 
 ```text
 backend/.venv/bin/python -m ai_finance_assistant.evaluation.runner \
-  --manifest backend/data/evaluation/m8_cases.v1.json \
+  --manifest backend/data/qualification/release-cases.v1.json \
   --repo-root . \
-  --output backend/artifacts/m8/qualification-report.v1.json \
+  --output backend/artifacts/release/qualification-report.v1.json \
   --profile full
 ```
 

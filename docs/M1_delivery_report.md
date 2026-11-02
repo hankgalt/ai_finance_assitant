@@ -26,11 +26,12 @@ The 2026-10-31 maintenance added twelve individually reviewed SEC/Investor.gov s
 ## Delivered interfaces and artifacts
 
 - `backend/src/ai_finance_assistant/knowledge/`: versioned source/chunk/collection/evaluation contracts, bounded source acquisition and cache, HTML/PDF normalization, deterministic chunking, local FastEmbed representations, in-memory and Qdrant stores, retrieval, evaluation, and CLI orchestration.
-- `backend/data/knowledge/source_registry.v1.json`: permitted-use, reviewer, source status, jurisdiction, tax-year, and ingestion decisions.
-- `backend/data/knowledge/qrels.finance.v1.json` and `qrels.tax.v1.json`: fixed M1 retrieval cases.
+- `backend/data/knowledge/source-registry.v1.json`: permitted-use, reviewer, source status, jurisdiction, tax-year, and ingestion decisions.
+- `backend/data/knowledge/finance-education/retrieval-cases.v1.json` and
+  `backend/data/knowledge/tax-education/retrieval-cases.v1.json`: fixed M1 retrieval cases.
 - `compose.yaml`: Qdrant 1.20.0 bound to loopback with persistent storage and a health check.
 - FastAPI readiness: validates aliases, named vector configuration, model revisions/hashes, chunk/schema versions, payload indexes, ready state, collection status, and nonempty points. It performs no writes or embedding.
-- `backend/artifacts/m1/`: source/document manifests, evaluation reports, activation records, unchanged-rerun evidence, and rollback transcripts. See its `README.md` for current versus retained generations.
+- `backend/artifacts/knowledge/`: source/document manifests, evaluation reports, activation records, unchanged-rerun evidence, and rollback transcripts. See its `README.md` for current versus retained generations.
 
 ## Frozen local experiment
 
@@ -77,8 +78,8 @@ The same fixed qrels, filters, collection, top-k of 5, and RRF configuration wer
 
 Both hybrid candidates exceeded the EVAL-07 Recall@5 threshold of 0.85. Citation identifiers and critical year/jurisdiction filters passed exactly. Machine-readable reports are:
 
-- `backend/artifacts/m1/finance_education_v1_755be30b6a2d.evaluation.json`
-- `backend/artifacts/m1/tax_education_v1_9b31ab2354ea.evaluation.json`
+- `backend/artifacts/knowledge/finance-education/finance_education_v1_755be30b6a2d.evaluation.json`
+- `backend/artifacts/knowledge/tax-education/tax_education_v1_9b31ab2354ea.evaluation.json`
 
 ## Acceptance evidence
 
@@ -101,8 +102,8 @@ Commands used during final qualification:
 ~~~bash
 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make m1-check
 UV_CACHE_DIR=/private/tmp/aifa-uv-cache AIFA_TEST_QDRANT_URL=http://127.0.0.1:6333 uv run pytest -q tests/test_qdrant_integration.py
-UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli run --kb finance_education --qrels data/knowledge/qrels.finance.v1.json --activate
-UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli run --kb tax_education --qrels data/knowledge/qrels.tax.v1.json --activate
+UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli run --kb finance_education --qrels data/knowledge/finance-education/retrieval-cases.v1.json --activate
+UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli run --kb tax_education --qrels data/knowledge/tax-education/retrieval-cases.v1.json --activate
 docker compose restart qdrant
 UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli validate --kb finance_education
 UV_CACHE_DIR=/private/tmp/aifa-uv-cache uv run python -m ai_finance_assistant.knowledge.cli validate --kb tax_education

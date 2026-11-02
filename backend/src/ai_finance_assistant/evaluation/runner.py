@@ -1,4 +1,4 @@
-"""Run fixed M8 qualification commands and reconcile them with versioned evidence."""
+"""Run fixed release-qualification commands and reconcile them with versioned evidence."""
 
 from __future__ import annotations
 
@@ -44,8 +44,8 @@ CHECK_SPECS = (
             ".venv/bin/pytest",
             "-q",
             "--cov=ai_finance_assistant",
-            "--cov-report=json:artifacts/m8/backend-coverage.json",
-            "--junitxml=artifacts/m8/backend-junit.xml",
+            "--cov-report=json:artifacts/quality/backend-coverage.json",
+            "--junitxml=artifacts/quality/backend-junit.xml",
         ),
         "backend",
     ),
@@ -217,7 +217,7 @@ def build_report(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the fixed M8 release-qualification suite")
+    parser = argparse.ArgumentParser(description="Run the fixed release-qualification suite")
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--repo-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)

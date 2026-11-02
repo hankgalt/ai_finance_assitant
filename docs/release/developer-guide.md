@@ -48,6 +48,16 @@ does not already contain the active collections, build them deliberately with `m
 knowledge-finance` and `make knowledge-tax`; those commands may fetch only approved registry
 sources.
 
+The copied environment also owns three distinct runtime identities:
+
+- `AIFA_WORKFLOW_ID` is persisted on Runs and forms part of the LangGraph checkpoint namespace. Do
+  not change it while existing Session checkpoints must remain addressable.
+- `AIFA_LANGSMITH_PROJECT` selects the optional LangSmith destination; it does not rename Runs.
+- `AIFA_OTEL_SERVICE_NAME` identifies this backend to OpenTelemetry collectors.
+
+Ordinary backend and frontend tests use their tracked, credential-free test environments and do
+not inherit these identity values from a developer's local `.env`.
+
 Run the backend and frontend in separate terminals:
 
 ```bash

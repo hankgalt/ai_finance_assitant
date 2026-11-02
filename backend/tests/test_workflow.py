@@ -16,6 +16,7 @@ from ai_finance_assistant.contracts.agents import (
 )
 from ai_finance_assistant.contracts.errors import ErrorCategory, SafeError
 from ai_finance_assistant.contracts.events import EventType
+from ai_finance_assistant.core.config import get_settings
 from ai_finance_assistant.finance.models import ImportedPortfolio
 from ai_finance_assistant.llm.errors import ModelErrorCode, ModelProviderError
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
@@ -137,7 +138,7 @@ def workflow_request(
     return WorkflowRequest(
         execution_id=execution_id,
         session_id=session_id,
-        workflow_id="finance-assistant",
+        workflow_id=get_settings().workflow_id,
         workflow_version="1",
         message=message,
         context_references=context_references,

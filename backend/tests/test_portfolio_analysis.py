@@ -17,8 +17,8 @@ from ai_finance_assistant.finance.models import (
 from ai_finance_assistant.finance.portfolio_analysis import PortfolioAnalysis
 from ai_finance_assistant.finance.portfolio_import import PortfolioImport
 
-DATA_DIR = Path(__file__).parents[1] / "data" / "finance"
-ARTIFACT_DIR = Path(__file__).parents[1] / "artifacts" / "m2"
+DATA_DIR = Path(__file__).parents[1] / "data" / "calculations"
+ARTIFACT_DIR = Path(__file__).parents[1] / "artifacts" / "calculations"
 NOW = datetime(2026, 10, 27, 12, 0, tzinfo=UTC)
 
 
@@ -32,7 +32,7 @@ def imported_portfolio() -> ImportedPortfolio:
                 imported_at=NOW,
             ),
             payload=JsonImportPayload(
-                content=(DATA_DIR / "portfolio_rows.valid.v1.json").read_bytes()
+                content=(DATA_DIR / "portfolio-import.valid.v1.json").read_bytes()
             ),
         )
     )
@@ -57,7 +57,7 @@ def request_for(
 
 def test_hand_worked_portfolio_golden_reports_partial_coverage() -> None:
     expected = json.loads(
-        (ARTIFACT_DIR / "calculation-goldens.v1.json").read_text(encoding="utf-8")
+        (ARTIFACT_DIR / "portfolio-analysis-goldens.v1.json").read_text(encoding="utf-8")
     )["expected"]
     snapshot = PortfolioAnalysis().analyze(request_for())
 

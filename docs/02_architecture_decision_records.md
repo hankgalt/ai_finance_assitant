@@ -1,6 +1,6 @@
 # AI Finance Assistant — Architecture decision records
 
-Version 1.7 | Status: Product architecture baseline through M6 plus accepted M6.1 response-cache design | 2026-10-31
+Version 1.8 | Status: Product architecture baseline through the private-demo release | 2026-11-02
 
 The existing single-file register is retained to avoid unnecessary file churn. “Accepted” records are architectural constraints; “Proposed” records require validation during the named milestone. Proof references are future completion evidence, not claims of implementation.
 
@@ -132,6 +132,27 @@ For the local/private demonstration, Redis binds only to loopback, uses an expli
 
 Caching complete `WorkflowRunResult` objects, citations, personalized calculations, time-sensitive provider results, all-agent responses, system prompts, unqualified user messages, or cross-Session results was rejected because it would hide current evidence/freshness checks and expand privacy and correctness risk. LangChain's global cache was rejected for this product seam because the repository invokes a custom structured `ModelAdapter` and requires application-specific eligibility, Session isolation, evidence binding, event truth, and invalidation.
 
+### ADR-029: Product capabilities own durable repository assets — Accepted
+
+Organize committed data, generated artifacts, machine contracts, and tests by the durable product
+capability or interface they describe. Cross-product verification belongs to `quality`,
+`qualification`, or `release`; milestone identifiers remain only in planning, delivery reports, and
+historical evidence. This keeps a module's implementation inputs, interface evidence, and tests at a
+stable seam after the delivery sequence has ended, so maintainers do not need milestone history to
+find or change current behavior.
+
+Machine-readable paths are part of the reproducibility interface. A layout migration therefore
+updates CLI defaults, Make targets, manifests, checksums, tests, documentation links, and release
+audits atomically. Compatibility Make targets may retain milestone names while existing delivery
+reports depend on them, but new durable targets use capability or release terminology. Runtime
+state remains ignored and is not moved by this decision because changing its location requires a
+separate data-migration and rollback design.
+
+Keeping milestone directories as the permanent repository taxonomy was rejected because one
+capability then spans several unrelated delivery folders. Duplicating or symlinking artifacts into
+both taxonomies was rejected because it creates competing sources of truth and weakens path and
+checksum validation.
+
 ## Decision register still open
 
-The following are not silently decided by these records: a future public deployment target; identity provider; public/managed persistence stores, including a managed/public response-cache topology; commercial/public market and news rights; production Qdrant hosting mode; initial institution-specific Cash-flow import profiles; and authoritative coursework rubric interpretations. M1 resolved the initial representation and ranking experiment; ADR-021 resolves initial multi-currency behavior, short positions, and the diversification heuristic; ADR-022 resolves that cash-flow import does not depend on a provider; ADR-023 resolves the private demonstration posture; ADR-024 resolves the initial adapters and safe default; ADR-025 resolves explicit Alpha Vantage/Massive selection without claiming shared-demo or public-production data rights; ADR-003 and ADR-026 resolve the private-demo SQLite checkpoint/application/provider-cache stores and initial historical-cache policies without approving a public store or provider rights; ADR-027 resolves the local Active/Archived/permanent-deletion Session lifecycle without approving indefinite retention; ADR-028 resolves only the bounded private-demo response-cache policy for standalone public Finance and U.S. Tax education and leaves broader agent eligibility, public hosting, and production retention for later measured decisions. Remaining decisions require measured or contractual evidence in their owning milestone.
+The following are not silently decided by these records: a future public deployment target; identity provider; public/managed persistence stores, including a managed/public response-cache topology; commercial/public market and news rights; production Qdrant hosting mode; initial institution-specific Cash-flow import profiles; and authoritative coursework rubric interpretations. M1 resolved the initial representation and ranking experiment; ADR-021 resolves initial multi-currency behavior, short positions, and the diversification heuristic; ADR-022 resolves that cash-flow import does not depend on a provider; ADR-023 resolves the private demonstration posture; ADR-024 resolves the initial adapters and safe default; ADR-025 resolves explicit Alpha Vantage/Massive selection without claiming shared-demo or public-production data rights; ADR-003 and ADR-026 resolve the private-demo SQLite checkpoint/application/provider-cache stores and initial historical-cache policies without approving a public store or provider rights; ADR-027 resolves the local Active/Archived/permanent-deletion Session lifecycle without approving indefinite retention; ADR-028 resolves only the bounded private-demo response-cache policy for standalone public Finance and U.S. Tax education and leaves broader agent eligibility, public hosting, and production retention for later measured decisions; ADR-029 changes committed repository ownership without moving ignored runtime state. Remaining decisions require measured or contractual evidence in their owning milestone.

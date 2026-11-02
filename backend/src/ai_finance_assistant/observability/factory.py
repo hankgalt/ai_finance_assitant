@@ -37,7 +37,7 @@ def telemetry_runtime_from_settings(settings: Settings) -> TelemetryRuntime:
         return TelemetryRuntime(observability=SafeObservability(InMemoryObservability()))
     resource = Resource.create(
         {
-            "service.name": "ai-finance-assistant",
+            "service.name": settings.otel_service_name,
             "service.version": settings.app_version,
         }
     )

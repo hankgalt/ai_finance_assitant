@@ -18,7 +18,7 @@ class RoutingCase(TypedDict, total=False):
 
 
 def test_versioned_routing_dataset_meets_m4_gate() -> None:
-    dataset_path = Path(__file__).parents[1] / "data/workflow/routing_cases.v1.json"
+    dataset_path = Path(__file__).parents[1] / "data/assistant/routing-cases.v1.json"
     payload = cast(dict[str, object], json.loads(dataset_path.read_text()))
     cases = cast(list[RoutingCase], payload["cases"])
     assert len(cases) >= 40

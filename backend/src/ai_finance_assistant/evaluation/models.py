@@ -1,4 +1,4 @@
-"""Strict contracts for the versioned M8 qualification manifest and report."""
+"""Strict contracts for the versioned release-qualification manifest and report."""
 
 from __future__ import annotations
 

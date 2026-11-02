@@ -4,7 +4,7 @@ Status: **Qualified for serving; owner-approved 2026-10-31**
 
 ## Configuration
 
-- Dataset: `backend/data/response_cache/calibration.v1.json`
+- Dataset: `backend/data/response-cache/semantic-calibration.v1.json`
 - Dataset version: `public-rag-calibration-v1`
 - Eligible domains: standalone public Finance Q&A and U.S. Tax Education only
 - Encoder: `BAAI/bge-small-en-v1.5`

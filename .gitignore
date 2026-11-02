@@ -11,6 +11,7 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.*.example
+!/frontend/.env.test
 
 # Python environments, caches, and reports
 .venv/

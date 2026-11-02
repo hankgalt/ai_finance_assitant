@@ -94,6 +94,7 @@ def test_approved_live_mode_builds_openai_adapter_with_injected_client() -> None
 def test_standard_and_legacy_langsmith_environment_names_are_supported(
     monkeypatch: MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("AIFA_LANGSMITH_PROJECT")
     monkeypatch.setenv("LANGCHAIN_TRACING_V2", "true")
     monkeypatch.setenv("LANGCHAIN_API_KEY", "legacy-fixture")
     monkeypatch.setenv("LANGCHAIN_PROJECT", "legacy-project")
@@ -115,6 +116,18 @@ def test_standard_and_legacy_langsmith_environment_names_are_supported(
     assert current.langsmith_api_key is not None
     assert current.langsmith_api_key.get_secret_value() == "current-fixture"
     assert current.langsmith_project == "current-project"
+
+
+def test_runtime_identity_names_are_environment_owned(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("AIFA_WORKFLOW_ID", "workflow-from-environment")
+    monkeypatch.setenv("AIFA_OTEL_SERVICE_NAME", "telemetry-from-environment")
+    monkeypatch.setenv("AIFA_LANGSMITH_PROJECT", "traces-from-environment")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.workflow_id == "workflow-from-environment"
+    assert settings.otel_service_name == "telemetry-from-environment"
+    assert settings.langsmith_project == "traces-from-environment"
 
 
 def test_openai_standard_environment_key_is_supported(monkeypatch: MonkeyPatch) -> None:

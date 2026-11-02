@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 2.8 | Status: M0–M9 complete for the owner-only private demo/coursework release; M10 planned | 2026-10-31
+Version 2.9 | Status: M0–M9.1 complete; M10 planned | 2026-11-02
 
 ## 1. Delivery rules
 
@@ -276,6 +276,39 @@ and CA-01 through CA-13 without changing the owner-only release boundary. See
 
 **Evidence:** Release bundle, exact environment/command log, requirement-to-evidence matrix, demonstration artifact, MCP record, known limitations, and approval.
 
+### M9.1 — Product-oriented repository layout maintenance
+
+**Completed:** 2026-11-02. See [M9.1 delivery report](M9_1_delivery_report.md).
+
+**Deliverables**
+
+- Capability-owned paths for committed backend data and generated artifacts, with cross-product
+  reports under quality, qualification, or release ownership.
+- Interface-named machine contracts and behavior-named backend tests without milestone identifiers.
+- One current repository-layout reference plus durable agent guidance; milestone delivery reports
+  remain historical evidence rather than the navigation model for current assets.
+- Atomically reconciled CLI defaults, Make targets, JSON path references, hashes, documentation
+  links, and release audits.
+- Environment-owned workflow, LangSmith-project, and OpenTelemetry-service identities, including
+  credential-free backend and frontend test configuration without product-identity literals in
+  implementation or test fixtures.
+
+**Dependencies:** Completed M9 release bundle and accepted ADR-029. This maintenance does not change
+runtime state locations, product contracts, collection versions, financial calculations, or release
+scope.
+
+**Acceptance:** No tracked backend data, artifact, contract, or test path is owned by a milestone
+directory or filename; every moved path has one capability/release owner; all machine references and
+documentation links resolve; active RAG collection identities and artifact contents remain
+unchanged except for path metadata; credential-free backend, frontend, contract, evidence, and
+release gates pass.
+
+**Tests:** Formatting, linting, strict typing, full backend and frontend suites, path/reference and
+checksum audits, contract reconciliation, release qualification, and documentation-link checks.
+
+**Evidence:** ADR-029, [repository layout](repository_layout.md), rename map in version control, exact
+verification commands/results, security/privacy statement, and unresolved limitations.
+
 ### M10 — Provider-independent bank and credit-card cash-flow import
 
 **Deliverables**
@@ -304,11 +337,11 @@ M0 → M2
 M0 → M3
 M1 + M2 + M3 → M4
 M4 → M4.1 → M5 → M6 → M7 → M6.1
-M1–M7 + M4.1 + M6.1 → M8 → M9
+M1–M7 + M4.1 + M6.1 → M8 → M9 → M9.1
 M2 + M5 + M6 → M10 after M9 release approval
 ~~~
 
-M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. M7 renders generic persisted RunEvents first. M6.1 later emits response-cache activity through that existing tool-event contract, and M8 independently qualifies both features for release. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
+M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. M7 renders generic persisted RunEvents first. M6.1 later emits response-cache activity through that existing tool-event contract, and M8 independently qualifies both features for release. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M9.1 changes repository ownership after the release without changing product behavior. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
 
 ## 4. Mapping from the previous milestone plan
 

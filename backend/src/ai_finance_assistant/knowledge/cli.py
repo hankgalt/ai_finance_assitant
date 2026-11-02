@@ -29,8 +29,8 @@ from ai_finance_assistant.knowledge.representations import FastEmbedEncoder
 from ai_finance_assistant.knowledge.retrieval import KnowledgeRetriever
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[3]
-_DEFAULT_REGISTRY = _BACKEND_ROOT / "data/knowledge/source_registry.v1.json"
-_DEFAULT_ARTIFACTS = _BACKEND_ROOT / "artifacts/m1"
+_DEFAULT_REGISTRY = _BACKEND_ROOT / "data/knowledge/source-registry.v1.json"
+_DEFAULT_ARTIFACTS = _BACKEND_ROOT / "artifacts/knowledge"
 _DEFAULT_SOURCE_CACHE = _BACKEND_ROOT / ".cache/knowledge-sources"
 
 
@@ -72,6 +72,7 @@ def _alias(logical_kb: LogicalKnowledgeBase) -> str:
 
 def _run(args: argparse.Namespace) -> int:
     logical_kb = _logical_kb(args.kb)
+    artifacts_dir = args.artifacts_dir / logical_kb.value.replace("_", "-")
     registry = load_source_registry(args.registry)
     qrels = _load_qrels(args.qrels)
     if any(case.filters.logical_kb != logical_kb for case in qrels):
@@ -96,7 +97,7 @@ def _run(args: argparse.Namespace) -> int:
         cases=qrels,
         retriever=retriever,
     )
-    report_path = args.artifacts_dir / f"{prepared.manifest.collection_name}.evaluation.json"
+    report_path = artifacts_dir / f"{prepared.manifest.collection_name}.evaluation.json"
     _write_json(report_path, report.model_dump(mode="json"))
     recorded_at = datetime.now(UTC)
     run_record: dict[str, Any] = {
@@ -124,7 +125,7 @@ def _run(args: argparse.Namespace) -> int:
                 "previous_collection": activation.previous_collection,
             }
     _write_json(
-        args.artifacts_dir / f"{prepared.manifest.collection_name}.manifest.json",
+        artifacts_dir / f"{prepared.manifest.collection_name}.manifest.json",
         {
             "manifest": final_manifest.model_dump(mode="json"),
             "documents": [
@@ -141,7 +142,7 @@ def _run(args: argparse.Namespace) -> int:
     )
     _write_json(
         _next_run_path(
-            args.artifacts_dir,
+            artifacts_dir,
             prepared.manifest.collection_name,
             recorded_at,
         ),
@@ -153,6 +154,7 @@ def _run(args: argparse.Namespace) -> int:
 
 def _rollback(args: argparse.Namespace) -> int:
     logical_kb = _logical_kb(args.kb)
+    artifacts_dir = args.artifacts_dir / logical_kb.value.replace("_", "-") / "rollback"
     store = QdrantKnowledgeStore(args.qdrant_url)
     result = store.activate(_alias(logical_kb), args.collection)
     record = {
@@ -164,7 +166,7 @@ def _rollback(args: argparse.Namespace) -> int:
         "previous_collection": result.previous_collection,
     }
     _write_json(
-        args.artifacts_dir
+        artifacts_dir
         / f"rollback-{logical_kb.value}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}.json",
         record,
     )

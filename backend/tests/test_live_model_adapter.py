@@ -115,7 +115,7 @@ def test_openai_live_account_supports_all_six_agent_contracts() -> None:
         WorkflowRequest(
             execution_id="run-live-model-m4-1",
             session_id="session-live-model-m4-1",
-            workflow_id="finance-assistant",
+            workflow_id=settings.workflow_id,
             workflow_version="1",
             message=messages[only_agent] if only_agent is not None else all_agent_message,
             context_references=(

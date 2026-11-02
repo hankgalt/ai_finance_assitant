@@ -73,7 +73,7 @@ terminal punctuation and no internal-generation warning.
 - `WorkflowApplication`: one selected model adapter per Run.
 - Settings and `.env.example`: OpenAI controls and current/legacy LangSmith aliases.
 - `live_model` marker, `make m4-1-check`, and `make model-live-check`.
-- `docs/research/M4_1_openai_model_selection.md` and `backend/artifacts/m4_1/` evidence.
+- `docs/research/M4_1_openai_model_selection.md` and `backend/artifacts/models/` evidence.
 
 The original M4.1 slice added no FastAPI workflow route, SSE interface, durable checkpoint/event
 adapter, or frontend feature. The 2026-10-31 maintenance keeps the API contract unchanged and only
@@ -173,7 +173,7 @@ approvals before model-backed routing, plus one post-completion narrative replay
    recorded in the evidence artifact.
 
 The exact commands and machine-readable outcomes are recorded in
-`backend/artifacts/m4_1/test-results.json`.
+`backend/artifacts/quality/model-adapter-test-results.json`.
 
 ## Limitations and unresolved decisions
 
@@ -196,8 +196,8 @@ The exact commands and machine-readable outcomes are recorded in
 ## Evidence paths
 
 - `docs/research/M4_1_openai_model_selection.md`
-- `backend/artifacts/m4_1/model-prompt-inventory.v1.json`
-- `backend/artifacts/m4_1/test-results.json`
+- `backend/artifacts/models/model-prompt-inventory.v1.json`
+- `backend/artifacts/quality/model-adapter-test-results.json`
 - `backend/tests/test_openai_model_adapter.py`
 - `backend/tests/test_model_factory.py`
 - `backend/tests/test_live_model_adapter.py`

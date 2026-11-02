@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+import { E2E_WORKFLOW_ID } from "./config";
+
 const now = "2026-10-30T17:00:00Z";
 
 function usage(measured = false) {
@@ -44,7 +46,7 @@ function recordedEvent(
     trace_id: `trace-${executionId}`,
     trace_unavailable_reason: null,
     session_id: "session-m7-e2e",
-    workflow_id: "finance-assistant",
+    workflow_id: E2E_WORKFLOW_ID,
     workflow_version: "1",
     sequence,
     node_id: nodeId,
@@ -77,7 +79,7 @@ const runRecords = [
 ].map(([executionId, status]) => ({
   execution_id: executionId,
   session_id: "session-m7-e2e",
-  workflow_id: "finance-assistant",
+  workflow_id: E2E_WORKFLOW_ID,
   workflow_version: "1",
   status,
   request_message: "This prompt is intentionally not rendered by Inspector.",

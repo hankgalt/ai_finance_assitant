@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     host: "127.0.0.1",
-    port: 5173,
+    port: 5174,
     proxy: {
       "/api": "http://127.0.0.1:8000",
     },
@@ -19,7 +19,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
-      reportsDirectory: "../backend/artifacts/m9/frontend-coverage",
+      reportsDirectory: "../backend/artifacts/quality/frontend-coverage",
       thresholds: {
         lines: 80,
       },

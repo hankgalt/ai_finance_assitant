@@ -1,0 +1,12 @@
+{
+  "activation_requested": false,
+  "collection_name": "tax_education_v1_7fe414360b90",
+  "evaluation_artifact": "artifacts/knowledge/tax-education/tax_education_v1_7fe414360b90.evaluation.json",
+  "evaluation_passed": true,
+  "recorded_at": "2026-10-31T22:12:15.237556+00:00",
+  "schema_version": "1",
+  "write": {
+    "created": true,
+    "points_written": 4638
+  }
+}

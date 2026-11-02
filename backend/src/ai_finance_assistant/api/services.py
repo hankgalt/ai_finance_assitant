@@ -67,7 +67,7 @@ class ApplicationServices:
             run_event_retention_days=settings.run_event_retention_days,
         )
         for expired_session_id in self.application_repository.purge_expired():
-            self.checkpointer.delete_thread(f"{expired_session_id}:finance-assistant")
+            self.checkpointer.delete_thread(f"{expired_session_id}:{self.settings.workflow_id}")
             self.response_cache.purge_session(expired_session_id)
         self.event_repository = SQLiteRunEventRepository(self.database)
         self.context_repository = SQLiteAgentContextRepository(self.database)
@@ -153,7 +153,7 @@ class ApplicationServices:
     def delete_session(self, session_id: str) -> bool:
         deleted = self.application_repository.delete_archived_session(session_id)
         if deleted:
-            self.checkpointer.delete_thread(f"{session_id}:finance-assistant")
+            self.checkpointer.delete_thread(f"{session_id}:{self.settings.workflow_id}")
             self.response_cache.purge_session(session_id)
         return deleted
 

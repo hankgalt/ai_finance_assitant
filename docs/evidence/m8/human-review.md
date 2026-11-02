@@ -1,6 +1,6 @@
 # M8 human review worksheet
 
-Status: **owner-approved 2026-10-31** | Dataset: `m8-release-qualification-v1`
+Status: **owner-approved 2026-10-31** | Dataset: `private-demo-release-qualification-v1`
 
 Automated tests establish schema, routing, filter, citation-identifier, arithmetic, access, and
 redaction invariants. They do not replace the evaluation strategy's required human adjudication of

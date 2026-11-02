@@ -162,7 +162,12 @@ test("groups equivalent snapshot warnings and reports their holding scope", asyn
   expect(
     screen.getAllByText("USER PRICE USED", { selector: "strong" }),
   ).toHaveLength(1);
-  expect(screen.getByText("Applies to 2 holdings.")).toBeInTheDocument();
+  const warnings = screen.getByRole("complementary", {
+    name: "Portfolio snapshot warnings",
+  });
+  expect(
+    within(warnings).getByText("Applies to 2 holdings."),
+  ).toBeInTheDocument();
 });
 
 test("confirms and permanently deletes a saved portfolio", async () => {

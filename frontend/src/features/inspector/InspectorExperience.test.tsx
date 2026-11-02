@@ -5,6 +5,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 
 import type { RunEvent } from "../../types/contracts";
 import { api, readRunStream } from "../../lib/api";
+import { TEST_WORKFLOW_ID } from "../../test/config";
 import { InspectorExperience } from "./InspectorExperience";
 
 vi.mock("@xyflow/react", () => ({
@@ -45,7 +46,7 @@ function recordedEvent(overrides: Partial<RunEvent> = {}): RunEvent {
     trace_id: null,
     trace_unavailable_reason: "Tracing was disabled.",
     session_id: "session-1",
-    workflow_id: "finance-assistant",
+    workflow_id: TEST_WORKFLOW_ID,
     workflow_version: "1",
     sequence: 1,
     node_id: "finance_qa",
@@ -98,7 +99,7 @@ beforeEach(() => {
       {
         execution_id: "run-1",
         session_id: "session-1",
-        workflow_id: "finance-assistant",
+        workflow_id: TEST_WORKFLOW_ID,
         workflow_version: "1",
         status: "completed",
         request_message: "Secret raw prompt that must not render",

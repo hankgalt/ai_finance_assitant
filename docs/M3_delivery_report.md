@@ -23,7 +23,7 @@ Provider selection is explicit and truthful. Credential-free mode is the default
 - `FakeMarketDataProvider` and `FakeNewsProvider`: deterministic synthetic implementations of the same ports.
 - `ProviderRuntime`: bounded in-memory cache, workflow budget, rate/concurrency limit, retry/full jitter, circuit, and stale-cache behavior.
 - `backend/data/providers/`: hand-authored synthetic response fixtures with no captured provider content.
-- `backend/artifacts/m3/`: privacy-safe test, coverage, failure-matrix, and demo-budget evidence.
+- `backend/artifacts/providers/`: privacy-safe test, coverage, failure-matrix, and demo-budget evidence.
 
 ## Acceptance evidence
 
@@ -44,7 +44,7 @@ Final qualification commands:
 ~~~bash
 UV_NO_SYNC=1 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make m3-check
 UV_NO_SYNC=1 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make verify
-cd backend && .venv/bin/pytest -q --cov=ai_finance_assistant --cov-report=json:artifacts/m3/coverage.json --cov-report=term tests
+cd backend && .venv/bin/pytest -q --cov=ai_finance_assistant --cov-report=json:artifacts/quality/providers-coverage.json --cov-report=term tests
 ~~~
 
 Observed results:
@@ -56,7 +56,7 @@ Observed results:
 - Frontend formatting, lint, typecheck, 3 tests, and production build: pass.
 - Live-provider calls: zero; both credentials were absent and readiness correctly blocked live mode.
 
-Machine-readable results are `backend/artifacts/m3/test-results.json`, `coverage.json`, `failure-matrix.v1.json`, and `demo-budget-transcript.v1.json`.
+Machine-readable results are `backend/artifacts/quality/providers-test-results.json`, `coverage.json`, `failure-matrix.v1.json`, and `demo-budget-transcript.v1.json`.
 
 ## Security, privacy, and observability impact
 
@@ -78,7 +78,7 @@ These limitations do not block the credential-free M3 interface milestone, M4 co
 
 ## Post-completion live-test harness — 2026-10-28
 
-Two integration tests marked `live_provider` exercise the selected application ports against an explicitly selected Alpha Vantage or Massive market account plus Tavily. The default Pytest marker expression excludes them, and `make provider-live-check` is the only repository target that enables their external-call gate. The target is bounded to at most three selected-market calls and one Tavily call; each market operation is asserted before the next begins. A diagnostic execution reached Alpha Vantage and received a body-level account limit after a successful symbol search; this is not a passing Alpha Vantage qualification result. After the Massive volume fix, `AIFA_MARKET_DATA_PROVIDER=massive make provider-live-check` passed both the selected-market search/quote/history contract and the Tavily news contract in 1.01 seconds. The Alpha adapter treats its ambiguous daily/plan-limit response as non-retryable, Massive 429 responses are not immediately retried, and log formatting redacts credentials embedded in HTTP client messages. Machine-readable exclusion and gating evidence is in `backend/artifacts/m3/live-test-harness.v1.json`.
+Two integration tests marked `live_provider` exercise the selected application ports against an explicitly selected Alpha Vantage or Massive market account plus Tavily. The default Pytest marker expression excludes them, and `make provider-live-check` is the only repository target that enables their external-call gate. The target is bounded to at most three selected-market calls and one Tavily call; each market operation is asserted before the next begins. A diagnostic execution reached Alpha Vantage and received a body-level account limit after a successful symbol search; this is not a passing Alpha Vantage qualification result. After the Massive volume fix, `AIFA_MARKET_DATA_PROVIDER=massive make provider-live-check` passed both the selected-market search/quote/history contract and the Tavily news contract in 1.01 seconds. The Alpha adapter treats its ambiguous daily/plan-limit response as non-retryable, Massive 429 responses are not immediately retried, and log formatting redacts credentials embedded in HTTP client messages. Machine-readable exclusion and gating evidence is in `backend/artifacts/providers/live-test-harness.v1.json`.
 
 Post-fix verification used `UV_NO_SYNC=1 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make m3-check` and `UV_NO_SYNC=1 UV_CACHE_DIR=/private/tmp/aifa-uv-cache make verify`. The focused provider suite passed 32 tests. The ordinary backend suite collected 80 tests, deselected both `live_provider` tests, passed 77, and skipped only the existing opt-in Qdrant integration; frontend formatting, linting, type checking, three tests, and production build passed. These verification commands made zero live-provider calls.
 

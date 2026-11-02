@@ -50,8 +50,8 @@ def fixture(name: str) -> object:
     return json.loads((DATA_DIR / name).read_text(encoding="utf-8"))
 
 
-def test_provider_fixture_manifest_hashes_match() -> None:
-    manifest = fixture("fixture_manifest.v1.json")
+def test_provider_fixture_manifest_hashes_match_the_evidence_files() -> None:
+    manifest = fixture("fixture-manifest.v1.json")
     assert isinstance(manifest, dict)
     files = manifest["files"]
     assert isinstance(files, list)
@@ -287,7 +287,7 @@ def test_alpha_quote_is_normalized_and_repeated_view_reuses_cache() -> None:
         assert request.url.params["apikey"] == "secret-test-key"
         return httpx.Response(
             200,
-            json=fixture("alpha_vantage.quote.synthetic.v1.json"),
+            json=fixture("market-data/alpha-vantage/quote.synthetic.v1.json"),
         )
 
     clock = MutableClock()
@@ -325,7 +325,7 @@ def test_massive_previous_close_is_normalized_and_repeated_view_reuses_cache() -
         assert "secret-test-key" not in str(request.url)
         return httpx.Response(
             200,
-            json=fixture("massive.previous_close.synthetic.v1.json"),
+            json=fixture("market-data/massive/previous-close.synthetic.v1.json"),
         )
 
     clock = MutableClock()
@@ -358,8 +358,8 @@ def test_alpha_search_and_history_are_normalized() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         function = request.url.params["function"]
         payload = {
-            "SYMBOL_SEARCH": "alpha_vantage.search.synthetic.v1.json",
-            "TIME_SERIES_DAILY": "alpha_vantage.history.synthetic.v1.json",
+            "SYMBOL_SEARCH": "market-data/alpha-vantage/search.synthetic.v1.json",
+            "TIME_SERIES_DAILY": "market-data/alpha-vantage/history.synthetic.v1.json",
         }[function]
         return httpx.Response(200, json=fixture(payload))
 
@@ -396,12 +396,12 @@ def test_massive_search_and_history_are_normalized() -> None:
             assert request.url.params["active"] == "true"
             assert request.url.params["search"] == "demo"
             assert request.url.params["limit"] == "2"
-            return httpx.Response(200, json=fixture("massive.search.synthetic.v1.json"))
+            return httpx.Response(200, json=fixture("market-data/massive/search.synthetic.v1.json"))
         assert request.url.path == ("/v2/aggs/ticker/DEMO/range/1/day/2026-10-24/2026-10-27")
         assert request.url.params["adjusted"] == "false"
         assert request.url.params["sort"] == "asc"
         assert request.url.params["limit"] == "5000"
-        return httpx.Response(200, json=fixture("massive.history.synthetic.v1.json"))
+        return httpx.Response(200, json=fixture("market-data/massive/history.synthetic.v1.json"))
 
     clock = MutableClock()
     provider = MassiveMarketDataProvider(
@@ -436,7 +436,7 @@ def test_massive_search_and_history_are_normalized() -> None:
 
 
 def test_massive_delayed_history_with_bars_is_successfully_labeled() -> None:
-    payload = fixture("massive.history.synthetic.v1.json")
+    payload = fixture("market-data/massive/history.synthetic.v1.json")
     assert isinstance(payload, dict)
     payload["status"] = "DELAYED"
 
@@ -535,7 +535,7 @@ def test_massive_http_failure_matrix(
 
 
 def test_massive_non_ok_payload_is_rejected_without_leaking_provider_detail() -> None:
-    payload = fixture("massive.previous_close.synthetic.v1.json")
+    payload = fixture("market-data/massive/previous-close.synthetic.v1.json")
     assert isinstance(payload, dict)
     payload["status"] = "ERROR"
     payload["error"] = "SECRET provider detail"
@@ -568,7 +568,7 @@ def test_massive_timeout_is_typed_and_fractional_volume_is_preserved() -> None:
         runtime=runtime(clock),
     ).get_quote(quote_request())
 
-    fractional_volume_payload = fixture("massive.history.synthetic.v1.json")
+    fractional_volume_payload = fixture("market-data/massive/history.synthetic.v1.json")
     assert isinstance(fractional_volume_payload, dict)
     raw_results = fractional_volume_payload["results"]
     assert isinstance(raw_results, list)
@@ -682,7 +682,9 @@ def test_stale_cache_fallback_preserves_original_retrieval_time() -> None:
         nonlocal calls
         calls += 1
         if calls == 1:
-            return httpx.Response(200, json=fixture("alpha_vantage.quote.synthetic.v1.json"))
+            return httpx.Response(
+                200, json=fixture("market-data/alpha-vantage/quote.synthetic.v1.json")
+            )
         raise httpx.ReadTimeout("fixture timeout", request=request)
 
     clock = MutableClock()
@@ -713,7 +715,9 @@ def test_invalid_or_authorization_failures_do_not_serve_stale_cache() -> None:
         nonlocal calls
         calls += 1
         if calls == 1:
-            return httpx.Response(200, json=fixture("alpha_vantage.quote.synthetic.v1.json"))
+            return httpx.Response(
+                200, json=fixture("market-data/alpha-vantage/quote.synthetic.v1.json")
+            )
         return httpx.Response(403)
 
     clock = MutableClock()
@@ -739,7 +743,9 @@ def test_budget_exhaustion_happens_before_an_additional_provider_call() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
-        return httpx.Response(200, json=fixture("alpha_vantage.quote.synthetic.v1.json"))
+        return httpx.Response(
+            200, json=fixture("market-data/alpha-vantage/quote.synthetic.v1.json")
+        )
 
     clock = MutableClock()
     provider = AlphaVantageMarketDataProvider(
@@ -763,7 +769,9 @@ def test_local_rate_limit_prevents_an_additional_provider_call() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
-        return httpx.Response(200, json=fixture("alpha_vantage.quote.synthetic.v1.json"))
+        return httpx.Response(
+            200, json=fixture("market-data/alpha-vantage/quote.synthetic.v1.json")
+        )
 
     clock = MutableClock()
     provider = AlphaVantageMarketDataProvider(
@@ -814,7 +822,9 @@ def test_concurrency_limit_is_observable_without_a_second_call() -> None:
         calls += 1
         entered.set()
         assert release.wait(timeout=2)
-        return httpx.Response(200, json=fixture("alpha_vantage.quote.synthetic.v1.json"))
+        return httpx.Response(
+            200, json=fixture("market-data/alpha-vantage/quote.synthetic.v1.json")
+        )
 
     clock = MutableClock()
     provider = AlphaVantageMarketDataProvider(
@@ -841,7 +851,7 @@ def test_tavily_news_is_attributed_and_request_minimizes_content() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         observed_body.update(json.loads(request.content))
         assert request.headers["Authorization"] == "Bearer test-key"
-        return httpx.Response(200, json=fixture("tavily.news.synthetic.v1.json"))
+        return httpx.Response(200, json=fixture("news/tavily/results.synthetic.v1.json"))
 
     clock = MutableClock()
     provider = TavilyNewsProvider(

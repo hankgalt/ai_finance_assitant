@@ -97,7 +97,7 @@ def _create_and_execute_run(
         record, created = services.application_repository.create_run(
             execution_id=execution_id,
             session_id=session_id,
-            workflow_id="finance-assistant",
+            workflow_id=services.settings.workflow_id,
             workflow_version="1",
             request_message=message,
             idempotency_key=idempotency_key,

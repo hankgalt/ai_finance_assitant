@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from ai_finance_assistant.agents.context import InMemoryAgentContextRepository
 from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.contracts.events import EventType
-from ai_finance_assistant.core.config import Settings
+from ai_finance_assistant.core.config import Settings, get_settings
 from ai_finance_assistant.knowledge.models import Evidence, LogicalKnowledgeBase
 from ai_finance_assistant.llm.fake import DeterministicModelAdapter
 from ai_finance_assistant.llm.models import RoutingModelOutput, RoutingReason
@@ -75,7 +75,7 @@ def test_application_creates_one_provider_bundle_per_run() -> None:
             WorkflowRequest(
                 execution_id=f"run-bundle-{index}",
                 session_id=f"session-bundle-{index}",
-                workflow_id="finance-assistant",
+                workflow_id=get_settings().workflow_id,
                 workflow_version="1",
                 message="What is an ETF?",
                 deadline_at=datetime.now(UTC) + timedelta(minutes=1),
@@ -163,7 +163,7 @@ def test_application_composes_finance_and_tax_results_through_synthesis() -> Non
         WorkflowRequest(
             execution_id="run-application-synthesis",
             session_id="session-application-synthesis",
-            workflow_id="finance-assistant",
+            workflow_id=get_settings().workflow_id,
             workflow_version="1",
             message=message,
             deadline_at=datetime.now(UTC) + timedelta(minutes=1),

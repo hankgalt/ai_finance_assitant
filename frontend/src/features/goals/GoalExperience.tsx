@@ -39,6 +39,17 @@ const initialScenarios = [
   },
 ];
 
+function uniqueWarnings(warnings: string[]): string[] {
+  const seen = new Set<string>();
+  return warnings.flatMap((warning) => {
+    const normalized = warning.trim().replaceAll(/\s+/g, " ");
+    const key = normalized.toLocaleLowerCase();
+    if (!normalized || seen.has(key)) return [];
+    seen.add(key);
+    return [normalized];
+  });
+}
+
 export function GoalExperience({ sessionId }: { sessionId: string }) {
   const [startingAmount, setStartingAmount] = useState("25000");
   const [goalAmount, setGoalAmount] = useState("100000");
@@ -78,6 +89,7 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
     });
   };
   const result = projection.data;
+  const warnings = uniqueWarnings(result?.warnings ?? []);
   const chartData =
     result?.scenarios.map((scenario) => ({
       name: scenario.label,
@@ -298,15 +310,6 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
             <span>{result.risk_tolerance.replaceAll("_", " ")} tolerance</span>
             <span>{result.currency}</span>
           </div>
-          {result.warnings.map((warning) => (
-            <StateNotice
-              key={warning}
-              tone="warning"
-              title="Projection limitation"
-            >
-              {warning}
-            </StateNotice>
-          ))}
           <div className="chart-table-stack">
             <div
               className="chart-frame chart-wide"
@@ -391,6 +394,19 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
               </table>
             </div>
           </div>
+          {warnings.length ? (
+            <aside
+              aria-label="Projection limitations"
+              className="goal-warning-summary"
+            >
+              <strong>Projection limitations</strong>
+              <ul>
+                {warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </aside>
+          ) : null}
         </section>
       ) : null}
     </>

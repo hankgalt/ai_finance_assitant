@@ -8,7 +8,7 @@ Read [docs/README.md](docs/README.md) before implementation work. Repository-wid
 
 ## Current capabilities
 
-- FastAPI liveness/readiness and React application shell from M0.
+- FastAPI liveness/readiness and React application shell.
 - Reviewed SourceRegistry with permitted-use, status, provenance, and tax-year fields.
 - Explicit offline HTML/PDF ingestion with integrity-checked source caching, deterministic normalization/chunking, source/content hashing, and resumable batched writes.
 - Persistent Qdrant 1.20.0 collections with named dense and sparse vectors, filter indexes, immutable manifests, atomic active aliases, and rollback.
@@ -32,7 +32,7 @@ Read [docs/README.md](docs/README.md) before implementation work. Repository-wid
 - FastAPI and outbound HTTPX W3C instrumentation, bounded backend/provider/retrieval/cache/persistence metrics, structured correlation logs, and optional loopback OTLP Collector transport.
 - Responsive React Assistant, Portfolio, Market, Goal, and Session History experiences with accessible states, backend-authoritative calculations, archive/history/permanent deletion, and privacy-safe browser telemetry.
 - Measured React Flow Inspector, qualified Finance/Tax Redis semantic cache, and read-only MCP stdio tools for education retrieval, quote lookup, in-memory Portfolio analysis, and Goal projection.
-- M8 full release qualification plus the M9 user/developer/operator, coursework, clean-start, coverage, and eight-minute credential-free demonstration bundle.
+- Full release qualification plus user/developer/operator, coursework, clean-start, coverage, and eight-minute credential-free demonstration evidence.
 
 Live providers are not enabled until the account-specific rights gate passes. The next planned product milestone is M10 provider-independent bank/card cash-flow import.
 
@@ -77,7 +77,7 @@ Health interfaces:
 
 - `GET /api/health` — aggregate service status.
 - `GET /api/health/live` — process liveness.
-- `GET /api/health/ready` — HTTP 200 only when both active Qdrant collections match the expected M1 contract; otherwise HTTP 503.
+- `GET /api/health/ready` — HTTP 200 only when both active Qdrant collections match the expected knowledge contract; otherwise HTTP 503.
 
 Application startup and health checks never fetch sources, download models, create collections, or generate embeddings.
 
@@ -91,7 +91,7 @@ make knowledge-tax
 make knowledge-validate
 ~~~
 
-Raw source responses are cached under ignored `backend/.cache/knowledge-sources/`. Use the CLI `--refresh-sources` option only for a deliberate source refresh. Manifests and evaluation evidence are written under `backend/artifacts/m1/`.
+Raw source responses are cached under ignored `backend/.cache/knowledge-sources/`. Use the CLI `--refresh-sources` option only for a deliberate source refresh. Manifests and evaluation evidence are written under `backend/artifacts/knowledge/`.
 
 Stop Qdrant without deleting its volume:
 
@@ -105,24 +105,24 @@ make qdrant-stop
 make verify
 make qdrant-check
 make knowledge-validate
-make m9-check
+make release-check
 ~~~
 
 `make verify` loads the tracked `backend/.test.env`, is credential-free, ignores the developer's `backend/.env`, and skips the live-Qdrant integration test. `make qdrant-check` explicitly exercises candidate creation, compatibility validation, atomic activation, rollback, and cleanup against the loopback service.
 
-M2 calculation and import contracts are exercised by the ordinary backend test suite. The versioned numerical policy is [docs/M2_calculation_policy.md](docs/M2_calculation_policy.md), and valid/adversarial samples are indexed by `backend/data/finance/sample_manifest.v1.json`.
+Calculation and import contracts are exercised by `make calculations-check`. The versioned numerical policy is [docs/M2_calculation_policy.md](docs/M2_calculation_policy.md), and valid/adversarial samples are indexed by `backend/data/calculations/fixture-manifest.v1.json`.
 
-M3 provider contracts and failure behavior are exercised by `make m3-check`. Credential-free mode is the default. Live mode requires both keys, documented entitlements, and a predeclared request budget; missing readiness never silently falls back within a Run.
+Provider contracts and failure behavior are exercised by `make providers-check`. Credential-free mode is the default. Live mode requires both keys, documented entitlements, and a predeclared request budget; missing readiness never silently falls back within a Run.
 
-M4 schema-constrained model routing, all six agent contracts, checkpoint behavior, failure bounds, RunEvents, redaction, OpenTelemetry correlation, optional LangSmith privacy defaults, and exporter-failure isolation are exercised by `make m4-check`. OpenTelemetry is enabled locally without a network exporter by default; `AIFA_OBSERVABILITY_MODE=disabled|in_memory|opentelemetry` controls the runtime adapter. LangSmith remains off unless explicitly configured.
+Schema-constrained model routing, all six agent contracts, checkpoint behavior, failure bounds, RunEvents, redaction, OpenTelemetry correlation, optional LangSmith privacy defaults, and exporter-failure isolation are exercised by `make assistant-check`. OpenTelemetry is enabled locally without a network exporter by default; `AIFA_OBSERVABILITY_MODE=disabled|in_memory|opentelemetry` controls the runtime adapter. LangSmith remains off unless explicitly configured.
 
-M4.1 structured-output, routing, failure, retry, request-budget, concurrency, privacy, and configuration contracts are exercised credential-free by `make m4-1-check`. Live mode requires `OPENAI_API_KEY` (or `AIFA_OPENAI_API_KEY`) and `AIFA_OPENAI_TERMS_APPROVED=true`; `make model-live-check` makes one routing request plus one request for each selected agent, with a seven-call ceiling for the aggregate six-agent case. Current LangSmith variables (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, and `LANGSMITH_PROJECT`) and their legacy `LANGCHAIN_*` aliases are accepted, but inputs and outputs remain hidden and RunEvents stay authoritative.
+Structured-output, routing, failure, retry, request-budget, concurrency, privacy, and configuration contracts are exercised credential-free by `make model-check`. Live mode requires `OPENAI_API_KEY` (or `AIFA_OPENAI_API_KEY`) and `AIFA_OPENAI_TERMS_APPROVED=true`; `make model-live-check` makes one routing request plus one request for each selected agent, with a seven-call ceiling for the aggregate six-agent case. Current LangSmith variables (`LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, and `LANGSMITH_PROJECT`) and their legacy `LANGCHAIN_*` aliases are accepted, but inputs and outputs remain hidden and RunEvents stay authoritative.
 
-M5 REST/SSE contracts, isolation, idempotency, restart/deletion/retention, migrations, cache reuse and rights gates, W3C propagation, metric cardinality, and readiness behavior are exercised by `make m5-check`. `make observability-up` starts the optional loopback OTLP Collector debug sink; network export remains disabled until `AIFA_OTEL_EXPORT_ENABLED=true` is deliberately configured.
+REST/SSE contracts, isolation, idempotency, restart/deletion/retention, migrations, cache reuse and rights gates, W3C propagation, metric cardinality, and readiness behavior are exercised by `make api-check`. `make observability-up` starts the optional loopback OTLP Collector debug sink; network export remains disabled until `AIFA_OTEL_EXPORT_ENABLED=true` is deliberately configured.
 
-M6 product workflows, Active Session archiving, archived history and permanent deletion, browser contract mocks, accessibility states, responsive layouts, and browser telemetry are exercised by `make m6-check`.
+Product workflows, Active Session archiving, archived history and permanent deletion, browser contract mocks, accessibility states, responsive layouts, and browser telemetry are exercised by `make product-ui-check`.
 
-M7 Inspector fidelity is exercised by `make m7-check`. M6.1 response-cache behavior is exercised by `make m6-1-check`. M8's full EVAL-01–EVAL-18 qualification is exercised by `make m8-check`. `make m9-check` adds measured frontend coverage, regenerates the full qualification, invokes the MCP protocol/client and release-path audits, and validates Compose configuration. The release guide records exact scope, modes, budgets, rollback, observability, and limitations.
+Inspector fidelity is exercised by `make inspector-check`. Response-cache behavior is exercised by `make response-cache-check` and the calibration/benchmark targets. Full EVAL-01–EVAL-18 qualification is exercised by `make qualification-check`. `make release-check` adds measured frontend coverage, regenerates the full qualification, invokes the MCP protocol/client and release-path audits, and validates Compose configuration. The release guide records exact scope, modes, budgets, rollback, observability, and limitations. Historical milestone target names remain compatibility aliases.
 
 Synthetic JSON, CSV, and XLSX files for exercising portfolio validation and dashboard analysis are available in [examples/portfolios](examples/portfolios/README.md). Each file includes explicit synthetic user prices, so the dashboard can be verified without live market-provider calls.
 
