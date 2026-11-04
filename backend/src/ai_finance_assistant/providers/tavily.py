@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
+from typing import cast
 from urllib.parse import urlparse
 
 import httpx
-from pydantic import ValidationError
+from pydantic import HttpUrl, TypeAdapter, ValidationError
 
 from ai_finance_assistant.contracts.market import CacheStatus, DelayStatus
 from ai_finance_assistant.providers._shared import (
     envelope_from_outcome,
+    require_object_mapping,
     result_status,
     retry_after_seconds,
     warnings_from_outcome,
@@ -38,6 +39,7 @@ from ai_finance_assistant.providers.runtime import (
 
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
 DEFAULT_ENTITLEMENT = "conditional-private-demo; third-party source rights remain separate"
+_HTTP_URL_ADAPTER = TypeAdapter(HttpUrl)
 NEWS_POLICY = EndpointPolicy(
     timeout_seconds=8,
     max_attempts=2,
@@ -181,17 +183,24 @@ class TavilyNewsProvider:
             payload = response.json()
         except ValueError as exc:
             raise _malformed("Tavily returned invalid JSON.") from exc
-        if not isinstance(payload, Mapping):
-            raise _malformed("Tavily returned a non-object payload.")
+        payload = require_object_mapping(
+            payload,
+            "Tavily returned a non-object payload.",
+            _malformed,
+        )
         raw_results = payload.get("results")
         if not isinstance(raw_results, list):
             raise _malformed("Tavily response omitted results.")
+        result_items = cast(list[object], raw_results)
 
         items: list[NewsItem] = []
         try:
-            for raw in raw_results:
-                if not isinstance(raw, Mapping):
-                    raise ValueError
+            for raw_item in result_items:
+                raw = require_object_mapping(
+                    raw_item,
+                    "Tavily result fields were malformed.",
+                    _malformed,
+                )
                 url = str(raw["url"])
                 published_at, timestamp_quality = _parse_published_date(raw.get("published_date"))
                 hostname = urlparse(url).hostname
@@ -204,7 +213,7 @@ class TavilyNewsProvider:
                     NewsItem(
                         item_id=item_id,
                         publisher=hostname.removeprefix("www."),
-                        url=url,
+                        url=_HTTP_URL_ADAPTER.validate_python(url),
                         title=str(raw["title"]),
                         excerpt=excerpt,
                         published_at=published_at,

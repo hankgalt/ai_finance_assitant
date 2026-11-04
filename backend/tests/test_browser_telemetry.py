@@ -1,6 +1,6 @@
 import base64
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -82,7 +82,7 @@ def test_browser_telemetry_is_bounded_and_non_payload_bearing(tmp_path: Path) ->
                 "message": "private portfolio content",
             },
         )
-        safe = cast(Any, app.state.services.observability)
+        safe = app.state.services.observability
         memory = cast(InMemoryObservability, safe._delegate)
 
     assert accepted.status_code == 204

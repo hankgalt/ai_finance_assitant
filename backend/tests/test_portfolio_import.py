@@ -4,11 +4,14 @@ import json
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from openpyxl import Workbook
+from pydantic import JsonValue
 
 from ai_finance_assistant.finance.models import (
     CsvImportPayload,
+    ImportPayload,
     JsonImportPayload,
     ManualImportPayload,
     PortfolioImportMetadata,
@@ -36,12 +39,17 @@ def metadata() -> PortfolioImportMetadata:
     )
 
 
-def valid_rows() -> list[dict[str, object]]:
+def valid_rows() -> list[dict[str, JsonValue]]:
     raw = json.loads((DATA_DIR / "portfolio-import.valid.v1.json").read_text(encoding="utf-8"))
-    return list(raw["rows"])
+    assert isinstance(raw, dict)
+    parsed = cast(dict[str, object], raw)
+    rows_raw = parsed["rows"]
+    assert isinstance(rows_raw, list)
+    rows = cast(list[object], rows_raw)
+    return [cast(dict[str, JsonValue], row) for row in rows]
 
 
-def make_xlsx(rows: list[dict[str, object]]) -> bytes:
+def make_xlsx(rows: list[dict[str, JsonValue]]) -> bytes:
     workbook = Workbook(write_only=True)
     sheet = workbook.create_sheet("Portfolio")
     headers = list(rows[0])
@@ -54,7 +62,7 @@ def make_xlsx(rows: list[dict[str, object]]) -> bytes:
     return output.getvalue()
 
 
-def import_request(payload: object) -> PortfolioImportRequest:
+def import_request(payload: ImportPayload) -> PortfolioImportRequest:
     return PortfolioImportRequest(metadata=metadata(), payload=payload)
 
 
@@ -113,7 +121,11 @@ def test_import_aggregates_adversarial_findings_and_performs_no_merge() -> None:
 
 def test_likely_duplicate_position_requires_explicit_merge_decision() -> None:
     rows = valid_rows()[:1]
-    duplicate_position = {**rows[0], "holding_id": "holding-second-lot", "quantity": "2"}
+    duplicate_position: dict[str, JsonValue] = {
+        **rows[0],
+        "holding_id": "holding-second-lot",
+        "quantity": "2",
+    }
     payload = ManualImportPayload(rows=(rows[0], duplicate_position))
 
     result = PortfolioImport().import_portfolio(import_request(payload))
@@ -152,6 +164,22 @@ def test_manual_float_nonfinite_and_missing_fields_are_reported_together() -> No
     codes = {finding.code for finding in result.findings}
     assert {"INEXACT_NUMERIC_TYPE", "NONFINITE_NUMBER", "MISSING_REQUIRED_FIELD"} <= codes
     assert not result.accepted
+
+
+def test_invalid_cost_basis_preserves_the_versioned_finding_contract() -> None:
+    row: dict[str, JsonValue] = {
+        **valid_rows()[0],
+        "cost_basis_amount": "500",
+        "cost_basis_basis": "average",
+    }
+
+    result = PortfolioImport().import_portfolio(import_request(ManualImportPayload(rows=(row,))))
+
+    codes = {finding.code for finding in result.findings}
+    assert not result.accepted
+    assert "INVALID_COST_BASIS" in codes
+    assert "INVALID_COST_BASIS_BASIS" not in codes
+    assert "INCOMPLETE_COST_BASIS" not in codes
 
 
 def test_csv_rejects_formula_like_content_without_exposing_it() -> None:
@@ -202,7 +230,7 @@ def test_file_and_row_limits_are_enforced_before_domain_construction() -> None:
 
 
 def test_column_limit_is_enforced_for_all_four_import_modes() -> None:
-    oversized_row: dict[str, object] = {
+    oversized_row: dict[str, JsonValue] = {
         f"field_{index}": "value" for index in range(MAX_COLUMNS + 1)
     }
     headers = ",".join(oversized_row)

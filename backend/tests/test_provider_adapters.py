@@ -6,10 +6,11 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from threading import Event
+from typing import cast
 
 import httpx
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from ai_finance_assistant.contracts.market import CacheStatus, DelayStatus
 from ai_finance_assistant.core.config import Settings
@@ -51,14 +52,20 @@ def fixture(name: str) -> object:
 
 
 def test_provider_fixture_manifest_hashes_match_the_evidence_files() -> None:
-    manifest = fixture("fixture-manifest.v1.json")
-    assert isinstance(manifest, dict)
+    manifest_raw = fixture("fixture-manifest.v1.json")
+    assert isinstance(manifest_raw, dict)
+    manifest = cast(dict[str, object], manifest_raw)
     files = manifest["files"]
     assert isinstance(files, list)
-    for item in files:
-        assert isinstance(item, dict)
-        actual = hashlib.sha256((DATA_DIR / item["path"]).read_bytes()).hexdigest()
-        assert actual == item["sha256"]
+    for item_raw in cast(list[object], files):
+        assert isinstance(item_raw, dict)
+        item = cast(dict[str, object], item_raw)
+        path = item["path"]
+        expected = item["sha256"]
+        assert isinstance(path, str)
+        assert isinstance(expected, str)
+        actual = hashlib.sha256((DATA_DIR / path).read_bytes()).hexdigest()
+        assert actual == expected
 
 
 def runtime(
@@ -158,9 +165,9 @@ def test_settings_select_one_mode_without_silent_fallback() -> None:
             mode="test",
             provider_mode="live",
             market_data_provider="alpha_vantage",
-            alpha_vantage_api_key="configured",
+            alpha_vantage_api_key=SecretStr("configured"),
             massive_api_key=None,
-            tavily_api_key="configured",
+            tavily_api_key=SecretStr("configured"),
             alpha_vantage_terms_approved=False,
             massive_terms_approved=False,
             tavily_terms_approved=False,
@@ -183,9 +190,9 @@ def test_settings_select_one_mode_without_silent_fallback() -> None:
             mode="test",
             provider_mode="live",
             market_data_provider="alpha_vantage",
-            alpha_vantage_api_key="configured",
+            alpha_vantage_api_key=SecretStr("configured"),
             massive_api_key=None,
-            tavily_api_key="configured",
+            tavily_api_key=SecretStr("configured"),
             alpha_vantage_terms_approved=True,
             massive_terms_approved=False,
             tavily_terms_approved=True,
@@ -201,11 +208,11 @@ def test_settings_explicitly_select_massive_without_falling_back_to_alpha() -> N
             mode="test",
             provider_mode="live",
             market_data_provider="massive",
-            alpha_vantage_api_key="configured-alpha",
+            alpha_vantage_api_key=SecretStr("configured-alpha"),
             alpha_vantage_terms_approved=True,
-            massive_api_key="configured-massive",
+            massive_api_key=SecretStr("configured-massive"),
             massive_terms_approved=True,
-            tavily_api_key="configured-tavily",
+            tavily_api_key=SecretStr("configured-tavily"),
             tavily_terms_approved=True,
         )
     )
@@ -219,11 +226,11 @@ def test_settings_explicitly_select_massive_without_falling_back_to_alpha() -> N
             mode="test",
             provider_mode="live",
             market_data_provider="massive",
-            alpha_vantage_api_key="configured-alpha",
+            alpha_vantage_api_key=SecretStr("configured-alpha"),
             alpha_vantage_terms_approved=True,
             massive_api_key=None,
             massive_terms_approved=False,
-            tavily_api_key="configured-tavily",
+            tavily_api_key=SecretStr("configured-tavily"),
             tavily_terms_approved=True,
         )
     )
@@ -252,11 +259,13 @@ def test_missing_live_credentials_fail_readiness_without_http_calls() -> None:
     news_calls = 0
 
     def market_handler(request: httpx.Request) -> httpx.Response:
+        del request
         nonlocal market_calls
         market_calls += 1
         return httpx.Response(500)
 
     def news_handler(request: httpx.Request) -> httpx.Response:
+        del request
         nonlocal news_calls
         news_calls += 1
         return httpx.Response(500)
@@ -475,6 +484,7 @@ def test_massive_delayed_history_with_bars_is_successfully_labeled() -> None:
 )
 def test_alpha_http_failure_matrix(status_code: int, expected: ProviderStatus) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
+        del request
         return httpx.Response(status_code, headers={"Retry-After": "0"})
 
     clock = MutableClock()
@@ -511,6 +521,7 @@ def test_massive_http_failure_matrix(
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
+        del request
         nonlocal calls
         calls += 1
         return httpx.Response(
@@ -570,10 +581,12 @@ def test_massive_timeout_is_typed_and_fractional_volume_is_preserved() -> None:
 
     fractional_volume_payload = fixture("market-data/massive/history.synthetic.v1.json")
     assert isinstance(fractional_volume_payload, dict)
-    raw_results = fractional_volume_payload["results"]
+    payload = cast(dict[str, object], fractional_volume_payload)
+    raw_results = payload["results"]
     assert isinstance(raw_results, list)
-    assert isinstance(raw_results[0], dict)
-    raw_results[0]["v"] = 1.5
+    results = cast(list[dict[str, object]], raw_results)
+    assert isinstance(results[0], dict)
+    results[0]["v"] = 1.5
     history = MassiveMarketDataProvider(
         api_key="test-key",
         terms_approved=True,
@@ -653,6 +666,7 @@ def test_alpha_body_level_plan_limit_is_not_retried() -> None:
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
+        del request
         nonlocal calls
         calls += 1
         return httpx.Response(
@@ -712,6 +726,7 @@ def test_invalid_or_authorization_failures_do_not_serve_stale_cache() -> None:
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
+        del request
         nonlocal calls
         calls += 1
         if calls == 1:
@@ -741,6 +756,7 @@ def test_budget_exhaustion_happens_before_an_additional_provider_call() -> None:
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
+        del request
         nonlocal calls
         calls += 1
         return httpx.Response(
@@ -767,6 +783,7 @@ def test_local_rate_limit_prevents_an_additional_provider_call() -> None:
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
+        del request
         nonlocal calls
         calls += 1
         return httpx.Response(
@@ -818,6 +835,7 @@ def test_concurrency_limit_is_observable_without_a_second_call() -> None:
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
+        del request
         nonlocal calls
         calls += 1
         entered.set()
@@ -935,11 +953,13 @@ def test_news_query_rejects_excessive_windows_and_sensitive_flag() -> None:
             end_date=date(2026, 3, 1),
         )
     with pytest.raises(ValidationError):
-        NewsSearchRequest(
-            query="private portfolio news",
-            start_date=date(2026, 10, 1),
-            end_date=date(2026, 10, 2),
-            contains_sensitive_context=True,
+        NewsSearchRequest.model_validate(
+            {
+                "query": "private portfolio news",
+                "start_date": date(2026, 10, 1),
+                "end_date": date(2026, 10, 2),
+                "contains_sensitive_context": True,
+            }
         )
     with pytest.raises(ValidationError, match="account-like"):
         NewsSearchRequest(

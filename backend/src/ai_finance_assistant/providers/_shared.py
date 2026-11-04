@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import TypeVar
+from collections.abc import Callable, Mapping
+from typing import TypeVar, cast
 
-from ai_finance_assistant.contracts.market import CacheStatus
+from ai_finance_assistant.contracts.market import CacheStatus, DelayStatus
 from ai_finance_assistant.providers.models import (
     CacheCoverageStatus,
     CacheLayer,
@@ -15,10 +15,24 @@ from ai_finance_assistant.providers.models import (
     ProviderMode,
     ProviderStatus,
     ProviderWarning,
+    TimestampQuality,
 )
 from ai_finance_assistant.providers.runtime import RuntimeOutcome
 
 T = TypeVar("T")
+
+
+def require_object_mapping(
+    value: object,
+    error_message: str,
+    error_factory: Callable[[str], Exception],
+) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise error_factory(error_message)
+    mapping = cast(Mapping[object, object], value)
+    if not all(isinstance(key, str) for key in mapping):
+        raise error_factory(error_message)
+    return cast(Mapping[str, object], mapping)
 
 
 def result_status(error: ProviderError | None, *, has_data: bool) -> ProviderStatus:
@@ -69,8 +83,10 @@ def envelope_from_outcome(
         served_at=outcome.served_at,
         retrieved_at=outcome.retrieved_at,
         data_as_of=value.data_as_of if value is not None else None,
-        delay_status=value.delay_status if value is not None else "unknown",
-        timestamp_quality=value.timestamp_quality if value is not None else "unavailable",
+        delay_status=value.delay_status if value is not None else DelayStatus.UNKNOWN,
+        timestamp_quality=(
+            value.timestamp_quality if value is not None else TimestampQuality.UNAVAILABLE
+        ),
         cache_status=outcome.cache_status,
         cache_layer=cache_layer,
         cache_coverage=coverage,

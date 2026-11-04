@@ -8,7 +8,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from io import BytesIO
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 from ai_finance_assistant.knowledge.models import (
@@ -80,8 +80,6 @@ def normalize_html(source: SourceDefinition, fetched: FetchedSource) -> Normaliz
     heading_path: list[str] = [source.title]
     sections: list[NormalizedSection] = []
     for element in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "li"]):
-        if not isinstance(element, Tag):
-            continue
         text = _redact_third_party_photo_text(element.get_text(" ", strip=True))
         if not text or _contains_third_party_photo_text(text):
             continue
@@ -283,7 +281,7 @@ class OfflineIngestionService:
             documents_by_version.setdefault(document.document_version, document)
         documents = tuple(sorted(documents_by_version.values(), key=lambda item: item.document_id))
 
-        corpus_material = {
+        corpus_material: dict[str, object] = {
             "documents": [(doc.document_id, doc.document_version) for doc in documents],
             "enabled_sources": [source.model_dump(mode="json") for source in sources],
             "policy": self._chunking_policy.model_dump(mode="json"),

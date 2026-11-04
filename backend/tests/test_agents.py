@@ -23,12 +23,15 @@ from ai_finance_assistant.contracts.portfolio import SecurityIdentifier, Securit
 from ai_finance_assistant.core.config import get_settings
 from ai_finance_assistant.finance.goal_projection import GoalProjection
 from ai_finance_assistant.finance.models import (
+    ContributionFrequency,
+    ContributionTiming,
     GoalProjectionRequest,
     GoalScenario,
     ImportedAccount,
     ImportedHolding,
     ImportedPortfolio,
     ImportSourceKind,
+    RiskTolerance,
 )
 from ai_finance_assistant.finance.portfolio_analysis import PortfolioAnalysis
 from ai_finance_assistant.knowledge.models import (
@@ -570,7 +573,7 @@ def test_remaining_specialists_use_only_their_approved_domain_modules() -> None:
         portfolio_id="portfolio-1",
         base_currency="USD",
         imported_at=NOW,
-        source_kind="manual",
+        source_kind=ImportSourceKind.MANUAL,
         source_file_hash="b" * 64,
         accounts=(
             ImportedAccount(
@@ -582,7 +585,10 @@ def test_remaining_specialists_use_only_their_approved_domain_modules() -> None:
                         holding_id="holding-1",
                         account_id="account-1",
                         source_row=1,
-                        security=SecurityIdentifier(identifier_type="ticker", value="DEMO"),
+                        security=SecurityIdentifier(
+                            identifier_type=SecurityIdentifierType.TICKER,
+                            value="DEMO",
+                        ),
                         quantity=Decimal("2"),
                         currency="USD",
                     ),
@@ -615,18 +621,18 @@ def test_remaining_specialists_use_only_their_approved_domain_modules() -> None:
             projection=GoalProjectionRequest(
                 projection_id="goal-1",
                 currency="USD",
-                starting_amount="1000",
-                goal_amount="3000",
-                contribution_amount="100",
-                contribution_frequency="monthly",
-                contribution_timing="end",
+                starting_amount=Decimal("1000"),
+                goal_amount=Decimal("3000"),
+                contribution_amount=Decimal("100"),
+                contribution_frequency=ContributionFrequency.MONTHLY,
+                contribution_timing=ContributionTiming.END,
                 horizon_months=12,
-                risk_tolerance="moderate",
+                risk_tolerance=RiskTolerance.MODERATE,
                 scenarios=(
                     GoalScenario(
                         label="user scenario",
-                        annual_return_rate="0.05",
-                        annual_inflation_rate="0.02",
+                        annual_return_rate=Decimal("0.05"),
+                        annual_inflation_rate=Decimal("0.02"),
                     ),
                 ),
             ),

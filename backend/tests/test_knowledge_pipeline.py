@@ -1,18 +1,15 @@
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 import pytest
-from pydantic import ValidationError
+from pydantic import HttpUrl, TypeAdapter, ValidationError
 
-from ai_finance_assistant.knowledge.cli import _load_qrels, _next_run_path
+from ai_finance_assistant.knowledge import cli as knowledge_cli
+from ai_finance_assistant.knowledge import ingestion as knowledge_ingestion
 from ai_finance_assistant.knowledge.evaluation import evaluate_candidate
-from ai_finance_assistant.knowledge.ingestion import (
-    OfflineIngestionService,
-    _contains_third_party_photo_text,
-    _is_third_party_photo_caption,
-    _redact_third_party_photo_text,
-    document_versions,
-)
+from ai_finance_assistant.knowledge.ingestion import OfflineIngestionService, document_versions
 from ai_finance_assistant.knowledge.memory_store import InMemoryKnowledgeStore
 from ai_finance_assistant.knowledge.models import (
     ChunkingPolicy,
@@ -36,6 +33,27 @@ from ai_finance_assistant.knowledge.representations import DeterministicTestEnco
 from ai_finance_assistant.knowledge.retrieval import KnowledgeRetriever
 
 REVIEWED_AT = datetime(2026, 10, 27, tzinfo=UTC)
+_http_url = TypeAdapter(HttpUrl)
+_load_qrels = cast(
+    Callable[[Path], tuple[EvaluationCase, ...]],
+    vars(knowledge_cli)["_load_qrels"],
+)
+_next_run_path = cast(
+    Callable[[Path, str, datetime], Path],
+    vars(knowledge_cli)["_next_run_path"],
+)
+_contains_third_party_photo_text = cast(
+    Callable[[str], bool],
+    vars(knowledge_ingestion)["_contains_third_party_photo_text"],
+)
+_is_third_party_photo_caption = cast(
+    Callable[[str], bool],
+    vars(knowledge_ingestion)["_is_third_party_photo_caption"],
+)
+_redact_third_party_photo_text = cast(
+    Callable[[str], str],
+    vars(knowledge_ingestion)["_redact_third_party_photo_text"],
+)
 
 
 def _source(
@@ -52,7 +70,7 @@ def _source(
         logical_kb=kb,
         title=title,
         publisher="Example Federal Agency",
-        canonical_url=f"https://example.gov/{source_id}",
+        canonical_url=_http_url.validate_python(f"https://example.gov/{source_id}"),
         source_type=SourceType.HTML,
         jurisdiction="US-Federal",
         tax_years=tax_years,

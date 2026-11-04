@@ -608,28 +608,28 @@ class DurableCachingMarketDataProvider:
         try:
             result = call()
         except Exception:
-            attributes = {
+            failure_attributes: dict[str, str] = {
                 "provider": self.provider_name,
                 "operation": operation,
                 "result_status": "failed",
             }
-            self._observability.count("provider.requests", 1, attributes)
+            self._observability.count("provider.requests", 1, failure_attributes)
             self._observability.observe(
                 "provider.duration_ms",
                 (self._monotonic() - started) * 1_000,
-                attributes,
+                failure_attributes,
             )
             raise
-        attributes = {
+        success_attributes: dict[str, str] = {
             "provider": result.provenance.provider,
             "operation": operation,
             "result_status": result.status.value,
         }
-        self._observability.count("provider.requests", 1, attributes)
+        self._observability.count("provider.requests", 1, success_attributes)
         self._observability.observe(
             "provider.duration_ms",
             (self._monotonic() - started) * 1_000,
-            attributes,
+            success_attributes,
         )
         if result.provenance.attempts > 1:
             self._observability.count(

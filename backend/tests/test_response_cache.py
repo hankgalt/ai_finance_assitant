@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from threading import Lock
@@ -29,6 +29,7 @@ from ai_finance_assistant.response_cache.service import (
     GenerationCacheContext,
     ResponseCacheService,
     RouteCacheContext,
+    SemanticServingMode,
     normalize_query,
 )
 
@@ -81,28 +82,25 @@ def evidence(
 def cache_service(
     *,
     encoder: MappingEncoder | None = None,
-    semantic_mode: str = "serving",
+    semantic_mode: SemanticServingMode = "serving",
     minimum_similarity: float = 0.92,
-    clock: object | None = None,
+    clock: Callable[[], datetime] | None = None,
     adapter: InMemoryModelResponseCache | UnavailableModelResponseCache | None = None,
     policy_version: str = "test-policy-v1",
     schema_version: str = "1",
 ) -> ResponseCacheService:
-    kwargs = {}
+    kwargs: dict[str, Callable[[], datetime]] = {}
     if clock is not None:
         kwargs["clock"] = clock
     return ResponseCacheService(
-        adapter=adapter
-        or InMemoryModelResponseCache(
-            clock=clock if callable(clock) else lambda: datetime.now(UTC)
-        ),
+        adapter=adapter or InMemoryModelResponseCache(clock=clock or (lambda: datetime.now(UTC))),
         encoder=encoder or MappingEncoder(),
         policy_version=policy_version,
         schema_version=schema_version,
         ttl_seconds=300,
         minimum_semantic_similarity=minimum_similarity,
-        semantic_mode=semantic_mode,  # type: ignore[arg-type]
-        **kwargs,  # type: ignore[arg-type]
+        semantic_mode=semantic_mode,
+        **kwargs,
     )
 
 
@@ -476,8 +474,12 @@ def test_generation_guard_coalesces_same_session_identical_misses() -> None:
             cache.store_generation(context, ModelOutput(summary="Coalesced response."))
             return CacheLookupOutcome.MISS
 
+    def run_once(_index: int) -> CacheLookupOutcome:
+        del _index
+        return execute()
+
     with ThreadPoolExecutor(max_workers=2) as executor:
-        outcomes = tuple(executor.map(lambda _: execute(), range(2)))
+        outcomes = tuple(executor.map(run_once, range(2)))
 
     assert model_calls == 1
     assert set(outcomes) == {CacheLookupOutcome.MISS, CacheLookupOutcome.HIT}

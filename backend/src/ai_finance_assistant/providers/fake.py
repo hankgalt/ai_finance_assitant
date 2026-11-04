@@ -6,6 +6,8 @@ from collections.abc import Callable, Mapping
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
+from pydantic import HttpUrl, TypeAdapter
+
 from ai_finance_assistant.contracts.market import CacheStatus, DelayStatus
 from ai_finance_assistant.providers._shared import result_status
 from ai_finance_assistant.providers.models import (
@@ -31,6 +33,7 @@ from ai_finance_assistant.providers.models import (
 )
 
 DEFAULT_SYNTHETIC_NOW = datetime(2026, 10, 27, 20, 0, tzinfo=UTC)
+_HTTP_URL_ADAPTER = TypeAdapter(HttpUrl)
 
 
 class FakeMarketDataProvider:
@@ -118,7 +121,7 @@ class FakeMarketDataProvider:
                     high=Decimal("124"),
                     low=Decimal("119"),
                     close=Decimal("123"),
-                    volume=1000000,
+                    volume=Decimal("1000000"),
                 ),
                 PriceBar(
                     trading_date=date(2026, 10, 26),
@@ -126,7 +129,7 @@ class FakeMarketDataProvider:
                     high=Decimal("125"),
                     low=Decimal("122"),
                     close=Decimal("123.45"),
-                    volume=1100000,
+                    volume=Decimal("1100000"),
                 ),
             )
             if request.start_date <= bar.trading_date <= request.end_date
@@ -219,7 +222,9 @@ class FakeNewsProvider:
                 NewsItem(
                     item_id="news-synthetic-demo-v1",
                     publisher="example.invalid",
-                    url="https://example.invalid/synthetic-market-update",
+                    url=_HTTP_URL_ADAPTER.validate_python(
+                        "https://example.invalid/synthetic-market-update"
+                    ),
                     title="Synthetic company reports a demonstration update",
                     excerpt="Synthetic fixture content for the credential-free demo.",
                     published_at=datetime(2026, 10, 26, 14, 0, tzinfo=UTC),

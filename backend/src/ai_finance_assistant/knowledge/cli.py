@@ -6,7 +6,7 @@ import os
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ai_finance_assistant.knowledge.evaluation import evaluate_candidate
 from ai_finance_assistant.knowledge.ingestion import OfflineIngestionService
@@ -59,7 +59,7 @@ def _load_qrels(path: Path) -> tuple[EvaluationCase, ...]:
     raw = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(raw, list):
         raise ValueError("qrels file must contain a JSON list")
-    return tuple(EvaluationCase.model_validate(item) for item in raw)
+    return tuple(EvaluationCase.model_validate(item) for item in cast(list[object], raw))
 
 
 def _logical_kb(value: str) -> LogicalKnowledgeBase:
@@ -157,7 +157,7 @@ def _rollback(args: argparse.Namespace) -> int:
     artifacts_dir = args.artifacts_dir / logical_kb.value.replace("_", "-") / "rollback"
     store = QdrantKnowledgeStore(args.qdrant_url)
     result = store.activate(_alias(logical_kb), args.collection)
-    record = {
+    record: dict[str, Any] = {
         "schema_version": "1",
         "recorded_at": datetime.now(UTC).isoformat(),
         "action": "rollback",

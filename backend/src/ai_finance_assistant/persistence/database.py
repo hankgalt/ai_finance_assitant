@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -245,7 +245,7 @@ class SQLiteDatabase:
         return int(row[0])
 
     @contextmanager
-    def transaction(self) -> Iterator[sqlite3.Connection]:
+    def transaction(self) -> Generator[sqlite3.Connection, None, None]:
         started = monotonic()
         with self._lock:
             self._connection.execute("BEGIN IMMEDIATE")
@@ -260,7 +260,7 @@ class SQLiteDatabase:
                 self._record_operation("write", "completed", started)
 
     @contextmanager
-    def read(self) -> Iterator[sqlite3.Connection]:
+    def read(self) -> Generator[sqlite3.Connection, None, None]:
         started = monotonic()
         with self._lock:
             try:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager, suppress
 
 from pydantic import JsonValue
@@ -57,7 +57,7 @@ class SafeObservability:
         self,
         name: str,
         attributes: Mapping[str, JsonValue] | None = None,
-    ) -> Iterator[TraceContext]:
+    ) -> Generator[TraceContext, None, None]:
         try:
             manager = self._delegate.span(name, safe_attributes(attributes))
             trace = manager.__enter__()

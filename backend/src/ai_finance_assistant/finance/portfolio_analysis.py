@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 from decimal import Decimal, localcontext
-from typing import TypeVar
+from typing import Literal, TypeVar
 
 from ai_finance_assistant.finance.models import (
     CalculationWarning,
@@ -19,6 +19,8 @@ from ai_finance_assistant.finance.models import (
 from ai_finance_assistant.finance.precision import count_value, money, percent, ratio
 
 _T = TypeVar("_T")
+_SelectedFieldValue = TypeVar("_SelectedFieldValue", str, Decimal)
+_SelectedFieldSource = Literal["provider", "user_import"] | None
 _DIVERSIFICATION_LIMITATION = (
     "HHI and effective holding count describe only observed holding-value concentration within "
     "one currency. They do not measure correlation, volatility, liquidity, suitability, or risk."
@@ -36,9 +38,9 @@ def _unique_by(items: tuple[_T, ...], attribute: str, label: str) -> dict[str, _
 
 
 def _selected_field(
-    imported: str | Decimal | None,
-    provider: str | Decimal | None,
-) -> tuple[str | Decimal | None, str | None, bool]:
+    imported: _SelectedFieldValue | None,
+    provider: _SelectedFieldValue | None,
+) -> tuple[_SelectedFieldValue | None, _SelectedFieldSource, bool]:
     if provider is None:
         return imported, "user_import" if imported is not None else None, False
     conflict = imported is not None and str(imported).casefold() != str(provider).casefold()

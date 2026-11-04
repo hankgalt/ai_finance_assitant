@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from typing import cast
 
@@ -34,7 +34,7 @@ class OpenTelemetryObservability:
         self,
         name: str,
         attributes: Mapping[str, JsonValue] | None = None,
-    ) -> Iterator[TraceContext]:
+    ) -> Generator[TraceContext, None, None]:
         with self._tracer.start_as_current_span(
             name,
             attributes=_otel_attributes(attributes),

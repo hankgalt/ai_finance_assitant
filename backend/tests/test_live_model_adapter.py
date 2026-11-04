@@ -13,14 +13,18 @@ from ai_finance_assistant.agents.context import (
 )
 from ai_finance_assistant.contracts.agents import AgentId, AgentResultStatus
 from ai_finance_assistant.contracts.events import EventType, MeasurementAvailability
-from ai_finance_assistant.contracts.portfolio import SecurityIdentifier
+from ai_finance_assistant.contracts.portfolio import SecurityIdentifier, SecurityIdentifierType
 from ai_finance_assistant.core.config import Settings
 from ai_finance_assistant.finance.models import (
+    ContributionFrequency,
+    ContributionTiming,
     GoalProjectionRequest,
     GoalScenario,
     ImportedAccount,
     ImportedHolding,
     ImportedPortfolio,
+    ImportSourceKind,
+    RiskTolerance,
 )
 from ai_finance_assistant.knowledge.models import Evidence, LogicalKnowledgeBase
 from ai_finance_assistant.observability.memory import InMemoryObservability
@@ -204,7 +208,7 @@ def _contexts(now: datetime) -> InMemoryAgentContextRepository:
         portfolio_id="portfolio-live",
         base_currency="USD",
         imported_at=now,
-        source_kind="manual",
+        source_kind=ImportSourceKind.MANUAL,
         source_file_hash="b" * 64,
         accounts=(
             ImportedAccount(
@@ -216,7 +220,10 @@ def _contexts(now: datetime) -> InMemoryAgentContextRepository:
                         holding_id="holding-live",
                         account_id="account-live",
                         source_row=1,
-                        security=SecurityIdentifier(identifier_type="ticker", value="DEMO"),
+                        security=SecurityIdentifier(
+                            identifier_type=SecurityIdentifierType.TICKER,
+                            value="DEMO",
+                        ),
                         quantity=Decimal("2"),
                         currency="USD",
                     ),
@@ -249,18 +256,18 @@ def _contexts(now: datetime) -> InMemoryAgentContextRepository:
             projection=GoalProjectionRequest(
                 projection_id="goal-live",
                 currency="USD",
-                starting_amount="1000",
-                goal_amount="3000",
-                contribution_amount="100",
-                contribution_frequency="monthly",
-                contribution_timing="end",
+                starting_amount=Decimal("1000"),
+                goal_amount=Decimal("3000"),
+                contribution_amount=Decimal("100"),
+                contribution_frequency=ContributionFrequency.MONTHLY,
+                contribution_timing=ContributionTiming.END,
                 horizon_months=12,
-                risk_tolerance="moderate",
+                risk_tolerance=RiskTolerance.MODERATE,
                 scenarios=(
                     GoalScenario(
                         label="user scenario",
-                        annual_return_rate="0.05",
-                        annual_inflation_rate="0.02",
+                        annual_return_rate=Decimal("0.05"),
+                        annual_inflation_rate=Decimal("0.02"),
                     ),
                 ),
             ),

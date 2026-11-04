@@ -125,7 +125,7 @@ def _local_checks(settings: Settings) -> tuple[DependencyCheck, ...]:
 
 
 def _storage_check(settings: Settings) -> DependencyCheck:
-    expected = {"schema_version": settings.storage_expected_schema_version}
+    expected: dict[str, JsonValue] = {"schema_version": settings.storage_expected_schema_version}
     if not settings.storage_path.exists():
         return DependencyCheck(
             name="storage.sqlite",

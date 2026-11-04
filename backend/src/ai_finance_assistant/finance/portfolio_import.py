@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from typing import Literal, cast
 
 from openpyxl import load_workbook
 from pydantic import ValidationError
@@ -237,8 +238,10 @@ def _json_rows(payload: JsonImportPayload) -> tuple[list[_SourceRow], list[Impor
                 ),
             )
         ]
-    if isinstance(raw, dict) and set(raw) == {"rows"}:
-        raw = raw["rows"]
+    if isinstance(raw, dict):
+        raw_object = cast(dict[object, object], raw)
+        if all(isinstance(key, str) for key in raw_object) and set(raw_object) == {"rows"}:
+            raw = raw_object["rows"]
     if not isinstance(raw, list):
         return [], [
             _finding(
@@ -248,7 +251,8 @@ def _json_rows(payload: JsonImportPayload) -> tuple[list[_SourceRow], list[Impor
                 "JSON must contain a list of holding rows or an object with only a rows list.",
             )
         ]
-    if len(raw) > MAX_ROWS:
+    raw_rows = cast(list[object], raw)
+    if len(raw_rows) > MAX_ROWS:
         return [], [
             _finding(
                 "ROW_LIMIT",
@@ -258,8 +262,8 @@ def _json_rows(payload: JsonImportPayload) -> tuple[list[_SourceRow], list[Impor
             )
         ]
     rows: list[_SourceRow] = []
-    for index, item in enumerate(raw, start=1):
-        if not isinstance(item, dict) or not all(isinstance(key, str) for key in item):
+    for index, item in enumerate(raw_rows, start=1):
+        if not isinstance(item, dict):
             findings.append(
                 _finding(
                     "INVALID_ROW_SHAPE",
@@ -270,7 +274,20 @@ def _json_rows(payload: JsonImportPayload) -> tuple[list[_SourceRow], list[Impor
                 )
             )
             continue
-        if len(item) > MAX_COLUMNS:
+        row_item = cast(dict[object, object], item)
+        if not all(isinstance(key, str) for key in row_item):
+            findings.append(
+                _finding(
+                    "INVALID_ROW_SHAPE",
+                    FindingSeverity.ERROR,
+                    FindingScope.ROW,
+                    "Each JSON row must be an object with string field names.",
+                    row=index,
+                )
+            )
+            continue
+        row_values = cast(dict[str, object], row_item)
+        if len(row_values) > MAX_COLUMNS:
             findings.append(
                 _finding(
                     "COLUMN_LIMIT",
@@ -280,7 +297,7 @@ def _json_rows(payload: JsonImportPayload) -> tuple[list[_SourceRow], list[Impor
                 )
             )
             continue
-        rows.append(_SourceRow(number=index, values=item))
+        rows.append(_SourceRow(number=index, values=row_values))
     return rows, findings
 
 
@@ -1001,7 +1018,10 @@ def _build_holding(
             currency=currency.upper(),
             asset_class=asset_class,
             cost_basis_amount=cost_basis_amount,
-            cost_basis_basis=cost_basis_basis,
+            cost_basis_basis=cast(
+                Literal["total", "per_unit"] | None,
+                cost_basis_basis,
+            ),
             acquisition_date=_parse_date(
                 values.get("acquisition_date"),
                 row=row.number,
@@ -1049,11 +1069,9 @@ class PortfolioImport:
         elif isinstance(payload, CsvImportPayload):
             rows, findings = _csv_rows(payload)
             source_hash = _source_hash(payload.content)
-        elif isinstance(payload, XlsxImportPayload):
+        else:
             rows, findings = _xlsx_rows(payload)
             source_hash = _source_hash(payload.content)
-        else:  # pragma: no cover - discriminated contract makes this unreachable.
-            raise TypeError(f"unsupported import payload {type(payload)!r}")
 
         if any(finding.severity == FindingSeverity.FATAL for finding in findings):
             return PortfolioImportResult(

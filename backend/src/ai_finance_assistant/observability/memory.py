@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -47,7 +47,7 @@ class InMemoryObservability:
     @contextmanager
     def span(
         self, name: str, attributes: Mapping[str, JsonValue] | None = None
-    ) -> Iterator[TraceContext]:
+    ) -> Generator[TraceContext, None, None]:
         parent_span_id = _SPAN_ID.get()
         trace_id = _TRACE_ID.get() or uuid4().hex
         span_id = uuid4().hex[:16]

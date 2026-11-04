@@ -107,7 +107,7 @@ def model_for(
     *selected_agent_ids: AgentId,
     reason_category: RoutingReason | None = None,
 ) -> DeterministicModelAdapter:
-    responses = {}
+    responses: dict[str, RoutingModelOutput] = {}
     if message is not None:
         responses[message] = RoutingModelOutput(
             selected_agent_ids=selected_agent_ids,

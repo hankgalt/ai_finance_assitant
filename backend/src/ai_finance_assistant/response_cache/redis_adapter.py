@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Protocol, cast
 
 from redis import Redis
 from redisvl.extensions.cache.llm import SemanticCache
@@ -22,6 +22,10 @@ from ai_finance_assistant.response_cache.models import (
     CacheRecordKind,
     entry_age,
 )
+
+
+class _DropByFilterResult(Protocol):
+    processed: int
 
 
 class RedisVLModelResponseCache:
@@ -75,15 +79,15 @@ class RedisVLModelResponseCache:
     def lookup(self, request: CacheLookupRequest) -> CacheLookupResult:
         if request.kind == CacheRecordKind.ROUTE:
             return self._lookup_route(request)
-        expression = (
-            (Tag("session_scope") == request.session_scope)
-            & (Tag("record_kind") == request.kind.value)
-            & (Tag("filter_fingerprint") == request.filter_fingerprint)
-        )
         hits = self._semantic.check(
             vector=list(request.vector),
             num_results=1,
-            filter_expression=expression,
+            filter_expression=cast(
+                Any,
+                (Tag("session_scope") == request.session_scope)
+                & (Tag("record_kind") == request.kind.value)
+                & (Tag("filter_fingerprint") == request.filter_fingerprint),
+            ),
             distance_threshold=(
                 1.0 - request.minimum_similarity if request.allow_semantic else 0.0
             ),
@@ -138,23 +142,42 @@ class RedisVLModelResponseCache:
         )
 
     def purge_session(self, session_scope: str) -> int:
-        route_keys = tuple(
-            self._client.scan_iter(match=f"{self._route_prefix}:{session_scope}:*", count=100)
+        raw_route_keys = list(
+            cast(
+                Any,
+                self._client.scan_iter(
+                    match=f"{self._route_prefix}:{session_scope}:*",
+                    count=100,
+                ),
+            )
         )
+        route_keys = tuple(key for key in raw_route_keys if isinstance(key, (str, bytes)))
         route_count = int(self._client.unlink(*route_keys)) if route_keys else 0
-        result = self._semantic.index.drop_by_filter(
-            Tag("session_scope") == session_scope,
-            batch_size=100,
+        result = cast(
+            _DropByFilterResult,
+            self._semantic.index.drop_by_filter(
+                cast(Any, Tag("session_scope") == session_scope),
+                batch_size=100,
+            ),
         )
         return route_count + int(result.processed)
 
     def purge_all(self) -> int:
-        route_keys = tuple(self._client.scan_iter(match=f"{self._route_prefix}:*", count=100))
+        raw_route_keys = list(
+            cast(
+                Any,
+                self._client.scan_iter(match=f"{self._route_prefix}:*", count=100),
+            )
+        )
+        route_keys = tuple(key for key in raw_route_keys if isinstance(key, (str, bytes)))
         route_count = int(self._client.unlink(*route_keys)) if route_keys else 0
-        result = self._semantic.index.drop_by_filter(
-            "*",
-            batch_size=100,
-            allow_all=True,
+        result = cast(
+            _DropByFilterResult,
+            self._semantic.index.drop_by_filter(
+                "*",
+                batch_size=100,
+                allow_all=True,
+            ),
         )
         return route_count + int(result.processed)
 

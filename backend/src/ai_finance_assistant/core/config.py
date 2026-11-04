@@ -3,10 +3,13 @@
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import AliasChoices, Field, SecretStr
+from pydantic_core import PydanticUndefined
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_REQUIRED_ENVIRONMENT_VALUE = cast(str, PydanticUndefined)
 
 
 class Settings(BaseSettings):
@@ -21,6 +24,7 @@ class Settings(BaseSettings):
     app_name: str = "AI Finance Assistant API"
     app_version: str = "0.1.0"
     workflow_id: str = Field(
+        default=_REQUIRED_ENVIRONMENT_VALUE,
         min_length=1,
         max_length=128,
         pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
@@ -131,6 +135,7 @@ class Settings(BaseSettings):
     api_sse_replay_limit: int = Field(default=1000, ge=1, le=10_000)
     observability_mode: Literal["disabled", "in_memory", "opentelemetry"] = "opentelemetry"
     otel_service_name: str = Field(
+        default=_REQUIRED_ENVIRONMENT_VALUE,
         min_length=1,
         max_length=128,
         pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
@@ -162,6 +167,7 @@ class Settings(BaseSettings):
         ),
     )
     langsmith_project: str = Field(
+        default=_REQUIRED_ENVIRONMENT_VALUE,
         min_length=1,
         max_length=128,
         validation_alias=AliasChoices(

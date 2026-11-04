@@ -38,7 +38,7 @@ def live_providers() -> ProviderBundle:
     if settings.provider_mode != "live":
         pytest.fail("live-provider tests require AIFA_PROVIDER_MODE=live")
 
-    missing_credentials = []
+    missing_credentials: list[str] = []
     if settings.market_data_provider == "alpha_vantage":
         if settings.alpha_vantage_api_key is None:
             missing_credentials.append("AIFA_ALPHA_VANTAGE_API_KEY")
@@ -49,7 +49,7 @@ def live_providers() -> ProviderBundle:
     if missing_credentials:
         pytest.fail("missing live-provider credentials: " + ", ".join(missing_credentials))
 
-    unapproved_terms = []
+    unapproved_terms: list[str] = []
     if settings.market_data_provider == "alpha_vantage":
         if not settings.alpha_vantage_terms_approved:
             unapproved_terms.append("AIFA_ALPHA_VANTAGE_TERMS_APPROVED")

@@ -214,8 +214,12 @@ def test_concurrent_exact_requests_are_coalesced(tmp_path: Path) -> None:
     cached = _wrapper(provider, database, clock, memory=memory)
     request = _request(date(2026, 1, 1), date(2026, 1, 5))
 
+    def run_once(_index: int) -> HistoricalResult:
+        del _index
+        return cached.get_history(request)
+
     with ThreadPoolExecutor(max_workers=5) as pool:
-        results = tuple(pool.map(lambda _: cached.get_history(request), range(5)))
+        results = tuple(pool.map(run_once, range(5)))
 
     assert len(provider.requests) == 1
     assert all(result.series is not None for result in results)

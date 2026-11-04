@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from pathlib import Path
+from typing import cast
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from ai_finance_assistant.api.app import create_app
+from ai_finance_assistant.api.services import ApplicationServices
 from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.core.config import Settings
 from ai_finance_assistant.llm.models import (
@@ -46,7 +50,15 @@ def _session(client: TestClient) -> str:
     return cast(str, response.json()["session_id"])
 
 
-def test_archive_and_delete_purge_session_cache_namespace(tmp_path: Any) -> None:
+def _services(client: TestClient) -> ApplicationServices:
+    app = client.app
+    assert isinstance(app, FastAPI)
+    services = app.state.services
+    assert isinstance(services, ApplicationServices)
+    return services
+
+
+def test_archive_and_delete_purge_session_cache_namespace(tmp_path: Path) -> None:
     app = create_app(
         Settings(
             mode="test",
@@ -60,7 +72,7 @@ def test_archive_and_delete_purge_session_cache_namespace(tmp_path: Any) -> None
     )
     with TestClient(app) as client:
         session_id = _session(client)
-        services = cast(Any, cast(Any, client.app).state.services)
+        services = _services(client)
         context = _route_context(session_id)
         assert (
             services.response_cache.store_route(context, _route_output()).outcome
@@ -75,7 +87,7 @@ def test_archive_and_delete_purge_session_cache_namespace(tmp_path: Any) -> None
         assert deleted.status_code == 204
 
 
-def test_administrative_response_cache_purge_requires_token(tmp_path: Any) -> None:
+def test_administrative_response_cache_purge_requires_token(tmp_path: Path) -> None:
     app = create_app(
         Settings(
             mode="test",
@@ -85,12 +97,12 @@ def test_administrative_response_cache_purge_requires_token(tmp_path: Any) -> No
             model_mode="credential_free",
             observability_mode="in_memory",
             response_cache_adapter="in_memory",
-            local_admin_token="test-admin-token",
+            local_admin_token=SecretStr("test-admin-token"),
         )
     )
     with TestClient(app) as client:
         session_id = _session(client)
-        services = cast(Any, cast(Any, client.app).state.services)
+        services = _services(client)
         assert (
             services.response_cache.store_route(_route_context(session_id), _route_output()).outcome
             == CacheWriteOutcome.STORED

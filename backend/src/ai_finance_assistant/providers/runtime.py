@@ -210,15 +210,18 @@ class ProviderRuntime:
                 )
 
         if not self._semaphore.acquire(blocking=False):
-            return self._failed_or_stale(
-                served_at=served_at,
-                cached=cached,
-                policy=policy,
-                attempts=0,
-                error=ProviderError(
-                    code=ProviderErrorCode.CONCURRENCY_LIMITED,
-                    message="Provider concurrency limit is active.",
-                    retryable=True,
+            return cast(
+                RuntimeOutcome[T],
+                self._failed_or_stale(
+                    served_at=served_at,
+                    cached=cached,
+                    policy=policy,
+                    attempts=0,
+                    error=ProviderError(
+                        code=ProviderErrorCode.CONCURRENCY_LIMITED,
+                        message="Provider concurrency limit is active.",
+                        retryable=True,
+                    ),
                 ),
             )
 
@@ -273,12 +276,15 @@ class ProviderRuntime:
                 message="Provider call did not return a result.",
                 retryable=True,
             )
-        return self._failed_or_stale(
-            served_at=self._now(),
-            cached=cached,
-            policy=policy,
-            attempts=attempts,
-            error=last_error,
+        return cast(
+            RuntimeOutcome[T],
+            self._failed_or_stale(
+                served_at=self._now(),
+                cached=cached,
+                policy=policy,
+                attempts=attempts,
+                error=last_error,
+            ),
         )
 
     def _reserve_call(self) -> None:
@@ -358,7 +364,7 @@ class ProviderRuntime:
         policy: EndpointPolicy,
         attempts: int,
         error: ProviderError,
-    ) -> RuntimeOutcome[T]:
+    ) -> RuntimeOutcome[object]:
         stale_eligible = error.code in {
             ProviderErrorCode.RATE_LIMITED,
             ProviderErrorCode.TIMEOUT,
@@ -371,7 +377,7 @@ class ProviderRuntime:
             age = max(0, (served_at - cached.retrieved_at).total_seconds())
             if age <= policy.cache_ttl_seconds + policy.stale_if_error_seconds:
                 return RuntimeOutcome(
-                    value=cast(RuntimeValue[T], cached.value),
+                    value=cached.value,
                     served_at=served_at,
                     retrieved_at=cached.retrieved_at,
                     cache_status=CacheStatus.STALE,

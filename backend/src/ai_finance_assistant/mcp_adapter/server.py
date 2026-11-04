@@ -29,17 +29,21 @@ from ai_finance_assistant.providers.ports import MarketDataProvider
 from ai_finance_assistant.workflow.retrieval import KnowledgeRetrieval, RetrievalResult
 
 MCP_ADAPTER_VERSION = "read-only-mcp-v1"
-_CLOSED_WORLD = ToolAnnotations(
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=False,
+_CLOSED_WORLD = ToolAnnotations.model_validate(
+    {
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
 )
-_PROVIDER_READ = ToolAnnotations(
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+_PROVIDER_READ = ToolAnnotations.model_validate(
+    {
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    }
 )
 
 

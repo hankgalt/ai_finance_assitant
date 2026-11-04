@@ -24,9 +24,7 @@ def model_request() -> ModelRequest:
 
 
 def test_credential_free_mode_builds_only_deterministic_adapter() -> None:
-    model = model_adapter_from_settings(
-        Settings(mode="test", model_mode="credential_free", _env_file=None)
-    )
+    model = model_adapter_from_settings(Settings(mode="test", model_mode="credential_free"))
 
     assert isinstance(model, DeterministicModelAdapter)
 
@@ -40,7 +38,6 @@ def test_credential_free_mode_builds_only_deterministic_adapter() -> None:
                 model_mode="openai_live",
                 openai_terms_approved=False,
                 openai_api_key=SecretStr("fixture"),
-                _env_file=None,
             ),
             ModelErrorCode.NOT_READY,
         ),
@@ -50,7 +47,6 @@ def test_credential_free_mode_builds_only_deterministic_adapter() -> None:
                 model_mode="openai_live",
                 openai_terms_approved=True,
                 openai_api_key=None,
-                _env_file=None,
             ),
             ModelErrorCode.AUTHENTICATION_FAILED,
         ),
@@ -82,7 +78,6 @@ def test_approved_live_mode_builds_openai_adapter_with_injected_client() -> None
             model_mode="openai_live",
             openai_terms_approved=True,
             openai_api_key=SecretStr("fixture"),
-            _env_file=None,
         ),
         client=FakeClient(),
     )
@@ -99,7 +94,7 @@ def test_standard_and_legacy_langsmith_environment_names_are_supported(
     monkeypatch.setenv("LANGCHAIN_API_KEY", "legacy-fixture")
     monkeypatch.setenv("LANGCHAIN_PROJECT", "legacy-project")
 
-    legacy = Settings(_env_file=None)
+    legacy = Settings()
 
     assert legacy.langsmith_tracing_enabled is True
     assert legacy.langsmith_api_key is not None
@@ -110,7 +105,7 @@ def test_standard_and_legacy_langsmith_environment_names_are_supported(
     monkeypatch.setenv("LANGSMITH_API_KEY", "current-fixture")
     monkeypatch.setenv("LANGSMITH_PROJECT", "current-project")
 
-    current = Settings(_env_file=None)
+    current = Settings()
 
     assert current.langsmith_tracing_enabled is True
     assert current.langsmith_api_key is not None
@@ -123,17 +118,22 @@ def test_runtime_identity_names_are_environment_owned(monkeypatch: MonkeyPatch) 
     monkeypatch.setenv("AIFA_OTEL_SERVICE_NAME", "telemetry-from-environment")
     monkeypatch.setenv("AIFA_LANGSMITH_PROJECT", "traces-from-environment")
 
-    settings = Settings(_env_file=None)
+    settings = Settings()
 
     assert settings.workflow_id == "workflow-from-environment"
     assert settings.otel_service_name == "telemetry-from-environment"
     assert settings.langsmith_project == "traces-from-environment"
 
 
+def test_runtime_identity_names_have_no_source_code_fallbacks() -> None:
+    for field_name in ("workflow_id", "otel_service_name", "langsmith_project"):
+        assert Settings.model_fields[field_name].is_required()
+
+
 def test_openai_standard_environment_key_is_supported(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "openai-fixture")
 
-    settings = Settings(_env_file=None)
+    settings = Settings()
 
     assert settings.openai_api_key is not None
     assert settings.openai_api_key.get_secret_value() == "openai-fixture"

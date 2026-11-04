@@ -1,7 +1,9 @@
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from ai_finance_assistant.contracts.health import CheckStatus
 from ai_finance_assistant.core.config import Settings
@@ -114,15 +116,15 @@ def test_compatible_active_collections_are_ready(
 @pytest.mark.parametrize("audience", ["shared_demo", "public"])
 def test_unverified_live_cache_rights_fail_non_owner_readiness(
     tmp_path: Path,
-    audience: str,
+    audience: Literal["shared_demo", "public"],
 ) -> None:
     settings = Settings(
         mode="test",
         storage_path=tmp_path / "application.sqlite3",
         qdrant_url=None,
         provider_mode="live",
-        alpha_vantage_api_key="market-key",
-        tavily_api_key="news-key",
+        alpha_vantage_api_key=SecretStr("market-key"),
+        tavily_api_key=SecretStr("news-key"),
         alpha_vantage_terms_approved=True,
         tavily_terms_approved=True,
         provider_cache_retention_permission="unverified",

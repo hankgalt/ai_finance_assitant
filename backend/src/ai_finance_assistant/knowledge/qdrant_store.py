@@ -5,7 +5,7 @@ import uuid
 from collections.abc import Sequence
 from hashlib import sha256
 from importlib.metadata import version
-from typing import Any
+from typing import Any, cast
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
@@ -180,7 +180,7 @@ class QdrantKnowledgeStore:
                     match=models.MatchValue(value=query.filters.jurisdiction),
                 )
             )
-        return models.Filter(must=conditions)
+        return models.Filter(must=cast(list[models.Condition], conditions))
 
     def search(
         self,

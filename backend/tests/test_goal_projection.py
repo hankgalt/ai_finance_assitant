@@ -5,7 +5,13 @@ from pathlib import Path
 
 from ai_finance_assistant.finance.cash_flow import CashFlowSummary, MonthlyCashFlow
 from ai_finance_assistant.finance.goal_projection import GoalProjection
-from ai_finance_assistant.finance.models import GoalProjectionRequest, GoalScenario
+from ai_finance_assistant.finance.models import (
+    ContributionFrequency,
+    ContributionTiming,
+    GoalProjectionRequest,
+    GoalScenario,
+    RiskTolerance,
+)
 
 DATA_DIR = Path(__file__).parents[1] / "data" / "calculations"
 
@@ -16,13 +22,13 @@ def request_for(
     return GoalProjectionRequest(
         projection_id="goal-1",
         currency="USD",
-        starting_amount="1000",
-        goal_amount="2500",
-        contribution_amount=contribution,
-        contribution_frequency="monthly",
-        contribution_timing="end",
+        starting_amount=Decimal("1000"),
+        goal_amount=Decimal("2500"),
+        contribution_amount=Decimal(contribution),
+        contribution_frequency=ContributionFrequency.MONTHLY,
+        contribution_timing=ContributionTiming.END,
         horizon_months=12,
-        risk_tolerance="moderate",
+        risk_tolerance=RiskTolerance.MODERATE,
         scenarios=scenarios,
     )
 
@@ -33,11 +39,11 @@ def test_versioned_hand_worked_goal_goldens_reproduce_exactly() -> None:
         request = GoalProjectionRequest(
             projection_id=case["case_id"],
             currency="USD",
-            starting_amount=case["starting_amount"],
-            goal_amount=case["goal_amount"],
-            contribution_amount=case["contribution_amount"],
-            contribution_frequency=case["contribution_frequency"],
-            contribution_timing=case["contribution_timing"],
+            starting_amount=Decimal(case["starting_amount"]),
+            goal_amount=Decimal(case["goal_amount"]),
+            contribution_amount=Decimal(case["contribution_amount"]),
+            contribution_frequency=ContributionFrequency(case["contribution_frequency"]),
+            contribution_timing=ContributionTiming(case["contribution_timing"]),
             horizon_months=case["horizon_months"],
             scenarios=(GoalScenario.model_validate(case["scenario"]),),
         )
@@ -51,8 +57,8 @@ def test_versioned_hand_worked_goal_goldens_reproduce_exactly() -> None:
 def test_zero_return_and_no_fees_equals_start_plus_contributions() -> None:
     scenario = GoalScenario(
         label="zero",
-        annual_return_rate="0",
-        annual_inflation_rate="0",
+        annual_return_rate=Decimal("0"),
+        annual_inflation_rate=Decimal("0"),
     )
 
     result = GoalProjection().project(request_for(scenarios=(scenario,))).scenarios[0]
@@ -66,9 +72,9 @@ def test_increasing_positive_contribution_cannot_reduce_nonnegative_scenario_val
     scenarios = tuple(
         GoalScenario(
             label=f"return-{rate}",
-            annual_return_rate=rate,
-            annual_inflation_rate="0.02",
-            annual_fee_rate="0.001",
+            annual_return_rate=Decimal(rate),
+            annual_inflation_rate=Decimal("0.02"),
+            annual_fee_rate=Decimal("0.001"),
         )
         for rate in ("0.001", "0.03", "0.07", "0.15")
     )
@@ -85,8 +91,8 @@ def test_increasing_positive_contribution_cannot_reduce_nonnegative_scenario_val
 def test_nominal_and_inflation_adjusted_results_remain_distinct() -> None:
     scenario = GoalScenario(
         label="inflation",
-        annual_return_rate="0.06",
-        annual_inflation_rate="0.03",
+        annual_return_rate=Decimal("0.06"),
+        annual_inflation_rate=Decimal("0.03"),
     )
 
     result = GoalProjection().project(request_for(scenarios=(scenario,))).scenarios[0]
@@ -97,11 +103,13 @@ def test_nominal_and_inflation_adjusted_results_remain_distinct() -> None:
 def test_beginning_contributions_receive_one_more_period_of_growth() -> None:
     scenario = GoalScenario(
         label="positive",
-        annual_return_rate="0.12",
-        annual_inflation_rate="0",
+        annual_return_rate=Decimal("0.12"),
+        annual_inflation_rate=Decimal("0"),
     )
     end_request = request_for(scenarios=(scenario,))
-    beginning_request = end_request.model_copy(update={"contribution_timing": "beginning"})
+    beginning_request = end_request.model_copy(
+        update={"contribution_timing": ContributionTiming.BEGINNING}
+    )
 
     end = GoalProjection().project(end_request).scenarios[0]
     beginning = GoalProjection().project(beginning_request).scenarios[0]
@@ -120,22 +128,22 @@ def test_cash_flow_summary_is_minimized_context_and_cannot_change_contribution()
         monthly=(
             MonthlyCashFlow(
                 month="2026-01",
-                income="5000",
-                spending="4000",
-                surplus="1000",
+                income=Decimal("5000"),
+                spending=Decimal("4000"),
+                surplus=Decimal("1000"),
             ),
         ),
-        average_monthly_income="5000",
-        average_monthly_spending="4000",
-        average_monthly_surplus="1000",
-        categorized_coverage_ratio="1",
+        average_monthly_income=Decimal("5000"),
+        average_monthly_spending=Decimal("4000"),
+        average_monthly_surplus=Decimal("1000"),
+        categorized_coverage_ratio=Decimal("1"),
         unresolved_duplicate_count=0,
         unresolved_transfer_count=0,
     )
     scenario = GoalScenario(
         label="zero",
-        annual_return_rate="0",
-        annual_inflation_rate="0",
+        annual_return_rate=Decimal("0"),
+        annual_inflation_rate=Decimal("0"),
     )
     request = request_for(scenarios=(scenario,)).model_copy(
         update={"cash_flow_summary_id": summary.summary_id}

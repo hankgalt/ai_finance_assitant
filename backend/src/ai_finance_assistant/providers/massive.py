@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, cast
 from urllib.parse import quote
 
 import httpx
@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from ai_finance_assistant.contracts.market import CacheStatus, DelayStatus
 from ai_finance_assistant.providers._shared import (
     envelope_from_outcome,
+    require_object_mapping,
     result_status,
     retry_after_seconds,
     warnings_from_outcome,
@@ -209,11 +210,15 @@ class MassiveMarketDataProvider:
         raw_results = payload.get("results")
         if not isinstance(raw_results, list):
             raise _malformed("Massive ticker-search response omitted results.")
+        result_items = cast(list[object], raw_results)
         matches: list[InstrumentMatch] = []
         try:
-            for raw in raw_results[: request.limit]:
-                if not isinstance(raw, Mapping):
-                    raise ValueError
+            for raw_item in result_items[: request.limit]:
+                raw = require_object_mapping(
+                    raw_item,
+                    "Massive ticker-search result was malformed.",
+                    _malformed,
+                )
                 currency_value = raw.get("currency_name")
                 locale_value = raw.get("locale")
                 matches.append(
@@ -245,15 +250,18 @@ class MassiveMarketDataProvider:
         raw_results = payload.get("results")
         if not isinstance(raw_results, list):
             raise _malformed("Massive previous-day response omitted results.")
-        if not raw_results:
+        result_items = cast(list[object], raw_results)
+        if not result_items:
             raise ProviderCallError(
                 ProviderErrorCode.INVALID_REQUEST,
                 "Massive returned no previous-day bar for the requested symbol.",
                 retryable=False,
             )
-        raw = raw_results[0]
-        if not isinstance(raw, Mapping):
-            raise _malformed("Massive previous-day result was malformed.")
+        raw = require_object_mapping(
+            result_items[0],
+            "Massive previous-day result was malformed.",
+            _malformed,
+        )
         try:
             market_quote = MarketQuote(
                 requested_symbol=request.symbol,
@@ -293,11 +301,15 @@ class MassiveMarketDataProvider:
         raw_results = payload.get("results")
         if not isinstance(raw_results, list):
             raise _malformed("Massive daily-history response omitted results.")
+        result_items = cast(list[object], raw_results)
         bars: list[PriceBar] = []
         try:
-            for raw in raw_results:
-                if not isinstance(raw, Mapping):
-                    raise ValueError
+            for raw_item in result_items:
+                raw = require_object_mapping(
+                    raw_item,
+                    "Massive daily-history fields were malformed.",
+                    _malformed,
+                )
                 trading_date = datetime.fromtimestamp(
                     int(str(raw["t"])) / 1000,
                     tz=UTC,
@@ -377,11 +389,14 @@ class MassiveMarketDataProvider:
             ) from exc
         _raise_for_status(response)
         try:
-            payload = response.json()
+            payload_raw = response.json()
         except ValueError as exc:
             raise _malformed("Massive returned invalid JSON.") from exc
-        if not isinstance(payload, dict):
-            raise _malformed("Massive returned a non-object payload.")
+        payload = require_object_mapping(
+            payload_raw,
+            "Massive returned a non-object payload.",
+            _malformed,
+        )
         if "status" not in payload:
             raise _malformed("Massive response omitted status.")
         status = payload.get("status")
@@ -391,7 +406,7 @@ class MassiveMarketDataProvider:
                 "Massive returned a non-success response.",
                 retryable=False,
             )
-        return payload
+        return dict(payload)
 
 
 def _gated_outcome(code: ProviderErrorCode, message: str) -> RuntimeOutcome[Any]:

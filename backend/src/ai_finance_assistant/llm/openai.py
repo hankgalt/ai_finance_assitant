@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from threading import Lock
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, cast
 
 from openai import (
     APIConnectionError,
@@ -350,10 +350,11 @@ def _adapter_result(
 def _contains_refusal(output: object) -> bool:
     if not isinstance(output, (list, tuple)):
         return False
-    for item in output:
+    for item in cast(list[object] | tuple[object, ...], output):
         content = getattr(item, "content", ())
         if isinstance(content, (list, tuple)) and any(
-            getattr(part, "type", None) == "refusal" for part in content
+            getattr(part, "type", None) == "refusal"
+            for part in cast(list[object] | tuple[object, ...], content)
         ):
             return True
     return False

@@ -1,12 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from pytest import MonkeyPatch
 
 from ai_finance_assistant.api.app import create_app
+from ai_finance_assistant.api.services import ApplicationServices
 from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.core.config import Settings
 from ai_finance_assistant.llm.models import (
@@ -96,6 +98,29 @@ class OutOfScopeModelAdapter:
 
     def synthesize(self, request: SynthesisModelRequest) -> ModelAdapterResult:
         raise AssertionError(f"No multi-agent synthesis expected for {len(request.agent_results)}")
+
+
+def _out_of_scope_builder(_settings: Settings) -> OutOfScopeModelAdapter:
+    del _settings
+    return OutOfScopeModelAdapter()
+
+
+def _portfolio_question_builder(_settings: Settings) -> PortfolioQuestionModelAdapter:
+    del _settings
+    return PortfolioQuestionModelAdapter()
+
+
+def _long_narrative_builder(_settings: Settings) -> LongNarrativeModelAdapter:
+    del _settings
+    return LongNarrativeModelAdapter()
+
+
+def _services(client: TestClient) -> ApplicationServices:
+    app = client.app
+    assert isinstance(app, FastAPI)
+    services = app.state.services
+    assert isinstance(services, ApplicationServices)
+    return services
 
 
 def _session(client: TestClient, label: str = "test") -> str:
@@ -203,11 +228,11 @@ def test_run_returns_bounded_response_without_specialists_for_out_of_scope_quest
     client: TestClient,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    services = cast(Any, cast(Any, client.app).state.services)
+    services = _services(client)
     monkeypatch.setattr(
         services.workflow,
         "_model_adapter_builder",
-        lambda _: OutOfScopeModelAdapter(),
+        _out_of_scope_builder,
     )
     session_id = _session(client, "out of scope")
 
@@ -228,11 +253,11 @@ def test_run_uses_each_explicit_authorized_portfolio_context(
     client: TestClient,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    services = cast(Any, cast(Any, client.app).state.services)
+    services = _services(client)
     monkeypatch.setattr(
         services.workflow,
         "_model_adapter_builder",
-        lambda _: PortfolioQuestionModelAdapter(),
+        _portfolio_question_builder,
     )
     session_id = _session(client, "portfolio questions")
     portfolio_path = f"/api/v1/sessions/{session_id}/portfolios"
@@ -309,11 +334,11 @@ def test_run_resolves_a_unique_explicitly_quoted_saved_portfolio_label(
     client: TestClient,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    services = cast(Any, cast(Any, client.app).state.services)
+    services = _services(client)
     monkeypatch.setattr(
         services.workflow,
         "_model_adapter_builder",
-        lambda _: PortfolioQuestionModelAdapter(),
+        _portfolio_question_builder,
     )
     session_id = _session(client, "portfolio label resolution")
     portfolio_id = "account-portfolio-json"
@@ -349,11 +374,11 @@ def test_portfolio_follow_up_reuses_the_previously_authorized_selection(
     client: TestClient,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    services = cast(Any, cast(Any, client.app).state.services)
+    services = _services(client)
     monkeypatch.setattr(
         services.workflow,
         "_model_adapter_builder",
-        lambda _: PortfolioQuestionModelAdapter(),
+        _portfolio_question_builder,
     )
     session_id = _session(client, "portfolio follow-up")
     portfolio_id = "technology-portfolio"
@@ -434,11 +459,11 @@ def test_complete_narrative_persists_and_streams_without_truncation(
     client: TestClient,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    services = cast(Any, cast(Any, client.app).state.services)
+    services = _services(client)
     monkeypatch.setattr(
         services.workflow,
         "_model_adapter_builder",
-        lambda _: LongNarrativeModelAdapter(),
+        _long_narrative_builder,
     )
     session_id = _session(client, "long narrative")
 
@@ -461,11 +486,11 @@ def test_broad_financial_news_run_does_not_require_a_ticker(
     client: TestClient,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    services = cast(Any, cast(Any, client.app).state.services)
+    services = _services(client)
     monkeypatch.setattr(
         services.workflow,
         "_model_adapter_builder",
-        lambda _: LongNarrativeModelAdapter(),
+        _long_narrative_builder,
     )
     session_id = _session(client, "broad financial news")
 
@@ -576,7 +601,7 @@ def test_portfolio_delete_is_scoped_cascades_and_allows_reimport(
             "quote_set": {"quote_set_id": "quotes-delete-1", "quotes": []},
         },
     )
-    services = cast(Any, cast(Any, client.app).state.services)
+    services = _services(client)
     assert services.context_repository.get(session_id, portfolio_id) is not None
     denied = client.delete(f"/api/v1/sessions/{other_session_id}/portfolios/{portfolio_id}")
     deleted = client.delete(portfolio_path)
@@ -685,7 +710,7 @@ def test_unexpected_workflow_failure_persists_safe_terminal_run(
     monkeypatch: MonkeyPatch,
 ) -> None:
     session_id = _session(client)
-    services = cast(Any, cast(Any, client.app).state.services)
+    services = _services(client)
 
     def fail_safely(request: object) -> None:
         del request
@@ -720,7 +745,7 @@ def test_administrative_provider_cache_purge_requires_token(tmp_path: Path) -> N
             qdrant_url=None,
             observability_mode="in_memory",
             langsmith_tracing_enabled=False,
-            local_admin_token="test-admin-token",
+            local_admin_token=SecretStr("test-admin-token"),
         )
     )
     with TestClient(app) as local:

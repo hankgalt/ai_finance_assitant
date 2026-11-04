@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -95,7 +96,7 @@ def adapter(
     *,
     request_budget: int = 6,
     maximum_attempts: int = 3,
-    sleeper: object | None = None,
+    sleeper: Callable[[float], None] | None = None,
 ) -> OpenAIModelAdapter:
     return OpenAIModelAdapter(
         client=client,

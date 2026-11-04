@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 import unicodedata
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager, nullcontext
 from datetime import UTC, datetime, timedelta
 from threading import Lock
@@ -245,7 +245,7 @@ class ResponseCacheService:
         return self._store(record)
 
     @contextmanager
-    def route_guard(self, context: RouteCacheContext) -> Iterator[None]:
+    def route_guard(self, context: RouteCacheContext) -> Generator[None, None, None]:
         if not self.configured:
             with nullcontext():
                 yield
@@ -260,7 +260,7 @@ class ResponseCacheService:
             yield
 
     @contextmanager
-    def generation_guard(self, context: GenerationCacheContext) -> Iterator[None]:
+    def generation_guard(self, context: GenerationCacheContext) -> Generator[None, None, None]:
         if not self.configured or self._generation_bypass(context) is not None:
             with nullcontext():
                 yield
@@ -429,7 +429,7 @@ class _KeyedRequestCoalescer:
         self._locks: dict[str, tuple[Lock, int]] = {}
 
     @contextmanager
-    def guard(self, key: str) -> Iterator[None]:
+    def guard(self, key: str) -> Generator[None, None, None]:
         with self._registry_lock:
             lock, count = self._locks.get(key, (Lock(), 0))
             self._locks[key] = (lock, count + 1)
@@ -452,19 +452,20 @@ def normalize_query(value: str) -> str:
 
 
 def _evidence_fingerprint(evidence: tuple[Evidence, ...]) -> str:
+    chunk_fingerprints: list[dict[str, object]] = [
+        {
+            "chunk_id": item.chunk_id,
+            "collection_version": item.collection_version,
+            "content_hash": item.content_hash,
+            "document_version": item.document_version,
+            "rank": item.rank,
+        }
+        for item in evidence
+    ]
     return _fingerprint(
         {
             "collections": sorted({item.collection_version for item in evidence}),
-            "chunks": [
-                {
-                    "chunk_id": item.chunk_id,
-                    "collection_version": item.collection_version,
-                    "content_hash": item.content_hash,
-                    "document_version": item.document_version,
-                    "rank": item.rank,
-                }
-                for item in evidence
-            ],
+            "chunks": chunk_fingerprints,
         }
     )
 

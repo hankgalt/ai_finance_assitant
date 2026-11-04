@@ -1,6 +1,6 @@
 """Small vendor-neutral tracing and metrics interface."""
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Generator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
 from typing import Protocol
@@ -39,7 +39,7 @@ class NoOpObservability:
     @contextmanager
     def span(
         self, name: str, attributes: Mapping[str, JsonValue] | None = None
-    ) -> Iterator[TraceContext]:
+    ) -> Generator[TraceContext, None, None]:
         del name, attributes
         yield TraceContext(trace_id=None)
 

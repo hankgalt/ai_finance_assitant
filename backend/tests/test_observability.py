@@ -1,5 +1,5 @@
-from collections.abc import Iterator, Mapping
-from contextlib import contextmanager
+from collections.abc import Generator, Mapping
+from contextlib import AbstractContextManager, contextmanager
 from datetime import UTC, datetime, timedelta
 
 from langchain_core.tracers.context import collect_runs
@@ -49,15 +49,13 @@ class SuccessfulAgent:
 
 
 class FailingTelemetry:
-    @contextmanager
     def span(
         self,
         name: str,
         attributes: Mapping[str, JsonValue] | None = None,
-    ) -> Iterator[TraceContext]:
+    ) -> AbstractContextManager[TraceContext]:
         del name, attributes
         raise RuntimeError("exporter unavailable")
-        yield TraceContext(trace_id=None)
 
     def count(
         self,
@@ -115,9 +113,17 @@ def test_run_events_correlate_with_exported_opentelemetry_trace() -> None:
     assert result.status == WorkflowStatus.COMPLETED
     assert result.trace_id is not None
     assert spans
-    assert {format(span.context.trace_id, "032x") for span in spans} == {result.trace_id}
+    span_trace_ids: set[str] = set()
+    for span in spans:
+        assert span.context is not None
+        span_trace_ids.add(format(span.context.trace_id, "032x"))
+    assert span_trace_ids == {result.trace_id}
     recorded = events.list_for_run("run-otel-1", session_id="session-observability")
-    assert {event.trace_id for event in recorded} == {result.trace_id}
+    event_trace_ids: set[str] = set()
+    for event in recorded:
+        assert event.trace_id is not None
+        event_trace_ids.add(event.trace_id)
+    assert event_trace_ids == {result.trace_id}
     assert all("message" not in (span.attributes or {}) for span in spans)
 
 
@@ -217,7 +223,7 @@ def test_langsmith_context_hides_inputs_and_outputs_by_default(
             client_options.update(kwargs)
 
     @contextmanager
-    def fake_context(**kwargs: object) -> Iterator[None]:
+    def fake_context(**kwargs: object) -> Generator[None, None, None]:
         context_options.update(kwargs)
         yield
 

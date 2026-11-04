@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from datetime import UTC, date, datetime, time
 from decimal import Decimal, InvalidOperation
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from pydantic import ValidationError
@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from ai_finance_assistant.contracts.market import CacheStatus, DelayStatus
 from ai_finance_assistant.providers._shared import (
     envelope_from_outcome,
+    require_object_mapping,
     result_status,
     retry_after_seconds,
     warnings_from_outcome,
@@ -221,11 +222,15 @@ class AlphaVantageMarketDataProvider:
         raw_matches = payload.get("bestMatches")
         if not isinstance(raw_matches, list):
             raise _malformed("Alpha Vantage search response omitted bestMatches.")
+        match_items = cast(list[object], raw_matches)
         matches: list[InstrumentMatch] = []
         try:
-            for item in raw_matches[: request.limit]:
-                if not isinstance(item, Mapping):
-                    raise ValueError
+            for raw_item in match_items[: request.limit]:
+                item = require_object_mapping(
+                    raw_item,
+                    "Alpha Vantage search result was malformed.",
+                    _malformed,
+                )
                 currency_value = item.get("8. currency")
                 matches.append(
                     InstrumentMatch(
@@ -249,9 +254,11 @@ class AlphaVantageMarketDataProvider:
         payload = self._request_json(
             {"function": "GLOBAL_QUOTE", "symbol": request.symbol}, timeout
         )
-        raw = payload.get("Global Quote")
-        if not isinstance(raw, Mapping):
-            raise _malformed("Alpha Vantage quote response omitted Global Quote.")
+        raw = require_object_mapping(
+            payload.get("Global Quote"),
+            "Alpha Vantage quote response omitted Global Quote.",
+            _malformed,
+        )
         if not raw:
             raise ProviderCallError(
                 ProviderErrorCode.INVALID_REQUEST,
@@ -287,25 +294,30 @@ class AlphaVantageMarketDataProvider:
             },
             timeout,
         )
-        raw_series = payload.get("Time Series (Daily)")
-        if not isinstance(raw_series, Mapping):
-            raise _malformed("Alpha Vantage history response omitted the daily series.")
+        raw_series = require_object_mapping(
+            payload.get("Time Series (Daily)"),
+            "Alpha Vantage history response omitted the daily series.",
+            _malformed,
+        )
         bars: list[PriceBar] = []
         try:
             for raw_date, raw_bar in raw_series.items():
                 trading_date = date.fromisoformat(str(raw_date))
                 if not request.start_date <= trading_date <= request.end_date:
                     continue
-                if not isinstance(raw_bar, Mapping):
-                    raise ValueError
+                bar = require_object_mapping(
+                    raw_bar,
+                    "Alpha Vantage daily price fields were malformed.",
+                    _malformed,
+                )
                 bars.append(
                     PriceBar(
                         trading_date=trading_date,
-                        open=Decimal(str(raw_bar["1. open"])),
-                        high=Decimal(str(raw_bar["2. high"])),
-                        low=Decimal(str(raw_bar["3. low"])),
-                        close=Decimal(str(raw_bar["4. close"])),
-                        volume=Decimal(str(raw_bar["5. volume"])),
+                        open=Decimal(str(bar["1. open"])),
+                        high=Decimal(str(bar["2. high"])),
+                        low=Decimal(str(bar["3. low"])),
+                        close=Decimal(str(bar["4. close"])),
+                        volume=Decimal(str(bar["5. volume"])),
                     )
                 )
         except (KeyError, InvalidOperation, ValidationError, TypeError, ValueError) as exc:
@@ -347,11 +359,14 @@ class AlphaVantageMarketDataProvider:
             ) from exc
         _raise_for_status(response)
         try:
-            payload = response.json()
+            payload_raw = response.json()
         except ValueError as exc:
             raise _malformed("Alpha Vantage returned invalid JSON.") from exc
-        if not isinstance(payload, dict):
-            raise _malformed("Alpha Vantage returned a non-object payload.")
+        payload = require_object_mapping(
+            payload_raw,
+            "Alpha Vantage returned a non-object payload.",
+            _malformed,
+        )
         if "Error Message" in payload:
             raise ProviderCallError(
                 ProviderErrorCode.INVALID_REQUEST,
@@ -372,7 +387,7 @@ class AlphaVantageMarketDataProvider:
                 "Alpha Vantage reported that the endpoint is unavailable for this entitlement.",
                 retryable=False,
             )
-        return payload
+        return dict(payload)
 
 
 def _raise_for_status(response: httpx.Response) -> None:

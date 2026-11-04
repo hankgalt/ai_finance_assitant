@@ -42,7 +42,7 @@ def telemetry_runtime_from_settings(settings: Settings) -> TelemetryRuntime:
         }
     )
     tracer_provider = TracerProvider(resource=resource)
-    metric_readers = []
+    metric_readers: list[PeriodicExportingMetricReader] = []
     if settings.otel_export_enabled:
         endpoint = settings.otel_exporter_otlp_endpoint.rstrip("/")
         tracer_provider.add_span_processor(

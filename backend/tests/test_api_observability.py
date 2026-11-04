@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 import httpx
 from fastapi.testclient import TestClient
@@ -69,14 +69,19 @@ def test_http_metrics_use_route_templates_and_exclude_health(tmp_path: Path) -> 
             },
         )
         client.get("/api/health/live")
-        safe = cast(Any, app.state.services.observability)
+        safe = app.state.services.observability
         memory = cast(InMemoryObservability, safe._delegate)
         request_metrics = tuple(
             metric for metric in memory.metrics if metric.name == "backend.http.requests"
         )
 
     assert request_metrics
-    assert {metric.attributes["route"] for metric in request_metrics} == {
+    routes: set[str] = set()
+    for metric in request_metrics:
+        route = metric.attributes.get("route")
+        assert isinstance(route, str)
+        routes.add(route)
+    assert routes == {
         "/api/v1/sessions",
         "/api/v1/sessions/{session_id}",
         "/api/v1/sessions/{session_id}/market/history",

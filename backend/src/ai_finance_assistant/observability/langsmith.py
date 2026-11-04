@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager, suppress
+from importlib import import_module
+from typing import Any
 
 from langsmith import Client
-from langsmith.run_helpers import tracing_context
+
+_RUN_HELPERS: Any = import_module("langsmith.run_helpers")
+tracing_context: Any = _RUN_HELPERS.tracing_context
 
 
 class LangSmithTracing:
@@ -22,9 +26,10 @@ class LangSmithTracing:
         self._api_key = api_key
 
     @contextmanager
-    def activate(self) -> Iterator[None]:
+    def activate(self) -> Generator[None, None, None]:
+        manager_factory = tracing_context
         if not self._enabled:
-            with tracing_context(enabled=False):
+            with manager_factory(enabled=False):
                 yield
             return
         try:
@@ -33,7 +38,7 @@ class LangSmithTracing:
                 hide_inputs=True,
                 hide_outputs=True,
             )
-            manager = tracing_context(
+            manager = manager_factory(
                 enabled=True,
                 project_name=self._project,
                 client=client,
