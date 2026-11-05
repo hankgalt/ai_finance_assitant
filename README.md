@@ -1,10 +1,25 @@
 # AI Finance Assistant
 
-AI Finance Assistant is a U.S.-focused financial education and analysis product. The repository has completed **M9: private-demo and coursework release packaging**. It has versioned Finance and Tax knowledge collections, safe Portfolio import/calculation modules, deterministic Goal projections, provider ports/adapters, a bounded six-agent LangGraph workflow, a qualified OpenAI model path, authoritative measured RunEvents, versioned REST/replayable SSE, durable private-demo storage, historical and public-RAG caches, vendor-neutral operational telemetry, responsive product/Inspector experiences, and a four-tool read-only MCP stdio adapter. It does not provide approved public-provider rights, public multi-user controls, professional financial or tax advice, or M10 cash-flow import.
+AI Finance Assistant is a U.S.-focused financial education and analysis product. It has:
+- Versioned Finance and Tax knowledge collections, 
+- Safe Portfolio import/calculation modules, 
+- Deterministic Goal projections, 
+- Provider ports/adapters, 
+- A bounded six-agent LangGraph workflow, 
+- A qualified OpenAI model path, 
+- Authoritative measured RunEvents,
+- Versioned REST/replayable SSE,
+- Durable private-demo storage,
+- Historical and public-RAG caches,
+- Vendor-neutral operational telemetry,
+- Responsive product/Inspector experiences, and
+- A four-tool read-only MCP stdio adapter. 
+
+It does not provide approved public-provider rights, public multi-user controls, professional financial or tax advice, or M10 cash-flow import.
 
 The planned initial release is a production-oriented private demonstration release for the owner and approved viewers, not a public launch. Live provider demonstrations must remain within approved API terms and configured quotas; a separately selected credential-free mode remains reproducible and clearly labeled synthetic.
 
-Read [docs/README.md](docs/README.md) before implementation work. Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). The runnable release package starts at [docs/release/README.md](docs/release/README.md); milestone reports and evidence remain indexed by the documentation directory.
+Read [docs/release/developer-guide.md](docs/release/developer-guide.md), [docs/release/user-guide.md](docs/release/user-guide.md) & [docs/release/README.md](docs/release/README.md). See [docs/release/demo-script.md](docs/release/demo-script.md) to go over functionality demo.
 
 ## Current capabilities
 
@@ -48,27 +63,64 @@ Dependencies are local to `backend/.venv` and `frontend/node_modules`. Qdrant da
 
 ## Install and configure
 
+### 1. Install dependencies
 ~~~bash
 make backend-sync
 make frontend-install
+~~~
+
+### 2. Create local configuration
+~~~bash
 cp .env.example backend/.env
-make qdrant-up
-make response-cache-up
+docker compose config --quiet
 ~~~
 
 The generated lockfiles are the reproducibility authority. The example configuration enables only the loopback Qdrant service and requires no credentials.
 
 ## Run locally
 
+### 3. Start local infrastructure
 ~~~bash
 make qdrant-up
-make backend-dev
+make response-cache-up
 ~~~
 
-In another terminal:
-
+### 4. Build, evaluate, and activate both RAG collections
 ~~~bash
+make knowledge-finance
+make knowledge-tax
+~~~
+
+### 5. Validate the active aliases
+~~~bash
+make knowledge-validate
+~~~
+
+The ingestion commands:
+- Fetch only enabled and approved sources from the source registry.
+- Download the pinned BGE-small and BM25 model artifacts if absent.
+- Normalize and chunk Finance and Tax content.
+- Generate dense and sparse representations.
+- Write immutable Qdrant collections.
+- Evaluate retrieval against the tracked cases.
+- Activate each collection only if its evaluation passes.
+
+On the existing release state, the expected collections are:
+- Finance: 18 documents, 106 chunks
+- Tax: 31 documents, 6,295 chunks
+
+Raw source responses are cached under ignored `backend/.cache/knowledge-sources/`. Use the CLI `--refresh-sources` option only for a deliberate source refresh. Manifests and evaluation evidence are written under `backend/artifacts/knowledge/`.
+
+### 6. Start the application in separate terminals:
+~~~bash
+make backend-dev
 make frontend-dev
+~~~
+
+### 7. Verify readiness:
+~~~bash
+curl -fsS http://127.0.0.1:8000/api/health/live
+curl -fsS http://127.0.0.1:8000/api/health/ready
 ~~~
 
 Open http://127.0.0.1:5173. Vite proxies `/api` to the backend at http://127.0.0.1:8000.
@@ -80,18 +132,6 @@ Health interfaces:
 - `GET /api/health/ready` — HTTP 200 only when both active Qdrant collections match the expected knowledge contract; otherwise HTTP 503.
 
 Application startup and health checks never fetch sources, download models, create collections, or generate embeddings.
-
-## Offline knowledge maintenance
-
-These commands intentionally run outside application startup. They fetch only enabled, approved registry entries, build an immutable candidate, evaluate it, and activate it only after the gate passes:
-
-~~~bash
-make knowledge-finance
-make knowledge-tax
-make knowledge-validate
-~~~
-
-Raw source responses are cached under ignored `backend/.cache/knowledge-sources/`. Use the CLI `--refresh-sources` option only for a deliberate source refresh. Manifests and evaluation evidence are written under `backend/artifacts/knowledge/`.
 
 Stop Qdrant without deleting its volume:
 

@@ -38,6 +38,8 @@ cp .env.example backend/.env
 docker compose config --quiet
 make qdrant-up
 make response-cache-up
+make knowledge-finance
+make knowledge-tax
 make knowledge-validate
 ```
 
@@ -47,6 +49,15 @@ collections; it never downloads models or regenerates embeddings on startup. If 
 does not already contain the active collections, build them deliberately with `make
 knowledge-finance` and `make knowledge-tax`; those commands may fetch only approved registry
 sources.
+
+The default configuration uses deterministic credential-free models and synthetic market/news providers.
+For the real OpenAI-backed assistant, backend/.env additionally needs:
+
+```bash
+AIFA_MODEL_MODE=openai_live
+AIFA_OPENAI_API_KEY=...
+AIFA_OPENAI_TERMS_APPROVED=true
+```
 
 The copied environment also owns three distinct runtime identities:
 
