@@ -606,6 +606,38 @@ test("opens portfolio context selection in a modal and insets the composer", asy
   );
 });
 
+test("defaults a file import label from the selected filename", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Portfolio", exact: true }).click();
+  await page.getByRole("button", { name: "Import portfolio" }).click();
+  const dialog = page.getByRole("dialog", { name: "Import positions" });
+  await dialog.getByRole("button", { name: "JSON / CSV / XLSX" }).click();
+
+  const fileInput = dialog.getByLabel("Choose a portfolio file");
+  const labelInput = dialog.getByLabel("Portfolio label");
+  const fileBox = await dialog.locator(".file-drop").boundingBox();
+  const labelBox = await labelInput.boundingBox();
+  expect(fileBox).not.toBeNull();
+  expect(labelBox).not.toBeNull();
+  expect(fileBox?.y ?? 0).toBeLessThan(labelBox?.y ?? 0);
+
+  await fileInput.setInputFiles({
+    name: "balanced-retirement.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"rows":[]}'),
+  });
+  await expect(labelInput).toHaveValue("balanced-retirement.json");
+  await labelInput.fill("Retirement allocation");
+  await expect(labelInput).toHaveValue("Retirement allocation");
+  await expect(
+    dialog.getByRole("button", { name: "Validate import" }),
+  ).toBeEnabled();
+  await expect(
+    dialog.getByRole("button", { name: "Save validated portfolio" }),
+  ).toBeDisabled();
+});
+
 test("completes all M6 product workflows with accessible alternatives", async ({
   page,
 }) => {
@@ -644,19 +676,25 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await expect(importDialog).toBeVisible();
   await page.getByLabel("Symbol").fill("BAD");
   await page.getByRole("button", { name: "Validate import" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Corrections required" }),
-  ).toBeVisible();
+  await expect(importDialog.getByRole("alert")).toContainText(
+    "Corrections required",
+  );
   await expect(
     page.getByRole("button", { name: "Save validated portfolio" }),
-  ).toHaveCount(0);
+  ).toBeDisabled();
   await page.getByLabel("Symbol").fill("DEMO");
   await page.getByRole("button", { name: "Validate import" }).click();
   await expect(
-    page.getByRole("heading", { name: "Ready for your approval" }),
+    importDialog.getByRole("status").filter({ hasText: "Ready for approval" }),
   ).toBeVisible();
-  await expectNoSeriousAxeViolations(page);
   await capture(page, "../docs/evidence/m6/portfolio-validation.png");
+  await expect(
+    page.getByRole("button", { name: "Validate import" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Save validated portfolio" }),
+  ).toBeEnabled();
+  await expectNoSeriousAxeViolations(page);
   await page.getByRole("button", { name: "Save validated portfolio" }).click();
   await expect(page.getByText("1 holding · MANUAL")).toBeVisible();
   const savedNotice = page.getByRole("status").filter({
@@ -748,6 +786,83 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await capture(page, "../docs/evidence/m6/market-success.png");
 
   await page.getByRole("button", { name: "Goals" }).click();
+  await expect(
+    page.getByText(
+      "Recorded with the projection, but it does not change return assumptions or select investments.",
+    ),
+  ).toBeVisible();
+  const goalPanels = page.locator(".goal-layout > .panel");
+  const goalInputPanel = goalPanels.nth(0);
+  const assumptionsPanel = goalPanels.nth(1);
+  const goalInputBounds = await goalInputPanel.boundingBox();
+  const assumptionsBounds = await assumptionsPanel.boundingBox();
+  expect(goalInputBounds).not.toBeNull();
+  expect(assumptionsBounds).not.toBeNull();
+  expect(
+    Math.abs((goalInputBounds?.height ?? 0) - (assumptionsBounds?.height ?? 0)),
+  ).toBeLessThanOrEqual(1);
+  const contributionTiming = page.getByLabel("Contribution timing");
+  const riskTolerance = page.getByLabel("Risk tolerance (context only)");
+  const contributionTimingBounds = await contributionTiming.boundingBox();
+  const riskToleranceBounds = await riskTolerance.boundingBox();
+  expect(contributionTimingBounds?.height).toBe(riskToleranceBounds?.height);
+  const riskSelectStyle = await riskTolerance.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      backgroundImage: style.backgroundImage,
+      paddingRight: Number.parseFloat(style.paddingRight),
+    };
+  });
+  expect(riskSelectStyle.backgroundImage).not.toBe("none");
+  expect(riskSelectStyle.paddingRight).toBeGreaterThanOrEqual(32);
+  const riskContextBounds = await page
+    .locator(".goal-risk-context")
+    .boundingBox();
+  expect(riskContextBounds).not.toBeNull();
+  expect(riskContextBounds!.width).toBeGreaterThan(
+    (goalInputBounds?.width ?? 0) * 0.85,
+  );
+  expect(
+    riskContextBounds!.y -
+      (riskToleranceBounds!.y + riskToleranceBounds!.height),
+  ).toBeGreaterThanOrEqual(8);
+  expect(
+    riskContextBounds!.y -
+      (riskToleranceBounds!.y + riskToleranceBounds!.height),
+  ).toBeLessThanOrEqual(32);
+  const ratePreviewBounds = await page
+    .getByLabel("Derived annual return scenarios")
+    .boundingBox();
+  expect(ratePreviewBounds).not.toBeNull();
+  expect(ratePreviewBounds!.height).toBeLessThanOrEqual(48);
+  const compareButtonBounds = await page
+    .getByRole("button", { name: "Compare scenarios" })
+    .boundingBox();
+  expect(compareButtonBounds).not.toBeNull();
+  expect(
+    Math.abs(
+      compareButtonBounds!.x +
+        compareButtonBounds!.width / 2 -
+        (assumptionsBounds!.x + assumptionsBounds!.width / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+  const expectedReturnSlider = page.getByLabel("Expected annual return");
+  await expectedReturnSlider.focus();
+  await expectedReturnSlider.press("ArrowRight");
+  await expectedReturnSlider.press("ArrowRight");
+  await expectedReturnSlider.press("ArrowRight");
+  const derivedRates = page.getByLabel("Derived annual return scenarios");
+  await expect(derivedRates.getByText("4.5%")).toBeVisible();
+  await expect(derivedRates.getByText("7.5%")).toBeVisible();
+  await expect(derivedRates.getByText("9.5%")).toBeVisible();
+  await expect(page.getByLabel("Annual inflation %")).toHaveCount(1);
+  await expect(page.getByLabel("Annual fee %")).toHaveCount(1);
+  await expectedReturnSlider.press("ArrowLeft");
+  await expectedReturnSlider.press("ArrowLeft");
+  await expectedReturnSlider.press("ArrowLeft");
+  await expect(derivedRates.getByText("3%")).toBeVisible();
+  await expect(derivedRates.getByText("6%")).toBeVisible();
+  await expect(derivedRates.getByText("8%")).toBeVisible();
   await page.getByRole("button", { name: "Compare scenarios" }).click();
   await expect(
     page.getByRole("heading", { name: "Scenario comparison" }),

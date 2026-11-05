@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   fireEvent,
   render,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
-import { beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { api } from "../../lib/api";
 import type {
@@ -112,6 +113,10 @@ beforeEach(() => {
   vi.mocked(api.deletePortfolio).mockResolvedValue(undefined);
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 test("keeps saved portfolios primary and opens import in a modal", async () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -136,12 +141,176 @@ test("keeps saved portfolios primary and opens import in a modal", async () => {
   expect(within(dialog).getByLabelText("Symbol")).toBeInTheDocument();
   expect(
     within(dialog).getByRole("button", { name: "Validate import" }),
-  ).toBeInTheDocument();
+  ).toBeEnabled();
+  expect(
+    within(dialog).getByRole("button", {
+      name: "Save validated portfolio",
+    }),
+  ).toBeDisabled();
 
   fireEvent.click(
     within(dialog).getByRole("button", { name: "Close portfolio import" }),
   );
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+test("puts file selection before the editable filename-derived label", async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <PortfolioExperience sessionId="session-test" />
+    </QueryClientProvider>,
+  );
+
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Import portfolio" }),
+  );
+  const dialog = await screen.findByRole("dialog", {
+    name: "Import positions",
+  });
+  fireEvent.click(
+    within(dialog).getByRole("button", { name: "JSON / CSV / XLSX" }),
+  );
+
+  const fileInput = within(dialog).getByLabelText("Choose a portfolio file");
+  const labelInput = within(dialog).getByLabelText("Portfolio label");
+  expect(labelInput).toHaveValue("");
+  expect(
+    fileInput.compareDocumentPosition(labelInput) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+
+  fireEvent.change(fileInput, {
+    target: {
+      files: [
+        new File(["{}"], "retirement-portfolio.json", {
+          type: "application/json",
+        }),
+      ],
+    },
+  });
+  expect(labelInput).toHaveValue("retirement-portfolio.json");
+
+  fireEvent.change(labelInput, {
+    target: { value: "Long-term retirement portfolio" },
+  });
+  expect(labelInput).toHaveValue("Long-term retirement portfolio");
+});
+
+test("keeps both actions visible and makes successful validation notice ephemeral", async () => {
+  vi.useFakeTimers();
+  vi.mocked(api.validatePortfolio).mockResolvedValue({
+    schema_version: "1",
+    source_kind: "manual",
+    source_file_hash: "a".repeat(64),
+    accepted: true,
+    portfolio,
+    findings: [],
+  });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <PortfolioExperience sessionId="session-test" />
+    </QueryClientProvider>,
+  );
+
+  await vi.waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Import portfolio" }),
+    ).toBeInTheDocument(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Import portfolio" }));
+  const dialog = screen.getByRole("dialog", { name: "Import positions" });
+  const validateButton = within(dialog).getByRole("button", {
+    name: "Validate import",
+  });
+  const saveButton = within(dialog).getByRole("button", {
+    name: "Save validated portfolio",
+  });
+
+  expect(validateButton).toBeEnabled();
+  expect(saveButton).toBeDisabled();
+  fireEvent.click(validateButton);
+
+  await vi.waitFor(() => expect(api.validatePortfolio).toHaveBeenCalledOnce());
+  await vi.waitFor(() => expect(validateButton).toBeDisabled());
+  expect(saveButton).toBeEnabled();
+  const notice = within(dialog).getByRole("status");
+  expect(notice).toHaveTextContent("Ready for approval");
+  expect(notice).toHaveTextContent("No validation findings.");
+  expect(
+    dialog.querySelector(".import-dialog-body")?.firstElementChild,
+  ).toHaveClass("import-feedback");
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(5_000);
+  });
+  expect(
+    within(dialog).queryByText("Ready for approval"),
+  ).not.toBeInTheDocument();
+  expect(saveButton).toBeEnabled();
+  expect(validateButton).toBeDisabled();
+
+  fireEvent.change(within(dialog).getByLabelText("Portfolio label"), {
+    target: { value: "Updated after validation" },
+  });
+  expect(validateButton).toBeEnabled();
+  expect(saveButton).toBeDisabled();
+});
+
+test("keeps validation errors visible in an error notice", async () => {
+  vi.useFakeTimers();
+  vi.mocked(api.validatePortfolio).mockResolvedValue({
+    schema_version: "1",
+    source_kind: "manual",
+    source_file_hash: "a".repeat(64),
+    accepted: false,
+    portfolio: null,
+    findings: [
+      {
+        code: "UNKNOWN_IDENTIFIER",
+        severity: "error",
+        scope: "field",
+        message: "Use a supported identifier.",
+        row_number: 1,
+        field: "identifier_value",
+      },
+    ],
+  });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <PortfolioExperience sessionId="session-test" />
+    </QueryClientProvider>,
+  );
+
+  await vi.waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Import portfolio" }),
+    ).toBeInTheDocument(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Import portfolio" }));
+  fireEvent.click(screen.getByRole("button", { name: "Validate import" }));
+
+  await vi.waitFor(() => expect(api.validatePortfolio).toHaveBeenCalledOnce());
+  const errorNotice = screen.getByRole("alert");
+  expect(errorNotice).toHaveClass("state-error");
+  expect(errorNotice).toHaveTextContent("Corrections required");
+  expect(errorNotice).toHaveTextContent("Use a supported identifier.");
+  expect(
+    screen.getByRole("button", { name: "Save validated portfolio" }),
+  ).toBeDisabled();
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(10_000);
+  });
+  expect(screen.getByRole("alert")).toBeInTheDocument();
 });
 
 test("groups equivalent snapshot warnings and reports their holding scope", async () => {

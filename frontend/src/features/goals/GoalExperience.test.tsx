@@ -65,11 +65,31 @@ test("shows unique compact projection limitations after the result visualization
   fireEvent.change(screen.getByLabelText("Contribution timing"), {
     target: { value: "beginning" },
   });
-  fireEvent.change(screen.getByLabelText("Risk tolerance"), {
+  expect(
+    screen.getByText(
+      "Recorded with the projection, but it does not change return assumptions or select investments.",
+    ),
+  ).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Risk tolerance (context only)"), {
     target: { value: "conservative" },
   });
-  fireEvent.change(screen.getAllByLabelText("Return %").at(0)!, {
-    target: { value: "4.5" },
+  const expectedReturn = screen.getByLabelText("Expected annual return");
+  expect(expectedReturn).toHaveAttribute("min", "1");
+  expect(expectedReturn).toHaveAttribute("max", "9");
+  fireEvent.change(expectedReturn, {
+    target: { value: "7.5" },
+  });
+  const derivedRates = screen.getByLabelText("Derived annual return scenarios");
+  expect(within(derivedRates).getByText("4.5%")).toBeInTheDocument();
+  expect(within(derivedRates).getByText("7.5%")).toBeInTheDocument();
+  expect(within(derivedRates).getByText("9.5%")).toBeInTheDocument();
+  expect(screen.getAllByLabelText("Annual inflation %")).toHaveLength(1);
+  expect(screen.getAllByLabelText("Annual fee %")).toHaveLength(1);
+  fireEvent.change(screen.getByLabelText("Annual inflation %"), {
+    target: { value: "3" },
+  });
+  fireEvent.change(screen.getByLabelText("Annual fee %"), {
+    target: { value: "0.4" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Compare scenarios" }));
 
@@ -79,9 +99,26 @@ test("shows unique compact projection limitations after the result visualization
       expect.objectContaining({
         contribution_timing: "beginning",
         risk_tolerance: "conservative",
-        scenarios: expect.arrayContaining([
-          expect.objectContaining({ annual_return_rate: "0.045" }),
-        ]),
+        scenarios: [
+          {
+            label: "Conservative",
+            annual_return_rate: "0.045",
+            annual_inflation_rate: "0.03",
+            annual_fee_rate: "0.004",
+          },
+          {
+            label: "Expected",
+            annual_return_rate: "0.075",
+            annual_inflation_rate: "0.03",
+            annual_fee_rate: "0.004",
+          },
+          {
+            label: "Optimistic",
+            annual_return_rate: "0.095",
+            annual_inflation_rate: "0.03",
+            annual_fee_rate: "0.004",
+          },
+        ],
       }),
     ),
   );
@@ -89,6 +126,9 @@ test("shows unique compact projection limitations after the result visualization
   const limitations = await screen.findByRole("complementary", {
     name: "Projection limitations",
   });
+  expect(
+    screen.getByText("moderate tolerance (context only)"),
+  ).toBeInTheDocument();
   expect(within(limitations).getAllByRole("listitem")).toHaveLength(2);
   expect(
     within(limitations).getAllByText(

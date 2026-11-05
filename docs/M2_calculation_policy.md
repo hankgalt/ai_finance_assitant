@@ -1,6 +1,6 @@
 # M2 deterministic finance calculation policy
 
-Version 1.0 | Status: Implemented M2 policy | 2026-10-27
+Version 1.1 | Status: Implemented M2 policy | 2026-11-04
 
 Scope: PR-003, PR-005, PR-009, PR-016; QR-001, QR-002, QR-006, QR-009, QR-010, QR-015; ADR-009, ADR-012, ADR-018, ADR-019, ADR-020, ADR-021
 
@@ -82,6 +82,8 @@ It also returns the largest Holding percentage and priced Holding count. The heu
 ## 7. Goal projection
 
 Every scenario is supplied by the caller. Declared risk tolerance is returned as explanatory context and never chooses an assumption.
+
+The M6 Goals view constructs its explicit three-scenario request from one user-controlled expected-return slider bounded from 1% through 9%. Conservative return is the selected expected return minus 3 percentage points with a 0% floor; optimistic return is expected return plus 2 percentage points. One user-controlled inflation assumption and one fee assumption are copied into all three request scenarios. The view displays every derived rate before submission. This is a transparent request-construction convenience, not a backend forecast, suitability decision, or change to `goal-projection-v1` arithmetic.
 
 Annual nominal return, annual inflation, and annual fee inputs are decimal fractions. The v1 policy uses nominal monthly rates:
 

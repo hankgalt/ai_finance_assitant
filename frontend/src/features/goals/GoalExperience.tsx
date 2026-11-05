@@ -18,26 +18,32 @@ import { api } from "../../lib/api";
 import { formatCurrency, formatPercent } from "../../lib/format";
 import type { GoalProjectionRequest } from "../../types/contracts";
 
-const initialScenarios = [
-  {
-    label: "Conservative",
-    annual_return_rate: "3",
-    annual_inflation_rate: "2.5",
-    annual_fee_rate: "0.25",
-  },
-  {
-    label: "Expected",
-    annual_return_rate: "6",
-    annual_inflation_rate: "2.5",
-    annual_fee_rate: "0.25",
-  },
-  {
-    label: "Optimistic",
-    annual_return_rate: "8",
-    annual_inflation_rate: "2.5",
-    annual_fee_rate: "0.25",
-  },
-];
+const minimumExpectedReturn = 1;
+const maximumExpectedReturn = 9;
+const conservativeOffset = 3;
+const optimisticOffset = 2;
+
+function scenarioRates(expectedReturn: number) {
+  return [
+    {
+      label: "Conservative",
+      annualReturnRate: Math.max(0, expectedReturn - conservativeOffset),
+    },
+    { label: "Expected", annualReturnRate: expectedReturn },
+    {
+      label: "Optimistic",
+      annualReturnRate: expectedReturn + optimisticOffset,
+    },
+  ];
+}
+
+function displayRate(rate: number): string {
+  return `${Number.isInteger(rate) ? rate.toFixed(0) : rate.toFixed(1)}%`;
+}
+
+function decimalRate(percent: number | string): string {
+  return String(Number(percent) / 100);
+}
 
 function uniqueWarnings(warnings: string[]): string[] {
   const seen = new Set<string>();
@@ -58,7 +64,9 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
   const [timing, setTiming] = useState<"beginning" | "end">("end");
   const [risk, setRisk] =
     useState<GoalProjectionRequest["risk_tolerance"]>("moderate");
-  const [scenarios, setScenarios] = useState(initialScenarios);
+  const [expectedReturn, setExpectedReturn] = useState(6);
+  const [inflationRate, setInflationRate] = useState("2.5");
+  const [annualFeeRate, setAnnualFeeRate] = useState("0.25");
   const projection = useMutation({
     mutationFn: (request: GoalProjectionRequest) =>
       api.goalProjection(sessionId, request),
@@ -78,16 +86,15 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
       horizon_months: Math.round(Number(years) * 12),
       risk_tolerance: risk,
       cash_flow_summary_id: null,
-      scenarios: scenarios.map((scenario) => ({
+      scenarios: scenarioRates(expectedReturn).map((scenario) => ({
         label: scenario.label,
-        annual_return_rate: String(Number(scenario.annual_return_rate) / 100),
-        annual_inflation_rate: String(
-          Number(scenario.annual_inflation_rate) / 100,
-        ),
-        annual_fee_rate: String(Number(scenario.annual_fee_rate) / 100),
+        annual_return_rate: decimalRate(scenario.annualReturnRate),
+        annual_inflation_rate: decimalRate(inflationRate),
+        annual_fee_rate: decimalRate(annualFeeRate),
       })),
     });
   };
+  const derivedScenarios = scenarioRates(expectedReturn);
   const result = projection.data;
   const warnings = uniqueWarnings(result?.warnings ?? []);
   const chartData =
@@ -106,7 +113,10 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
         action={<span className="milestone-chip">Monthly contributions</span>}
       />
       <form className="goal-layout" onSubmit={submit}>
-        <section className="panel" aria-labelledby="goal-basics-heading">
+        <section
+          className="panel goal-input-panel"
+          aria-labelledby="goal-basics-heading"
+        >
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Goal inputs</p>
@@ -170,9 +180,13 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
                 <option value="beginning">Beginning of month</option>
               </select>
             </label>
-            <label className="field">
-              Risk tolerance
+            <div className="field">
+              <label htmlFor="goal-risk-tolerance">
+                Risk tolerance (context only)
+              </label>
               <select
+                aria-describedby="goal-risk-tolerance-help"
+                id="goal-risk-tolerance"
                 value={risk}
                 onChange={(event) =>
                   setRisk(
@@ -186,96 +200,95 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
                 <option value="moderate">Moderate</option>
                 <option value="aggressive">Aggressive</option>
               </select>
-            </label>
+            </div>
           </div>
+          <p
+            className="form-help goal-risk-context"
+            id="goal-risk-tolerance-help"
+          >
+            Recorded with the projection, but it does not change return
+            assumptions or select investments.
+          </p>
         </section>
-        <section className="panel" aria-labelledby="scenario-heading">
+        <section
+          className="panel goal-assumptions-panel"
+          aria-labelledby="scenario-heading"
+        >
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Editable assumptions</p>
-              <h3 id="scenario-heading">Three scenarios</h3>
+              <h3 id="scenario-heading">Scenario assumptions</h3>
             </div>
             <Sparkles aria-hidden="true" />
           </div>
-          <div className="scenario-grid">
-            {scenarios.map((scenario, index) => (
-              <fieldset key={scenario.label}>
-                <legend>{scenario.label}</legend>
-                <label className="field">
-                  Return %
-                  <input
-                    max="1000"
-                    min="-99"
-                    required
-                    step="0.1"
-                    type="number"
-                    value={scenario.annual_return_rate}
-                    onChange={(event) =>
-                      setScenarios(
-                        scenarios.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? {
-                                ...item,
-                                annual_return_rate: event.target.value,
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                </label>
-                <label className="field">
-                  Inflation %
-                  <input
-                    max="1000"
-                    min="-99"
-                    required
-                    step="0.1"
-                    type="number"
-                    value={scenario.annual_inflation_rate}
-                    onChange={(event) =>
-                      setScenarios(
-                        scenarios.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? {
-                                ...item,
-                                annual_inflation_rate: event.target.value,
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                </label>
-                <label className="field">
-                  Fee %
-                  <input
-                    max="100"
-                    min="0"
-                    required
-                    step="0.01"
-                    type="number"
-                    value={scenario.annual_fee_rate}
-                    onChange={(event) =>
-                      setScenarios(
-                        scenarios.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, annual_fee_rate: event.target.value }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                </label>
-              </fieldset>
+          <div className="expected-return-control field">
+            <label htmlFor="expected-return">Expected annual return</label>
+            <div className="rate-slider-row">
+              <input
+                aria-describedby="expected-return-help"
+                aria-valuetext={`${displayRate(expectedReturn)} expected annual return`}
+                id="expected-return"
+                max={maximumExpectedReturn}
+                min={minimumExpectedReturn}
+                onChange={(event) =>
+                  setExpectedReturn(Number(event.target.value))
+                }
+                step="0.5"
+                type="range"
+                value={expectedReturn}
+              />
+              <output htmlFor="expected-return">
+                {displayRate(expectedReturn)}
+              </output>
+            </div>
+            <small className="field-help" id="expected-return-help">
+              Select 1%–9%. Conservative is 3 percentage points lower (with a 0%
+              floor); optimistic is 2 points higher.
+            </small>
+          </div>
+          <dl
+            aria-label="Derived annual return scenarios"
+            className="scenario-rate-preview"
+          >
+            {derivedScenarios.map((scenario) => (
+              <div key={scenario.label}>
+                <dt>{scenario.label}</dt>
+                <dd>{displayRate(scenario.annualReturnRate)}</dd>
+              </div>
             ))}
+          </dl>
+          <div className="form-grid shared-scenario-inputs">
+            <label className="field">
+              Annual inflation %
+              <input
+                max="1000"
+                min="-99"
+                onChange={(event) => setInflationRate(event.target.value)}
+                required
+                step="0.1"
+                type="number"
+                value={inflationRate}
+              />
+            </label>
+            <label className="field">
+              Annual fee %
+              <input
+                max="100"
+                min="0"
+                onChange={(event) => setAnnualFeeRate(event.target.value)}
+                required
+                step="0.01"
+                type="number"
+                value={annualFeeRate}
+              />
+            </label>
           </div>
           <p className="form-help">
-            Returns, inflation, and fees are assumptions—not promises or market
-            forecasts.
+            All three scenarios use the shared inflation and fee assumptions.
+            These inputs are illustrations—not promises or market forecasts.
           </p>
           <button
-            className="primary-button"
+            className="primary-button goal-submit"
             disabled={projection.isPending}
             type="submit"
           >
@@ -307,7 +320,10 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
           <div className="assumption-strip">
             <span>{result.horizon_months} months</span>
             <span>{result.contribution_timing} contributions</span>
-            <span>{result.risk_tolerance.replaceAll("_", " ")} tolerance</span>
+            <span>
+              {result.risk_tolerance.replaceAll("_", " ")} tolerance (context
+              only)
+            </span>
             <span>{result.currency}</span>
           </div>
           <div className="chart-table-stack">
@@ -328,16 +344,16 @@ export function GoalExperience({ sessionId }: { sessionId: string }) {
                   />
                   <Legend />
                   <Bar
-                    dataKey="nominal"
-                    fill="#1c5c50"
-                    isAnimationActive={false}
-                    name="Nominal future value"
-                  />
-                  <Bar
                     dataKey="real"
                     fill="#e4a83a"
                     isAnimationActive={false}
                     name="Inflation-adjusted value"
+                  />
+                  <Bar
+                    dataKey="nominal"
+                    fill="#1c5c50"
+                    isAnimationActive={false}
+                    name="Nominal future value"
                   />
                 </BarChart>
               </ResponsiveContainer>

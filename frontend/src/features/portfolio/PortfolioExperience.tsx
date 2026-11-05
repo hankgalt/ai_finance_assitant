@@ -35,6 +35,7 @@ const chartColors = [
 ];
 
 const portfolioNoticeDurationMs = 4_000;
+const importValidationNoticeDurationMs = 5_000;
 
 interface SnapshotWarningGroup {
   code: string;
@@ -99,9 +100,10 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [portfolioId] = useState(() => `portfolio-${Date.now()}`);
   const nextHoldingNumber = useRef(2);
-  const [label, setLabel] = useState("Demo portfolio");
+  const [label, setLabel] = useState("");
   const [rows, setRows] = useState<ManualHoldingRow[]>([initialRow(0)]);
   const [clientError, setClientError] = useState<string | null>(null);
+  const [showValidationSuccess, setShowValidationSuccess] = useState(false);
   const [reviewedRequest, setReviewedRequest] =
     useState<PortfolioImportApiRequest | null>(null);
   const [snapshotId, setSnapshotId] = useState<string | null>(null);
@@ -121,8 +123,11 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
   const validate = useMutation({
     mutationFn: (request: PortfolioImportApiRequest) =>
       api.validatePortfolio(sessionId, request),
-    onSuccess: (result, request) =>
-      setReviewedRequest(result.accepted ? request : null),
+    onSuccess: (result, request) => {
+      setReviewedRequest(result.accepted ? request : null);
+      setShowValidationSuccess(result.accepted);
+    },
+    onError: () => setShowValidationSuccess(false),
   });
   const save = useMutation({
     mutationFn: (request: PortfolioImportApiRequest) =>
@@ -200,7 +205,9 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setReviewedRequest(null);
+    setShowValidationSuccess(false);
     setClientError(null);
+    save.reset();
     void createRequest()
       .then((request) => validate.mutate(request))
       .catch((error: Error) => {
@@ -209,12 +216,17 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
       });
   };
 
+  const invalidateValidatedImport = () => {
+    setReviewedRequest(null);
+    setShowValidationSuccess(false);
+  };
+
   const updateRow = (
     index: number,
     field: keyof ManualHoldingRow,
     value: string,
   ) => {
-    setReviewedRequest(null);
+    invalidateValidatedImport();
     setRows(
       rows.map((row, rowIndex) =>
         rowIndex === index ? { ...row, [field]: value } : row,
@@ -225,8 +237,10 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
   const openImportDialog = () => {
     setClientError(null);
     setReviewedRequest(null);
+    setShowValidationSuccess(false);
     setPortfolioNotice(null);
     validate.reset();
+    save.reset();
     removePortfolio.reset();
     setIsImportOpen(true);
   };
@@ -263,6 +277,15 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
     );
     return () => window.clearTimeout(timeoutId);
   }, [portfolioNotice]);
+
+  useEffect(() => {
+    if (!showValidationSuccess) return;
+    const timeoutId = window.setTimeout(
+      () => setShowValidationSuccess(false),
+      importValidationNoticeDurationMs,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [showValidationSuccess]);
 
   const latestSnapshot = snapshot.data;
   const snapshotWarningGroups = useMemo(
@@ -330,12 +353,86 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
             </button>
           </div>
           <div className="import-dialog-body">
+            <div className="import-feedback">
+              {clientError ? (
+                <StateNotice tone="error" title="File could not be prepared">
+                  {clientError}
+                </StateNotice>
+              ) : null}
+              {validate.isError ? (
+                <StateNotice tone="error" title="Import could not be validated">
+                  {validate.error instanceof Error
+                    ? validate.error.message
+                    : "Review the input and try again."}
+                </StateNotice>
+              ) : null}
+              {save.isError ? (
+                <StateNotice tone="error" title="Portfolio could not be saved">
+                  {save.error instanceof Error
+                    ? save.error.message
+                    : "Try saving the validated portfolio again."}
+                </StateNotice>
+              ) : null}
+              {validate.data && !validate.data.accepted ? (
+                <StateNotice tone="error" title="Corrections required">
+                  {validate.data.findings.length ? (
+                    <ul className="validation-findings">
+                      {validate.data.findings.map((finding, index) => (
+                        <li
+                          className={`finding-${finding.severity}`}
+                          key={`${finding.code}-${index}`}
+                        >
+                          <strong>{finding.code.replaceAll("_", " ")}</strong>
+                          {" — "}
+                          {finding.message}
+                          {finding.row_number
+                            ? ` (row ${finding.row_number})`
+                            : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>Review the input and validate it again.</p>
+                  )}
+                </StateNotice>
+              ) : null}
+              {validate.data?.accepted && showValidationSuccess ? (
+                <StateNotice tone="success" title="Ready for approval">
+                  <p>
+                    {validate.data.findings.length
+                      ? "Validation completed. Review the findings below."
+                      : "No validation findings."}
+                  </p>
+                </StateNotice>
+              ) : null}
+              {validate.data?.accepted &&
+              validate.data.findings.length > 0 &&
+              reviewedRequest ? (
+                <StateNotice tone="warning" title="Validation findings">
+                  <ul className="validation-findings">
+                    {validate.data.findings.map((finding, index) => (
+                      <li
+                        className={`finding-${finding.severity}`}
+                        key={`${finding.code}-${index}`}
+                      >
+                        <strong>{finding.code.replaceAll("_", " ")}</strong>
+                        {" — "}
+                        {finding.message}
+                        {finding.row_number
+                          ? ` (row ${finding.row_number})`
+                          : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </StateNotice>
+              ) : null}
+            </div>
             <div className="segmented" aria-label="Import method">
               <button
                 aria-pressed={mode === "manual"}
                 onClick={() => {
                   setMode("manual");
-                  setReviewedRequest(null);
+                  invalidateValidatedImport();
                 }}
                 type="button"
               >
@@ -345,7 +442,7 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
                 aria-pressed={mode === "file"}
                 onClick={() => {
                   setMode("file");
-                  setReviewedRequest(null);
+                  invalidateValidatedImport();
                 }}
                 type="button"
               >
@@ -353,12 +450,38 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
               </button>
             </div>
             <form className="form-grid" onSubmit={submit}>
+              {mode === "file" ? (
+                <label className="file-drop field-wide">
+                  <FileSpreadsheet aria-hidden="true" />
+                  <span>{file ? file.name : "Choose a portfolio file"}</span>
+                  <small>
+                    Maximum 2 MB. Files are validated as untrusted input.
+                  </small>
+                  <input
+                    accept=".json,.csv,.xlsx"
+                    aria-label="Choose a portfolio file"
+                    onChange={(event) => {
+                      const selectedFile = event.target.files?.[0] ?? null;
+                      setFile(selectedFile);
+                      setLabel(selectedFile?.name ?? "");
+                      setClientError(null);
+                      invalidateValidatedImport();
+                    }}
+                    required
+                    type="file"
+                  />
+                </label>
+              ) : null}
               <label className="field field-wide">
                 Portfolio label
                 <input
                   value={label}
-                  onChange={(event) => setLabel(event.target.value)}
+                  onChange={(event) => {
+                    setLabel(event.target.value);
+                    invalidateValidatedImport();
+                  }}
                   maxLength={128}
+                  placeholder="Enter a portfolio label"
                 />
               </label>
               {mode === "manual" ? (
@@ -372,13 +495,14 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
                           <button
                             aria-label={`Remove holding ${index + 1}`}
                             className="text-button"
-                            onClick={() =>
+                            onClick={() => {
+                              invalidateValidatedImport();
                               setRows(
                                 rows.filter(
                                   (_, rowIndex) => rowIndex !== index,
                                 ),
-                              )
-                            }
+                              );
+                            }}
                             type="button"
                           >
                             <Trash2 aria-hidden="true" size={15} /> Remove
@@ -479,6 +603,7 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
                   <button
                     className="secondary-button add-holding"
                     onClick={() => {
+                      invalidateValidatedImport();
                       setRows([
                         ...rows,
                         initialRow(nextHoldingNumber.current - 1),
@@ -490,83 +615,28 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
                     <Plus aria-hidden="true" size={16} /> Add holding
                   </button>
                 </div>
-              ) : (
-                <label className="file-drop field-wide">
-                  <FileSpreadsheet aria-hidden="true" />
-                  <span>{file ? file.name : "Choose a portfolio file"}</span>
-                  <small>
-                    Maximum 2 MB. Files are validated as untrusted input.
-                  </small>
-                  <input
-                    accept=".json,.csv,.xlsx"
-                    onChange={(event) =>
-                      setFile(event.target.files?.[0] ?? null)
-                    }
-                    required
-                    type="file"
-                  />
-                </label>
-              )}
-              <button
-                className="primary-button field-wide"
-                disabled={validate.isPending}
-                type="submit"
-              >
-                <ShieldCheck aria-hidden="true" size={18} />{" "}
-                {validate.isPending ? "Validating…" : "Validate import"}
-              </button>
+              ) : null}
+              <div className="import-actions field-wide">
+                <button
+                  className="primary-button"
+                  disabled={validate.isPending || reviewedRequest !== null}
+                  type="submit"
+                >
+                  <ShieldCheck aria-hidden="true" size={18} />{" "}
+                  {validate.isPending ? "Validating…" : "Validate import"}
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={reviewedRequest === null || save.isPending}
+                  onClick={() => {
+                    if (reviewedRequest) save.mutate(reviewedRequest);
+                  }}
+                  type="button"
+                >
+                  {save.isPending ? "Saving…" : "Save validated portfolio"}
+                </button>
+              </div>
             </form>
-
-            {clientError ? (
-              <StateNotice tone="error" title="File could not be prepared">
-                {clientError}
-              </StateNotice>
-            ) : null}
-
-            {validate.isError ? (
-              <StateNotice tone="error" title="Import could not be validated">
-                {validate.error instanceof Error
-                  ? validate.error.message
-                  : "Review the input and try again."}
-              </StateNotice>
-            ) : null}
-            {validate.data ? (
-              <section className="validation-review" aria-live="polite">
-                <h4>
-                  {validate.data.accepted
-                    ? "Ready for your approval"
-                    : "Corrections required"}
-                </h4>
-                {validate.data.findings.length ? (
-                  <ul>
-                    {validate.data.findings.map((finding, index) => (
-                      <li
-                        className={`finding-${finding.severity}`}
-                        key={`${finding.code}-${index}`}
-                      >
-                        <strong>{finding.code.replaceAll("_", " ")}</strong> —{" "}
-                        {finding.message}
-                        {finding.row_number
-                          ? ` (row ${finding.row_number})`
-                          : ""}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No validation findings.</p>
-                )}
-                {reviewedRequest ? (
-                  <button
-                    className="primary-button"
-                    disabled={save.isPending}
-                    onClick={() => save.mutate(reviewedRequest)}
-                    type="button"
-                  >
-                    {save.isPending ? "Saving…" : "Save validated portfolio"}
-                  </button>
-                ) : null}
-              </section>
-            ) : null}
           </div>
         </dialog>
       ) : null}
