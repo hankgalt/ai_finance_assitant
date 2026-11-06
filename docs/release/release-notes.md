@@ -19,7 +19,9 @@
 The final M8 report passed EVAL-01 through EVAL-18 with zero critical failures or incomplete gates.
 The M9-regenerated qualification has 274 backend tests, 35 frontend tests, nine browser journeys,
 real Qdrant, and real Redis checks passing. Backend coverage is 87.28%. M9 adds measured frontend line coverage of
-80.25% and closes the previous "coverage unavailable" risk. The final M9 command record is in the
+80.25% and closes the previous "coverage unavailable" risk. A 2026-11-05 test-only update raised
+backend coverage to 91.39% and frontend coverage to 93.70% lines and 92.74% statements across every
+application module; see the [coverage report](../evidence/m8/coverage.md). The final M9 command record is in the
 [clean-start record](../evidence/m9/clean-start-record.md).
 
 ## Compatibility and upgrade notes

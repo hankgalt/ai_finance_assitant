@@ -25,9 +25,10 @@ mutation tools.
 
 ## Coverage and substitution statement
 
-Backend coverage is 87.28%. Frontend V8 coverage is 80.25% lines, 78.43% statements, 64.47%
-branches, and 73.79% functions. Only the line measure meets the transcribed 80% fallback; neither
-suite reaches the 90% “Excellent” target. Risk-critical arithmetic, access, redaction, and event
+As of 2026-11-05, backend coverage is 91.39%. Frontend V8 coverage, measured across every
+application module, is 93.70% lines, 92.74% statements, 92.38% functions, and 77.00% branches. Both
+suites meet the transcribed 90% “Excellent” target by lines and statements; frontend branch
+coverage does not. See the [coverage report](../m8/coverage.md). Risk-critical arithmetic, access, redaction, and event
 truth retain specific behavioral gates independent of aggregate coverage.
 
 React replaces the named Streamlit option and Qdrant replaces FAISS for the reasons in the

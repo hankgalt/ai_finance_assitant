@@ -20,8 +20,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       reportsDirectory: "../backend/artifacts/quality/frontend-coverage",
+      // Measure every application module, including ones no test imports.
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/test/**", "src/vite-env.d.ts"],
       thresholds: {
-        lines: 80,
+        lines: 90,
+        statements: 90,
       },
     },
   },

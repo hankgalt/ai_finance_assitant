@@ -34,6 +34,7 @@ settings, not enforced after export. Live-provider display/retention rights rema
 Proposed ADR-030 and M11 plan a private multi-user GCP deployment but do not change these current
 release limitations until their implementation and qualification evidence passes.
 
-Frontend coverage meets the transcribed 80% fallback target by lines (80.25%) but not the 90%
-"Excellent" target; statements (78.43%), branches (64.47%), and functions (73.79%) are reported
-separately and are not misrepresented as 80%+. Backend coverage is 87.28%, also below 90%.
+Backend coverage is 91.39% and frontend coverage is 93.70% lines and 92.74% statements, meeting
+the transcribed 90% "Excellent" target. Frontend branch coverage (77.00%) remains below 90% and is
+reported separately. Real Qdrant and Redis behavior is still proven only by the opt-in marked
+integration tests; the CI coverage for those adapters uses deterministic fakes.

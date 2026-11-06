@@ -68,10 +68,15 @@ def test_packaged_samples_match_their_checksums() -> None:
         assert hashlib.sha256(content).hexdigest() == dataset["sha256"]
 
 
-def test_frontend_measured_line_coverage_meets_fallback_target() -> None:
-    coverage_path = REPO_ROOT / "backend/artifacts/quality/frontend-coverage/coverage-summary.json"
-    coverage = json.loads(coverage_path.read_text(encoding="utf-8"))
-    assert coverage["total"]["lines"]["pct"] >= 80
+def test_recorded_coverage_meets_the_excellent_target() -> None:
+    frontend_path = REPO_ROOT / "backend/artifacts/quality/frontend-coverage/coverage-summary.json"
+    frontend = json.loads(frontend_path.read_text(encoding="utf-8"))["total"]
+    backend_path = REPO_ROOT / "backend/artifacts/quality/backend-coverage.json"
+    backend = json.loads(backend_path.read_text(encoding="utf-8"))["totals"]
+
+    assert frontend["lines"]["pct"] >= 90
+    assert frontend["statements"]["pct"] >= 90
+    assert backend["percent_covered"] >= 90
 
 
 def test_mcp_release_surface_is_explicitly_read_only() -> None:
