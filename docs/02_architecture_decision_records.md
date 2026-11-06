@@ -1,6 +1,6 @@
 # AI Finance Assistant — Architecture decision records
 
-Version 1.8 | Status: Product architecture baseline through the private-demo release | 2026-11-02
+Version 1.9 | Status: Product architecture baseline plus proposed private multi-user deployment | 2026-11-05
 
 The existing single-file register is retained to avoid unnecessary file churn. “Accepted” records are architectural constraints; “Proposed” records require validation during the named milestone. Proof references are future completion evidence, not claims of implementation.
 
@@ -153,6 +153,59 @@ capability then spans several unrelated delivery folders. Duplicating or symlink
 both taxonomies was rejected because it creates competing sources of truth and weakens path and
 checksum validation.
 
+### ADR-030: IAP-protected GCP private multi-user deployment — Proposed
+
+Deploy the Finance Assistant as an internet-routable but non-public application at
+`https://apps.comfforts.com/finance_assistant`, with Google Cloud as the target platform and Google
+Identity-Aware Proxy as the only browser authentication flow. IAP admits only the owner and
+explicitly approved Google Workspace or consumer Google accounts. FastAPI independently validates
+the signed IAP assertion, maps its issuer and subject to an immutable Application Principal, and
+authorizes every Session, Portfolio, Snapshot, Goal, Run, stream, History record, and Inspector view
+against that Principal. Email is admission and display metadata, not a resource-ownership key.
+Anonymous access, trusting unsigned IAP headers, frontend-only authorization, and adding a second
+`@react-oauth/google` login to this application are rejected because they either weaken the boundary
+or create competing identities.
+
+The application remains available locally through a separately configured, explicitly labeled
+local mode. The deployed path is served through an HTTPS load balancer with HTTP redirect, IAP, and
+no direct workload bypass. Application workloads are stateless with respect to authoritative user
+state; managed persistence, production Qdrant, response-cache topology, encryption, retention,
+backup/recovery, region, capacity, and cost ceilings must be selected and qualified before this ADR
+can be accepted. Finance and Tax collections continue to be built, evaluated, and activated by the
+offline knowledge workflow rather than application startup. Provider access remains governed by
+ADRs 024–026 and must be entitlement-aware for each Application Principal; this deployment decision
+does not create display, caching, or redistribution rights.
+
+The load balancer maps the exact `/finance_assistant` path and its descendants to a dedicated
+IAP-protected backend policy; unmatched paths fail closed. A future application on another path must
+use its own backend and authentication decision and cannot infer or reuse the Finance Assistant
+Principal. Because paths on one hostname share a browser origin, such an application also shares a
+browser trust boundary unless it moves to a separate hostname; that future application is outside
+M11.
+
+Terraform owns reproducible GCP resources, while GitHub Actions uses short-lived Workload Identity
+Federation rather than stored service-account keys for validated plan, build, and approval-gated
+deployment workflows. DNS changes at the external registrar may remain a documented operator step.
+Implementation assets and evidence are organized under durable identity/access, persistence,
+knowledge, infrastructure, observability, quality, and release ownership in accordance with
+ADR-029; `M11` appears only in planning and historical delivery evidence. M11 must validate
+cross-Principal denial across every product experience, IAP-bypass resistance, migration and
+rollback, collection promotion/rollback, retention/deletion, backup/restore, provider gates,
+monitoring, capacity, and clean deployment before this proposal may become Accepted.
+
 ## Decision register still open
 
-The following are not silently decided by these records: a future public deployment target; identity provider; public/managed persistence stores, including a managed/public response-cache topology; commercial/public market and news rights; production Qdrant hosting mode; initial institution-specific Cash-flow import profiles; and authoritative coursework rubric interpretations. M1 resolved the initial representation and ranking experiment; ADR-021 resolves initial multi-currency behavior, short positions, and the diversification heuristic; ADR-022 resolves that cash-flow import does not depend on a provider; ADR-023 resolves the private demonstration posture; ADR-024 resolves the initial adapters and safe default; ADR-025 resolves explicit Alpha Vantage/Massive selection without claiming shared-demo or public-production data rights; ADR-003 and ADR-026 resolve the private-demo SQLite checkpoint/application/provider-cache stores and initial historical-cache policies without approving a public store or provider rights; ADR-027 resolves the local Active/Archived/permanent-deletion Session lifecycle without approving indefinite retention; ADR-028 resolves only the bounded private-demo response-cache policy for standalone public Finance and U.S. Tax education and leaves broader agent eligibility, public hosting, and production retention for later measured decisions; ADR-029 changes committed repository ownership without moving ignored runtime state. Remaining decisions require measured or contractual evidence in their owning milestone.
+The following are not silently decided by these records: acceptance of the proposed GCP deployment
+topology; exact managed application/checkpoint/provider-cache and response-cache stores; production
+Qdrant hosting mode; regions, retention, backup/recovery, capacity, and cost ceilings; commercial
+market-data rights for approved viewers; initial institution-specific Cash-flow import profiles; and
+authoritative coursework rubric interpretations. M1 resolved the initial representation and ranking
+experiment; ADR-021 resolves initial multi-currency behavior, short positions, and the
+diversification heuristic; ADR-022 resolves that cash-flow import does not depend on a provider;
+ADR-023 resolves the initial private demonstration posture; ADRs 024–026 resolve provider adapters
+and private-demo cache policy without granting shared market-data rights; ADR-027 resolves the local
+Session lifecycle without approving indefinite retention; ADR-028 resolves only the bounded
+private-demo response-cache policy; ADR-029 makes capability ownership durable; and proposed ADR-030
+names the deployment and identity direction without representing it as implemented or accepted.
+Remaining decisions require measured, operational, or contractual evidence in their owning
+capability and M11 acceptance gate.

@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 2.9 | Status: M0–M9.1 complete; M10 planned | 2026-11-02
+Version 3.0 | Status: M0–M9.1 complete; M10 and M11 independently planned | 2026-11-05
 
 ## 1. Delivery rules
 
@@ -16,6 +16,12 @@ Every milestone delivery report must include:
 6. evidence artifact paths;
 7. security/privacy impact and known limitations;
 8. unresolved decisions and the next permitted milestone.
+
+Milestones sequence delivery; they no longer define repository ownership. New implementation,
+Terraform, workflow, contract, fixture, test, and evidence paths use the product capability or
+release/quality owner defined by [the repository layout](repository_layout.md). Milestone identifiers
+belong only in this plan, delivery reports, and historical evidence. Do not create `m10`, `m11`, or
+equivalent milestone-owned implementation directories.
 
 Cash flow remains a planned enhancement: M2 reserves and tests its interface shape, and post-release M10 implements provider-independent CSV/JSON bank and credit-card imports. The initial release prioritizes investment portfolios and complete behavior for all six agents.
 
@@ -329,6 +335,125 @@ verification commands/results, security/privacy statement, and unresolved limita
 
 **Evidence:** Cash-flow import and calculation policy versions, profile registry, canonical schema, valid/adversarial fixture manifest, hand-worked reconciliation goldens, API and lifecycle reports, test/coverage results, UI evidence, privacy data-flow review, redaction report, limitations, and a delivery report.
 
+### M11 — IAP-protected GCP private multi-user deployment
+
+M11 is an independent post-release production-hardening track. It may proceed before, after, or in
+parallel with M10 and must not imply that cash-flow import is implemented. Its first slice is
+documentation-only: proposed ADR-030, the requirements/design/evaluation updates, deployment threat
+boundaries, open owner decisions, and rollback gates. Later slices may begin only after their
+dependencies and ADR-030 validation questions are resolved.
+
+**Deliverables**
+
+- A versioned `/finance_assistant` base-path contract covering React routes and assets, REST,
+  replayable SSE, redirects, health/readiness, generated URLs, and reverse-proxy behavior while
+  preserving an explicit loopback local-development mode.
+- IAP-only browser authentication for the deployed Finance Assistant. FastAPI validates the signed
+  IAP assertion and maps its issuer/subject to an immutable Application Principal with owner or
+  approved-viewer role; email is not a resource-ownership key.
+- Per-Principal authorization and durable ownership for Assistant Sessions/checkpoints, Portfolios,
+  enrichments/Snapshots, Market context, Goals, History, Runs/RunEvents, streams, idempotency, cache
+  namespaces, deletion, and Inspector access. Shared knowledge remains read-only, and any shared
+  provider observation or cache entry requires an approved non-user-specific policy.
+- Stateless deployable frontend/backend images plus selected managed application/checkpoint storage,
+  production Qdrant, Redis topology, secret management, encryption, migrations, retention jobs,
+  backup/restore, readiness, observability, quotas, and cost controls. Exact GCP services, region,
+  sizing, and retention periods require the owner decisions and validation named by ADR-030.
+- Capability-owned Terraform for the GCP foundation, workload identity, Artifact Registry,
+  workloads, networking, load balancer, IAP, managed data services, Secret Manager, monitoring,
+  budgets, HTTPS, and no-direct-workload-bypass controls. Registrar/DNS actions that cannot be owned
+  by Terraform remain explicit, reviewable operator steps.
+- Capability- and release-owned GitHub Actions for deterministic CI, dependency/secret/container/IaC
+  scanning, image publication, Terraform validation/plan, approval-gated apply/deploy, migration,
+  smoke verification, and rollback. GCP authentication uses Workload Identity Federation and stores
+  no long-lived service-account key in GitHub.
+- A production knowledge-release workflow that transfers immutable collection artifacts to the
+  selected Qdrant service, verifies manifests/schema/models/qrels, activates aliases only after the
+  fixed gates pass, and proves rollback. Application startup continues to perform readiness checks
+  only and never fetches sources or generates embeddings.
+- An HTTPS deployment at `https://apps.comfforts.com/finance_assistant` behind a Google Cloud load
+  balancer and IAP custom External OAuth client, with the owner and explicitly approved Workspace or
+  Gmail viewers allow-listed. Plain HTTP redirects to HTTPS; anonymous access and direct workload
+  URLs are denied.
+- A deployment threat review and release-qualification package covering identity, cross-Principal
+  isolation, provider entitlements, file handling, privacy/redaction, retention/deletion,
+  backup/restore, availability, capacity, alerting, incident response, DNS/certificate and IAM
+  rollback, application/data migration rollback, and collection rollback.
+
+**Dependencies:** Completed M9.1 capability-layout maintenance plus accepted ADR-019 and ADR-029.
+The documentation slice creates proposed ADR-030. Application access/isolation requires approval of
+the IAP Principal and tenancy model. Managed-state, infrastructure, data-migration, and deployment
+slices require the corresponding owner decisions and successful prototypes named in ADR-030. M11
+has no dependency on M10, and M10 has no dependency on M11 unless a later decision explicitly adopts
+M11 managed persistence for the cash-flow capability.
+
+**Ordered slices and stop gates**
+
+1. Record proposed ADR-030, requirements, design, evaluation, capability ownership, open decisions,
+   and promotion/rollback gates. No runtime or cloud control is claimed by this slice.
+2. Implement `/finance_assistant`, verified IAP identity, Application Principal mapping, and complete
+   per-Principal application authorization. Stop until the two-Principal negative matrix passes.
+3. Replace local-only runtime assumptions with selected managed-state, secret, migration, retention,
+   readiness, backup/restore, telemetry, and stateless-workload behavior. Stop until recovery and
+   privacy tests pass against the real adapter seams.
+4. Establish deterministic GitHub CI, artifact provenance, security scanning, Workload Identity
+   Federation, and approval boundaries before permitting automated cloud deployment.
+5. Provision and validate staging GCP infrastructure through Terraform, including the no-direct-
+   workload-bypass boundary, before any production/demo cutover.
+6. Transfer, validate, activate, and roll back the versioned Finance and Tax collections in the
+   selected production Qdrant topology.
+7. Deploy to staging, then configure HTTPS, external DNS, IAP OAuth branding/allow-list, and
+   `apps.comfforts.com/finance_assistant`; promote only the pinned qualified revision.
+8. Run the integrated security, privacy, recovery, capacity, cost, accessibility, observability, and
+   release qualification. Security controls and tests are implemented in every earlier slice; this
+   final slice verifies the assembled system rather than adding security after deployment.
+
+**Owner decisions required before implementation slices**
+
+- Before application access/isolation: approve the owner/viewer role matrix and revocation behavior;
+  decide whether the existing local Sessions, Portfolios, Snapshots, and Goals migrate to the owner
+  Principal or the deployed store starts empty; approve the local-development identity fixture; and
+  decide whether local navigation also uses `/finance_assistant` or keeps a documented root-path
+  convenience mode.
+- Before managed-state and infrastructure work: identify the GCP organization/project and billing
+  owner, preferred region and cost ceiling, selected workload/database/Qdrant/Redis services,
+  retention and backup objectives, GitHub environment approvers, and staging/production separation.
+- Before cutover: provide registrar/DNS authority, the final approved-viewer list, OAuth branding and
+  public privacy/support URLs, provider modes/entitlements per role, and the maintenance/incident
+  contact. Credentials and secret values are supplied only through their approved secret systems,
+  never through planning documents or repository files.
+
+**Acceptance:** The internet-facing edge admits only allow-listed Google identities, FastAPI rejects invalid
+or bypassed IAP assertions, and two approved viewers cannot read, mutate, stream, resume, inspect,
+archive, delete, or infer each other's resources across any product experience. The deployed path
+and all generated assets/interfaces work under `/finance_assistant`; direct workload access is
+denied. Authoritative state survives restart and controlled rollout, retention/deletion and
+backup/restore are enforced, active RAG collections pass the fixed qualification and rollback gates,
+provider data is selected and displayed only within recorded rights, and measured capacity/cost/SLO
+targets pass. CI/CD deploys a pinned reviewed revision through short-lived identity and supports a
+tested application, infrastructure, schema, and collection rollback. No control is called
+operational until the deployed evidence passes, and accepting ADR-030 requires the final threat and
+release review.
+
+**Tests:** Base-path/static-asset/API/SSE/browser navigation; signed-IAP assertion signature,
+issuer/audience/expiry and unsigned-header rejection; owner/viewer/disabled/unknown identities;
+cross-Principal matrix tests for every resource and lifecycle operation; guessed identifiers,
+idempotency, concurrent Sessions, stream reconnect, Inspector, cache and administrative boundaries;
+migration/restart/retention/deletion; backup/restore and disaster rehearsal; Qdrant transfer,
+readiness, activation and rollback; Redis/provider/telemetry outage and privacy behavior; Terraform
+format/validate/plan/policy and URL-map tests; direct-origin bypass, TLS, headers, CSRF/XSS/SSRF,
+malicious imports and prompt injection; container/dependency/secret/IaC scans; staging smoke,
+supported-browser accessibility, load/soak, cost/quota/alert, deploy and rollback tests.
+
+**Evidence:** Proposed/accepted ADR-030 history; identity and authorization matrix; data inventory and
+threat model; migration and rollback transcripts; Terraform plans and drift checks; CI/CD
+attestations and image digests; collection manifests/evaluations/activation records; provider-rights
+matrix; backup/restore, load/cost/SLO and incident-response reports; correlated privacy-filtered
+telemetry; DNS/TLS/IAP and no-bypass verification; clean staging/production deployment record; known
+limitations; and an explicit private multi-user release recommendation. Current artifacts live under
+their capability, `backend/artifacts/quality/`, or `backend/artifacts/release/`; milestone delivery
+reports link to those single sources of truth.
+
 ## 3. Dependency sequence
 
 ~~~text
@@ -339,9 +464,13 @@ M1 + M2 + M3 → M4
 M4 → M4.1 → M5 → M6 → M7 → M6.1
 M1–M7 + M4.1 + M6.1 → M8 → M9 → M9.1
 M2 + M5 + M6 → M10 after M9 release approval
+M9.1 → M11, independent of M10
 ~~~
 
 M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. M7 renders generic persisted RunEvents first. M6.1 later emits response-cache activity through that existing tool-event contract, and M8 independently qualifies both features for release. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M9.1 changes repository ownership after the release without changing product behavior. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
+M11 is a separate production-hardening and deployment track rooted in the M9.1 product-oriented
+layout. It may be delivered before or in parallel with M10. Security, isolation, and rollback tests
+arrive with their owning M11 slice rather than being deferred to final qualification.
 
 ## 4. Mapping from the previous milestone plan
 
@@ -359,10 +488,11 @@ M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 wh
 | Old M8: MCP tools | New M9 | Kept as a coursework release obligation after validated core modules |
 | Old M9: documentation and demo | New M9 | Preserved and broadened into product release packaging |
 | Previously unsequenced PR-016 cash-flow implementation | New M10 | Adds a provider-independent JSON/CSV path after the initial/coursework release while preserving the M2 domain seam |
+| Previously unsequenced private multi-user GCP deployment | New M11 | Adds IAP identity, per-Principal authorization, managed infrastructure, production knowledge deployment, CI/CD, and release qualification without depending on or reorganizing around M10 |
 | Old M10: optional hybrid retrieval or voice | New M1 evaluation and future backlog | Hybrid retrieval is evaluated as a retrieval strategy, not bonus theater; voice remains out of initial scope |
 
 ## 5. Release sequencing and stop conditions
 
-The **initial product release** requires M0 through M8, including M4.1 and M6.1, plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the planned post-release cash-flow implementation; it does not delay either release and does not require a banking-data provider. Public availability and remaining production-hardening controls stay out of scope until separately approved.
+The **initial product release** requires M0 through M8, including M4.1 and M6.1, plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the independent post-release cash-flow implementation and does not require a banking-data provider. M11 is the independent post-release private multi-user deployment and production-hardening track. Neither M10 nor M11 delays the other; anonymous public availability remains out of scope unless separately approved.
 
 Stop a milestone when a critical dependency, source-use right, data-integrity policy, security decision, or external authority is missing. Record the blocker rather than substituting invented data, bypassing a gate, or weakening the requirement. Near-complete work is not milestone completion.

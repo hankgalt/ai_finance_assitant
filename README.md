@@ -15,7 +15,9 @@ AI Finance Assistant is a U.S.-focused financial education and analysis product.
 - Responsive product/Inspector experiences, and
 - A four-tool read-only MCP stdio adapter. 
 
-It does not provide approved public-provider rights, public multi-user controls, professional financial or tax advice, or M10 cash-flow import.
+It does not yet provide approved public-provider rights, private multi-user deployment controls,
+professional financial or tax advice, or M10 cash-flow import. M11 documents but has not implemented
+the IAP-protected GCP deployment.
 
 The planned initial release is a production-oriented private demonstration release for the owner and approved viewers, not a public launch. Live provider demonstrations must remain within approved API terms and configured quotas; a separately selected credential-free mode remains reproducible and clearly labeled synthetic.
 
@@ -49,7 +51,9 @@ Read [docs/release/developer-guide.md](docs/release/developer-guide.md), [docs/r
 - Measured React Flow Inspector, qualified Finance/Tax Redis semantic cache, and read-only MCP stdio tools for education retrieval, quote lookup, in-memory Portfolio analysis, and Goal projection.
 - Full release qualification plus user/developer/operator, coursework, clean-start, coverage, and eight-minute credential-free demonstration evidence.
 
-Live providers are not enabled until the account-specific rights gate passes. The next planned product milestone is M10 provider-independent bank/card cash-flow import.
+Live providers are not enabled until the account-specific rights gate passes. The independently
+planned post-release tracks are M10 provider-independent bank/card cash-flow import and M11
+IAP-protected GCP private multi-user deployment; either may proceed first.
 
 ## Prerequisites
 

@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.7 | Status: M0–M9.1/M6.1 complete; M10 planned | 2026-11-02
+Version 2.8 | Status: M0–M9.1/M6.1 complete; M10 and M11 independently planned | 2026-11-05
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -55,12 +55,17 @@ If documents conflict, use this precedence: product requirements, accepted ADRs,
 - **Private demonstration release:** production-oriented initial release operated only for the owner and approved viewers in a controlled local or private environment; it is not a public launch.
 - **Coursework release:** submission-specific deliverables and grading evidence. These are mandatory for submission even if they are not enduring product constraints.
 - **Planned enhancement:** architecturally acknowledged work that is not part of the initial release.
-- **Production hardening:** required before exposing the product as a public multi-user service, but not represented as implemented in the initial local release.
+- **Private multi-user deployment:** an internet-routable deployment protected by strong identity,
+  an explicit allow-list, and per-Principal authorization; it is not anonymous public access. M11
+  plans this posture but does not make it operational until qualification passes.
+- **Production hardening:** required before operating outside the initial local release, including
+  the private multi-user boundary planned in M11; proposed or documented controls are not represented
+  as implemented.
 - **Out of scope:** excluded unless separately approved.
 
 All controls and capabilities in these documents are requirements or designs until supported by completion evidence from the implementation plan. Documentation must not describe an unimplemented control as operational.
 
 ## Traceability convention
 
-Product requirements use PR and QR identifiers. Coursework criteria use CA identifiers. Decisions use ADR identifiers. Milestones use M0 through M10, with M4.1 and M6.1 as explicitly sequenced intermediate gates. Evaluation cases use EV identifiers. The requirements specification contains the cross-document traceability matrix; the coursework document contains the source-to-product mapping.
+Product requirements use PR and QR identifiers. Coursework criteria use CA identifiers. Decisions use ADR identifiers. Milestones use M0 through M11, with M4.1 and M6.1 as explicitly sequenced intermediate gates. M10 and M11 are independent post-release tracks. Evaluation cases use EV identifiers. The requirements specification contains the cross-document traceability matrix; the coursework document contains the source-to-product mapping.
 

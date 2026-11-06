@@ -1,7 +1,8 @@
 # Product-oriented repository layout
 
-Status: Authoritative under ADR-029  
-Updated: 2026-11-02
+Status: Authoritative under ADR-029; proposed deployment additions under ADR-030
+
+Updated: 2026-11-05
 
 The repository is organized by durable product capability and interface. Milestones describe
 delivery history in `docs/`; they are not ownership boundaries for current machine-readable assets.
@@ -16,6 +17,9 @@ delivery history in `docs/`; they are not ownership boundaries for current machi
 - `backend/tests/` names the behavior or capability under test. A delivery milestone is not a test
   subject.
 - `docs/*_delivery_report.md` and `docs/evidence/` retain milestone history and coursework evidence.
+- `infrastructure/`, `.github/workflows/`, deployment contracts, and their tests are owned by the
+  infrastructure, identity/access, delivery, or release capability. They never live under a
+  milestone-named implementation directory.
 - A path move is complete only when code defaults, Make targets, manifests, checksums, tests,
   documentation, and release audits all resolve to the new path.
 
@@ -46,3 +50,23 @@ delivery history in `docs/`; they are not ownership boundaries for current machi
 Capability directories may contain internal subdirectories when they improve locality, such as one
 directory per knowledge base. Do not duplicate an artifact across capability and milestone trees;
 the delivery report links to its single current location.
+
+## Planned private multi-user deployment ownership
+
+Proposed ADR-030 and M11 may add the following capability-owned paths after their owning decisions
+are approved. This table reserves ownership, not implementation status.
+
+| Path | Owner |
+| --- | --- |
+| `backend/src/ai_finance_assistant/identity/` | Verified external identity, Application Principal, roles, and per-resource authorization policy |
+| `contracts/deployment/` | Base-path, identity-claim, readiness, migration, and deployment interface contracts |
+| `backend/data/qualification/deployment/` | Deterministic identity, isolation, migration, recovery, and deployment qualification inputs |
+| `backend/artifacts/quality/security/` | Cross-product identity, isolation, threat, scan, and penetration evidence |
+| `backend/artifacts/release/deployment/` | Terraform plans, image attestations, migration/rollback, staging, production, and release-decision evidence |
+| `infrastructure/terraform/` | Reusable GCP infrastructure modules and environment composition without committed secrets or state |
+| `.github/workflows/` | Capability checks, supply-chain validation, infrastructure plan, approval-gated deployment, and rollback orchestration |
+
+Tests continue to live under behavior-named backend/frontend/infrastructure test paths. For example,
+an IAP assertion test is named for signed-identity validation, not `test_m11`. Terraform state,
+runtime databases, credentials, downloaded collections, and environment-specific secret values are
+runtime/deployment state and are never committed as capability artifacts.

@@ -31,6 +31,8 @@ high availability, disaster recovery, WAF, distributed quota control, or public 
 SQLite, local unauthenticated Qdrant/Redis, Vite, and loopback FastAPI are appropriate only for the
 documented private-demo boundary. External telemetry retention and sampling are operator/vendor
 settings, not enforced after export. Live-provider display/retention rights remain account-specific.
+Proposed ADR-030 and M11 plan a private multi-user GCP deployment but do not change these current
+release limitations until their implementation and qualification evidence passes.
 
 Frontend coverage meets the transcribed 80% fallback target by lines (80.25%) but not the 90%
 "Excellent" target; statements (78.43%), branches (64.47%), and functions (73.79%) are reported

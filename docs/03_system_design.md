@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.15 | Status: Product architecture baseline through M7 with implemented M6.1 response-cache seam | 2026-10-31
+Version 1.16 | Status: Product baseline plus proposed M11 private multi-user deployment | 2026-11-05
 
 ## 1. Architecture principles
 
@@ -350,7 +350,25 @@ Data classes and initial local policy:
 | Durable provider cache | Reliability, quota control, and reusable historical ranges | Normalized historical bars survive restart; recent bars are revalidated; quote/news retention stays endpoint-specific; local owner-only long retention requires explicit unverified-rights risk acceptance | Server only; provider/schema/policy scoped, administratively purgeable, and never presented without provenance |
 | Model response cache | Reduce repeated model latency/cost for qualified standalone public Finance Q&A and U.S. Tax Education | Optional non-persistent loopback Redis; maximum 24-hour TTL; current domain evidence is rechecked before generation reuse; Tax is exactly year/jurisdiction partitioned | Server only; opaque Session/version/evidence scoped; purged on archive/deletion or administratively; no raw Session/Run identifiers, context references, or financial/provider payloads |
 
-The local demo is unauthenticated only when explicitly configured and bound for local use. Opaque identifiers are not authentication. Every resource lookup and stream still checks Session scope to prevent accidental cross-session leakage. A public deployment requires the ADR-019 production controls before release.
+The local demo is unauthenticated only when explicitly configured and bound for local use. Opaque identifiers are not authentication. Every resource lookup and stream still checks Session scope to prevent accidental cross-session leakage. Any non-loopback multi-user or public deployment requires the ADR-019 production controls before release.
+
+### Proposed private multi-user identity and authorization boundary
+
+M11 proposes an internet-routable but non-public deployment behind Google IAP. IAP performs browser
+authentication and coarse allow-list admission; it is not the resource-authorization layer. FastAPI
+validates `x-goog-iap-jwt-assertion` for the configured audience and derives an immutable Application
+Principal from the verified issuer and subject. Unsigned identity headers, email addresses, Session
+identifiers, and frontend state are not proof of identity. The owner and each approved viewer have a
+separate Principal and role; an email change does not transfer ownership.
+
+Every Session, checkpoint, Run, RunEvent, Portfolio, enrichment, Snapshot, Goal, authorized context,
+idempotency record, stream cursor, History operation, and Inspector lookup is owned or explicitly
+shared by policy and checked against the current Principal. Missing ownership and cross-Principal
+lookups fail closed without revealing whether another Principal's resource exists. Shared Finance and
+Tax knowledge collections remain read-only product data. Caches may be shared only when their policy
+contains no user context and provider/content rights allow it; the existing response-cache policy
+remains Session-scoped. Local unauthenticated mode stays a separate loopback-only configuration and
+cannot be enabled by a deployed environment fallback.
 
 M5 local persistence uses application schema version 3 in SQLite with foreign keys, WAL for file-backed databases, a five-second busy timeout, and transactional migrations. Version 2 adds nullable `archived_at` state to Sessions; version 3 adds nullable `request_message` to Runs so new conversation history can display the submitted question while legacy Runs remain readable. Application tables store Sessions, Runs, privacy-filtered RunEvents, saved Portfolios, Snapshots, authorized agent contexts, idempotency records, normalized market bars, and range coverage. The official LangGraph SQLite saver uses a dedicated connection to the same local file and strict allow-listed checkpoint deserialization. Startup rejects a newer schema, purges expired application/cache records, and removes expired Session checkpoint threads. Archiving preserves Session-owned records and checkpoints; permanent Archived Session deletion cascades user artifacts, including submitted Run messages, and explicitly deletes its checkpoint thread. Provider cache purge is a separately token-protected local administrative operation.
 
@@ -412,6 +430,21 @@ knowledge/
   manifests/           versioned non-secret ingestion metadata
   fixtures/            permitted small test content
 docs/
+infrastructure/
+  terraform/           capability-owned GCP modules and environment composition
+.github/workflows/      CI, security qualification, plan, deploy, and rollback workflows
 ~~~
 
-The layout is conceptual and can be refined without changing the interfaces. The initial development topology uses separate Vite, FastAPI, Qdrant, and ingestion commands/processes. The release target is a production-oriented private demonstration release, not a public deployment or claim of regulatory approval. Credential-free demo mode uses labeled deterministic adapters. Live-demo mode is separately selected, performs provider readiness and configured-budget checks, uses only approved credentials and entitlements, and never silently substitutes synthetic results. Public hosting, identity, stores, encryption, availability objectives, and compliance posture remain unresolved.
+The layout is conceptual and can be refined without changing the interfaces. Durable implementation,
+infrastructure, contracts, tests, and evidence are capability-owned under ADR-029; milestone names
+appear only in plans and historical delivery records. The current development topology uses separate
+Vite, FastAPI, Qdrant, Redis, and ingestion commands/processes and remains the qualified local
+private-demo release.
+
+Proposed ADR-030 and M11 select the GCP/IAP/base-path direction but do not represent it as operational.
+The exact workload, managed application/checkpoint/provider-cache and response-cache stores,
+production Qdrant topology, region, encryption, retention, backup/recovery, capacity, SLO, and cost
+configuration remain validation decisions. The deployed design must keep knowledge ingestion and
+activation separate from runtime, deny direct workload bypass, and retain explicitly selected
+credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
+the proposal.

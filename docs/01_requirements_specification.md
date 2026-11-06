@@ -1,6 +1,6 @@
 # AI Finance Assistant — Product requirements specification
 
-Version 1.6 | Status: Product architecture baseline through M6 plus implemented M6.1 response-cache seam | 2026-10-31
+Version 1.7 | Status: Product baseline plus independent M10/M11 planned capabilities | 2026-11-05
 
 ## 1. Mission and product posture
 
@@ -14,7 +14,7 @@ Product requirements are defined here. Submission-specific obligations are defin
 
 Primary users are individuals learning financial concepts, beginner-to-intermediate investors reviewing self-entered portfolios, and people exploring savings or investment goal scenarios. The product should explain terminology and uncertainty without assuming professional expertise.
 
-The **initial release** includes all six agents, persistent knowledge retrieval, portfolio analysis, goal projections, market and news integrations, the React application, FastAPI integration, and the Agent Execution Inspector. It is delivered as a **private demonstration release**: engineered with production-oriented boundaries and evidence, but operated only in a controlled local or private environment for the owner and approved viewers. It is not a public launch. **Production hardening** requirements apply before public multi-user deployment. Personal cash flow is a **planned enhancement** with a stable interface designed during the initial release but no required end-user implementation.
+The **initial release** includes all six agents, persistent knowledge retrieval, portfolio analysis, goal projections, market and news integrations, the React application, FastAPI integration, and the Agent Execution Inspector. It is delivered as a **private demonstration release**: engineered with production-oriented boundaries and evidence, but operated only in a controlled local or private environment for the owner and approved viewers. It is not a public launch. Personal cash flow is a **planned enhancement** with a stable interface designed during the initial release but no required end-user implementation. M11 separately plans an IAP-protected **private multi-user deployment** at an internet-routable URL. That posture requires production hardening and per-Principal authorization but is still not anonymous public access. M10 and M11 are independent post-release tracks.
 
 ## 3. Product functional requirements
 
@@ -36,6 +36,7 @@ The **initial release** includes all six agents, persistent knowledge retrieval,
 | PR-014 | Initial | Provide sample datasets, reproducible local development, product documentation, evaluation artifacts, and private-demo release instructions | A clean-environment verification record identifies exact commands, versions, results, limitations, provider mode, and a quota-safe demonstration path |
 | PR-015 | Coursework release | Expose approved read-only capabilities through MCP using the same validation and deterministic modules as the web application | Protocol and external-client tests demonstrate no bypass of authorization, validation, or provenance |
 | PR-016 | Planned enhancement | Add personal cash flow analysis from user-controlled, versioned JSON or CSV bank and credit-card imports as a deterministic domain module available to authorized agents, not as a seventh LLM agent | Equivalent JSON/CSV inputs produce reproducible normalized transactions, reconciliation, summaries, and authorized goal context without requiring a financial-data provider or changing existing agent identities |
+| PR-017 | Production hardening | Deploy the existing product at `https://apps.comfforts.com/finance_assistant` behind Google IAP for the owner and approved Google accounts, with per-Principal isolation, managed protected state, offline-promoted RAG collections, reproducible Terraform, short-lived CI/CD identity, and measured rollback/security qualification | IAP-bypass and cross-Principal tests pass across every experience; the base path, managed-state lifecycle, collection activation/rollback, clean deployment, backup/restore, provider gates, and application/infrastructure rollback are evidenced before the deployment is approved |
 
 ## 4. Six-agent product contract
 
@@ -186,7 +187,8 @@ Brokerage execution, automated financial transactions, custody, bank aggregation
 | PR-014 | ADR-011; docs index | M8–M9 | clean-environment and product release audit |
 | PR-015 | ADR-010; coursework criteria | M9 | MCP protocol/client and coursework evidence |
 | PR-016 | ADR-020/022; design §13 | Interface in M2; provider-independent implementation in M10 | cash-flow import, reconciliation, lifecycle, and summary suites |
-| QR-001–QR-015 | ADR-011/012/019/028; design §12 | Every milestone, including M6.1; consolidated M8 | security, quality, reliability, response-cache, and benchmark suites |
+| PR-017 | ADR-019/029 and proposed ADR-030; design §12/14 | M11, independent of M10 | EVAL-13/18–20 plus identity, deployment, recovery, and rollback suites |
+| QR-001–QR-015 | ADR-011/012/019/028 and proposed ADR-030; design §12 | Every milestone, including M6.1 and M11; consolidated M8 for the initial release and M11 qualification for deployment | security, quality, reliability, response-cache, deployment, and benchmark suites |
 
 ## 12. Resolved conflicts and open decisions
 
@@ -200,7 +202,8 @@ Resolved architectural conflicts:
 
 Open decisions that require implementation research or owner approval:
 
-- deployment target and the corresponding production identity, storage, encryption, and retention mechanisms;
+- acceptance of proposed ADR-030 and the exact GCP compute, managed storage, Qdrant, Redis, region,
+  encryption, retention, backup/recovery, capacity, and cost configuration for M11;
 - authoritative market and news providers, licensing, entitlements, cache terms, and fallback ordering;
 - Qdrant hosting mode, embedding and sparse models, distance metric, chunk policy, and relevance thresholds, chosen through M1 evaluation;
 - production FX-provider/conversion behavior and any future short-position model beyond the conservative ADR-021 initial policy;

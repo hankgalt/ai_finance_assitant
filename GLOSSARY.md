@@ -2,6 +2,9 @@
 
 **Account:** A user-declared financial container, such as a taxable brokerage account, traditional IRA, or Roth IRA. It is not an application login.
 
+**Application Principal:** The immutable product identity of one authenticated person, derived from a verified identity-provider issuer and subject. Email is mutable admission and display metadata, not the Principal's identity or a financial Account.
+_Avoid_: User email, login account, tenant email
+
 **Agent:** One of the six named LangGraph specialists that interprets a request, selects allowed tools, and returns a structured result. An agent is not the authority for financial arithmetic.
 
 **Collection version:** An immutable, validated snapshot of one logical knowledge base that can be activated or rolled back as a unit.
@@ -33,6 +36,9 @@
 **Portfolio snapshot:** A time-specific analytical result created from imported portfolio data, provider-enriched security information, and deterministic calculations.
 
 **Private demonstration release:** A production-oriented release operated only in a controlled local or private environment for the owner and approved viewers. It is not a public multi-user deployment.
+
+**Private multi-user deployment:** An internet-routable deployment that requires strong identity, admits only approved Application Principals, and isolates every Principal's resources. It is neither anonymous public access nor a public product launch.
+_Avoid_: Public deployment, public app
 
 **Pricing provenance:** The provider, retrieval time, market-data time, delay status, and cache status associated with a price.
 

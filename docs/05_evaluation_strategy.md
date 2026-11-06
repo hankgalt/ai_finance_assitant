@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.3 | Status: Product evaluation baseline including M6.1 response-cache qualification | 2026-10-31
+Version 1.4 | Status: Product baseline plus proposed M11 deployment qualification | 2026-11-05
 
 ## 1. Evaluation principles
 
@@ -30,6 +30,12 @@ Maintain reviewable datasets with stable case IDs:
 - UI/accessibility: deterministic end-to-end journeys, keyboard flows, and alternative chart/trace representations;
 - Inspector: synthetic schema fixtures and actual instrumented Runs with a backend truth record.
 - response cache: separate public Finance and U.S. Tax exact repeats, safe paraphrases, near misses, Tax year/jurisdiction changes, cross-Session non-reuse, ambiguous/personalized and non-RAG exclusions, evidence/version invalidation, malformed entries, archive/delete/administrative purge, expiry, outage, and concurrent-miss cases.
+- identity/authorization: signed-IAP claim cases plus owner, approved-viewer, disabled, unknown,
+  malformed, expired, wrong-issuer/audience, unsigned-header, guessed-resource, and two-Principal
+  matrices across every REST, SSE, History, deletion, cache, and Inspector boundary;
+- deployment/recovery: base-path and URL-map cases, Terraform plans/policies, direct-origin bypass,
+  schema and collection migrations, backup/restore, workload and collection rollback, staging smoke,
+  capacity/soak, quota/cost, alert, and incident-response rehearsals.
 
 Dataset size targets can grow after difficulty and independence review. Do not inflate corpus or test counts with paraphrases that exercise the same behavior.
 
@@ -57,6 +63,8 @@ Thresholds below are initial candidate gates. M8 must calibrate noncritical stat
 | EVAL-16 | Regression | Previously fixed defect and contract suites on every relevant change | No open critical regression; quarantine needs owner, rationale, and expiry |
 | EVAL-17 | Latency and API cost | p50/p95/end-to-end and per-module timing, provider/response-cache outcome, avoided/fetched provider ranges, avoided model calls/tokens, tokens, and monetary cost with availability/method | Actual cache-disabled/exact-hit/qualified-semantic-hit/near-miss baselines and configuration reported; milestone-approved budgets and response-cache false-hit gate must pass once set |
 | EVAL-18 | Persistence/privacy lifecycle | Restart, retention, administrative provider-cache purge, deletion, cross-session, and log/trace data-flow review | 100% isolation/deletion/purge critical cases pass; uploaded temporary data cleanup verified |
+| EVAL-19 | Identity and Principal isolation | Verified IAP assertion handling plus two-Principal authorization matrix over all product resources, streams, caches, lifecycle and administrative operations | Zero authentication bypass, cross-Principal disclosure/mutation/inference, unsigned-header trust, or resource-ID enumeration in critical cases |
+| EVAL-20 | Deployment, recovery and operations | Base-path/browser/API/SSE smoke, IaC policy and drift, artifact provenance, managed-state migration, backup/restore, application/infrastructure/collection rollback, capacity/cost/SLO and alert rehearsal | Clean staging and protected deployment pass; direct workload bypass is denied; every authoritative store and active collection has a tested recovery/rollback path; approved budgets and operational gates pass |
 
 ## 4. Retrieval evaluation and collection activation
 
@@ -144,7 +152,7 @@ Coverage is reported by backend/frontend suite and risk-critical module where po
 
 ## 10. Reports, regression, and release decision
 
-Continuous integration runs formatting, linting, type checks, unit/contract/integration tests with deterministic adapters, fast retrieval checks, and core frontend journeys. Scheduled/manual M8 evaluation runs the full datasets and produces machine-readable and human-readable reports, coverage, environment/configuration manifests, and failure samples.
+Continuous integration runs formatting, linting, type checks, unit/contract/integration tests with deterministic adapters, fast retrieval checks, and core frontend journeys. Scheduled/manual M8 evaluation runs the full datasets and produces machine-readable and human-readable reports, coverage, environment/configuration manifests, and failure samples. M11 adds capability-owned GitHub workflows for supply-chain and Terraform checks, staging/deployment qualification, and approval-gated promotion; the workflows and their evidence are not owned by a milestone directory.
 
 Block release for any open critical defect involving:
 
@@ -156,8 +164,11 @@ Block release for any open critical defect involving:
 - unsafe financial/tax representation;
 - Inspector execution fabrication;
 - loss of user data beyond the documented local durability mode.
+- invalid or bypassed deployed identity, cross-Principal access, or direct workload-origin access;
+- an untested or failed migration, backup/restore, infrastructure, application, or active-collection rollback;
+- provider data displayed outside the recorded account rights or Principal entitlement.
 
-Noncritical threshold exceptions require a named owner, impact, mitigation, approval, and expiry. M8 produces a product release recommendation; M9 separately audits coursework acceptance and packaging.
+Noncritical threshold exceptions require a named owner, impact, mitigation, approval, and expiry. M8 produces the initial product release recommendation; M9 separately audits coursework acceptance and packaging. M11 requires a new private multi-user deployment recommendation and cannot inherit the local release decision.
 
 ## 11. Evaluation risks
 
