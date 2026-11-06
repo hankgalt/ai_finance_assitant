@@ -57,7 +57,7 @@ or a partial response with an explicit warning.
 
 Run `cd backend && uv run pytest -q tests/test_mcp_adapter.py` or show its recorded result. Explain
 that the stdio client discovered and invoked four read-only tools over the same modules. Close with
-the M8 qualification report, backend 91.46% coverage, frontend 93.85% line coverage, and the public-
+the M8 qualification report, backend 91.55% coverage, frontend 93.85% line coverage, and the public-
 deployment limitations.
 
 ## Optional live variation

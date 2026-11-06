@@ -2,8 +2,8 @@
 
 ## Current (2026-11-05)
 
-Backend full regression: 6,974 of 7,625 statements covered, **91.46%** line/statement coverage
-(`uv run pytest --cov=ai_finance_assistant`; 334 passed, 1 skipped, 4 opt-in tests deselected).
+Backend full regression: 7,020 of 7,668 statements covered, **91.55%** line/statement coverage
+(`uv run pytest --cov=ai_finance_assistant`; 338 passed, 1 skipped, 4 opt-in tests deselected).
 The exact machine report is `backend/artifacts/quality/backend-coverage.json`.
 
 Frontend Vitest/V8 coverage now measures every application module under `frontend/src` (tests,

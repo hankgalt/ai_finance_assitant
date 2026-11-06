@@ -1,12 +1,16 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
+import httpx
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from pytest import MonkeyPatch
 
+from ai_finance_assistant.api import services as api_services
 from ai_finance_assistant.api.app import create_app
 from ai_finance_assistant.api.services import ApplicationServices
 from ai_finance_assistant.contracts.agents import AgentId
@@ -20,6 +24,9 @@ from ai_finance_assistant.llm.models import (
     RoutingReason,
     SynthesisModelRequest,
 )
+from ai_finance_assistant.providers.alpha_vantage import AlphaVantageMarketDataProvider
+from ai_finance_assistant.providers.ports import ProviderBundle
+from ai_finance_assistant.providers.tavily import TavilyNewsProvider
 
 LONG_EDUCATIONAL_NARRATIVE = " ".join(
     ["ETFs and mutual funds share features but differ in trading and pricing."] * 20
@@ -771,3 +778,151 @@ def test_administrative_provider_cache_purge_requires_token(tmp_path: Path) -> N
     assert denied.status_code == 403
     assert purged.status_code == 200
     assert purged.json()["deleted_bar_count"] > 0
+
+
+def test_market_page_requests_each_receive_a_fresh_provider_budget(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    quote_body = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "data/providers/market-data/alpha-vantage/quote.synthetic.v1.json"
+        ).read_text(encoding="utf-8")
+    )
+    calls: list[tuple[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        symbol = request.url.params["symbol"]
+        calls.append((request.url.params["function"], symbol))
+        body = {"Global Quote": {**quote_body["Global Quote"], "01. symbol": symbol}}
+        return httpx.Response(200, json=body)
+
+    provider_bundles: list[ProviderBundle] = []
+
+    def one_request_bundle(settings: Settings) -> ProviderBundle:
+        del settings
+        if provider_bundles:
+            return provider_bundles[0]
+        provider_bundles.append(
+            ProviderBundle(
+                market=AlphaVantageMarketDataProvider(
+                    api_key="secret-test-key",
+                    request_budget=1,
+                    terms_approved=True,
+                    client=httpx.Client(transport=httpx.MockTransport(handler)),
+                ),
+                news=TavilyNewsProvider(api_key=None),
+            )
+        )
+        return provider_bundles[0]
+
+    monkeypatch.setattr(api_services, "provider_bundle_from_settings", one_request_bundle)
+    app = create_app(
+        Settings(
+            mode="test",
+            storage_path=tmp_path / "market-budget.sqlite3",
+            provider_mode="credential_free",
+            model_mode="credential_free",
+            qdrant_url=None,
+            observability_mode="in_memory",
+            langsmith_tracing_enabled=False,
+        )
+    )
+    with TestClient(app) as local:
+        session_id = _session(local)
+        statuses = [
+            local.post(
+                f"/api/v1/sessions/{session_id}/market/quotes",
+                json={"symbol": symbol, "currency": "USD"},
+            ).json()["status"]
+            for symbol in ("DEMO", "VTI", "BND", "VTI")
+        ]
+
+    # Budget is 1: each request gets its own budget, and the repeated VTI quote is served
+    # from the shared provider cache without another call.
+    assert statuses == ["success", "success", "success", "success"]
+    assert [symbol for _, symbol in calls] == ["DEMO", "VTI", "BND"]
+
+
+def test_chat_runs_and_market_page_share_one_provider_rate_window(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    quote_body = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "data/providers/market-data/alpha-vantage/quote.synthetic.v1.json"
+        ).read_text(encoding="utf-8")
+    )
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        symbol = request.url.params["symbol"]
+        calls.append(symbol)
+        body = {"Global Quote": {**quote_body["Global Quote"], "01. symbol": symbol}}
+        return httpx.Response(200, json=body)
+
+    def live_bundle(settings: Settings) -> ProviderBundle:
+        del settings
+        return ProviderBundle(
+            market=AlphaVantageMarketDataProvider(
+                api_key="secret-test-key",
+                request_budget=1,
+                requests_per_minute=3,
+                terms_approved=True,
+                client=httpx.Client(transport=httpx.MockTransport(handler)),
+            ),
+            news=TavilyNewsProvider(api_key=None),
+        )
+
+    monkeypatch.setattr(api_services, "provider_bundle_from_settings", live_bundle)
+    app = create_app(
+        Settings(
+            mode="test",
+            storage_path=tmp_path / "shared-rate.sqlite3",
+            provider_mode="credential_free",
+            model_mode="credential_free",
+            qdrant_url=None,
+            observability_mode="in_memory",
+            langsmith_tracing_enabled=False,
+        )
+    )
+    payload = _portfolio_payload("portfolio-rate")
+    rows = cast(list[dict[str, str]], cast(dict[str, object], payload["payload"])["rows"])
+    rows.append({**rows[0], "holding_id": "holding-2", "identifier_value": "VTI"})
+    with TestClient(app) as local:
+        monkeypatch.setattr(
+            _services(local).workflow, "_model_adapter_builder", _portfolio_question_builder
+        )
+        session_id = _session(local)
+        saved = local.post(
+            f"/api/v1/sessions/{session_id}/portfolios",
+            json=payload,
+            headers={"Idempotency-Key": "save-portfolio-rate"},
+        )
+        assert saved.status_code == 201
+        for index in range(2):
+            run = local.post(
+                f"/api/v1/sessions/{session_id}/runs",
+                json={
+                    "message": "Analyze this portfolio.",
+                    "context_references": ["portfolio-rate"],
+                },
+                headers={"Idempotency-Key": f"run-rate-{index}"},
+            )
+            assert run.status_code == 201
+        market = local.post(
+            f"/api/v1/sessions/{session_id}/market/quotes",
+            json={"symbol": "BND", "currency": "USD"},
+        ).json()
+        limited = local.post(
+            f"/api/v1/sessions/{session_id}/market/quotes",
+            json={"symbol": "AAA", "currency": "USD"},
+        ).json()
+
+    # Budget 1 per Run: Run 1 fetches DEMO; Run 2 reuses the cached DEMO quote and fetches
+    # VTI. The Market page request is the third call in the shared 3-per-minute window, so
+    # the next one is rate limited.
+    assert calls == ["DEMO", "VTI", "BND"]
+    assert market["status"] == "success"
+    assert limited["status"] == "rate_limited"
+    assert "Try again in" in limited["error"]["message"]

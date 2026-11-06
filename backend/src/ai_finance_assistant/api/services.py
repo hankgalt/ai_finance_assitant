@@ -31,7 +31,18 @@ from ai_finance_assistant.providers.durable_cache import (
     SQLiteHistoricalCacheRepository,
 )
 from ai_finance_assistant.providers.factory import provider_bundle_from_settings
-from ai_finance_assistant.providers.ports import ProviderBundle
+from ai_finance_assistant.providers.models import (
+    HistoricalRequest,
+    HistoricalResult,
+    InstrumentSearchRequest,
+    InstrumentSearchResult,
+    ProviderMode,
+    ProviderReadiness,
+    QuoteRequest,
+    QuoteResult,
+)
+from ai_finance_assistant.providers.ports import MarketDataProvider, ProviderBundle
+from ai_finance_assistant.providers.runtime import request_budget_scope
 from ai_finance_assistant.response_cache.factory import response_cache_service_from_settings
 from ai_finance_assistant.workflow.application import WorkflowApplication
 from ai_finance_assistant.workflow.events import RunEventRecorder
@@ -40,6 +51,38 @@ from ai_finance_assistant.workflow.retrieval import (
     KnowledgeRetrieval,
     StaticKnowledgeRetrieval,
 )
+
+
+class BudgetScopedMarketDataProvider:
+    """Give each Market page or MCP call its own provider request budget.
+
+    Chat Runs build a provider bundle per Run. The Market page and MCP reuse one long-lived
+    provider, which previously meant one budget for the whole process. Each call now gets a
+    fresh budget while the provider's quote cache, rate window, and circuit stay shared.
+    """
+
+    def __init__(self, provider: MarketDataProvider) -> None:
+        self._provider = provider
+
+    @property
+    def mode(self) -> ProviderMode:
+        return self._provider.mode
+
+    def readiness(self, required_requests: int = 1) -> ProviderReadiness:
+        with request_budget_scope():
+            return self._provider.readiness(required_requests)
+
+    def search_instruments(self, request: InstrumentSearchRequest) -> InstrumentSearchResult:
+        with request_budget_scope():
+            return self._provider.search_instruments(request)
+
+    def get_quote(self, request: QuoteRequest) -> QuoteResult:
+        with request_budget_scope():
+            return self._provider.get_quote(request)
+
+    def get_history(self, request: HistoricalRequest) -> HistoricalResult:
+        with request_budget_scope():
+            return self._provider.get_history(request)
 
 
 class ApplicationServices:
@@ -98,7 +141,7 @@ class ApplicationServices:
             max_entries=settings.provider_cache_memory_max_entries,
         )
         self._market_bundle = self._provider_bundle()
-        self.market = self._market_bundle.market
+        self.market: MarketDataProvider = BudgetScopedMarketDataProvider(self._market_bundle.market)
         self.news = self._market_bundle.news
         self.knowledge = self._knowledge_retrieval()
         self.workflow = WorkflowApplication(
@@ -107,7 +150,9 @@ class ApplicationServices:
             contexts=self.context_repository,
             event_recorder=self.event_recorder,
             observability=self.observability,
-            provider_bundle_builder=lambda _: self._provider_bundle(),
+            # One shared bundle per process: every chat Run counts against the same provider
+            # rate window and cache; WorkflowApplication.run scopes the request budget per Run.
+            provider_bundle_builder=lambda _: self._market_bundle,
             checkpointer=self.checkpointer,
             response_cache=self.response_cache,
         )

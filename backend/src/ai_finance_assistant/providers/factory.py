@@ -22,6 +22,8 @@ def live_demo_bundle(
     tavily_api_key: str | None,
     market_request_budget: int = 5,
     news_request_budget: int = 3,
+    market_requests_per_minute: int = 5,
+    news_requests_per_minute: int = 10,
     alpha_vantage_entitlement: str = (
         "conditional-private-demo; verify account terms before live use"
     ),
@@ -42,6 +44,7 @@ def live_demo_bundle(
         market = MassiveMarketDataProvider(
             api_key=massive_api_key,
             request_budget=market_request_budget,
+            requests_per_minute=market_requests_per_minute,
             entitlement=massive_entitlement,
             terms_approved=massive_terms_approved,
         )
@@ -49,6 +52,7 @@ def live_demo_bundle(
         market = AlphaVantageMarketDataProvider(
             api_key=alpha_vantage_api_key,
             request_budget=market_request_budget,
+            requests_per_minute=market_requests_per_minute,
             entitlement=alpha_vantage_entitlement,
             terms_approved=alpha_vantage_terms_approved,
         )
@@ -57,6 +61,7 @@ def live_demo_bundle(
         news=TavilyNewsProvider(
             api_key=tavily_api_key,
             request_budget=news_request_budget,
+            requests_per_minute=news_requests_per_minute,
             entitlement=tavily_entitlement,
             terms_approved=tavily_terms_approved,
         ),
@@ -86,6 +91,8 @@ def provider_bundle_from_settings(settings: Settings) -> ProviderBundle:
             else None
         ),
         market_request_budget=settings.market_provider_request_budget,
+        market_requests_per_minute=settings.market_provider_requests_per_minute,
+        news_requests_per_minute=settings.news_provider_requests_per_minute,
         news_request_budget=settings.news_provider_request_budget,
         alpha_vantage_entitlement=settings.alpha_vantage_entitlement,
         massive_entitlement=settings.massive_entitlement,

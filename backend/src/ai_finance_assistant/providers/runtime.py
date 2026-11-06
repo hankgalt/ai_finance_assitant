@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import math
 import time
 from collections import OrderedDict, deque
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from random import uniform
@@ -21,6 +24,26 @@ from ai_finance_assistant.providers.models import (
 )
 
 T = TypeVar("T")
+
+# Calls counted per runtime inside an active budget scope; None means no scope is active.
+_BUDGET_SCOPE: ContextVar[dict[int, int] | None] = ContextVar(
+    "provider_request_budget_scope", default=None
+)
+
+
+@contextmanager
+def request_budget_scope() -> Iterator[None]:
+    """Count provider requests against a fresh budget for the enclosed operation.
+
+    Long-lived providers (the Market page and MCP) keep one runtime so its cache, rate
+    window, and circuit stay shared, while each request gets its own budget.
+    """
+
+    token = _BUDGET_SCOPE.set({})
+    try:
+        yield
+    finally:
+        _BUDGET_SCOPE.reset(token)
 
 
 @dataclass(frozen=True)
@@ -97,7 +120,12 @@ class _CacheEntry:
 
 
 class ProviderRuntime:
-    """State scoped to one provider in one workflow/demo session."""
+    """One provider's shared rate window, circuit, and cache, with a per-operation budget.
+
+    The application builds one runtime per provider for the backend process, so the rolling
+    rate window counts every chat Run, Market page request, and MCP call together. Each
+    operation opens a ``request_budget_scope`` for its own request budget.
+    """
 
     def __init__(
         self,
@@ -143,12 +171,16 @@ class ProviderRuntime:
     @property
     def calls_used(self) -> int:
         with self._lock:
-            return self._calls_used
+            return self._budget_calls_used()
 
     @property
     def remaining_budget(self) -> int:
         with self._lock:
-            return max(0, self._request_budget - self._calls_used)
+            return max(0, self._request_budget - self._budget_calls_used())
+
+    def _budget_calls_used(self) -> int:
+        scope = _BUDGET_SCOPE.get()
+        return self._calls_used if scope is None else scope.get(id(self), 0)
 
     def readiness(
         self,
@@ -161,7 +193,7 @@ class ProviderRuntime:
             raise ValueError("required_requests cannot be negative")
         with self._lock:
             circuit_open = self._is_circuit_open(self._now())
-            remaining = max(0, self._request_budget - self._calls_used)
+            remaining = max(0, self._request_budget - self._budget_calls_used())
         if not credential_configured:
             reason = "Provider credential is not configured."
         elif not terms_approved:
@@ -296,7 +328,7 @@ class ProviderRuntime:
                     "Provider circuit is open.",
                     retryable=True,
                 )
-            if self._calls_used >= self._request_budget:
+            if self._budget_calls_used() >= self._request_budget:
                 raise ProviderCallError(
                     ProviderErrorCode.BUDGET_EXHAUSTED,
                     "Configured workflow request budget is exhausted.",
@@ -309,13 +341,21 @@ class ProviderRuntime:
                 retry_after = (
                     self._recent_calls[0] + timedelta(seconds=self._rate_window_seconds) - now
                 ).total_seconds()
+                wait_seconds = max(0, retry_after)
                 raise ProviderCallError(
                     ProviderErrorCode.RATE_LIMITED,
-                    "Local provider rate limit is active.",
+                    (
+                        f"The limit of {self._requests_per_window} provider requests per "
+                        f"{self._rate_window_seconds:g} seconds was reached. Try again in "
+                        f"{max(1, math.ceil(wait_seconds))} seconds."
+                    ),
                     retryable=False,
-                    retry_after_seconds=max(0, retry_after),
+                    retry_after_seconds=wait_seconds,
                 )
             self._calls_used += 1
+            scope = _BUDGET_SCOPE.get()
+            if scope is not None:
+                scope[id(self)] = scope.get(id(self), 0) + 1
             self._recent_calls.append(now)
 
     def _record_failure(self, error: ProviderError) -> None:

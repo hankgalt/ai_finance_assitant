@@ -26,10 +26,11 @@ from ai_finance_assistant.providers.models import (
     ProviderMode,
     ProviderStatus,
     QuoteRequest,
+    QuoteResult,
     TimestampQuality,
 )
 from ai_finance_assistant.providers.ports import ProviderBundle
-from ai_finance_assistant.providers.runtime import ProviderRuntime
+from ai_finance_assistant.providers.runtime import ProviderRuntime, request_budget_scope
 from ai_finance_assistant.providers.tavily import TavilyNewsProvider
 
 DATA_DIR = Path(__file__).parents[1] / "data" / "providers"
@@ -967,3 +968,85 @@ def test_news_query_rejects_excessive_windows_and_sensitive_flag() -> None:
             start_date=date(2026, 10, 1),
             end_date=date(2026, 10, 2),
         )
+
+
+def test_request_budget_scope_resets_budget_but_keeps_shared_rate_and_cache() -> None:
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        symbol = request.url.params["symbol"]
+        calls.append(symbol)
+        body = fixture("market-data/alpha-vantage/quote.synthetic.v1.json")
+        assert isinstance(body, dict)
+        return httpx.Response(
+            200, json={"Global Quote": {**body["Global Quote"], "01. symbol": symbol}}
+        )
+
+    clock = MutableClock()
+    shared = runtime(clock, budget=1, requests_per_window=2)
+    provider = AlphaVantageMarketDataProvider(
+        api_key="secret-test-key",
+        terms_approved=True,
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        runtime=shared,
+    )
+
+    with request_budget_scope():
+        first = provider.get_quote(quote_request("AAA"))
+        assert provider.readiness().remaining_request_budget == 0
+    with request_budget_scope():
+        assert provider.readiness().remaining_request_budget == 1
+        second = provider.get_quote(quote_request("BBB"))
+    with request_budget_scope():
+        cached = provider.get_quote(quote_request("AAA"))
+        rate_limited = provider.get_quote(quote_request("CCC"))
+
+    assert first.status == second.status == cached.status == ProviderStatus.SUCCESS
+    assert cached.provenance.cache_status == CacheStatus.HIT
+    assert rate_limited.error is not None
+    assert rate_limited.error.code == ProviderErrorCode.RATE_LIMITED
+    assert calls == ["AAA", "BBB"]
+    # Outside a scope the process-wide count still applies, as for chat Runs' own runtimes.
+    assert shared.calls_used == 2
+    assert shared.remaining_budget == 0
+
+
+def test_rate_window_allows_the_configured_requests_per_minute_then_resets() -> None:
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        symbol = request.url.params["symbol"]
+        calls.append(symbol)
+        body = fixture("market-data/alpha-vantage/quote.synthetic.v1.json")
+        assert isinstance(body, dict)
+        return httpx.Response(
+            200, json={"Global Quote": {**body["Global Quote"], "01. symbol": symbol}}
+        )
+
+    clock = MutableClock()
+    provider = AlphaVantageMarketDataProvider(
+        api_key="secret-test-key",
+        terms_approved=True,
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        runtime=runtime(clock, budget=5, requests_per_window=5),
+    )
+
+    def quote(symbol: str) -> QuoteResult:
+        with request_budget_scope():
+            return provider.get_quote(quote_request(symbol))
+
+    allowed = [quote(f"S{index}") for index in range(5)]
+    clock.advance(30)
+    blocked = quote("S5")
+    clock.advance(30)
+    after_reset = quote("S6")
+
+    assert all(item.status == ProviderStatus.SUCCESS for item in allowed)
+    blocked_error = blocked.error
+    assert blocked_error is not None
+    assert blocked_error.code == ProviderErrorCode.RATE_LIMITED
+    assert blocked_error.retry_after_seconds == 30
+    assert "5 provider requests per 60 seconds" in blocked_error.message
+    assert "Try again in 30 seconds" in blocked_error.message
+    assert after_reset.status == ProviderStatus.SUCCESS
+    assert calls == ["S0", "S1", "S2", "S3", "S4", "S6"]

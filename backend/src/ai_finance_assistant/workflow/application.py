@@ -27,6 +27,7 @@ from ai_finance_assistant.observability.langsmith import LangSmithTracing
 from ai_finance_assistant.observability.ports import Observability
 from ai_finance_assistant.providers.factory import provider_bundle_from_settings
 from ai_finance_assistant.providers.ports import ProviderBundle
+from ai_finance_assistant.providers.runtime import request_budget_scope
 from ai_finance_assistant.response_cache.factory import disabled_response_cache_service
 from ai_finance_assistant.response_cache.service import ResponseCacheService
 from ai_finance_assistant.workflow.events import RunEventRecorder
@@ -74,6 +75,11 @@ class WorkflowApplication:
         )
 
     def run(self, request: WorkflowRequest) -> WorkflowRunResult:
+        # Each Run gets its own provider request budget, even when providers are shared.
+        with request_budget_scope():
+            return self._run(request)
+
+    def _run(self, request: WorkflowRequest) -> WorkflowRunResult:
         providers = self._provider_bundle_builder(self._settings)
         model = self._model_adapter_builder(self._settings)
         runtime = AgentRuntime(

@@ -25,7 +25,7 @@ mutation tools.
 
 ## Coverage and substitution statement
 
-As of 2026-11-05, backend coverage is 91.46%. Frontend V8 coverage, measured across every
+As of 2026-11-05, backend coverage is 91.55%. Frontend V8 coverage, measured across every
 application module, is 93.85% lines, 92.98% statements, 92.40% functions, and 78.53% branches. Both
 suites meet the transcribed 90% “Excellent” target by lines and statements; frontend branch
 coverage does not. See the [coverage report](../m8/coverage.md). Risk-critical arithmetic, access, redaction, and event

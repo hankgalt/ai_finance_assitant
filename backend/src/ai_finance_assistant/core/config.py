@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     tavily_terms_approved: bool = False
     market_provider_request_budget: int = Field(default=5, ge=0, le=100)
     news_provider_request_budget: int = Field(default=3, ge=0, le=100)
+    market_provider_requests_per_minute: int = Field(default=5, ge=1, le=600)
+    news_provider_requests_per_minute: int = Field(default=10, ge=1, le=600)
     alpha_vantage_entitlement: str = Field(
         default="conditional-private-demo; verify account terms before live use",
         min_length=1,

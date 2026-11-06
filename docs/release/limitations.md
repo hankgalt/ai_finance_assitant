@@ -39,7 +39,7 @@ They exclude dividends, distributions, separately paid fees, taxes, and cash flo
 Holding, are not time-weighted or money-weighted returns, and are not forecasts. History-based
 volatility, drawdown, and risk-adjusted metrics are not implemented.
 
-Backend coverage is 91.46% and frontend coverage is 93.85% lines and 92.98% statements, meeting
+Backend coverage is 91.55% and frontend coverage is 93.85% lines and 92.98% statements, meeting
 the transcribed 90% "Excellent" target. Frontend branch coverage (78.53%) remains below 90% and is
 reported separately. Real Qdrant and Redis behavior is still proven only by the opt-in marked
 integration tests; the CI coverage for those adapters uses deterministic fakes.

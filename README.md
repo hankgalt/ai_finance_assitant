@@ -23,6 +23,30 @@ The planned initial release is a production-oriented private demonstration relea
 
 Read [docs/release/developer-guide.md](docs/release/developer-guide.md), [docs/release/user-guide.md](docs/release/user-guide.md) & [docs/release/README.md](docs/release/README.md). See [docs/release/demo-script.md](docs/release/demo-script.md) to go over functionality demo.
 
+## Grading rubric map
+
+Where to find each graded criterion. The [demo script](docs/release/demo-script.md) walks through
+them in order, and the [coursework evidence matrix](docs/evidence/m9/coursework-evidence-matrix.md)
+has the full mapping.
+
+| Rubric criterion | What is implemented | Where to see it |
+|---|---|---|
+| Multi-agent architecture | Six specialist agents: Finance Q&A, Portfolio Analysis, Market Analysis, Goal Planning, News Synthesizer, Tax Education. They share one typed result contract and collaborate only through the graph. | [specialists.py](backend/src/ai_finance_assistant/agents/specialists.py), [test_agents.py](backend/tests/test_agents.py) |
+| LangGraph workflow | LangGraph `StateGraph` with model-based routing, a context gate, conditional fan-out, multi-agent synthesis, durable SQLite checkpoints and follow-up turns | [graph.py](backend/src/ai_finance_assistant/workflow/graph.py), [test_workflow.py](backend/tests/test_workflow.py) |
+| RAG implementation | Persistent Qdrant Finance and Tax collections combining keyword and semantic search (BM25 + BGE, merged with RRF), filtered by tax year and jurisdiction, with citations. Retrieval is scored against fixed test questions before activation (hybrid recall@5 = 1.0 for both). | [knowledge/](backend/src/ai_finance_assistant/knowledge), [evaluation reports](backend/artifacts/knowledge) |
+| Real-time data integration | Alpha Vantage or Massive market data and Tavily news behind provider adapters, with retries, circuit breaker, request budget, durable history cache, and explicit stale/unavailable states. Live mode is selected by environment; a labelled synthetic mode works without credentials. | [providers/](backend/src/ai_finance_assistant/providers), [M3 provider policy](docs/M3_provider_policy.md) |
+| MCP server | Read-only stdio MCP server with four tools: `search_education`, `get_market_quote`, `analyze_portfolio`, `project_goal` | `make mcp-stdio`, [MCP client record](docs/evidence/m9/mcp-client-record.md) |
+| Web interface | React + TypeScript app (used instead of Streamlit; see [ADR-007](docs/02_architecture_decision_records.md)) with Assistant, Portfolio, Market, Goals, History and Inspector views. Responsive, with accessible states. | [screenshots](docs/evidence/m6), [user guide](docs/release/user-guide.md) |
+| Conversational flow | Session-scoped conversation with durable checkpoints, follow-ups that reuse the selected portfolio, clarification prompts, replayable SSE streaming, archived session history | Assistant view, [test_workflow_application.py](backend/tests/test_workflow_application.py) |
+| Data visualization | Allocation donut, unrealized gain/loss bars, market price line, and goal scenario bars (Recharts), each with an accessible table. The Agent Execution Inspector graph (React Flow) is built from measured run events. | Portfolio, Market, Goals and Inspector views, [Inspector screenshots](docs/evidence/m7) |
+| Educational content | 49 approved, rights-reviewed sources split into 6,401 cited chunks: 18 Investor.gov/SEC finance articles and 31 IRS publications and form instructions. 18 more sources are pending review. | [source registry](backend/data/knowledge/source-registry.v1.json), [source license register](docs/release/source-license-register.md) |
+| Portfolio analysis | Deterministic Decimal calculations: valuation, allocation, asset-class and sector concentration, weighted expense ratio, HHI and effective-holdings diversification, top-5 concentration, cost-basis unrealized gain/loss, return on cost, holding period and annualized return. All with coverage reporting. | [calculation policy](docs/M2_calculation_policy.md), [portfolio_analysis.py](backend/src/ai_finance_assistant/finance/portfolio_analysis.py), [sample portfolios](examples/portfolios) |
+| Market intelligence | Quotes and daily history with provenance and freshness; deterministic period change, percent change, high and low for the Market Analysis agent to interpret; dated, attributed news synthesis | Market view, Assistant market/news questions |
+| Code organization | Modules organized by capability with ports and adapters; strict mypy, ruff, ESLint and Prettier | [repository layout](docs/repository_layout.md) |
+| Documentation | Requirements, 30 architecture decision records, system design with Mermaid diagrams, implementation plan, user/developer/operator guides, per-milestone delivery reports | [docs/README.md](docs/README.md) |
+| Testing | Backend: 338 tests, 91.55% coverage. Frontend: 71 Vitest tests, 93.85% lines / 92.98% statements (branches 78.53%), plus 10 Playwright journeys. Release qualification covers 18 dimensions. | `make verify`, [coverage report](docs/evidence/m8/coverage.md) |
+| Innovation (bonus) | Agent Execution Inspector from measured run events, an evidence-bound semantic response cache (Redis), OpenTelemetry tracing across browser and backend, a threat model with prompt-injection controls, and planned M10 cash-flow import and M11 IAP-protected GCP deployment | [M7](docs/M7_delivery_report.md), [M6.1](docs/M6_1_delivery_report.md), [M8](docs/M8_delivery_report.md) reports, [implementation plan](docs/04_implementation_plan.md) |
+
 ## Current capabilities
 
 - FastAPI liveness/readiness and React application shell.
@@ -127,7 +151,7 @@ curl -fsS http://127.0.0.1:8000/api/health/live
 curl -fsS http://127.0.0.1:8000/api/health/ready
 ~~~
 
-Open http://127.0.0.1:5173. Vite proxies `/api` to the backend at http://127.0.0.1:8000.
+Open http://127.0.0.1:5174. Vite proxies `/api` to the backend at http://127.0.0.1:8000.
 
 Health interfaces:
 

@@ -14,7 +14,7 @@ disclaimer](limitations.md) before using non-synthetic data.
 ## Start and navigate
 
 Follow the [developer guide](developer-guide.md) for local setup, then open
-`http://127.0.0.1:5173`. The navigation exposes:
+`http://127.0.0.1:5174`. The navigation exposes:
 
 - **Assistant** for Finance, Tax, Portfolio, Market, Goal, and News questions;
 - **Portfolio** to import, validate, save, select, analyze, and delete Portfolios;
