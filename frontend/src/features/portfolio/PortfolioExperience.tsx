@@ -12,6 +12,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { PageHeader } from "../../components/PageHeader";
 import { StateNotice } from "../../components/StateNotice";
+import { PerformanceSection } from "./PerformanceSection";
 import { api, ClientApiError, fileToBase64 } from "../../lib/api";
 import {
   formatCurrency,
@@ -288,6 +289,13 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
   }, [showValidationSuccess]);
 
   const latestSnapshot = snapshot.data;
+  const analyzedPortfolio = latestSnapshot
+    ? portfolios.data?.find(
+        (portfolio) => portfolio.portfolio_id === latestSnapshot.portfolio_id,
+      )
+    : undefined;
+  const analyzedPortfolioLabel =
+    analyzedPortfolio?.label ?? latestSnapshot?.portfolio_id ?? null;
   const snapshotWarningGroups = useMemo(
     () => groupSnapshotWarnings(latestSnapshot?.warnings ?? []),
     [latestSnapshot],
@@ -689,10 +697,25 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
               0,
             );
             const portfolioLabel = portfolio.label ?? portfolio.portfolio_id;
+            const isAnalyzed =
+              latestSnapshot?.portfolio_id === portfolio.portfolio_id;
+            const isAnalyzing =
+              snapshot.isPending &&
+              snapshot.variables === portfolio.portfolio_id;
             return (
-              <article key={portfolio.portfolio_id}>
+              <article
+                aria-current={isAnalyzed ? "true" : undefined}
+                aria-label={portfolioLabel}
+                className={isAnalyzed ? "is-analyzed" : undefined}
+                key={portfolio.portfolio_id}
+              >
                 <div>
-                  <strong>{portfolioLabel}</strong>
+                  <strong className="saved-portfolio-title">
+                    {portfolioLabel}
+                    {isAnalyzed ? (
+                      <span className="analysis-chip">Shown below</span>
+                    ) : null}
+                  </strong>
                   <span>
                     {holdingCount} holding{holdingCount === 1 ? "" : "s"} ·{" "}
                     {portfolio.source_kind.toUpperCase()}
@@ -754,7 +777,7 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
                       onClick={() => snapshot.mutate(portfolio.portfolio_id)}
                       type="button"
                     >
-                      Analyze
+                      {isAnalyzing ? "Analyzing…" : "Analyze"}
                     </button>
                     <button
                       aria-label={`Delete ${portfolioLabel}`}
@@ -786,152 +809,171 @@ export function PortfolioExperience({ sessionId }: { sessionId: string }) {
       </section>
 
       {latestSnapshot ? (
-        <section
-          className="results-section"
-          aria-labelledby="allocation-heading"
-        >
-          <div className="results-heading">
-            <div>
-              <p className="eyebrow">Backend snapshot</p>
-              <h3 id="allocation-heading">Allocation and coverage</h3>
+        <>
+          <section
+            className="results-section"
+            aria-labelledby="allocation-heading"
+          >
+            <div className="results-heading">
+              <div>
+                <p className="eyebrow">Backend snapshot</p>
+                <h3 id="allocation-heading">Allocation and coverage</h3>
+              </div>
+              <span className="schema-chip">
+                {latestSnapshot.calculation_policy_version}
+              </span>
             </div>
-            <span className="schema-chip">
-              {latestSnapshot.calculation_policy_version}
-            </span>
-          </div>
-          <p className="result-context">
-            Calculated {formatDateTime(latestSnapshot.calculated_at)} · Snapshot{" "}
-            {snapshotId}
-          </p>
-          <div className="metric-row">
-            <div>
-              <span>Total</span>
-              <strong>
-                {formatCurrency(
-                  latestSnapshot.base_currency_total,
-                  latestSnapshot.base_currency,
-                )}
-              </strong>
+            <p className="result-context">
+              Portfolio <strong>{analyzedPortfolioLabel}</strong> · Calculated{" "}
+              {formatDateTime(latestSnapshot.calculated_at)} · Snapshot{" "}
+              {snapshotId}
+            </p>
+            <div className="metric-row metric-row-four">
+              <div>
+                <span>Total</span>
+                <strong>
+                  {formatCurrency(
+                    latestSnapshot.base_currency_total,
+                    latestSnapshot.base_currency,
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Priced holdings</span>
+                <strong>
+                  {latestSnapshot.holding_valuations.length -
+                    latestSnapshot.unpriced_holding_ids.length}{" "}
+                  / {latestSnapshot.holding_valuations.length}
+                </strong>
+              </div>
+              <div>
+                <span>Coverage</span>
+                <strong>
+                  {formatPercent(
+                    latestSnapshot.totals_by_currency[0]
+                      ?.holding_count_coverage_percent ?? null,
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Top 5 holdings</span>
+                <strong>
+                  {formatPercent(
+                    latestSnapshot.diversification[0]
+                      ?.top_five_holding_percent ?? null,
+                  )}
+                </strong>
+              </div>
             </div>
-            <div>
-              <span>Priced holdings</span>
-              <strong>
-                {latestSnapshot.holding_valuations.length -
-                  latestSnapshot.unpriced_holding_ids.length}{" "}
-                / {latestSnapshot.holding_valuations.length}
-              </strong>
-            </div>
-            <div>
-              <span>Coverage</span>
-              <strong>
-                {formatPercent(
-                  latestSnapshot.totals_by_currency[0]
-                    ?.holding_count_coverage_percent ?? null,
-                )}
-              </strong>
-            </div>
-          </div>
-          <div className="chart-table-layout">
-            <div
-              className="chart-frame"
-              role="img"
-              aria-label="Portfolio value by holding donut chart"
-            >
-              <ResponsiveContainer height={280} width="100%">
-                <PieChart>
-                  <Pie
-                    data={allocationData}
-                    dataKey="value"
-                    innerRadius={62}
-                    isAnimationActive={false}
-                    nameKey="name"
-                    outerRadius={105}
-                  >
-                    {allocationData.map((item, index) => (
-                      <Cell
-                        fill={chartColors[index % chartColors.length]}
-                        key={item.name}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value) =>
-                      formatCurrency(
-                        Number(value),
-                        latestSnapshot.base_currency,
-                      )
-                    }
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="table-scroll">
-              <table>
-                <caption>Authoritative holding valuations</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Holding</th>
-                    <th scope="col">Value</th>
-                    <th scope="col">Allocation</th>
-                    <th scope="col">Price source</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {latestSnapshot.holding_valuations.map((holding) => (
-                    <tr key={holding.holding_id}>
-                      <th scope="row">{holding.holding_id}</th>
-                      <td>
-                        {formatCurrency(holding.market_value, holding.currency)}
-                      </td>
-                      <td>{formatPercent(holding.allocation_percent)}</td>
-                      <td>
-                        {holding.price_source?.replaceAll("_", " ") ??
-                          "Unpriced"}
-                      </td>
+            <div className="chart-table-layout">
+              <div
+                className="chart-frame"
+                role="img"
+                aria-label="Portfolio value by holding donut chart"
+              >
+                <ResponsiveContainer height={280} width="100%">
+                  <PieChart>
+                    <Pie
+                      data={allocationData}
+                      dataKey="value"
+                      innerRadius={62}
+                      isAnimationActive={false}
+                      nameKey="name"
+                      outerRadius={105}
+                    >
+                      {allocationData.map((item, index) => (
+                        <Cell
+                          fill={chartColors[index % chartColors.length]}
+                          key={item.name}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) =>
+                        formatCurrency(
+                          Number(value),
+                          latestSnapshot.base_currency,
+                        )
+                      }
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="table-scroll">
+                <table>
+                  <caption>Authoritative holding valuations</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Holding</th>
+                      <th scope="col">Value</th>
+                      <th scope="col">Allocation</th>
+                      <th scope="col">Price source</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {latestSnapshot.holding_valuations.map((holding) => (
+                      <tr key={holding.holding_id}>
+                        <th scope="row">{holding.holding_id}</th>
+                        <td>
+                          {formatCurrency(
+                            holding.market_value,
+                            holding.currency,
+                          )}
+                        </td>
+                        <td>{formatPercent(holding.allocation_percent)}</td>
+                        <td>
+                          {holding.price_source?.replaceAll("_", " ") ??
+                            "Unpriced"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-          {snapshotWarningGroups.length ? (
-            <aside
-              aria-label="Portfolio snapshot warnings"
-              className="portfolio-snapshot-warnings"
-            >
-              {snapshotWarningGroups.map((warning) => (
-                <StateNotice
-                  key={JSON.stringify([
-                    warning.scope,
-                    warning.code,
-                    warning.message,
-                  ])}
-                  tone="warning"
-                  title={warning.code.replaceAll("_", " ")}
-                >
-                  <p>{warning.message}</p>
-                  {warning.holdingIds.length === 1 ? (
-                    <p className="snapshot-warning-scope">
-                      Holding: {warning.holdingIds[0]}.
-                    </p>
-                  ) : null}
-                  {warning.holdingIds.length > 1 ? (
-                    <details className="snapshot-warning-scope">
-                      <summary>
-                        Applies to {warning.holdingIds.length} holdings.
-                      </summary>
-                      <ul aria-label={`${warning.code} affected holdings`}>
-                        {warning.holdingIds.map((holdingId) => (
-                          <li key={holdingId}>{holdingId}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  ) : null}
-                </StateNotice>
-              ))}
-            </aside>
-          ) : null}
-        </section>
+            {snapshotWarningGroups.length ? (
+              <aside
+                aria-label="Portfolio snapshot warnings"
+                className="portfolio-snapshot-warnings"
+              >
+                {snapshotWarningGroups.map((warning) => (
+                  <StateNotice
+                    key={JSON.stringify([
+                      warning.scope,
+                      warning.code,
+                      warning.message,
+                    ])}
+                    tone="warning"
+                    title={warning.code.replaceAll("_", " ")}
+                  >
+                    <p>{warning.message}</p>
+                    {warning.holdingIds.length === 1 ? (
+                      <p className="snapshot-warning-scope">
+                        Holding: {warning.holdingIds[0]}.
+                      </p>
+                    ) : null}
+                    {warning.holdingIds.length > 1 ? (
+                      <details className="snapshot-warning-scope">
+                        <summary>
+                          Applies to {warning.holdingIds.length} holdings.
+                        </summary>
+                        <ul aria-label={`${warning.code} affected holdings`}>
+                          {warning.holdingIds.map((holdingId) => (
+                            <li key={holdingId}>{holdingId}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : null}
+                  </StateNotice>
+                ))}
+              </aside>
+            ) : null}
+          </section>
+          <PerformanceSection
+            portfolioLabel={analyzedPortfolioLabel}
+            snapshot={latestSnapshot}
+          />
+        </>
       ) : null}
     </>
   );

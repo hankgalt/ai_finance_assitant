@@ -699,6 +699,28 @@ textarea:focus {
 .saved-list article:last-child {
   border-bottom: 0;
 }
+.saved-list article.is-analyzed {
+  border-left: 4px solid var(--primary);
+  background: #eef5f2;
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
+.saved-portfolio-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.saved-list .analysis-chip {
+  border: 1px solid var(--primary);
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.45rem;
+  text-transform: uppercase;
+}
 .saved-list article > div {
   display: grid;
   gap: 0.2rem;
@@ -827,11 +849,24 @@ textarea:focus {
   border: 1px solid var(--line);
   margin: 1.2rem 0;
 }
+.metric-row-four {
+  grid-template-columns: repeat(4, 1fr);
+}
 .metric-row > div {
   display: grid;
   gap: 0.3rem;
   border-right: 1px solid var(--line);
   padding: 1rem;
+}
+.metric-row small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.value-gain {
+  color: var(--primary);
+}
+.value-loss {
+  color: var(--danger);
 }
 .metric-row > div:last-child {
   border: 0;

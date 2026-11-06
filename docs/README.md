@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.8 | Status: M0–M9.1/M6.1 complete; M10 and M11 independently planned | 2026-11-05
+Version 2.9 | Status: M0–M9.1/M6.1 and M2.1 complete; M10 and M11 independently planned | 2026-11-05
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -19,7 +19,7 @@ This directory is the design authority for AI Finance Assistant. The product mis
 10. [M1 Qdrant, model, and source-use research](research/M1_qdrant_models_sources.md) records the primary-source evidence used for M1 decisions; it is not itself an ADR.
 11. [M1 corpus-expansion research](research/M1_corpus_expansion_sources.md) records the bounded Finance and Tax source review and disabled-source decisions.
 12. [M1 IRS publication closure research](research/M1_irs_publication_expansion_2025.md) verifies the requested 2025 editions, applicability, source-use boundaries, and retrieval cases.
-13. [M2 calculation policy](M2_calculation_policy.md) records the implemented precision, import, coverage, and heuristic rules for deterministic finance modules.
+13. [M2 calculation policy](M2_calculation_policy.md) records the implemented precision, import, coverage, heuristic, and M2.1 unrealized-performance rules for deterministic finance modules.
 14. [M3 market and news provider candidate research](research/M3_provider_candidates.md) evaluates Tavily, Alpha Vantage, and yfinance against the provider seam; it is decision input, not an approved provider selection.
 15. [M3 provider policy](M3_provider_policy.md) records the implemented adapters, endpoint policies, rights gate, quota budget, and safe fallback behavior.
 16. [M3 Massive market-data adapter research](research/M3_massive_provider.md) evaluates Massive's technical fit, current Basic-plan limits, and owner-only individual-plan rights using official sources.
@@ -30,6 +30,7 @@ Milestone completion evidence is recorded separately from the design authority. 
 [M0 delivery report](M0_delivery_report.md) for the foundation milestone and
 [M1 delivery report](M1_delivery_report.md) for persistent knowledge ingestion, retrieval evaluation, activation, and rollback, and
 [M2 delivery report](M2_delivery_report.md) for deterministic Portfolio import/analysis, goal projection, and the reserved cash-flow interface, and
+[M2.1 delivery report](M2_1_delivery_report.md) for cost-basis unrealized gain/return and top-five concentration, and
 [M3 delivery report](M3_delivery_report.md) for market/news ports, deterministic adapters, and conditional live-provider adapters, and
 [M4 delivery report](M4_delivery_report.md) for the six-agent graph, measured RunEvents, checkpoint behavior, and observability evidence, and
 [M4.1 delivery report](M4_1_delivery_report.md) for the live model adapter and completed six-agent qualification evidence, and

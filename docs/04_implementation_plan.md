@@ -93,6 +93,23 @@ Telemetry configuration is environment-driven and disabled safely when no export
 
 **Evidence:** [M2 delivery report](M2_delivery_report.md), [calculation policy/version](M2_calculation_policy.md), hand-worked golden cases, sample-data manifest, test and coverage reports, and documented heuristic limitations.
 
+### M2.1 — Cost-basis unrealized performance
+
+**Deliverables**
+
+- `finance-calculation-v2` with `unrealized-performance-v1`: per-Holding cost basis total, unrealized gain/loss, return on cost, holding period, and Actual/365 annualized return for holdings held at least one year; per-currency summary with cost-basis value coverage; and top-five Holding concentration.
+- Additive Snapshot contract fields so persisted `finance-calculation-v1` Snapshots remain readable.
+- Portfolio Analysis facts, read-only MCP output, and a Portfolio Dashboard section with summary metrics, a single-currency bar chart, and an accessible table.
+- Hand-worked golden dataset and artifact registered in the calculation fixture manifest.
+
+**Dependencies:** M2 import of cost basis and acquisition date; M5 Snapshot API; M6 Portfolio Dashboard. No provider, history, or ADR change. History-based volatility, drawdown, and risk-adjusted metrics are out of scope because they need per-holding history beyond the private-demo market request budget and a new decision.
+
+**Acceptance:** Goldens reproduce exactly; missing cost basis reduces coverage instead of inventing zero; unpriced, zero-basis, future-acquisition, sub-one-year, total-loss, quote-currency-mismatch, and mixed-currency cases behave as documented; v1 Snapshots deserialize; agents explain but do not recalculate the figures.
+
+**Tests:** Golden, edge-case, currency-partition, and backward-compatibility unit tests; agent fact and MCP regression; frontend component tests for signed values, coverage, missing basis, mixed-currency chart suppression, and v1 Snapshots.
+
+**Evidence:** [M2.1 delivery report](M2_1_delivery_report.md), [calculation policy §6a](M2_calculation_policy.md), golden artifact, and test/coverage results.
+
 ### M3 — External market and news integrations
 
 **Deliverables**
@@ -463,6 +480,7 @@ M0 → M3
 M1 + M2 + M3 → M4
 M4 → M4.1 → M5 → M6 → M7 → M6.1
 M1–M7 + M4.1 + M6.1 → M8 → M9 → M9.1
+M2 + M5 + M6 → M2.1 after M9, independent of M10 and M11
 M2 + M5 + M6 → M10 after M9 release approval
 M9.1 → M11, independent of M10
 ~~~

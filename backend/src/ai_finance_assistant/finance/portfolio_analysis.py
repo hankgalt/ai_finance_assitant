@@ -1,7 +1,8 @@
 """Pure deterministic valuation and portfolio analysis."""
 
 from collections import defaultdict
-from decimal import Decimal, localcontext
+from datetime import date
+from decimal import ROUND_HALF_EVEN, Decimal, localcontext
 from typing import Literal, TypeVar
 
 from ai_finance_assistant.finance.models import (
@@ -15,8 +16,15 @@ from ai_finance_assistant.finance.models import (
     PortfolioAnalysisRequest,
     PortfolioSnapshot,
     SecurityReference,
+    UnrealizedPerformance,
 )
-from ai_finance_assistant.finance.precision import count_value, money, percent, ratio
+from ai_finance_assistant.finance.precision import (
+    PERCENT_QUANTUM,
+    count_value,
+    money,
+    percent,
+    ratio,
+)
 
 _T = TypeVar("_T")
 _SelectedFieldValue = TypeVar("_SelectedFieldValue", str, Decimal)
@@ -25,6 +33,12 @@ _DIVERSIFICATION_LIMITATION = (
     "HHI and effective holding count describe only observed holding-value concentration within "
     "one currency. They do not measure correlation, volatility, liquidity, suitability, or risk."
 )
+_PERFORMANCE_LIMITATION = (
+    "Unrealized price change against imported cost basis only. It excludes dividends, "
+    "distributions, separately paid fees, taxes, and cash flows, is not a time-weighted or "
+    "money-weighted return, and does not predict future performance."
+)
+_DAYS_PER_YEAR = Decimal("365")
 
 
 def _unique_by(items: tuple[_T, ...], attribute: str, label: str) -> dict[str, _T]:
@@ -76,7 +90,11 @@ class PortfolioAnalysis:
                 quotes.get(holding.holding_id),
                 warnings,
             )
-            valuations.append(valuation)
+            valuations.append(
+                self._holding_performance(
+                    holding, valuation, request.calculated_at.date(), warnings
+                )
+            )
 
         totals = self._currency_totals(holdings, valuations)
         totals_by_currency = {total.currency: total.priced_value for total in totals}
@@ -117,6 +135,7 @@ class PortfolioAnalysis:
         concentrations = self._concentrations(valuations, totals_by_currency)
         expense_metrics = self._expense_metrics(valuations, totals_by_currency)
         diversification = self._diversification(valuations, totals_by_currency)
+        performance = self._performance(valuations)
         unpriced = tuple(
             valuation.holding_id for valuation in valuations if valuation.market_value is None
         )
@@ -135,6 +154,7 @@ class PortfolioAnalysis:
             concentrations=tuple(concentrations),
             expense_metrics=tuple(expense_metrics),
             diversification=tuple(diversification),
+            performance=tuple(performance),
             unpriced_holding_ids=unpriced,
             warnings=tuple(warnings),
         )
@@ -252,6 +272,103 @@ class PortfolioAnalysis:
             expense_ratio=expense,
             expense_ratio_source=expense_source,
         )
+
+    @staticmethod
+    def _holding_performance(
+        holding: ImportedHolding,
+        valuation: HoldingValuation,
+        valuation_date: date,
+        warnings: list[CalculationWarning],
+    ) -> HoldingValuation:
+        if holding.cost_basis_amount is None:
+            return valuation
+        cost_total = money(
+            holding.cost_basis_amount * holding.quantity
+            if holding.cost_basis_basis == "per_unit"
+            else holding.cost_basis_amount
+        )
+        holding_period_days: int | None = None
+        if holding.acquisition_date is not None:
+            if holding.acquisition_date > valuation_date:
+                warnings.append(
+                    CalculationWarning(
+                        code="ACQUISITION_DATE_AFTER_VALUATION",
+                        message=(
+                            "The acquisition date is after the valuation date, so no holding "
+                            "period or annualized return was calculated."
+                        ),
+                        holding_id=holding.holding_id,
+                    )
+                )
+            else:
+                holding_period_days = (valuation_date - holding.acquisition_date).days
+        update: dict[str, object] = {
+            "cost_basis_total": cost_total,
+            "acquisition_date": holding.acquisition_date,
+            "holding_period_days": holding_period_days,
+        }
+        if valuation.market_value is None:
+            return valuation.model_copy(update=update)
+
+        gain = valuation.market_value - cost_total
+        update["unrealized_gain"] = money(gain)
+        if cost_total == 0:
+            warnings.append(
+                CalculationWarning(
+                    code="ZERO_COST_BASIS",
+                    message="A zero cost basis has no defined percentage return.",
+                    holding_id=holding.holding_id,
+                )
+            )
+            return valuation.model_copy(update=update)
+        update["unrealized_return_percent"] = percent(gain, cost_total)
+        if holding_period_days is not None and holding_period_days >= 365:
+            update["annualized_return_percent"] = _annualized_percent(
+                valuation.market_value, cost_total, holding_period_days
+            )
+        return valuation.model_copy(update=update)
+
+    @staticmethod
+    def _performance(valuations: list[HoldingValuation]) -> list[UnrealizedPerformance]:
+        output: list[UnrealizedPerformance] = []
+        for currency in sorted({valuation.currency for valuation in valuations}):
+            priced = [
+                valuation
+                for valuation in valuations
+                if valuation.currency == currency and valuation.market_value is not None
+            ]
+            covered = [
+                valuation
+                for valuation in priced
+                if valuation.cost_basis_total is not None and valuation.unrealized_gain is not None
+            ]
+            priced_value = sum(
+                (valuation.market_value or Decimal("0") for valuation in priced), Decimal("0")
+            )
+            covered_value = sum(
+                (valuation.market_value or Decimal("0") for valuation in covered), Decimal("0")
+            )
+            cost_total = sum(
+                (valuation.cost_basis_total or Decimal("0") for valuation in covered),
+                Decimal("0"),
+            )
+            gain = covered_value - cost_total
+            output.append(
+                UnrealizedPerformance(
+                    currency=currency,
+                    priced_holding_count=len(priced),
+                    holdings_with_cost_basis=len(covered),
+                    cost_basis_total=money(cost_total),
+                    market_value_with_cost_basis=money(covered_value),
+                    unrealized_gain=money(gain),
+                    unrealized_return_percent=(
+                        percent(gain, cost_total) if cost_total > 0 else None
+                    ),
+                    cost_basis_value_coverage_percent=percent(covered_value, priced_value),
+                    limitation=_PERFORMANCE_LIMITATION,
+                )
+            )
+        return output
 
     @staticmethod
     def _currency_totals(
@@ -372,8 +489,24 @@ class PortfolioAnalysis:
                     holding_hhi=ratio(hhi_unrounded),
                     effective_holding_count=count_value(effective),
                     top_holding_percent=percent(max(values), total),
+                    top_five_holding_percent=percent(
+                        sum(sorted(values, reverse=True)[:5], Decimal("0")), total
+                    ),
                     priced_holding_count=len(values),
                     limitation=_DIVERSIFICATION_LIMITATION,
                 )
             )
         return output
+
+
+def _annualized_percent(market_value: Decimal, cost_total: Decimal, days: int) -> Decimal:
+    """Actual/365 compound annual rate of the unrealized price change."""
+
+    with localcontext() as context:
+        context.prec = 34
+        growth = market_value / cost_total
+        if growth == 0:
+            annualized = Decimal("-1")
+        else:
+            annualized = growth ** (_DAYS_PER_YEAR / Decimal(days)) - 1
+        return (annualized * 100).quantize(PERCENT_QUANTUM, rounding=ROUND_HALF_EVEN)

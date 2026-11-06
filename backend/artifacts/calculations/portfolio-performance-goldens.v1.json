@@ -1,0 +1,62 @@
+{
+  "schema_version": "1",
+  "calculation_policy_version": "finance-calculation-v2",
+  "performance_policy_version": "unrealized-performance-v1",
+  "source_dataset": "data/calculations/portfolio-performance.v1.json",
+  "valuation_date": "2026-10-27",
+  "hand_working": {
+    "holding-gain": "10 × 150 = 1500.00 value; total cost 1000.00; gain 500.00; 500 / 1000 × 100 = 50.0000%",
+    "holding-gain_period": "2024-10-27 to 2026-10-27 = 730 days",
+    "holding-gain_annualized": "(1500 / 1000)^(365 / 730) − 1 = √1.5 − 1 = 0.2247448714 → 22.4745%",
+    "holding-loss": "20 × 25 = 500.00 value; per-unit cost 30 × 20 = 600.00; gain −100.00; −100 / 600 × 100 = −16.6667%",
+    "holding-loss_period": "2026-04-30 to 2026-10-27 = 180 days; under 365 days, so not annualized",
+    "holding-no-cost": "5 × 100 = 500.00 value; no cost basis, so excluded from cost-basis coverage",
+    "holding-unpriced": "Cost 200.00 but no price; no gain is calculated",
+    "summary": "cost 1000 + 600 = 1600.00; covered value 1500 + 500 = 2000.00; gain 400.00; 400 / 1600 = 25.0000%",
+    "coverage": "2000 / (1500 + 500 + 500) × 100 = 80.0000%",
+    "top_five_holding_percent": "Three priced holdings, so the top five cover 100.0000%"
+  },
+  "expected": {
+    "holdings": {
+      "holding-gain": {
+        "cost_basis_total": "1000.00",
+        "unrealized_gain": "500.00",
+        "unrealized_return_percent": "50.0000",
+        "holding_period_days": 730,
+        "annualized_return_percent": "22.4745"
+      },
+      "holding-loss": {
+        "cost_basis_total": "600.00",
+        "unrealized_gain": "-100.00",
+        "unrealized_return_percent": "-16.6667",
+        "holding_period_days": 180,
+        "annualized_return_percent": null
+      },
+      "holding-no-cost": {
+        "cost_basis_total": null,
+        "unrealized_gain": null,
+        "unrealized_return_percent": null,
+        "holding_period_days": null,
+        "annualized_return_percent": null
+      },
+      "holding-unpriced": {
+        "cost_basis_total": "200.00",
+        "unrealized_gain": null,
+        "unrealized_return_percent": null,
+        "holding_period_days": 1381,
+        "annualized_return_percent": null
+      }
+    },
+    "summary": {
+      "currency": "USD",
+      "priced_holding_count": 3,
+      "holdings_with_cost_basis": 2,
+      "cost_basis_total": "1600.00",
+      "market_value_with_cost_basis": "2000.00",
+      "unrealized_gain": "400.00",
+      "unrealized_return_percent": "25.0000",
+      "cost_basis_value_coverage_percent": "80.0000"
+    },
+    "top_five_holding_percent": "100.0000"
+  }
+}

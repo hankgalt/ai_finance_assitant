@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "account_id": "acct-taxable",
+      "account_type": "taxable_brokerage",
+      "holding_id": "holding-gain",
+      "identifier_type": "ticker",
+      "identifier_value": "GAIN",
+      "quantity": "10",
+      "currency": "USD",
+      "cost_basis_amount": "1000",
+      "cost_basis_basis": "total",
+      "acquisition_date": "2024-10-27",
+      "user_price": "150",
+      "user_price_as_of": "2026-10-27T12:00:00Z",
+      "user_price_provenance": "hand-worked fixture"
+    },
+    {
+      "account_id": "acct-taxable",
+      "account_type": "taxable_brokerage",
+      "holding_id": "holding-loss",
+      "identifier_type": "ticker",
+      "identifier_value": "LOSS",
+      "quantity": "20",
+      "currency": "USD",
+      "cost_basis_amount": "30",
+      "cost_basis_basis": "per_unit",
+      "acquisition_date": "2026-04-30",
+      "user_price": "25",
+      "user_price_as_of": "2026-10-27T12:00:00Z",
+      "user_price_provenance": "hand-worked fixture"
+    },
+    {
+      "account_id": "acct-taxable",
+      "account_type": "taxable_brokerage",
+      "holding_id": "holding-no-cost",
+      "identifier_type": "ticker",
+      "identifier_value": "NOCOST",
+      "quantity": "5",
+      "currency": "USD",
+      "user_price": "100",
+      "user_price_as_of": "2026-10-27T12:00:00Z",
+      "user_price_provenance": "hand-worked fixture"
+    },
+    {
+      "account_id": "acct-roth",
+      "account_type": "roth_ira",
+      "holding_id": "holding-unpriced",
+      "identifier_type": "user_defined",
+      "identifier_value": "PRIVATE-ASSET",
+      "quantity": "4",
+      "currency": "USD",
+      "cost_basis_amount": "200",
+      "cost_basis_basis": "total",
+      "acquisition_date": "2023-01-15"
+    }
+  ]
+}

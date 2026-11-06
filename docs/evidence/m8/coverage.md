@@ -2,15 +2,16 @@
 
 ## Current (2026-11-05)
 
-Backend full regression: 6,907 of 7,558 statements covered, **91.39%** line/statement coverage
-(`uv run pytest --cov=ai_finance_assistant`; 325 passed, 1 skipped, 4 opt-in tests deselected).
+Backend full regression: 6,974 of 7,625 statements covered, **91.46%** line/statement coverage
+(`uv run pytest --cov=ai_finance_assistant`; 334 passed, 1 skipped, 4 opt-in tests deselected).
 The exact machine report is `backend/artifacts/quality/backend-coverage.json`.
 
 Frontend Vitest/V8 coverage now measures every application module under `frontend/src` (tests,
-test setup, and type declarations excluded), including modules no test imports. With 65 Vitest
-tests it reports 685/731 lines (**93.70%**), 729/786 statements (**92.74%**), 267/289 functions
-(**92.38%**), and 556/722 branches (**77.00%**). `frontend/vite.config.ts` enforces 90% line and
-statement thresholds; `backend/tests/test_release_bundle.py` checks the recorded artifacts.
+test setup, and type declarations excluded), including modules no test imports. With 71 Vitest
+tests it reports 718/765 lines (**93.85%**), 769/827 statements (**92.98%**), 280/303 functions
+(**92.40%**), and 622/792 branches (**78.53%**). These figures include the M2.1 performance work.
+`frontend/vite.config.ts` enforces 90% line and statement thresholds;
+`backend/tests/test_release_bundle.py` checks the recorded artifacts.
 
 Both suites meet the transcribed 90% "Excellent" target by lines and statements. Frontend branch
 coverage remains below it and is reported separately rather than averaged in.

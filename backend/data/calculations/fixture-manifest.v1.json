@@ -1,10 +1,12 @@
 {
   "schema_version": "1",
-  "calculation_policy_version": "finance-calculation-v1",
+  "calculation_policy_version": "finance-calculation-v2",
   "import_policy_version": "portfolio-import-v1",
   "goal_policy_version": "goal-projection-v1",
   "golden_artifact": "../../artifacts/calculations/portfolio-analysis-goldens.v1.json",
   "golden_artifact_sha256": "5b75f6241b0a81ca8363067230b500fc76aa7ee311647bf162e131b06aa6fbc3",
+  "performance_golden_artifact": "../../artifacts/calculations/portfolio-performance-goldens.v1.json",
+  "performance_golden_artifact_sha256": "c95f20b5dd71f0ba2bda604fe8f1269278188acc35bc4d20f145f71772d09319",
   "datasets": [
     {
       "path": "portfolio-import.valid.v1.json",
@@ -20,6 +22,11 @@
       "path": "portfolio-import.adversarial.v1.json",
       "sha256": "749a6ea462eaa13ab963583aa1444ae1942a112b6c4bfa8a96098f5b58669667",
       "purpose": "Duplicate, negative-quantity, and formula-like adversarial rows."
+    },
+    {
+      "path": "portfolio-performance.v1.json",
+      "sha256": "37a1fe4c827467f4fb29788dc0f538c2b1f32025bcb96c596cd94ef58cb0ae4e",
+      "purpose": "Hand-worked cost-basis gain, loss, per-unit basis, missing basis, unpriced, and annualization-threshold cases."
     },
     {
       "path": "goal-projection-cases.v1.json",

@@ -147,7 +147,7 @@ def test_openai_live_account_supports_all_six_agent_contracts() -> None:
     if AgentId.PORTFOLIO_ANALYSIS in expected_agents:
         assert (
             by_agent[AgentId.PORTFOLIO_ANALYSIS].facts[0]["calculation_policy_version"]
-            == "finance-calculation-v1"
+            == "finance-calculation-v2"
         )
     if AgentId.GOAL_PLANNING in expected_agents:
         assert by_agent[AgentId.GOAL_PLANNING].facts[0]["annual_return_rate"] == "0.05"

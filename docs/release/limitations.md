@@ -34,7 +34,12 @@ settings, not enforced after export. Live-provider display/retention rights rema
 Proposed ADR-030 and M11 plan a private multi-user GCP deployment but do not change these current
 release limitations until their implementation and qualification evidence passes.
 
-Backend coverage is 91.39% and frontend coverage is 93.70% lines and 92.74% statements, meeting
-the transcribed 90% "Excellent" target. Frontend branch coverage (77.00%) remains below 90% and is
+Portfolio unrealized gain and return (M2.1) are price change against imported cost basis only.
+They exclude dividends, distributions, separately paid fees, taxes, and cash flows, use one basis per
+Holding, are not time-weighted or money-weighted returns, and are not forecasts. History-based
+volatility, drawdown, and risk-adjusted metrics are not implemented.
+
+Backend coverage is 91.46% and frontend coverage is 93.85% lines and 92.98% statements, meeting
+the transcribed 90% "Excellent" target. Frontend branch coverage (78.53%) remains below 90% and is
 reported separately. Real Qdrant and Redis behavior is still proven only by the opt-in marked
 integration tests; the CI coverage for those adapters uses deterministic fakes.

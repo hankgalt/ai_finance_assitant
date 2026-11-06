@@ -2,9 +2,10 @@
 
 from decimal import ROUND_HALF_EVEN, Decimal, localcontext
 
-CALCULATION_POLICY_VERSION = "finance-calculation-v1"
+CALCULATION_POLICY_VERSION = "finance-calculation-v2"
 GOAL_POLICY_VERSION = "goal-projection-v1"
 DIVERSIFICATION_POLICY_VERSION = "diversification-hhi-v1"
+PERFORMANCE_POLICY_VERSION = "unrealized-performance-v1"
 
 MONEY_QUANTUM = Decimal("0.01")
 PERCENT_QUANTUM = Decimal("0.0001")

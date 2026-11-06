@@ -272,7 +272,9 @@ def test_versioned_fixture_manifest_hashes_match_the_evidence_files() -> None:
     for dataset in manifest["datasets"]:
         actual = hashlib.sha256((DATA_DIR / dataset["path"]).read_bytes()).hexdigest()
         assert actual == dataset["sha256"]
-    golden_path = (DATA_DIR / manifest["golden_artifact"]).resolve()
-    assert (
-        hashlib.sha256(golden_path.read_bytes()).hexdigest() == manifest["golden_artifact_sha256"]
-    )
+    for artifact_key in ("golden_artifact", "performance_golden_artifact"):
+        golden_path = (DATA_DIR / manifest[artifact_key]).resolve()
+        assert (
+            hashlib.sha256(golden_path.read_bytes()).hexdigest()
+            == manifest[f"{artifact_key}_sha256"]
+        )

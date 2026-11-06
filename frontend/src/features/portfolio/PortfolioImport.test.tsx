@@ -326,3 +326,50 @@ test("clears the analysis when its portfolio is deleted and refreshes on request
   );
   expect(screen.getByText("Portfolio deleted")).toBeInTheDocument();
 });
+
+test("marks which saved portfolio the analysis belongs to", async () => {
+  const second: ImportedPortfolio = {
+    ...portfolio,
+    portfolio_id: "portfolio-2",
+    label: "Technology",
+    accounts: portfolio.accounts.map((account) => ({
+      ...account,
+      portfolio_id: "portfolio-2",
+    })),
+  };
+  vi.mocked(api.listPortfolios).mockResolvedValue([portfolio, second]);
+  vi.mocked(api.createSnapshot).mockImplementation(async (_, portfolioId) => ({
+    ...snapshot,
+    snapshot_id: `snapshot-${portfolioId}`,
+    portfolio_id: portfolioId,
+  }));
+  renderPortfolio();
+
+  const retirement = await screen.findByRole("article", { name: "Retirement" });
+  const technology = screen.getByRole("article", { name: "Technology" });
+  expect(retirement).not.toHaveAttribute("aria-current");
+  expect(technology).not.toHaveAttribute("aria-current");
+
+  fireEvent.click(within(technology).getByRole("button", { name: "Analyze" }));
+
+  await waitFor(() =>
+    expect(technology).toHaveAttribute("aria-current", "true"),
+  );
+  expect(technology).toHaveClass("is-analyzed");
+  expect(within(technology).getByText("Shown below")).toBeInTheDocument();
+  expect(retirement).not.toHaveAttribute("aria-current");
+  expect(
+    screen.getByText("Technology", { selector: ".result-context strong" }),
+  ).toBeInTheDocument();
+
+  fireEvent.click(within(retirement).getByRole("button", { name: "Analyze" }));
+
+  await waitFor(() =>
+    expect(retirement).toHaveAttribute("aria-current", "true"),
+  );
+  expect(technology).not.toHaveAttribute("aria-current");
+  expect(within(technology).queryByText("Shown below")).not.toBeInTheDocument();
+  expect(
+    screen.getByText("Retirement", { selector: ".result-context strong" }),
+  ).toBeInTheDocument();
+});

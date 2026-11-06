@@ -696,7 +696,9 @@ def test_remaining_specialists_use_only_their_approved_domain_modules() -> None:
 
     assert all(result.status == AgentResultStatus.OK for result in results)
     portfolio_result, market_result, goal_result, news_result, tax_result = results
-    assert portfolio_result.facts[0]["calculation_policy_version"] == "finance-calculation-v1"
+    assert portfolio_result.facts[0]["calculation_policy_version"] == "finance-calculation-v2"
+    performance = portfolio_result.facts[0]["performance"]
+    assert isinstance(performance, list) and performance
     assert market_result.facts[0]["observation_count"] == 2
     assert goal_result.facts[0]["annual_return_rate"] == "0.05"
     assert news_result.evidence[0].publisher == "example.invalid"

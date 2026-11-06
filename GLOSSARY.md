@@ -35,6 +35,8 @@ _Avoid_: User email, login account, tenant email
 
 **Portfolio snapshot:** A time-specific analytical result created from imported portfolio data, provider-enriched security information, and deterministic calculations.
 
+**Unrealized performance:** The price change of priced holdings against their imported cost basis at a snapshot's valuation date, with cost-basis coverage. It excludes income, cash flows, fees paid separately, and taxes, and is not a forecast.
+
 **Private demonstration release:** A production-oriented release operated only in a controlled local or private environment for the owner and approved viewers. It is not a public multi-user deployment.
 
 **Private multi-user deployment:** An internet-routable deployment that requires strong identity, admits only approved Application Principals, and isolates every Principal's resources. It is neither anonymous public access nor a public product launch.

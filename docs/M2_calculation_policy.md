@@ -1,6 +1,6 @@
 # M2 deterministic finance calculation policy
 
-Version 1.1 | Status: Implemented M2 policy | 2026-11-04
+Version 1.2 | Status: Implemented M2 policy plus M2.1 unrealized performance | 2026-11-05
 
 Scope: PR-003, PR-005, PR-009, PR-016; QR-001, QR-002, QR-006, QR-009, QR-010, QR-015; ADR-009, ADR-012, ADR-018, ADR-019, ADR-020, ADR-021
 
@@ -11,8 +11,9 @@ This document records the numerical and import decisions needed to reproduce M2.
 | Concern | Version |
 | --- | --- |
 | Portfolio import | `portfolio-import-v1` |
-| Portfolio calculation | `finance-calculation-v1` |
+| Portfolio calculation | `finance-calculation-v2` (M2.1; `finance-calculation-v1` Snapshots remain readable) |
 | Diversification heuristic | `diversification-hhi-v1` |
+| Unrealized performance | `unrealized-performance-v1` |
 | Goal projection | `goal-projection-v1` |
 
 Changing a formula, rounding rule, accepted import interpretation, duplicate key, or heuristic requires a new version and new golden evidence.
@@ -77,7 +78,33 @@ HHI = sum(holding_weight_i²)
 effective_holding_count = 1 / HHI
 ~~~
 
-It also returns the largest Holding percentage and priced Holding count. The heuristic describes observed holding-value concentration only. It does not measure cross-asset correlation, volatility, liquidity, tax exposure, suitability, expected return, or personalized risk, and it emits no good/bad rating.
+It also returns the largest Holding percentage, the combined percentage of the five largest priced Holdings (added in `finance-calculation-v2`; HHI arithmetic is unchanged), and priced Holding count. The heuristic describes observed holding-value concentration only. It does not measure cross-asset correlation, volatility, liquidity, tax exposure, suitability, expected return, or personalized risk, and it emits no good/bad rating.
+
+## 6a. Unrealized performance (`unrealized-performance-v1`)
+
+M2.1 adds cost-basis performance using only imported evidence. It makes no provider call and adds no history, benchmark, or risk-free-rate input.
+
+For each Holding with an imported cost basis:
+
+~~~text
+cost_basis_total = cost_basis_amount              when cost_basis_basis = total
+cost_basis_total = cost_basis_amount × quantity   when cost_basis_basis = per_unit
+unrealized_gain = market_value − cost_basis_total
+unrealized_return_percent = unrealized_gain / cost_basis_total × 100
+holding_period_days = valuation date − acquisition_date
+annualized_return_percent = ((market_value / cost_basis_total)^(365 / holding_period_days) − 1) × 100
+~~~
+
+- Cost basis is interpreted in the Holding currency and is never converted.
+- Gain requires a usable price; an unpriced Holding keeps its cost basis but has no gain.
+- A zero cost basis reports gain with no percentage and a `ZERO_COST_BASIS` warning.
+- The valuation date is the Snapshot `calculated_at` date. An acquisition date after it emits `ACQUISITION_DATE_AFTER_VALUATION` and has no holding period.
+- Annualization uses Actual/365 and only applies when the holding period is at least 365 days; shorter periods are not annualized. A market value of zero annualizes to −100%.
+- Money uses the money quantum; percentages use the percent quantum with half-even rounding; the power is evaluated at 34 significant digits.
+
+For each currency, the summary reports priced Holding count, Holdings with both cost basis and gain, their combined cost basis and market value, combined gain, return on that combined cost basis, and cost-basis value coverage (covered market value divided by all priced value). Currencies are never combined.
+
+The result is price change against cost basis only. It excludes dividends, distributions, separately paid fees, taxes, and external cash flows; it is not a time-weighted or money-weighted return; and it is not a forecast. Golden evidence: `backend/artifacts/calculations/portfolio-performance-goldens.v1.json`.
 
 ## 7. Goal projection
 

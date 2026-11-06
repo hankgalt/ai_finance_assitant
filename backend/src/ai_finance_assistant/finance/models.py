@@ -313,6 +313,12 @@ class HoldingValuation(BaseModel):
     sector_source: Literal["provider", "user_import"] | None = None
     expense_ratio: RateDecimal | None = None
     expense_ratio_source: Literal["provider", "user_import"] | None = None
+    cost_basis_total: NonNegativeDecimal | None = None
+    unrealized_gain: FiniteDecimal | None = None
+    unrealized_return_percent: FiniteDecimal | None = None
+    acquisition_date: date | None = None
+    holding_period_days: int | None = Field(default=None, ge=0)
+    annualized_return_percent: FiniteDecimal | None = None
 
 
 class CurrencyTotal(BaseModel):
@@ -353,7 +359,25 @@ class DiversificationHeuristic(BaseModel):
     holding_hhi: RateDecimal | None = None
     effective_holding_count: NonNegativeDecimal | None = None
     top_holding_percent: NonNegativeDecimal | None = None
+    top_five_holding_percent: NonNegativeDecimal | None = None
     priced_holding_count: int = Field(ge=0)
+    limitation: str = Field(min_length=1, max_length=512)
+
+
+class UnrealizedPerformance(BaseModel):
+    """Cost-basis performance for one currency; never combined across currencies."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    version: Literal["unrealized-performance-v1"] = "unrealized-performance-v1"
+    currency: CurrencyCode
+    priced_holding_count: int = Field(ge=0)
+    holdings_with_cost_basis: int = Field(ge=0)
+    cost_basis_total: NonNegativeDecimal
+    market_value_with_cost_basis: NonNegativeDecimal
+    unrealized_gain: FiniteDecimal
+    unrealized_return_percent: FiniteDecimal | None = None
+    cost_basis_value_coverage_percent: NonNegativeDecimal
     limitation: str = Field(min_length=1, max_length=512)
 
 
@@ -364,7 +388,9 @@ class PortfolioSnapshot(BaseModel):
     snapshot_id: Identifier
     portfolio_id: Identifier
     calculated_at: AwareDatetime
-    calculation_policy_version: Literal["finance-calculation-v1"] = "finance-calculation-v1"
+    calculation_policy_version: Literal["finance-calculation-v1", "finance-calculation-v2"] = (
+        "finance-calculation-v2"
+    )
     quote_set_id: Identifier
     security_reference_ids: tuple[Identifier, ...]
     base_currency: CurrencyCode
@@ -374,6 +400,7 @@ class PortfolioSnapshot(BaseModel):
     concentrations: tuple[ClassificationConcentration, ...]
     expense_metrics: tuple[ExpenseMetric, ...]
     diversification: tuple[DiversificationHeuristic, ...]
+    performance: tuple[UnrealizedPerformance, ...] = ()
     unpriced_holding_ids: tuple[Identifier, ...]
     warnings: tuple[CalculationWarning, ...]
 

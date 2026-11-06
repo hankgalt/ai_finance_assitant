@@ -17,7 +17,7 @@ Release ID: `private-demo-2026-10-31`
 | Dense embedding | `BAAI/bge-small-en-v1.5`, revision `aa8f8b060edb00e03bfdd08813a2949946c8ba55`, 384 dimensions |
 | Sparse embedding | `Qdrant/bm25`, revision `22b8d2af71a76161e18dd432d2cee0eefa66e412` |
 | Chunking / payload schema | `structural-v1` / `1` |
-| Portfolio import / calculation | `portfolio-import-v1` / `finance-calculation-v1` |
+| Portfolio import / calculation | `portfolio-import-v1` / `finance-calculation-v1` (post-release M2.1 adds `finance-calculation-v2` and `unrealized-performance-v1`; the full qualification runner passed on 2026-11-05, but the committed release report was not replaced) |
 | Goal / diversification | `goal-projection-v1` / `diversification-hhi-v1` |
 | Historical provider cache | schema `1`, policy `historical-daily-v1` |
 | Public-RAG response cache | schema `1`, policy `public-rag-evidence-bound-v2`, cutoff `0.92` |

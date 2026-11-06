@@ -8,7 +8,7 @@ These files contain synthetic positions and prices for exercising the Portfolio 
 2. Enter any portfolio label, choose one example file, and select **Validate import**.
 3. Review the findings. Each example should be accepted without blocking findings.
 4. Select **Save validated portfolio**, then select **Analyze** from Saved portfolios.
-5. Verify the holding values, allocation chart and table, classification coverage, expense coverage, and diversification output.
+5. Verify the holding values, allocation chart and table, classification coverage, expense coverage, diversification output, and the unrealized gain and loss section built from each row's cost basis and acquisition date.
 
 The application assigns the Portfolio identifier, label, base currency, and import time. The files contain only Account and Holding rows. Analysis intentionally reports `USER_PRICE_USED` because every example carries an explicit synthetic price instead of calling a market-data provider.
 

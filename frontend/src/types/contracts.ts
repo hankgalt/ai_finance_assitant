@@ -325,6 +325,36 @@ export interface HoldingValuation {
   market_value: string | null;
   allocation_percent: string | null;
   asset_class: string | null;
+  cost_basis_total?: string | null;
+  unrealized_gain?: string | null;
+  unrealized_return_percent?: string | null;
+  acquisition_date?: string | null;
+  holding_period_days?: number | null;
+  annualized_return_percent?: string | null;
+}
+
+export interface UnrealizedPerformance {
+  version: "unrealized-performance-v1";
+  currency: string;
+  priced_holding_count: number;
+  holdings_with_cost_basis: number;
+  cost_basis_total: string;
+  market_value_with_cost_basis: string;
+  unrealized_gain: string;
+  unrealized_return_percent: string | null;
+  cost_basis_value_coverage_percent: string;
+  limitation: string;
+}
+
+export interface DiversificationHeuristic {
+  version: "diversification-hhi-v1";
+  currency: string;
+  holding_hhi: string | null;
+  effective_holding_count: string | null;
+  top_holding_percent: string | null;
+  top_five_holding_percent?: string | null;
+  priced_holding_count: number;
+  limitation: string;
 }
 
 export interface PortfolioSnapshot {
@@ -332,7 +362,8 @@ export interface PortfolioSnapshot {
   snapshot_id: string;
   portfolio_id: string;
   calculated_at: string;
-  calculation_policy_version: "finance-calculation-v1";
+  calculation_policy_version:
+    "finance-calculation-v1" | "finance-calculation-v2";
   quote_set_id: string;
   security_reference_ids: string[];
   base_currency: string;
@@ -354,7 +385,8 @@ export interface PortfolioSnapshot {
     classified_value_coverage_percent: string;
   }>;
   expense_metrics: Array<Record<string, unknown>>;
-  diversification: Array<Record<string, unknown>>;
+  diversification: DiversificationHeuristic[];
+  performance?: UnrealizedPerformance[];
   unpriced_holding_ids: string[];
   warnings: CalculationWarning[];
 }
