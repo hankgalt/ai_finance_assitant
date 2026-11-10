@@ -13,6 +13,18 @@ DELIVERY_CONTRACT = REPO_ROOT / "contracts/deployment/delivery-policy.v1.json"
 DELIVERY_EVIDENCE = REPO_ROOT / "backend/artifacts/release/deployment/delivery-controls.v1.json"
 ACTION_REF = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)(?:\s+#.*)?$", re.MULTILINE)
 IMMUTABLE_ACTION_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
+PINNED_PNPM_SETUP = re.compile(
+    r"- uses: pnpm/action-setup@[0-9a-f]{40}[^\n]*\n"
+    r"\s+with:\n"
+    r"\s+version: 11\.25\.0(?:\n|$)"
+)
+GITLEAKS_WITH_AUTOMATIC_TOKEN = re.compile(
+    r"- uses: gitleaks/gitleaks-action@[0-9a-f]{40}[^\n]*\n"
+    r"\s+env:\n"
+    r"\s+GITHUB_TOKEN: \$\{\{ github\.token \}\}(?:\n|$)"
+)
+PINNED_TRIVY_ACTION = "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0"
+PINNED_TRIVY_VERSION = "version: v0.76.2"
 
 
 def _contract() -> dict[str, Any]:
@@ -109,6 +121,12 @@ def test_ci_runs_credential_free_checks_and_real_postgres_qualification() -> Non
     assert "postgres:17.11-alpine3.23@sha256:" in workflow
 
 
+def test_pnpm_setup_is_explicit_when_package_manifest_is_not_at_repo_root() -> None:
+    for workflow_name in ("ci.yml", "security.yml"):
+        workflow = _workflow(workflow_name)
+        assert PINNED_PNPM_SETUP.search(workflow), workflow_name
+
+
 def test_security_pipeline_covers_dependencies_secrets_code_and_images() -> None:
     security = _workflow("security.yml")
     images = _workflow("images.yml")
@@ -128,6 +146,24 @@ def test_security_pipeline_covers_dependencies_secrets_code_and_images() -> None
     assert "packages: write" in images
     assert "attestations: write" in images
     assert "id-token: write" in images
+
+
+def test_gitleaks_receives_only_the_automatic_read_only_pull_request_token() -> None:
+    security = _workflow("security.yml")
+
+    assert GITLEAKS_WITH_AUTOMATIC_TOKEN.search(security)
+    assert "pull-requests: read" in security
+    assert 'GITLEAKS_ENABLE_COMMENTS: "false"' in security
+
+
+def test_trivy_scans_pin_a_supported_action_and_scanner_version() -> None:
+    security = _workflow("security.yml")
+    images = _workflow("images.yml")
+
+    assert security.count(PINNED_TRIVY_ACTION) == 1
+    assert security.count(PINNED_TRIVY_VERSION) == 1
+    assert images.count(PINNED_TRIVY_ACTION) == 2
+    assert images.count(PINNED_TRIVY_VERSION) == 2
 
 
 def test_cloud_identity_smoke_is_manual_environment_gated_and_keyless() -> None:

@@ -31,8 +31,9 @@ jobs:
           docker build --file infrastructure/container/backend/Dockerfile --build-arg VCS_REF="$GITHUB_SHA" --tag "aifa-backend:$GITHUB_SHA" .
           docker build --file infrastructure/container/frontend/Dockerfile --build-arg VCS_REF="$GITHUB_SHA" --tag "aifa-frontend:$GITHUB_SHA" .
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.76.2
           scan-type: image
           image-ref: aifa-backend:${{ github.sha }}
           scanners: vuln,secret,misconfig
@@ -40,8 +41,9 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.76.2
           scan-type: image
           image-ref: aifa-frontend:${{ github.sha }}
           scanners: vuln,secret,misconfig

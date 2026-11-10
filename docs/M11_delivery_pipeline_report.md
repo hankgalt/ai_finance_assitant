@@ -25,7 +25,8 @@ independent backup approver. The machine-readable boundary is
   GitHub Actions, Python/uv, pnpm, and both Dockerfiles; delivery paths are owned by `@hankgalt`.
 - Scheduled and change-triggered security checks cover dependency review/audits, secret scanning,
   CodeQL, and repository vulnerability/secret/misconfiguration scanning. Image publication also
-  blocks on high/critical Trivy findings.
+  blocks on high/critical Trivy findings. Repository and image scans use the immutable Trivy Action
+  v0.36.0 revision and explicitly pin the Trivy v0.76.2 security-fix release.
 - Backend and frontend images use digest-pinned base images and explicit non-root identities. The
   backend preloads its frozen dense/sparse embedding models and runs Hugging Face access offline.
   The frontend serves only `/finance_assistant`, refuses to turn missed API paths into SPA HTML,
@@ -43,11 +44,13 @@ independent backup approver. The machine-readable boundary is
 | Command/check | Actual result |
 | --- | --- |
 | Initial `pytest -q -x backend/tests/test_delivery_workflows.py` | expected red: delivery policy did not exist |
-| `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py` | 8 passed |
+| Initial `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py -k trivy` | expected red: workflows used the Trivy Action v0.33.1 default scanner |
+| `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py` | 11 passed |
 | `backend/.venv/bin/ruff format --check backend/src backend/tests` | 156 files already formatted |
 | `backend/.venv/bin/ruff check backend/src backend/tests` | passed |
 | `backend/.venv/bin/mypy` | passed for 156 source/test files |
-| `backend/.venv/bin/python -m pytest -q` | 372 passed, 6 skipped, 4 deselected in 6.30 s |
+| `backend/.venv/bin/python -m pytest -q` | 375 passed, 10 skipped in 6.39 s |
+| Trivy installer URL check for v0.65.0 / v0.76.2 | HTTP 404 / HTTP 200 |
 | PostgreSQL 17.11 managed-state qualification | 5 passed, 2 deselected in 1.75 s |
 | `UV_CACHE_DIR=/tmp/aifa-uv-cache uv lock --check --offline` | 136 packages resolved; lock current |
 | `frontend/pnpm format:check`, `lint`, `typecheck` | passed |
@@ -63,8 +66,16 @@ independent backup approver. The machine-readable boundary is
 The first Docker frontend build exposed a missing repository-level `contracts/` build input; the
 Dockerfile now copies that shared contract without duplicating it. The first local PostgreSQL test
 attempt was denied by the managed sandbox's loopback boundary; the identical test passed after the
-test process received loopback permission. No GitHub-hosted CodeQL, Gitleaks, Trivy, GHCR, or
-attestation run is claimed by this local record.
+test process received loopback permission. The first GitHub dependency-audit run also showed that
+`pnpm/action-setup` cannot discover `frontend/package.json` from the repository root; both workflow
+callers now pass the locked pnpm version explicitly. The first Gitleaks pull-request run required
+GitHub's automatic token to be mapped explicitly; the secret-scan job now has read-only PR metadata
+access with commenting disabled. The first repository-scan run then exposed an upstream installer
+compatibility failure: the Trivy Action v0.33.1 defaulted to Trivy v0.65.0, while the installer it
+checked out from the current Trivy `main` branch returned HTTP 404 for that release's generated
+`get.trivy.dev` binary URL. Repository and image scans now use the immutable Trivy Action v0.36.0
+revision and explicitly pin Trivy v0.76.2; the generated binary URL returns HTTP 200. No successful
+GitHub-hosted Gitleaks, CodeQL, Trivy, GHCR, or attestation run is claimed by this local record.
 
 ## Security and privacy impact
 

@@ -25,11 +25,11 @@
   "local_qualification": [
     {
       "check": "delivery contract tests",
-      "result": "8 passed"
+      "result": "11 passed"
     },
     {
       "check": "backend credential-free suite",
-      "result": "372 passed, 6 skipped, 4 deselected"
+      "result": "375 passed, 10 skipped"
     },
     {
       "check": "PostgreSQL managed-state qualification",
