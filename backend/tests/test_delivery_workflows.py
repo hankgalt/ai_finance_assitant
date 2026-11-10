@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_ROOT = REPO_ROOT / ".github/workflows"
 DELIVERY_CONTRACT = REPO_ROOT / "contracts/deployment/delivery-policy.v1.json"
@@ -36,6 +38,58 @@ def _contract() -> dict[str, Any]:
 
 def _workflow(name: str) -> str:
     return (WORKFLOW_ROOT / name).read_text(encoding="utf-8")
+
+
+def _pinned_stage_image(dockerfile: str, image_pattern: str, stage: str) -> str:
+    images: list[str] = re.findall(
+        rf"^FROM ({image_pattern}@sha256:[0-9a-f]{{64}}) AS {stage}$",
+        dockerfile,
+        re.MULTILINE,
+    )
+    assert len(images) == 1, f"expected one digest-pinned {stage} stage on {image_pattern}"
+    return images[0]
+
+
+def _assert_container_image_policy(backend: str, frontend: str) -> None:
+    backend_builder = _pinned_stage_image(
+        backend,
+        r"python:3\.12\.\d+-slim-bookworm",
+        "builder",
+    )
+    backend_runtime = _pinned_stage_image(
+        backend,
+        r"python:3\.12\.\d+-slim-bookworm",
+        "runtime",
+    )
+    assert backend_builder == backend_runtime
+    assert len(re.findall(r"^FROM ", backend, re.MULTILINE)) == 2
+    assert re.search(r"^ARG UV_VERSION=\d+\.\d+\.\d+$", backend, re.MULTILINE)
+    runtime_stage = backend.split(f"FROM {backend_runtime} AS runtime", maxsplit=1)[1]
+    assert "pip install" not in runtime_stage
+    assert "uv sync" not in runtime_stage
+    assert "COPY --from=builder --chown=10001:10001 /app /app" in runtime_stage
+    assert (
+        "COPY --from=builder --chown=10001:10001 /opt/fastembed-cache "
+        "/opt/fastembed-cache" in runtime_stage
+    )
+    assert "USER 10001:10001" in backend
+    assert "HF_HUB_OFFLINE=1" in backend
+    assert "FastEmbedEncoder" in backend
+
+    _pinned_stage_image(
+        frontend,
+        r"node:24\.\d+\.\d+-alpine3\.24",
+        "build",
+    )
+    _pinned_stage_image(
+        frontend,
+        r"nginx/nginx-unprivileged:1\.30\.\d+-alpine3\.24-slim",
+        "runtime",
+    )
+    assert "nginxinc/nginx-unprivileged" not in frontend
+    assert len(re.findall(r"^FROM [^\n]+@sha256:[0-9a-f]{64}", frontend, re.MULTILINE)) == 2
+    assert "USER 101:101" in frontend
+    assert "COPY contracts/ /workspace/contracts/" in frontend
 
 
 def test_delivery_contract_records_fail_closed_external_activation() -> None:
@@ -73,9 +127,21 @@ def test_delivery_evidence_is_capability_owned_and_truthful_about_pending_contro
     assert evidence["secret_payloads_recorded"] is False
     assert evidence["cloud_resources_mutated"] is False
     assert evidence["github_repository_settings_mutated"] is False
+    assert evidence["github_qualification"] == [
+        {
+            "check": (
+                "container build, HIGH/CRITICAL image scan, GHCR publication, "
+                "and build-provenance attestation"
+            ),
+            "result": "passed",
+            "run_id": 42761838064,
+            "commit": "ae079ef7e8a3c2b8f2dc01b78869534d2a94dc70",
+            "url": ("https://github.com/hankgalt/ai_finance_assitant/actions/runs/42761838064"),
+        }
+    ]
     assert evidence["external_qualification_pending"] == [
-        "GitHub-hosted workflow execution",
-        "GHCR publication and build-provenance attestation",
+        "remaining GitHub-hosted dependency-review, Gitleaks, CodeQL, and "
+        "repository-scan execution",
         "staging and production GitHub environment protection",
         "GCP Workload Identity Federation and read-only identity smoke",
         "staging infrastructure, no-bypass, deployment, and rollback qualification",
@@ -190,39 +256,7 @@ def test_container_builds_are_non_root_pinned_and_base_path_scoped() -> None:
     )
     nginx = (REPO_ROOT / "infrastructure/container/frontend/nginx.conf").read_text(encoding="utf-8")
 
-    backend_base = (
-        "python:3.12.16-slim-bookworm@sha256:"
-        "935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df"
-    )
-    assert backend.count(f"FROM {backend_base}") == 2
-    assert f"FROM {backend_base} AS builder" in backend
-    assert f"FROM {backend_base} AS runtime" in backend
-    assert "ARG UV_VERSION=0.13.4" in backend
-    runtime_stage = backend.split(f"FROM {backend_base} AS runtime", maxsplit=1)[1]
-    assert "pip install" not in runtime_stage
-    assert "uv sync" not in runtime_stage
-    assert "COPY --from=builder --chown=10001:10001 /app /app" in runtime_stage
-    assert (
-        "COPY --from=builder --chown=10001:10001 /opt/fastembed-cache "
-        "/opt/fastembed-cache" in runtime_stage
-    )
-    assert "USER 10001:10001" in backend
-    assert "HF_HUB_OFFLINE=1" in backend
-    assert "FastEmbedEncoder" in backend
-    frontend_builder = (
-        "node:24.22.2-alpine3.24@sha256:"
-        "a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8"
-    )
-    frontend_runtime = (
-        "nginx/nginx-unprivileged:1.30.6-alpine3.24-slim@sha256:"
-        "e333a5b95605942b5e495645ee54fab02b112081de6dbe45d2ead3ef38e03e31"
-    )
-    assert f"FROM {frontend_builder} AS build" in frontend
-    assert f"FROM {frontend_runtime} AS runtime" in frontend
-    assert "nginxinc/nginx-unprivileged" not in frontend
-    assert len(re.findall(r"^FROM [^\n]+@sha256:[0-9a-f]{64}", frontend, re.MULTILINE)) == 2
-    assert "USER 101:101" in frontend
-    assert "COPY contracts/ /workspace/contracts/" in frontend
+    _assert_container_image_policy(backend, frontend)
     assert "location = /finance_assistant/api" in nginx
     assert "location /finance_assistant/api/" in nginx
     assert "location /finance_assistant/" in nginx
@@ -235,6 +269,73 @@ def test_container_builds_are_non_root_pinned_and_base_path_scoped() -> None:
     assert all(re.search(r"@sha256:[0-9a-f]{64}$", ref) for ref in image_references)
 
 
+def test_container_policy_accepts_supported_runtime_patch_updates() -> None:
+    backend = (REPO_ROOT / "infrastructure/container/backend/Dockerfile").read_text(
+        encoding="utf-8"
+    )
+    frontend = (REPO_ROOT / "infrastructure/container/frontend/Dockerfile").read_text(
+        encoding="utf-8"
+    )
+
+    updated_backend, backend_updates = re.subn(
+        r"python:3\.12\.\d+-slim-bookworm@sha256:[0-9a-f]{64}",
+        f"python:3.12.17-slim-bookworm@sha256:{'1' * 64}",
+        backend,
+    )
+    updated_frontend, node_updates = re.subn(
+        r"node:24\.\d+\.\d+-alpine3\.24@sha256:[0-9a-f]{64}",
+        f"node:24.23.0-alpine3.24@sha256:{'2' * 64}",
+        frontend,
+    )
+    updated_frontend, nginx_updates = re.subn(
+        r"nginx/nginx-unprivileged:1\.30\.\d+-alpine3\.24-slim@sha256:[0-9a-f]{64}",
+        f"nginx/nginx-unprivileged:1.30.7-alpine3.24-slim@sha256:{'3' * 64}",
+        updated_frontend,
+    )
+
+    assert (backend_updates, node_updates, nginx_updates) == (2, 1, 1)
+    _assert_container_image_policy(updated_backend, updated_frontend)
+
+
+@pytest.mark.parametrize(
+    ("dockerfile", "qualified_pattern", "unqualified", "expected_updates"),
+    [
+        (
+            "backend",
+            r"python:3\.12\.\d+-slim-bookworm@sha256:[0-9a-f]{64}",
+            f"python:3.15.0-slim-bookworm@sha256:{'4' * 64}",
+            2,
+        ),
+        (
+            "frontend",
+            r"node:24\.\d+\.\d+-alpine3\.24@sha256:[0-9a-f]{64}",
+            f"node:26.13.0-alpine3.24@sha256:{'5' * 64}",
+            1,
+        ),
+    ],
+)
+def test_container_policy_rejects_unqualified_runtime_line_updates(
+    dockerfile: str,
+    qualified_pattern: str,
+    unqualified: str,
+    expected_updates: int,
+) -> None:
+    backend = (REPO_ROOT / "infrastructure/container/backend/Dockerfile").read_text(
+        encoding="utf-8"
+    )
+    frontend = (REPO_ROOT / "infrastructure/container/frontend/Dockerfile").read_text(
+        encoding="utf-8"
+    )
+    if dockerfile == "backend":
+        backend, updates = re.subn(qualified_pattern, unqualified, backend)
+    else:
+        frontend, updates = re.subn(qualified_pattern, unqualified, frontend)
+
+    assert updates == expected_updates
+    with pytest.raises(AssertionError):
+        _assert_container_image_policy(backend, frontend)
+
+
 def test_dependency_updates_and_delivery_ownership_are_repository_owned() -> None:
     dependabot = (REPO_ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
     codeowners = (REPO_ROOT / ".github/CODEOWNERS").read_text(encoding="utf-8")
@@ -242,5 +343,18 @@ def test_dependency_updates_and_delivery_ownership_are_repository_owned() -> Non
     assert dependabot.count("package-ecosystem:") == 5
     for ecosystem in ("github-actions", "pip", "npm", "docker"):
         assert f"package-ecosystem: {ecosystem}" in dependabot
+    backend_docker_updates = dependabot.split(
+        'directory: "/infrastructure/container/backend"', maxsplit=1
+    )[1].split("- package-ecosystem:", maxsplit=1)[0]
+    frontend_docker_updates = dependabot.split(
+        'directory: "/infrastructure/container/frontend"', maxsplit=1
+    )[1]
+    assert "dependency-name: python" in backend_docker_updates
+    assert "version-update:semver-major" in backend_docker_updates
+    assert "version-update:semver-minor" in backend_docker_updates
+    assert "dependency-name: node" in frontend_docker_updates
+    assert "version-update:semver-major" in frontend_docker_updates
+    assert "dependency-name: nginx/nginx-unprivileged" in frontend_docker_updates
+    assert "version-update:semver-minor" in frontend_docker_updates
     for path in ("/.github/workflows/", "/contracts/deployment/", "/infrastructure/"):
         assert f"{path} @hankgalt" in codeowners

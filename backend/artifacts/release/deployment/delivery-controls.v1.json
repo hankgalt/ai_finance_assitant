@@ -25,11 +25,11 @@
   "local_qualification": [
     {
       "check": "delivery contract tests",
-      "result": "11 passed"
+      "result": "14 passed"
     },
     {
       "check": "backend credential-free suite",
-      "result": "375 passed, 6 skipped, 4 deselected"
+      "result": "378 passed, 6 skipped, 4 deselected"
     },
     {
       "check": "PostgreSQL managed-state qualification",
@@ -60,9 +60,17 @@
       "result": "no known vulnerabilities"
     }
   ],
+  "github_qualification": [
+    {
+      "check": "container build, HIGH/CRITICAL image scan, GHCR publication, and build-provenance attestation",
+      "result": "passed",
+      "run_id": 42761838064,
+      "commit": "ae079ef7e8a3c2b8f2dc01b78869534d2a94dc70",
+      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42761838064"
+    }
+  ],
   "external_qualification_pending": [
-    "GitHub-hosted workflow execution",
-    "GHCR publication and build-provenance attestation",
+    "remaining GitHub-hosted dependency-review, Gitleaks, CodeQL, and repository-scan execution",
     "staging and production GitHub environment protection",
     "GCP Workload Identity Federation and read-only identity smoke",
     "staging infrastructure, no-bypass, deployment, and rollback qualification"

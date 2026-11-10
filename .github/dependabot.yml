@@ -19,9 +19,25 @@ updates:
     directory: "/infrastructure/container/backend"
     schedule:
       interval: weekly
+    ignore:
+      # Python runtime-line upgrades require explicit compatibility qualification.
+      - dependency-name: python
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
 
   - package-ecosystem: docker
     directory: "/infrastructure/container/frontend"
     schedule:
       interval: weekly
+    ignore:
+      # Keep the frontend builder on the Node 24 line qualified by CI.
+      - dependency-name: node
+        update-types:
+          - version-update:semver-major
+      # NGINX stable-line upgrades require a fresh runtime scan and HTTP smoke.
+      - dependency-name: nginx/nginx-unprivileged
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
 

@@ -24,6 +24,9 @@ independent backup approver. The machine-readable boundary is
   `pnpm/action-setup` v6.1.0 revision, whose action runtime is Node.js 24.
 - Every third-party GitHub Action reference is pinned to a full commit SHA. Dependabot covers
   GitHub Actions, Python/uv, pnpm, and both Dockerfiles; delivery paths are owned by `@hankgalt`.
+  Docker patch/digest refreshes remain automated, while Python, Node, and NGINX runtime-line
+  upgrades are held for explicit compatibility qualification against the supported Python 3.12,
+  Node 24, and NGINX 1.30 lines.
 - Scheduled and change-triggered security checks cover dependency review/audits, secret scanning,
   CodeQL, and repository vulnerability/secret/misconfiguration scanning. Image publication also
   blocks on high/critical Trivy findings. Repository and image scans use the immutable Trivy Action
@@ -50,11 +53,12 @@ independent backup approver. The machine-readable boundary is
 | Initial `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py -k trivy` | expected red: workflows used the Trivy Action v0.33.1 default scanner |
 | Initial `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py -k pnpm_setup` | expected red: workflows used the Node.js 20-based pnpm Action v4 |
 | Initial `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py -k container_builds` after the GitHub image-scan failure | expected red: stale backend/frontend bases and the single-stage backend runtime did not satisfy the repaired image boundary |
-| `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py` | 11 passed |
+| Initial `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py -k supported_runtime_patch_updates` | expected red: the container policy hard-coded qualified patch versions and digests |
+| `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py` | 14 passed |
 | `backend/.venv/bin/ruff format --check backend/src backend/tests` | 156 files already formatted |
 | `backend/.venv/bin/ruff check backend/src backend/tests` | passed |
 | `backend/.venv/bin/mypy` | passed for 156 source/test files |
-| `backend/.venv/bin/python -m pytest -q` (from `backend/`) | 375 passed, 6 skipped, 4 deselected in 6.35 s |
+| `backend/.venv/bin/python -m pytest -q` (from `backend/`) | 378 passed, 6 skipped, 4 deselected in 6.19 s |
 | Trivy installer URL check for v0.65.0 / v0.76.2 | HTTP 404 / HTTP 200 |
 | PostgreSQL 17.11 managed-state qualification | 5 passed, 2 deselected in 1.75 s |
 | `UV_CACHE_DIR=/tmp/aifa-uv-cache uv lock --check --offline` | 136 packages resolved; lock current |
@@ -85,7 +89,7 @@ v0.65.0, while the installer it
 checked out from the current Trivy `main` branch returned HTTP 404 for that release's generated
 `get.trivy.dev` binary URL. Repository and image scans now use the immutable Trivy Action v0.36.0
 revision and explicitly pin Trivy v0.76.2; the generated binary URL returns HTTP 200. No successful
-GitHub-hosted Gitleaks, CodeQL, Trivy, GHCR, or attestation run is claimed by this local record.
+GitHub-hosted Gitleaks or CodeQL run is claimed by this record.
 
 The subsequent GitHub Container images run `42758880644` built both images and reached the image
 scan, then failed because the digest-pinned runtime bases had aged past the workflow's
@@ -95,7 +99,16 @@ CRITICAL) in the frontend runtime. The repaired backend uses a clean Python 3.12
 runtime stage and uv 0.13.4 only in its discarded builder stage. The frontend uses Node 24.22.2 for
 the discarded builder and the current official unprivileged NGINX 1.30.6 / Alpine 3.24 runtime.
 Both rebuilt artifacts pass the exact Trivy gate locally with zero HIGH/CRITICAL findings. A
-successful replacement GitHub-hosted run remains pending.
+replacement GitHub-hosted Container images run (`42761838064`) subsequently passed on main for
+commit `ae079ef`, including the push-only GHCR publication and provenance-attestation path.
+
+Dependabot then opened Python 3.15 and Node 26 runtime-line PRs (`#2` and `#3`). Deterministic CI
+correctly exposed that the container-policy test had encoded exact qualified patch versions rather
+than the durable boundary. The test now permits patch and digest refreshes within the CI-qualified
+Python 3.12, Node 24, Alpine 3.24, and NGINX 1.30 lines, continues to reject unqualified runtime-line
+changes, and records that behavior with positive and negative regression fixtures. Dependabot now
+suppresses those runtime-line jumps; adopting a later line requires an explicit compatibility and
+container qualification change rather than an automated Dockerfile-only PR.
 
 ## Security and privacy impact
 
@@ -113,8 +126,9 @@ This slice does not broaden any provider entitlement or retention right.
 - Slice 5 must provision separate environment-specific Workload Identity Federation providers and
   service accounts through reviewed Terraform. Only then can the three non-secret GitHub
   environment variables be populated and the read-only identity smoke executed.
-- Execute the workflows on GitHub and retain actual CodeQL, dependency-review, Gitleaks, Trivy,
-  image-digest, and build-attestation evidence. Local source qualification is not a substitute.
+- Execute the remaining workflows on GitHub and retain actual CodeQL, dependency-review, Gitleaks,
+  and repository-scan evidence. Container build, scan, publication, and attestation passed in run
+  `42761838064`; retain the published image digests with the final release evidence.
 - Automated GCP deployment remains disabled. Terraform plan/apply, migration, staging smoke,
   no-direct-workload-bypass, promotion, rollback, and production/demo cutover belong to later slices.
 - Proposed ADR-030 remains Proposed until the complete M11 qualification passes.
