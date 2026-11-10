@@ -1,4 +1,4 @@
-FROM python:3.12.16-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS builder
+FROM python:3.15.0-slim-bookworm@sha256:0e019bbdfb5d9874cb2389f1c2884b64aa2ac97c99960b5bc521cef978c0617d AS builder
 
 ARG UV_VERSION=0.13.4
 
@@ -20,7 +20,7 @@ COPY backend/src ./src
 RUN uv sync --frozen --no-dev --no-editable \
     && python -c "from ai_finance_assistant.knowledge.representations import FastEmbedEncoder; encoder = FastEmbedEncoder(); encoder.embed_dense(['cache warmup']); encoder.embed_sparse(['cache warmup'])"
 
-FROM python:3.12.16-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS runtime
+FROM python:3.15.0-slim-bookworm@sha256:0e019bbdfb5d9874cb2389f1c2884b64aa2ac97c99960b5bc521cef978c0617d AS runtime
 
 ARG VCS_REF=unknown
 
