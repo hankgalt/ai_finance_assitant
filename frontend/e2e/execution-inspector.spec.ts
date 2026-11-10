@@ -45,7 +45,7 @@ function recordedEvent(
     execution_id: executionId,
     trace_id: `trace-${executionId}`,
     trace_unavailable_reason: null,
-    session_id: "session-m7-e2e",
+    session_id: "session-inspector-e2e",
     workflow_id: E2E_WORKFLOW_ID,
     workflow_version: "1",
     sequence,
@@ -78,7 +78,7 @@ const runRecords = [
   ["run-failure", "failed"],
 ].map(([executionId, status]) => ({
   execution_id: executionId,
-  session_id: "session-m7-e2e",
+  session_id: "session-inspector-e2e",
   workflow_id: E2E_WORKFLOW_ID,
   workflow_version: "1",
   status,
@@ -91,7 +91,7 @@ const runRecords = [
 const eventsByRun: Record<string, unknown[]> = {
   "run-success": [
     recordedEvent("run-success", 0, "workflow", "run_started", "running", {
-      safe_metadata: { fixture_version: "m7-e2e-v1" },
+      safe_metadata: { fixture_version: "inspector-e2e-v1" },
     }),
     recordedEvent("run-success", 1, "router", "route_selected", "completed", {
       routing: {
@@ -154,7 +154,7 @@ const eventsByRun: Record<string, unknown[]> = {
   ],
   "run-partial": [
     recordedEvent("run-partial", 0, "workflow", "run_started", "running", {
-      safe_metadata: { fixture_version: "m7-e2e-v1" },
+      safe_metadata: { fixture_version: "inspector-e2e-v1" },
     }),
     recordedEvent("run-partial", 1, "router", "route_selected", "completed", {
       routing: {
@@ -174,7 +174,7 @@ const eventsByRun: Record<string, unknown[]> = {
   ],
   "run-failure": [
     recordedEvent("run-failure", 0, "workflow", "run_started", "running", {
-      safe_metadata: { fixture_version: "m7-e2e-v1" },
+      safe_metadata: { fixture_version: "inspector-e2e-v1" },
     }),
     recordedEvent("run-failure", 1, "router", "route_selected", "completed", {
       routing: {
@@ -206,7 +206,7 @@ const eventsByRun: Record<string, unknown[]> = {
   ],
 };
 
-async function mockM7Api(page: Page) {
+async function mockInspectorApi(page: Page) {
   await page.route("**/api/**", async (route: Route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname.replace(
@@ -240,8 +240,8 @@ async function mockM7Api(page: Page) {
     if (path === "/api/v1/sessions" && request.method() === "POST")
       return json(
         {
-          session_id: "session-m7-e2e",
-          label: "M7 fixture",
+          session_id: "session-inspector-e2e",
+          label: "Inspector fixture",
           state: "active",
           created_at: now,
           updated_at: now,
@@ -272,7 +272,7 @@ async function mockM7Api(page: Page) {
 test("Inspector renders recorded success, partial, and failure paths accessibly", async ({
   page,
 }) => {
-  await mockM7Api(page);
+  await mockInspectorApi(page);
   await page.goto("/finance_assistant/");
   await expect(
     page.getByRole("heading", { name: "Ask, explore, decide" }),
@@ -292,35 +292,15 @@ test("Inspector renders recorded success, partial, and failure paths accessibly"
   await expect(
     page.getByText("This prompt is intentionally not rendered by Inspector."),
   ).toHaveCount(0);
-  if (process.env.AIFA_PLAYWRIGHT_CAPTURE_EVIDENCE !== "false") {
-    await page.screenshot({
-      path: "../docs/evidence/m7/inspector-success.png",
-      fullPage: true,
-    });
-  }
-
   const selector = page.getByLabel("Recorded Run");
   await selector.selectOption("run-partial");
   await expect(page.getByText("run partial", { exact: true })).toBeVisible();
-  if (process.env.AIFA_PLAYWRIGHT_CAPTURE_EVIDENCE !== "false") {
-    await page.screenshot({
-      path: "../docs/evidence/m7/inspector-partial.png",
-      fullPage: true,
-    });
-  }
 
   await selector.selectOption("run-failure");
   await expect(page.getByText("WORKFLOW_FAILED")).toBeVisible();
   await expect(
     page.getByText("The workflow could not complete."),
   ).toBeVisible();
-  if (process.env.AIFA_PLAYWRIGHT_CAPTURE_EVIDENCE !== "false") {
-    await page.screenshot({
-      path: "../docs/evidence/m7/inspector-failure.png",
-      fullPage: true,
-    });
-  }
-
   const axe = await new AxeBuilder({ page }).analyze();
   expect(
     axe.violations.filter((violation) =>

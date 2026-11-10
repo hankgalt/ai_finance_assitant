@@ -100,7 +100,7 @@ inspector-check: frontend-check
 	cd backend && uv run ruff check src tests
 	cd backend && uv run mypy
 	cd backend && uv run pytest -q tests/test_inspector_contract.py tests/test_http_api.py tests/test_persistence.py tests/test_api_observability.py tests/test_contracts.py tests/test_redaction.py
-	cd frontend && pnpm exec playwright test e2e/m7.spec.ts
+	cd frontend && pnpm exec playwright test e2e/execution-inspector.spec.ts
 
 response-cache-up:
 	docker compose up -d redis-response-cache

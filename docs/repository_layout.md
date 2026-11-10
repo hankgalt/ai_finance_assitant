@@ -46,6 +46,7 @@ delivery history in `docs/`; they are not ownership boundaries for current machi
 | `contracts/frontend/` | React-to-backend consumption manifest |
 | `contracts/inspector/` | Measured Inspector interface manifest |
 | `contracts/fixtures/` | Shared versioned contract fixtures |
+| `frontend/e2e/` | Behavior-named product-experience and capability browser journeys; generated output stays in ignored test-report directories |
 
 Capability directories may contain internal subdirectories when they improve locality, such as one
 directory per knowledge base. Do not duplicate an artifact across capability and milestone trees;

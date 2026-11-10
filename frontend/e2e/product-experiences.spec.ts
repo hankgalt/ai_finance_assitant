@@ -52,7 +52,7 @@ function importedPortfolio() {
             asset_class: "Equity",
             user_price: "100",
             user_price_as_of: now,
-            user_price_provenance: "Manual M6 entry",
+            user_price_provenance: "Manual browser fixture",
           },
         ],
       },
@@ -489,12 +489,6 @@ async function expectNoSeriousAxeViolations(page: Page) {
   ).toEqual([]);
 }
 
-async function capture(page: Page, path: string) {
-  if (process.env.AIFA_PLAYWRIGHT_CAPTURE_EVIDENCE === "false") return;
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ path, fullPage: true });
-}
-
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
   await page.goto("/finance_assistant/");
@@ -646,7 +640,7 @@ test("defaults a file import label from the selected filename", async ({
   ).toBeDisabled();
 });
 
-test("completes all M6 product workflows with accessible alternatives", async ({
+test("completes core product workflows with accessible alternatives", async ({
   page,
 }) => {
   const csp = await page
@@ -661,7 +655,6 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await page.keyboard.press("Enter");
   await expect(page.locator("main")).toBeFocused();
   await expectNoSeriousAxeViolations(page);
-  await capture(page, "../docs/evidence/m6/assistant-empty.png");
 
   await page.getByRole("button", { name: "Portfolio", exact: true }).click();
   await expect(
@@ -695,7 +688,6 @@ test("completes all M6 product workflows with accessible alternatives", async ({
   await expect(
     importDialog.getByRole("status").filter({ hasText: "Ready for approval" }),
   ).toBeVisible();
-  await capture(page, "../docs/evidence/m6/portfolio-validation.png");
   await expect(
     page.getByRole("button", { name: "Validate import" }),
   ).toBeDisabled();
@@ -709,7 +701,6 @@ test("completes all M6 product workflows with accessible alternatives", async ({
     hasText: "Portfolio saved",
   });
   await expect(savedNotice).toBeVisible();
-  await capture(page, "../docs/evidence/m6/portfolio-library.png");
   await expect(savedNotice).toBeHidden({ timeout: 5_000 });
   await page.getByRole("button", { name: "Assistant" }).click();
   await expect(page.getByLabel("Saved Portfolio")).toHaveCount(0);
@@ -736,7 +727,6 @@ test("completes all M6 product workflows with accessible alternatives", async ({
     page.getByLabel("Portfolio for next portfolio question"),
   ).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
-  await capture(page, "../docs/evidence/m6/assistant-portfolio-context.png");
   await page.getByRole("button", { name: "Portfolio", exact: true }).click();
   await page.getByRole("button", { name: "Analyze" }).click();
   await expect(
@@ -764,7 +754,6 @@ test("completes all M6 product workflows with accessible alternatives", async ({
       name: "Delete portfolio",
     }),
   ).toBeFocused();
-  await capture(page, "../docs/evidence/m6/portfolio-delete-confirmation.png");
   await deletePortfolioConfirmation
     .getByRole("button", { name: "Cancel" })
     .click();
@@ -791,7 +780,6 @@ test("completes all M6 product workflows with accessible alternatives", async ({
     page.getByRole("table", { name: "Daily provider observations" }),
   ).toBeVisible();
   await expectNoSeriousAxeViolations(page);
-  await capture(page, "../docs/evidence/m6/market-success.png");
 
   await page.getByRole("button", { name: "Goals" }).click();
   await expect(
@@ -905,7 +893,6 @@ test("completes all M6 product workflows with accessible alternatives", async ({
     ),
   ).toBeLessThanOrEqual(12);
   await expectNoSeriousAxeViolations(page);
-  await capture(page, "../docs/evidence/m6/goals-success.png");
 });
 
 test("keeps navigation and core content usable at a narrow viewport", async ({
@@ -964,7 +951,6 @@ test("keeps navigation and core content usable at a narrow viewport", async ({
   });
   await page.getByRole("button", { name: "View market data" }).click();
   await expect(page.getByText("Showing stale cached history")).toBeVisible();
-  await capture(page, "../docs/evidence/m6/mobile-market.png");
 });
 
 test("wraps assistant table cells and keeps every column visible at a narrow viewport", async ({
@@ -1250,7 +1236,6 @@ test("archives the active session and deletes it only from history", async ({
   await expect(
     page.getByRole("button", { name: "Archive and start fresh" }),
   ).toBeFocused();
-  await capture(page, "../docs/evidence/m6/session-clear-confirmation.png");
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(
     page.getByText(/Preserve this Session and its saved history/),
@@ -1285,7 +1270,6 @@ test("archives the active session and deletes it only from history", async ({
     page.getByRole("heading", { name: "Session history" }),
   ).toBeVisible();
   await expect(page.getByText("Archived Oct 29, 2026")).toBeVisible();
-  await capture(page, "../docs/evidence/m6/session-history.png");
   await page.getByRole("button", { name: /^Delete$/ }).click();
   await expect(
     page.getByText("Permanently delete this Session?"),

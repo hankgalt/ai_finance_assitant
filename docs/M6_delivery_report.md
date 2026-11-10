@@ -53,7 +53,7 @@ backend-only.
   `POST /api/v1/telemetry/browser` collector.
 - `contracts/frontend/backend-consumption.v1.json`: required M6 paths and frontend type names checked
   against FastAPI OpenAPI.
-- `frontend/e2e/m6.spec.ts`: deterministic desktop/mobile journeys, import correction, semantic
+- `frontend/e2e/product-experiences.spec.ts`: deterministic desktop/mobile journeys, import correction, semantic
   accessibility, keyboard focus, CSP, provenance, and chart/table assertions.
 - `examples/portfolios/`: import-ready synthetic JSON, CSV, and XLSX files for validating the
   review, save, and backend Snapshot workflow without live provider calls.

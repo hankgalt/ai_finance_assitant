@@ -9,7 +9,7 @@ Date: 2026-10-31
 | CA-03 — attributed RAG | M1 manifests/evaluations; `backend/tests/test_knowledge_pipeline.py` | Finance and Tax citations | Pass |
 | CA-04 — corpus count | Finance 106 points; Tax 6,295 points; immutable manifests | Show active manifests and explain non-gamed chunks | Pass, exceeds 100 records |
 | CA-05 — market integration | `docs/M3_delivery_report.md`; provider adapter/live-marker tests | Synthetic quote; optional preflighted live quote | Pass |
-| CA-06 — responsive web UI | `docs/M6_delivery_report.md`; `frontend/e2e/m6.spec.ts` | Assistant, Portfolio, Market, Goal, History | Pass |
+| CA-06 — responsive web UI | `docs/M6_delivery_report.md`; `frontend/e2e/product-experiences.spec.ts` | Assistant, Portfolio, Market, Goal, History | Pass |
 | CA-07 — Portfolio analysis | M2 report/tests; `examples/portfolios/manifest.v1.json` | Import balanced JSON and verify totals/coverage | Pass |
 | CA-08 — Goal projection | M2 report; `backend/tests/test_goal_projection.py` | Compare two visible scenarios | Pass |
 | CA-09 — dated news | M3/M4 reports; provider and agent tests | Show attributed synthetic news | Pass |

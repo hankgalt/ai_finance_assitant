@@ -2,13 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  outputDir: "../docs/evidence/m6/playwright-results",
+  outputDir: "./test-results/playwright",
   reporter: [
     ["list"],
-    [
-      "html",
-      { outputFolder: "../docs/evidence/m6/playwright-report", open: "never" },
-    ],
+    ["html", { outputFolder: "./playwright-report", open: "never" }],
   ],
   use: {
     baseURL: "http://127.0.0.1:4173",

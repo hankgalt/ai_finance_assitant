@@ -46,7 +46,7 @@ external trace-backend dependency.
 - `contracts/inspector/execution-inspector.v1.json`: required REST/SSE paths, frontend types, identity
   fields, graph evidence, and forbidden Inspector sources.
 - `backend/tests/test_inspector_contract.py`: OpenAPI/frontend/model seam reconciliation.
-- `frontend/e2e/m7.spec.ts`: deterministic success, partial, and failed browser paths plus Axe and
+- `frontend/e2e/execution-inspector.spec.ts`: deterministic success, partial, and failed browser paths plus Axe and
   prompt non-rendering assertions.
 - `make m7-check`: repeatable focused milestone gate.
 

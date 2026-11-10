@@ -30,6 +30,9 @@ No external account or network provider was used.
 | M7 focused backend gate through `make m7-check` | Passed; Ruff, strict mypy, and 31 tests |
 | Sandboxed `pnpm exec playwright test e2e/m7.spec.ts` through `make m7-check` | Local Vite bind denied with `EPERM` after preceding gates passed |
 | Approved local-browser `pnpm exec playwright test e2e/m7.spec.ts` | Passed; 1 Chrome journey in 3.3 seconds |
+
+These rows retain the command names executed for the historical M7 evidence. The maintained browser
+specification now lives at `frontend/e2e/execution-inspector.spec.ts`.
 | Approved `UV_CACHE_DIR=/tmp/aifa-uv-cache make m7-check` | Passed complete gate; 32 frontend tests, production build, 31 backend tests, and 1 Chrome journey in 3.0 seconds |
 
 The browser journey asserts nonconsecutive Workflow positions (`#0, #5`) and the consecutive
