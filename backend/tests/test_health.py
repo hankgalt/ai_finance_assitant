@@ -73,8 +73,8 @@ def test_configured_but_unavailable_qdrant_fails_clearly(
     tmp_path: Path,
 ) -> None:
     class UnavailableStore:
-        def __init__(self, url: str) -> None:
-            del url
+        def __init__(self, url: str, *, api_key: str | None = None) -> None:
+            del url, api_key
             raise ConnectionError("test-only connection failure")
 
     monkeypatch.setattr("ai_finance_assistant.core.health.QdrantKnowledgeStore", UnavailableStore)
@@ -93,8 +93,9 @@ def test_compatible_active_collections_are_ready(
     seen: list[tuple[str, CollectionCompatibility]] = []
 
     class CompatibleStore:
-        def __init__(self, url: str) -> None:
+        def __init__(self, url: str, *, api_key: str | None = None) -> None:
             assert url == "http://127.0.0.1:6333"
+            assert api_key is None
 
         def validate_active(
             self, alias: str, expected: CollectionCompatibility

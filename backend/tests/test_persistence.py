@@ -157,12 +157,17 @@ def test_schema_one_database_migrates_sessions_and_run_question_contract(tmp_pat
         run_columns = {
             str(row["name"]) for row in connection.execute("PRAGMA table_info(runs)").fetchall()
         }
-        principal_id = connection.execute(
+        principal_row = connection.execute(
             "SELECT principal_id FROM sessions WHERE session_id = 'legacy-session'"
-        ).fetchone()[0]
-        run_principal_id = connection.execute(
+        ).fetchone()
+        run_principal_row = connection.execute(
             "SELECT principal_id FROM runs WHERE execution_id = 'legacy-run'"
-        ).fetchone()[0]
+        ).fetchone()
+
+    assert principal_row is not None
+    assert run_principal_row is not None
+    principal_id = principal_row["principal_id"]
+    run_principal_id = run_principal_row["principal_id"]
 
     assert upgraded.schema_version() == 4
     assert "archived_at" in columns
@@ -202,7 +207,7 @@ def test_schema_three_local_checkpoint_is_scoped_to_loopback_principal(tmp_path:
 
     app = create_app(_settings(path))
     with TestClient(app):
-        rows = app.state.services._checkpoint_connection.execute(
+        rows = app.state.services._checkpoint_resource.execute(
             "SELECT thread_id FROM checkpoints"
         ).fetchall()
 

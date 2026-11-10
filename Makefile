@@ -8,7 +8,9 @@ QDRANT_URL ?= http://127.0.0.1:6333
 	m5-check m6-check m7-check provider-live-check model-live-check observability-up observability-status \
 	observability-stop response-cache-up response-cache-status response-cache-stop \
 	response-cache-check response-cache-calibrate response-cache-benchmark m6-1-check m8-check \
-	mcp-stdio m9-check
+	mcp-stdio m9-check managed-state-migrate managed-state-status managed-state-retention \
+	managed-state-postgres-up managed-state-postgres-status managed-state-postgres-stop \
+	managed-state-postgres-check
 
 backend-sync:
 	cd backend && uv sync
@@ -21,6 +23,27 @@ backend-check:
 	cd backend && uv run ruff check .
 	cd backend && uv run mypy
 	cd backend && uv run pytest --cov=ai_finance_assistant --cov-report=term-missing
+
+managed-state-migrate:
+	cd backend && uv run python -m ai_finance_assistant.persistence.cli migrate
+
+managed-state-status:
+	cd backend && uv run python -m ai_finance_assistant.persistence.cli status
+
+managed-state-retention:
+	cd backend && uv run python -m ai_finance_assistant.persistence.cli retention
+
+managed-state-postgres-up:
+	docker compose --profile managed-state up -d postgres-managed-state
+
+managed-state-postgres-status:
+	docker compose --profile managed-state ps postgres-managed-state
+
+managed-state-postgres-stop:
+	docker compose --profile managed-state stop postgres-managed-state
+
+managed-state-postgres-check:
+	cd backend && AIFA_TEST_POSTGRES_DSN=postgresql://aifa_qualification@127.0.0.1:55432/aifa_qualification uv run pytest -q -m postgres tests/test_managed_persistence.py
 
 frontend-install:
 	cd frontend && pnpm install

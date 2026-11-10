@@ -36,6 +36,25 @@ services:
       retries: 20
       start_period: 5s
 
+  postgres-managed-state:
+    image: postgres:17.11-alpine3.23
+    profiles: ["managed-state"]
+    restart: "no"
+    environment:
+      POSTGRES_DB: aifa_qualification
+      POSTGRES_USER: aifa_qualification
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aifa_qualification -d aifa_qualification"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
   otel-collector:
     image: otel/opentelemetry-collector:0.164.0
     profiles: ["observability"]

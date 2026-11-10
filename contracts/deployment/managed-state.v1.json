@@ -1,0 +1,111 @@
+{
+  "schema_version": "1",
+  "status": "owner_approved_not_provisioned",
+  "application_state": {
+    "service": "cloud_sql_postgresql",
+    "edition": "enterprise",
+    "postgres_major_version": 17,
+    "project_id": "comfforts-369117",
+    "region": "us-west1",
+    "availability": "single_zone",
+    "machine_tier": "db-f1-micro",
+    "storage": {
+      "type": "ssd",
+      "capacity_gib": 10,
+      "service_minimum": true
+    },
+    "connection_pools": {
+      "application_max": 2,
+      "checkpoint_max": 2,
+      "aggregate_per_container_max": 4
+    },
+    "application_schema_version": 4,
+    "deployed_store_initialization": "empty",
+    "local_development_backend": "sqlite"
+  },
+  "checkpoint_state": {
+    "service": "langgraph_postgresql_saver",
+    "database_service": "cloud_sql_postgresql",
+    "strict_deserialization_required": true,
+    "application_and_checkpoint_atomicity_claimed": false
+  },
+  "provider_cache": {
+    "database_service": "cloud_sql_postgresql",
+    "separate_purge_boundary": true,
+    "deployed_provider_mode": "credential_free",
+    "live_retention": "denied_until_provider_specific_rights_are_approved"
+  },
+  "response_cache": {
+    "deployed_adapter": "disabled",
+    "managed_redis_provisioned": false,
+    "correctness_requires_cache": false
+  },
+  "retention": {
+    "sessions_runs_checkpoints_days": 30,
+    "run_events_days": 30,
+    "saved_portfolios_and_snapshots_days": 365,
+    "operational_logs_days": 30,
+    "uploaded_file_bytes": "parse_scoped_ephemeral",
+    "provider_observations": "provider_specific_approved_ttl_only"
+  },
+  "backup_and_recovery": {
+    "automated_daily_backups": 7,
+    "pitr_transaction_log_days": 3,
+    "pre_migration_backup_retention_days": 7,
+    "rpo_target_minutes": 5,
+    "rto_target_hours": 4,
+    "targets_claimed_operational": false,
+    "regional_disaster_recovery_bound": null
+  },
+  "encryption_and_secrets": {
+    "data_at_rest": "google_managed_encryption",
+    "data_in_transit": "tls",
+    "cmek_enabled": false,
+    "secret_service": "regional_secret_manager",
+    "secret_region": "us-west1",
+    "secret_payloads_in_terraform": false,
+    "long_lived_gcp_keys_in_github": false
+  },
+  "staging": {
+    "project_id": "comfforts-369117",
+    "separation": "same_project",
+    "accepted_limitation": "shared_project_administrative_and_quota_blast_radius",
+    "synthetic_data_only": true,
+    "separate_terraform_state": true,
+    "separate_runtime_identity": true,
+    "separate_database_role": true,
+    "separate_secrets": true,
+    "ephemeral_restore_instance": true
+  },
+  "qdrant": {
+    "cluster_name": "finance-assistant-demo",
+    "cluster_id": "57c4d676-360a-4f1a-aad3-92d775292673",
+    "endpoint": "https://57c4d676-360a-4f1a-aad3-92d775292673.us-central1-0.gcp.cloud.qdrant.io",
+    "cloud": "gcp",
+    "region": "us-central1",
+    "version_observed": "1.20.0",
+    "tier": "free",
+    "nodes": 1,
+    "disk_gib": 4,
+    "memory_gib": 1,
+    "vcpu": 0.5,
+    "private_demo_cross_region_exception": true,
+    "principal_owned_data_allowed": false,
+    "api_key_committed": false,
+    "production_sla_claimed": false
+  },
+  "delivery_approval": {
+    "repository": "hankgalt/ai_finance_assitant",
+    "repository_visibility": "public",
+    "github_plan": "pro",
+    "production_approvers": ["hankgalt"],
+    "independent_backup_approver": null,
+    "prevent_self_review": false,
+    "single_operator_limitation_accepted": true
+  },
+  "cost_control": {
+    "combined_monthly_budget_usd": 100,
+    "alert_threshold_percent": [50, 80, 100],
+    "budget_is_hard_cap": false
+  }
+}

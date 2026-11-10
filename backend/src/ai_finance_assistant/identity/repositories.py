@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import UTC, datetime
 
 from ai_finance_assistant.identity.models import (
@@ -12,11 +11,11 @@ from ai_finance_assistant.identity.models import (
     VerifiedIdentity,
     derive_principal_id,
 )
-from ai_finance_assistant.persistence.database import SQLiteDatabase
+from ai_finance_assistant.persistence.ports import ApplicationDatabase, DatabaseRow
 
 
-class SQLitePrincipalRepository:
-    def __init__(self, database: SQLiteDatabase) -> None:
+class PrincipalRepository:
+    def __init__(self, database: ApplicationDatabase) -> None:
         self._database = database
 
     def resolve_or_admit(
@@ -71,8 +70,10 @@ class SQLitePrincipalRepository:
                         observed.isoformat(),
                     ),
                 )
-            except sqlite3.IntegrityError as exc:
-                raise RuntimeError("Application Principal identity collision.") from exc
+            except BaseException as exc:
+                if self._database.is_integrity_error(exc):
+                    raise RuntimeError("Application Principal identity collision.") from exc
+                raise
             row = connection.execute(
                 "SELECT * FROM application_principals WHERE principal_id = ?",
                 (principal_id,),
@@ -147,7 +148,7 @@ class SQLitePrincipalRepository:
         return _principal_from_row(row)
 
 
-def _principal_from_row(row: sqlite3.Row) -> ApplicationPrincipal:
+def _principal_from_row(row: DatabaseRow) -> ApplicationPrincipal:
     return ApplicationPrincipal(
         principal_id=row["principal_id"],
         issuer=row["issuer"],

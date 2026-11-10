@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     log_level: str = "INFO"
     qdrant_url: str | None = None
+    qdrant_api_key: SecretStr | None = None
     finance_collection_alias: str = "finance_education_active"
     tax_collection_alias: str = "tax_education_active"
     expected_payload_schema_version: str = "1"
@@ -100,7 +101,14 @@ class Settings(BaseSettings):
     model_maximum_attempts: int = Field(default=3, ge=1, le=3)
     model_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     model_maximum_input_characters: int = Field(default=40_000, ge=1_000, le=200_000)
+    storage_backend: Literal["sqlite", "postgres"] = "sqlite"
     storage_path: Path = Path("data/ai_finance_assistant.sqlite3")
+    postgres_dsn: SecretStr | None = None
+    postgres_pool_min_size: int = Field(default=1, ge=1, le=5)
+    postgres_pool_max_size: int = Field(default=2, ge=1, le=20)
+    postgres_connect_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
+    storage_migration_mode: Literal["auto", "verify_only"] = "auto"
+    retention_execution_mode: Literal["startup", "scheduled"] = "startup"
     storage_expected_schema_version: int = Field(default=4, ge=1, le=1000)
     local_deployment_audience: Literal["owner_only", "shared_demo", "public"] = "owner_only"
     local_admin_token: SecretStr | None = None
@@ -192,6 +200,26 @@ class Settings(BaseSettings):
     def validate_identity_mode(self) -> Settings:
         if self.storage_expected_schema_version != 4:
             raise ValueError("runtime storage schema version must be 4")
+        if self.postgres_pool_min_size > self.postgres_pool_max_size:
+            raise ValueError("PostgreSQL pool minimum cannot exceed its maximum")
+        if self.storage_backend == "postgres":
+            if self.postgres_dsn is None:
+                raise ValueError("PostgreSQL storage requires a DSN")
+        elif self.postgres_dsn is not None:
+            raise ValueError("PostgreSQL DSN cannot be configured for SQLite storage")
+        if self.mode == "production":
+            if self.storage_backend != "postgres":
+                raise ValueError("production mode requires PostgreSQL storage")
+            if self.storage_migration_mode != "verify_only":
+                raise ValueError("production startup must verify migrations without applying DDL")
+            if self.retention_execution_mode != "scheduled":
+                raise ValueError("production retention must run as a scheduled job")
+            if self.response_cache_adapter != "disabled":
+                raise ValueError("the approved deployed response cache is disabled")
+            if self.qdrant_url is None or not self.qdrant_url.startswith("https://"):
+                raise ValueError("production mode requires the HTTPS Qdrant endpoint")
+            if self.qdrant_api_key is None:
+                raise ValueError("production mode requires a Qdrant runtime API key")
         loopback_hosts = {"127.0.0.1", "::1", "localhost"}
         if self.identity_mode == "loopback_development":
             if self.mode == "production":

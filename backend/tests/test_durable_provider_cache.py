@@ -12,8 +12,8 @@ from ai_finance_assistant.providers.durable_cache import (
     DurableCachingMarketDataProvider,
     HistoricalCacheKey,
     HistoricalCachePolicy,
+    HistoricalCacheRepository,
     HistoricalMemoryCache,
-    SQLiteHistoricalCacheRepository,
 )
 from ai_finance_assistant.providers.models import (
     AdjustmentBasis,
@@ -169,7 +169,7 @@ def _wrapper(
     selected_policy = policy or _policy()
     return DurableCachingMarketDataProvider(
         provider,
-        repository=SQLiteHistoricalCacheRepository(database),
+        repository=HistoricalCacheRepository(database),
         policy=selected_policy,
         observability=InMemoryObservability(),
         memory_cache=memory,
@@ -268,7 +268,7 @@ def test_cache_keys_isolate_provider_currency_and_policy_and_purge(tmp_path: Pat
     _wrapper(first_provider, database, clock, policy=_policy(policy_version="v2")).get_history(
         request
     )
-    repository = SQLiteHistoricalCacheRepository(database)
+    repository = HistoricalCacheRepository(database)
     deleted = repository.purge(provider="provider-a")
 
     assert len(first_provider.requests) == 3
@@ -291,7 +291,7 @@ def test_live_unverified_rights_without_owner_acceptance_bypasses_durable_store(
     _wrapper(provider, database, clock, policy=policy).get_history(request)
 
     assert len(provider.requests) == 2
-    assert SQLiteHistoricalCacheRepository(database).purge() == 0
+    assert HistoricalCacheRepository(database).purge() == 0
     database.close()
 
 
@@ -332,7 +332,7 @@ def test_adjustment_basis_is_part_of_durable_key(tmp_path: Path) -> None:
     clock = MutableClock(datetime(2026, 1, 20, tzinfo=UTC))
     database = _database(tmp_path / "cache.sqlite3")
     provider = CountingMarketProvider(clock)
-    repository = SQLiteHistoricalCacheRepository(database)
+    repository = HistoricalCacheRepository(database)
     adjusted_key = HistoricalCacheKey(
         provider=provider.provider_name,
         instrument="DEMO",

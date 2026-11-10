@@ -12,7 +12,7 @@ from ai_finance_assistant.identity.models import (
     PrincipalView,
     loopback_verified_identity,
 )
-from ai_finance_assistant.identity.repositories import SQLitePrincipalRepository
+from ai_finance_assistant.identity.repositories import PrincipalRepository
 from ai_finance_assistant.identity.verification import (
     IAPAssertionVerifier,
     InvalidIAPAssertion,
@@ -30,7 +30,7 @@ class IdentityAccess:
     def __init__(
         self,
         settings: Settings,
-        repository: SQLitePrincipalRepository,
+        repository: PrincipalRepository,
         *,
         iap_assertion_verifier: IAPAssertionVerifier | None = None,
     ) -> None:

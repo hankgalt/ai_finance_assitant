@@ -13,7 +13,7 @@ from typing import TypeVar
 
 from ai_finance_assistant.contracts.market import CacheStatus, DelayStatus
 from ai_finance_assistant.observability.ports import Observability
-from ai_finance_assistant.persistence.database import SQLiteDatabase
+from ai_finance_assistant.persistence.ports import ApplicationDatabase
 from ai_finance_assistant.providers.models import (
     AdjustmentBasis,
     CacheCoverageStatus,
@@ -92,8 +92,8 @@ class HistoricalCacheCorruptionError(RuntimeError):
     """A stored row cannot satisfy the normalized historical-bar schema."""
 
 
-class SQLiteHistoricalCacheRepository:
-    def __init__(self, database: SQLiteDatabase) -> None:
+class HistoricalCacheRepository:
+    def __init__(self, database: ApplicationDatabase) -> None:
         self._database = database
 
     def read(
@@ -225,12 +225,12 @@ class SQLiteHistoricalCacheRepository:
         where = "" if provider is None else " WHERE provider = ?"
         params: tuple[str, ...] = () if provider is None else (provider,)
         with self._database.transaction() as connection:
-            count = int(
-                connection.execute(
-                    "SELECT COUNT(*) FROM market_bars" + where,
-                    params,
-                ).fetchone()[0]
-            )
+            count_row = connection.execute(
+                "SELECT COUNT(*) AS row_count FROM market_bars" + where,
+                params,
+            ).fetchone()
+            assert count_row is not None
+            count = int(count_row["row_count"])
             connection.execute("DELETE FROM market_coverage" + where, params)
             connection.execute("DELETE FROM market_bars" + where, params)
         return count
@@ -242,24 +242,24 @@ class SQLiteHistoricalCacheRepository:
             "AND adjustment_basis = ? AND schema_version = ? AND policy_version = ?"
         )
         with self._database.transaction() as connection:
-            count = int(
-                connection.execute(
-                    "SELECT COUNT(*) FROM market_bars" + where,
-                    params,
-                ).fetchone()[0]
-            )
+            count_row = connection.execute(
+                "SELECT COUNT(*) AS row_count FROM market_bars" + where,
+                params,
+            ).fetchone()
+            assert count_row is not None
+            count = int(count_row["row_count"])
             connection.execute("DELETE FROM market_coverage" + where, params)
             connection.execute("DELETE FROM market_bars" + where, params)
         return count
 
     def purge_expired(self, *, now: datetime) -> int:
         with self._database.transaction() as connection:
-            count = int(
-                connection.execute(
-                    "SELECT COUNT(*) FROM market_bars WHERE expires_at <= ?",
-                    (now.isoformat(),),
-                ).fetchone()[0]
-            )
+            count_row = connection.execute(
+                "SELECT COUNT(*) AS row_count FROM market_bars WHERE expires_at <= ?",
+                (now.isoformat(),),
+            ).fetchone()
+            assert count_row is not None
+            count = int(count_row["row_count"])
             connection.execute(
                 "DELETE FROM market_coverage WHERE expires_at <= ?",
                 (now.isoformat(),),
@@ -325,7 +325,7 @@ class DurableCachingMarketDataProvider:
         self,
         delegate: MarketDataProvider,
         *,
-        repository: SQLiteHistoricalCacheRepository,
+        repository: HistoricalCacheRepository,
         policy: HistoricalCachePolicy,
         observability: Observability,
         memory_cache: HistoricalMemoryCache | None = None,

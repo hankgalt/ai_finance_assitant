@@ -17,6 +17,7 @@ from ai_finance_assistant.identity.models import (
     derive_principal_id,
 )
 from ai_finance_assistant.observability.ports import NoOpObservability, Observability
+from ai_finance_assistant.persistence.ports import DatabaseConnection
 
 APPLICATION_SCHEMA_VERSION = 4
 LOCAL_DEVELOPMENT_PRINCIPAL_ID = derive_principal_id(LOOPBACK_ISSUER, LOOPBACK_SUBJECT)
@@ -435,7 +436,7 @@ class SQLiteDatabase:
         return int(row[0])
 
     @contextmanager
-    def transaction(self) -> Generator[sqlite3.Connection, None, None]:
+    def transaction(self) -> Generator[DatabaseConnection, None, None]:
         started = monotonic()
         with self._lock:
             self._connection.execute("BEGIN IMMEDIATE")
@@ -450,7 +451,7 @@ class SQLiteDatabase:
                 self._record_operation("write", "completed", started)
 
     @contextmanager
-    def read(self) -> Generator[sqlite3.Connection, None, None]:
+    def read(self) -> Generator[DatabaseConnection, None, None]:
         started = monotonic()
         with self._lock:
             try:
@@ -469,6 +470,9 @@ class SQLiteDatabase:
     def close(self) -> None:
         with self._lock:
             self._connection.close()
+
+    def is_integrity_error(self, error: BaseException) -> bool:
+        return isinstance(error, sqlite3.IntegrityError)
 
     def _record_operation(self, operation: str, result_status: str, started: float) -> None:
         attributes = {"operation": operation, "result_status": result_status}

@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 3.0 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access implemented, deployment not provisioned; M10 planned | 2026-11-09
+Version 3.0 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access and managed-state adapter implemented, real-service qualification and deployment pending; M10 planned | 2026-11-09
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -25,6 +25,9 @@ This directory is the design authority for AI Finance Assistant. The product mis
 16. [M3 Massive market-data adapter research](research/M3_massive_provider.md) evaluates Massive's technical fit, current Basic-plan limits, and owner-only individual-plan rights using official sources.
 17. [M4.1 OpenAI model selection](research/M4_1_openai_model_selection.md) records the approved private-demo model, data controls, limits, cost posture, and revisit triggers.
 18. [M6.1 response-cache dependency selection](research/M6_1_response_cache_dependencies.md) records the pinned Redis/RedisVL/encoder set, local security posture, licensing, and integration evidence.
+19. [Managed-state deployment recommendations](research/managed_state_deployment_recommendations.md)
+    records the primary-source service research behind the owner-approved deployment contract; the
+    machine-readable contract, not the research alternatives, is the selected design authority.
 
 Milestone completion evidence is recorded separately from the design authority. See
 [M0 delivery report](M0_delivery_report.md) for the foundation milestone and
@@ -45,6 +48,9 @@ read-only MCP client evidence, clean-start record, documentation, and demonstrat
 migration, integrity reconciliation, and passing release qualification. [M11 application-access
 delivery report](M11_application_access_delivery_report.md) records the implemented identity,
 base-path, and per-Principal isolation slice without claiming cloud deployment qualification.
+[M11 managed-state adapter report](M11_managed_state_adapter_report.md) records the selected
+managed-state contract, PostgreSQL/checkpoint adapter, operator migration/retention seams, and the
+remaining real-service recovery stop gate.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under

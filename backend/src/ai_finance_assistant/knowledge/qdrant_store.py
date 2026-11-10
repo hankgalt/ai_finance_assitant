@@ -41,8 +41,19 @@ _UPSERT_BATCH_SIZE = 128
 
 
 class QdrantKnowledgeStore:
-    def __init__(self, url: str, *, timeout_seconds: int = 10) -> None:
-        self._client = QdrantClient(url=url, timeout=timeout_seconds, check_compatibility=True)
+    def __init__(
+        self,
+        url: str,
+        *,
+        api_key: str | None = None,
+        timeout_seconds: int = 10,
+    ) -> None:
+        self._client = QdrantClient(
+            url=url,
+            api_key=api_key,
+            timeout=timeout_seconds,
+            check_compatibility=True,
+        )
 
     @staticmethod
     def _metadata(manifest: CollectionManifest) -> dict[str, Any]:

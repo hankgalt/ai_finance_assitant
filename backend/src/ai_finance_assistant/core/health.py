@@ -2,6 +2,8 @@
 
 import sqlite3
 
+import psycopg
+from psycopg.rows import dict_row
 from pydantic import JsonValue
 from redis import Redis
 
@@ -63,7 +65,14 @@ def build_readiness(settings: Settings) -> Readiness:
         return Readiness(status=HealthStatus.NOT_READY, checks=checks)
 
     try:
-        store = QdrantKnowledgeStore(settings.qdrant_url)
+        store = QdrantKnowledgeStore(
+            settings.qdrant_url,
+            api_key=(
+                None
+                if settings.qdrant_api_key is None
+                else settings.qdrant_api_key.get_secret_value()
+            ),
+        )
         checks_list: list[DependencyCheck] = []
         for name, alias, logical_kb in targets:
             compatible, detail = store.validate_active(
@@ -125,6 +134,8 @@ def _local_checks(settings: Settings) -> tuple[DependencyCheck, ...]:
 
 
 def _storage_check(settings: Settings) -> DependencyCheck:
+    if settings.storage_backend == "postgres":
+        return _postgres_storage_check(settings)
     expected: dict[str, JsonValue] = {"schema_version": settings.storage_expected_schema_version}
     if not settings.storage_path.exists():
         return DependencyCheck(
@@ -162,7 +173,73 @@ def _storage_check(settings: Settings) -> DependencyCheck:
     )
 
 
+def _postgres_storage_check(settings: Settings) -> DependencyCheck:
+    expected: dict[str, JsonValue] = {
+        "backend": "postgres",
+        "schema_version": settings.storage_expected_schema_version,
+        "checkpoint_schema": "langgraph_postgresql",
+    }
+    if settings.postgres_dsn is None:
+        return DependencyCheck(
+            name="storage.postgresql",
+            status=CheckStatus.NOT_CONFIGURED,
+            detail="The managed PostgreSQL connection is not configured.",
+            expected=expected,
+        )
+    try:
+        with psycopg.connect(
+            settings.postgres_dsn.get_secret_value(),
+            connect_timeout=int(settings.postgres_connect_timeout_seconds),
+            autocommit=True,
+            row_factory=dict_row,
+        ) as connection:
+            version_row = connection.execute(
+                "SELECT COALESCE(MAX(version), 0) AS schema_version FROM schema_migrations"
+            ).fetchone()
+            checkpoint_rows = connection.execute(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = current_schema() AND table_name IN ("
+                "'checkpoint_migrations', 'checkpoints', 'checkpoint_blobs', "
+                "'checkpoint_writes')"
+            ).fetchall()
+    except psycopg.Error:
+        return DependencyCheck(
+            name="storage.postgresql",
+            status=CheckStatus.FAILED,
+            detail="The managed PostgreSQL schemas could not be validated.",
+            expected=expected,
+        )
+    version = int(version_row["schema_version"] if version_row is not None else 0)
+    checkpoint_tables = {str(row["table_name"]) for row in checkpoint_rows}
+    compatible = version == settings.storage_expected_schema_version and checkpoint_tables == {
+        "checkpoint_migrations",
+        "checkpoints",
+        "checkpoint_blobs",
+        "checkpoint_writes",
+    }
+    return DependencyCheck(
+        name="storage.postgresql",
+        status=CheckStatus.READY if compatible else CheckStatus.FAILED,
+        detail=(
+            "The managed application and checkpoint schemas are compatible."
+            if compatible
+            else "The managed application or checkpoint schema is incompatible."
+        ),
+        expected=expected,
+    )
+
+
 def _bind_check(settings: Settings) -> DependencyCheck:
+    if settings.identity_mode == "iap":
+        return DependencyCheck(
+            name="security.iap_identity",
+            status=CheckStatus.READY,
+            detail=(
+                "The application requires verified IAP identity assertions; edge bypass remains "
+                "an infrastructure qualification gate."
+            ),
+            expected={"identity_mode": "iap"},
+        )
     local = settings.host in {"127.0.0.1", "::1", "localhost"}
     return DependencyCheck(
         name="security.local_bind",

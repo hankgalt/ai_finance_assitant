@@ -1,8 +1,7 @@
-"""SQLite repositories with Principal/Session ownership checks and idempotent writes."""
+"""Application repositories with Principal/Session ownership checks and idempotent writes."""
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import UTC, datetime, timedelta
 
 from ai_finance_assistant.agents.context import (
@@ -14,7 +13,6 @@ from ai_finance_assistant.agents.context import (
 )
 from ai_finance_assistant.contracts.events import RunEvent
 from ai_finance_assistant.finance.models import ImportedPortfolio, PortfolioSnapshot
-from ai_finance_assistant.persistence.database import SQLiteDatabase
 from ai_finance_assistant.persistence.models import (
     IdempotencyConflict,
     RunRecord,
@@ -22,13 +20,18 @@ from ai_finance_assistant.persistence.models import (
     SessionState,
     StoredRunStatus,
 )
+from ai_finance_assistant.persistence.ports import (
+    ApplicationDatabase,
+    DatabaseConnection,
+    DatabaseRow,
+)
 from ai_finance_assistant.workflow.models import WorkflowRunResult
 
 
-class SQLiteApplicationRepository:
+class ApplicationRepository:
     def __init__(
         self,
-        database: SQLiteDatabase,
+        database: ApplicationDatabase,
         *,
         session_retention_days: int,
         portfolio_retention_days: int,
@@ -339,8 +342,10 @@ class SQLiteApplicationRepository:
                         expires.isoformat(),
                     ),
                 )
-            except sqlite3.IntegrityError as exc:
-                raise IdempotencyConflict("Portfolio identifier already exists.") from exc
+            except BaseException as exc:
+                if self._database.is_integrity_error(exc):
+                    raise IdempotencyConflict("Portfolio identifier already exists.") from exc
+                raise
             if idempotency_key is not None:
                 _store_idempotency(
                     connection,
@@ -373,11 +378,12 @@ class SQLiteApplicationRepository:
         with self._database.read() as connection:
             _require_session(connection, principal_id, session_id)
             rows = connection.execute(
-                "SELECT portfolio_json FROM portfolios WHERE principal_id = ? AND session_id = ? "
+                "SELECT portfolio_json AS value_json FROM portfolios "
+                "WHERE principal_id = ? AND session_id = ? "
                 "ORDER BY created_at DESC",
                 (principal_id, session_id),
             ).fetchall()
-        return tuple(ImportedPortfolio.model_validate_json(row[0]) for row in rows)
+        return tuple(ImportedPortfolio.model_validate_json(row["value_json"]) for row in rows)
 
     def delete_portfolio(
         self,
@@ -467,15 +473,16 @@ class SQLiteApplicationRepository:
             if portfolio is None:
                 raise LookupError("Portfolio was not found.")
             rows = connection.execute(
-                "SELECT snapshot_json FROM portfolio_snapshots WHERE principal_id = ? "
+                "SELECT snapshot_json AS value_json FROM portfolio_snapshots "
+                "WHERE principal_id = ? "
                 "AND portfolio_id = ? AND session_id = ? ORDER BY created_at DESC",
                 (principal_id, portfolio_id, session_id),
             ).fetchall()
-        return tuple(PortfolioSnapshot.model_validate_json(row[0]) for row in rows)
+        return tuple(PortfolioSnapshot.model_validate_json(row["value_json"]) for row in rows)
 
 
-class SQLiteRunEventRepository:
-    def __init__(self, database: SQLiteDatabase) -> None:
+class RunEventRepository:
+    def __init__(self, database: ApplicationDatabase) -> None:
         self._database = database
 
     def append(self, event: RunEvent) -> None:
@@ -486,12 +493,13 @@ class SQLiteRunEventRepository:
             ).fetchone()
             if row is None or row["session_id"] != event.session_id:
                 raise PermissionError("RunEvent does not belong to a persisted Run and Session.")
-            expected = int(
-                connection.execute(
-                    "SELECT COALESCE(MAX(sequence), 0) + 1 FROM run_events WHERE execution_id = ?",
-                    (event.execution_id,),
-                ).fetchone()[0]
-            )
+            expected_row = connection.execute(
+                "SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence "
+                "FROM run_events WHERE execution_id = ?",
+                (event.execution_id,),
+            ).fetchone()
+            assert expected_row is not None
+            expected = int(expected_row["next_sequence"])
             if event.sequence != expected:
                 raise ValueError(f"expected RunEvent sequence {expected}")
             connection.execute(
@@ -518,7 +526,8 @@ class SQLiteRunEventRepository:
         limit: int | None = None,
     ) -> tuple[RunEvent, ...]:
         query = (
-            "SELECT event_json FROM run_events WHERE principal_id = ? AND execution_id = ? "
+            "SELECT event_json AS value_json FROM run_events "
+            "WHERE principal_id = ? AND execution_id = ? "
             "AND session_id = ? AND sequence > ? ORDER BY sequence"
         )
         params: tuple[object, ...] = (
@@ -538,11 +547,11 @@ class SQLiteRunEventRepository:
             if run is not None and run["session_id"] != session_id:
                 raise PermissionError("RunEvents do not belong to this Session.")
             rows = connection.execute(query, params).fetchall()
-        return tuple(RunEvent.model_validate_json(row[0]) for row in rows)
+        return tuple(RunEvent.model_validate_json(row["value_json"]) for row in rows)
 
 
-class SQLiteAgentContextRepository:
-    def __init__(self, database: SQLiteDatabase) -> None:
+class AgentContextRepository:
+    def __init__(self, database: ApplicationDatabase) -> None:
         self._database = database
 
     def put(self, session_id: str, context: AuthorizedAgentContext) -> None:
@@ -599,7 +608,7 @@ class SQLiteAgentContextRepository:
         return tuple(PortfolioAgentContext.model_validate_json(row["context_json"]) for row in rows)
 
 
-def _session_from_row(row: sqlite3.Row) -> SessionRecord:
+def _session_from_row(row: DatabaseRow) -> SessionRecord:
     archived_at = row["archived_at"]
     return SessionRecord(
         session_id=row["session_id"],
@@ -612,7 +621,7 @@ def _session_from_row(row: sqlite3.Row) -> SessionRecord:
     )
 
 
-def _run_from_row(row: sqlite3.Row) -> RunRecord:
+def _run_from_row(row: DatabaseRow) -> RunRecord:
     result_json = row["result_json"]
     return RunRecord(
         execution_id=row["execution_id"],
@@ -630,7 +639,7 @@ def _run_from_row(row: sqlite3.Row) -> RunRecord:
 
 
 def _require_session(
-    connection: sqlite3.Connection,
+    connection: DatabaseConnection,
     principal_id: str,
     session_id: str,
 ) -> None:
@@ -645,7 +654,7 @@ def _require_session(
 
 
 def _require_active_session(
-    connection: sqlite3.Connection,
+    connection: DatabaseConnection,
     principal_id: str,
     session_id: str,
 ) -> None:
@@ -660,7 +669,7 @@ def _require_active_session(
 
 
 def _owned_portfolio(
-    connection: sqlite3.Connection,
+    connection: DatabaseConnection,
     principal_id: str,
     portfolio_id: str,
     session_id: str,
@@ -678,7 +687,7 @@ def _owned_portfolio(
 
 
 def _idempotent_resource(
-    connection: sqlite3.Connection,
+    connection: DatabaseConnection,
     *,
     principal_id: str,
     session_id: str,
@@ -699,7 +708,7 @@ def _idempotent_resource(
 
 
 def _store_idempotency(
-    connection: sqlite3.Connection,
+    connection: DatabaseConnection,
     *,
     principal_id: str,
     session_id: str,

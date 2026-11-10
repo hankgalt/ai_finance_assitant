@@ -466,10 +466,16 @@ private-demo release.
 
 Proposed ADR-030 and M11 select the GCP/IAP/base-path direction, and the application-access boundary
 is implemented, but no cloud control is represented as operational. The selected region is
-`us-west1` and the selected vector store is Qdrant Managed Cloud on GCP. The exact workload, managed
-application/checkpoint/provider-cache and response-cache stores, encryption, retention,
-backup/recovery, capacity, SLO, and cost configuration remain validation decisions. The deployed
-design must keep knowledge ingestion and
+`us-west1`. The selected authoritative managed store is single-zone Cloud SQL PostgreSQL 17
+Enterprise, initially `db-f1-micro` with a 10 GiB SSD, seven daily backups, and three days of PITR.
+It owns separate application, checkpoint, and provider-cache persistence boundaries. Local
+development remains SQLite, deployed response caching is disabled, and managed Redis is not part of
+the initial topology. Same-project staging uses separate state, identities, secrets, database roles,
+and synthetic data, with ephemeral restore infrastructure. The selected Qdrant Managed Cloud Free
+cluster is a documented private-demo exception in `us-central1`; it contains shared knowledge only
+and provides no production SLA. The owner-approved values are versioned in
+`contracts/deployment/managed-state.v1.json`, but none is operational until its adapter,
+infrastructure, recovery, and security evidence passes. The deployed design must keep knowledge ingestion and
 activation separate from runtime, deny direct workload bypass, and retain explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the proposal.

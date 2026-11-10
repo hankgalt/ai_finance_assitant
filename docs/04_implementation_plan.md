@@ -435,6 +435,11 @@ M11 managed persistence for the cash-flow capability.
 - Before managed-state and infrastructure work: identify the GCP organization/project and billing
   owner, preferred region and cost ceiling, selected workload/database/Qdrant/Redis services,
   retention and backup objectives, GitHub environment approvers, and staging/production separation.
+  Resolved for implementation: same-project staging in `comfforts-369117`; single-zone Cloud SQL
+  PostgreSQL 17 Enterprise `db-f1-micro` with 10 GiB SSD, seven daily backups, and three-day PITR;
+  deployed response cache disabled; the documented `us-central1` Qdrant Free exception; regional
+  Secret Manager with Google-managed encryption; credential-free deployed providers; USD 100 soft
+  monthly budget; and sole public-repository approver `hankgalt` without independent review.
 - Before cutover: provide registrar/DNS authority, the final approved-viewer list, OAuth branding and
   public privacy/support URLs, provider modes/entitlements per role, and the maintenance/incident
   contact. Credentials and secret values are supplied only through their approved secret systems,

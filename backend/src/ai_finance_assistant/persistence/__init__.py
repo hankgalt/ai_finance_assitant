@@ -1,15 +1,17 @@
-"""Durable local persistence adapters for M5."""
+"""Durable application persistence adapters."""
 
 from ai_finance_assistant.persistence.database import SQLiteDatabase
+from ai_finance_assistant.persistence.ports import ApplicationDatabase
 from ai_finance_assistant.persistence.repositories import (
-    SQLiteAgentContextRepository,
-    SQLiteApplicationRepository,
-    SQLiteRunEventRepository,
+    AgentContextRepository,
+    ApplicationRepository,
+    RunEventRepository,
 )
 
 __all__ = [
-    "SQLiteAgentContextRepository",
-    "SQLiteApplicationRepository",
+    "AgentContextRepository",
+    "ApplicationDatabase",
+    "ApplicationRepository",
+    "RunEventRepository",
     "SQLiteDatabase",
-    "SQLiteRunEventRepository",
 ]

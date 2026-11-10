@@ -52,9 +52,9 @@ def create_app(
         version=resolved_settings.app_version,
         description=(
             "Private-demo API with authoritative versioned REST, replayable SSE, durable "
-            "SQLite resources and checkpoints, deterministic finance modules, provider cache, "
-            "an evidence-bound optional response cache, the six-agent LangGraph workflow, and "
-            "bounded first-party browser telemetry."
+            "application resources and checkpoints, deterministic finance modules, provider "
+            "cache, an evidence-bound optional response cache, the six-agent LangGraph workflow, "
+            "and bounded first-party browser telemetry."
         ),
         servers=[{"url": resolved_settings.base_path}],
         lifespan=lifespan,

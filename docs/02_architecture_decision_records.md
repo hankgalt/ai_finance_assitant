@@ -197,6 +197,31 @@ Principal. Because paths on one hostname share a browser origin, such an applica
 browser trust boundary unless it moves to a separate hostname; that future application is outside
 M11.
 
+The owner-approved managed-state design uses single-zone Cloud SQL for PostgreSQL 17 Enterprise in
+`us-west1`, initially on `db-f1-micro` with the service-minimum 10 GiB SSD. It holds distinct
+application, LangGraph checkpoint, and purgeable provider-cache boundaries; local development
+continues to use SQLite. The deployed response cache is disabled and no managed Redis service is
+provisioned. The empty deployed store retains seven daily backups and three days of point-in-time
+recovery logs. Session/Run/checkpoint and RunEvent retention remains 30 days, saved Portfolio and
+Snapshot retention remains 365 days, and provider observations require provider-specific approved
+rights and TTLs. Google-managed encryption and regional Secret Manager are selected initially;
+CMEK is not selected.
+
+Staging and the protected demo share project `comfforts-369117` as an accepted private-demo
+limitation, but use separate Terraform state, workload identities, secrets, database roles, and
+synthetic data; restore qualification uses an ephemeral database instance. The public GitHub Pro
+repository `hankgalt/ai_finance_assitant` has `hankgalt` as its sole deployment approver. Self-review
+therefore remains permitted and is recorded as a single-operator control rather than independent
+review. The combined soft monthly budget is USD 100 with 50%, 80%, and 100% alerts; it is not a hard
+spending cap.
+
+The selected Qdrant Free cluster `finance-assistant-demo` is a single-node GCP service in
+`us-central1`, because the free tier did not offer `us-west1`. This cross-region, no-SLA topology is
+an explicit private-demo exception. It stores only shared immutable knowledge collections and never
+Application-Principal-owned data. Its runtime key and offline release key remain separate secrets.
+Broader availability or regional-residency claims require a paid topology or a separately approved
+decision.
+
 Terraform owns reproducible GCP resources, while GitHub Actions uses short-lived Workload Identity
 Federation rather than stored service-account keys for validated plan, build, and approval-gated
 deployment workflows. DNS changes at the external registrar may remain a documented operator step.
@@ -209,18 +234,18 @@ monitoring, capacity, and clean deployment before this proposal may become Accep
 
 The selected deployment inputs are GCP project `comfforts-369117` (project number
 `730340912967`) in the `comfforts.com` organization, region `us-west1`, a single-region/low-traffic
-posture, and Qdrant Managed Cloud free tier on GCP. Secret values are entered directly in Google
+posture, and the owner-approved managed-state contract in
+`contracts/deployment/managed-state.v1.json`. Secret values are entered directly in Google
 Secret Manager and never committed or passed as Terraform variables. The owner retains Squarespace
 DNS control and will add the reviewed record after a load-balancer address exists. These selections
 do not authorize infrastructure provisioning in the application-access slice.
 
 ## Decision register still open
 
-The following are not silently decided by these records: acceptance of the proposed GCP deployment
-topology; exact managed application/checkpoint/provider-cache and response-cache stores; retention,
-backup/recovery, staging separation, GitHub approvers, capacity, and cost ceilings; commercial
-market-data rights for approved viewers; initial institution-specific Cash-flow import profiles; and
-authoritative coursework rubric interpretations. M1 resolved the initial representation and ranking
+The following are not silently decided by these records: final acceptance of the proposed GCP
+deployment topology before measured qualification; commercial market-data rights for approved
+viewers; initial institution-specific Cash-flow import profiles; and authoritative coursework rubric
+interpretations. M1 resolved the initial representation and ranking
 experiment; ADR-021 resolves initial multi-currency behavior, short positions, and the
 diversification heuristic; ADR-022 resolves that cash-flow import does not depend on a provider;
 ADR-023 resolves the initial private demonstration posture; ADRs 024–026 resolve provider adapters
