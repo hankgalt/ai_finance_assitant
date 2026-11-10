@@ -1,0 +1,52 @@
+{
+  "schema_version": "1",
+  "status": "repository_controls_implemented_external_activation_pending",
+  "repository": "hankgalt/ai_finance_assitant",
+  "default_branch": "main",
+  "automated_cloud_deployment_enabled": false,
+  "long_lived_gcp_credentials_allowed": false,
+  "identity": {
+    "method": "github_oidc_workload_identity_federation",
+    "credential_payload_in_github": false,
+    "credential_payload_in_repository": false,
+    "external_configuration_status": "pending_slice_5_terraform"
+  },
+  "environments": {
+    "staging": {
+      "required_reviewer": "hankgalt",
+      "prevent_self_review": false,
+      "deployment_branch": "main",
+      "external_configuration_status": "pending"
+    },
+    "production": {
+      "required_reviewer": "hankgalt",
+      "prevent_self_review": false,
+      "deployment_branch": "main",
+      "external_configuration_status": "pending"
+    }
+  },
+  "repository_controls": {
+    "deterministic_ci": ".github/workflows/ci.yml",
+    "security_scanning": ".github/workflows/security.yml",
+    "image_publication_and_provenance": ".github/workflows/images.yml",
+    "manual_identity_smoke": ".github/workflows/cloud-identity-smoke.yml",
+    "dependency_updates": ".github/dependabot.yml",
+    "delivery_code_owner": "hankgalt"
+  },
+  "published_images": {
+    "backend": "ghcr.io/hankgalt/ai-finance-assitant-backend:<git-sha>",
+    "frontend": "ghcr.io/hankgalt/ai-finance-assitant-frontend:<git-sha>",
+    "mutable_release_tags_allowed": false,
+    "build_provenance_attestation_required": true,
+    "high_or_critical_scan_findings_allowed": false
+  },
+  "activation_gates": [
+    "create staging and production GitHub environments",
+    "configure hankgalt as required reviewer with self-review permitted",
+    "provision environment-specific Workload Identity Federation through reviewed Terraform",
+    "set environment variables GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, and GCP_DEPLOY_SERVICE_ACCOUNT",
+    "pass the manual read-only cloud identity smoke workflow",
+    "complete slice 5 infrastructure policy and no-direct-workload-bypass qualification"
+  ]
+}
+

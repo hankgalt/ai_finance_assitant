@@ -1,0 +1,74 @@
+{
+  "schema_version": "1",
+  "qualification_date": "2026-11-09",
+  "status": "repository_controls_qualified_external_activation_pending",
+  "requirements": [
+    "PR-017",
+    "QR-003",
+    "QR-005",
+    "QR-006",
+    "QR-007",
+    "QR-010",
+    "QR-011",
+    "QR-014",
+    "QR-015",
+    "EVAL-20"
+  ],
+  "decisions": ["ADR-019", "ADR-029", "ADR-030-proposed"],
+  "repository_controls": {
+    "deterministic_ci": ".github/workflows/ci.yml",
+    "security_scanning": ".github/workflows/security.yml",
+    "container_publication": ".github/workflows/images.yml",
+    "manual_short_lived_identity_smoke": ".github/workflows/cloud-identity-smoke.yml",
+    "delivery_contract": "contracts/deployment/delivery-policy.v1.json"
+  },
+  "local_qualification": [
+    {
+      "check": "delivery contract tests",
+      "result": "11 passed"
+    },
+    {
+      "check": "backend credential-free suite",
+      "result": "375 passed, 10 skipped"
+    },
+    {
+      "check": "PostgreSQL managed-state qualification",
+      "result": "5 passed, 2 deselected"
+    },
+    {
+      "check": "frontend unit suite",
+      "result": "14 files and 72 tests passed"
+    },
+    {
+      "check": "frontend production build",
+      "result": "passed with /finance_assistant asset URLs"
+    },
+    {
+      "check": "backend container",
+      "result": "built; UID/GID 10001:10001; dense and sparse encoders passed with networking disabled"
+    },
+    {
+      "check": "frontend container",
+      "result": "built; UID/GID 101:101; /finance_assistant served; root and missed API paths returned 404"
+    },
+    {
+      "check": "locked Python production dependency audit",
+      "result": "no known vulnerabilities"
+    },
+    {
+      "check": "locked frontend production dependency audit",
+      "result": "no known vulnerabilities"
+    }
+  ],
+  "external_qualification_pending": [
+    "GitHub-hosted workflow execution",
+    "GHCR publication and build-provenance attestation",
+    "staging and production GitHub environment protection",
+    "GCP Workload Identity Federation and read-only identity smoke",
+    "staging infrastructure, no-bypass, deployment, and rollback qualification"
+  ],
+  "secret_payloads_recorded": false,
+  "cloud_resources_mutated": false,
+  "github_repository_settings_mutated": false
+}
+

@@ -1,0 +1,5 @@
+# Delivery and deployment controls have a single approved repository owner.
+/.github/workflows/ @hankgalt
+/contracts/deployment/ @hankgalt
+/infrastructure/ @hankgalt
+

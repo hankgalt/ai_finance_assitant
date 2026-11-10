@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 3.0 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access and managed-state adapter implemented, real-service qualification and deployment pending; M10 planned | 2026-11-09
+Version 3.0 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access, managed-state adapter, and repository delivery controls implemented, external qualification and deployment pending; M10 planned | 2026-11-09
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -50,7 +50,9 @@ delivery report](M11_application_access_delivery_report.md) records the implemen
 base-path, and per-Principal isolation slice without claiming cloud deployment qualification.
 [M11 managed-state adapter report](M11_managed_state_adapter_report.md) records the selected
 managed-state contract, PostgreSQL/checkpoint adapter, operator migration/retention seams, and the
-remaining real-service recovery stop gate.
+remaining real-service recovery stop gate. [M11 delivery pipeline report](M11_delivery_pipeline_report.md)
+records digest-pinned non-root images, deterministic/security workflows, provenance and keyless
+identity seams, and the external GitHub/GCP activation stop gate.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under

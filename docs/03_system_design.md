@@ -480,6 +480,16 @@ activation separate from runtime, deny direct workload bypass, and retain explic
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the proposal.
 
+Repository-side delivery controls are versioned in
+`contracts/deployment/delivery-policy.v1.json`. Pull requests and main-branch changes are configured
+to run locked backend/frontend checks plus security scanning; main-branch image publication is
+configured to use Git-revision tags and build-provenance attestations. The deployable backend and
+frontend images use digest-pinned base
+images and non-root runtime identities. GCP authentication is limited to a manual,
+protected-environment, read-only Workload Identity Federation smoke until slice 5 provisions the
+environment-specific trust and service accounts. No automated cloud deployment is enabled by this
+contract, and repository files contain neither a service-account key nor another credential payload.
+
 Web-process startup verifies the application and checkpoint schemas without applying DDL. It also
 reconciles a persisted `running` Run only when its last update is older than the configured API Run
 deadline: that Run becomes an immutable `failed` terminal resource with safe

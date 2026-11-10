@@ -65,6 +65,7 @@ the complete cloud deployment is operational.
 | `backend/data/qualification/deployment/` | Deterministic identity, isolation, migration, recovery, and deployment qualification inputs |
 | `backend/artifacts/quality/security/` | Cross-product identity, isolation, threat, scan, and penetration evidence |
 | `backend/artifacts/release/deployment/` | Terraform plans, image attestations, migration/rollback, staging, production, and release-decision evidence |
+| `infrastructure/container/` | Digest-pinned, non-root backend/frontend image definitions and static reverse-proxy policy |
 | `infrastructure/terraform/` | Reusable GCP infrastructure modules and environment composition without committed secrets or state |
 | `.github/workflows/` | Capability checks, supply-chain validation, infrastructure plan, approval-gated deployment, and rollback orchestration |
 
