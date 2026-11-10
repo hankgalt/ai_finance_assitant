@@ -8,6 +8,9 @@ from ai_finance_assistant.core.config import Settings
 from ai_finance_assistant.finance.goal_projection import GoalProjection
 from ai_finance_assistant.finance.portfolio_analysis import PortfolioAnalysis
 from ai_finance_assistant.finance.portfolio_import import PortfolioImport
+from ai_finance_assistant.identity.access import IdentityAccess
+from ai_finance_assistant.identity.repositories import SQLitePrincipalRepository
+from ai_finance_assistant.identity.verification import IAPAssertionVerifier
 from ai_finance_assistant.knowledge.models import LogicalKnowledgeBase
 from ai_finance_assistant.knowledge.qdrant_store import QdrantKnowledgeStore
 from ai_finance_assistant.knowledge.representations import FastEmbedEncoder
@@ -16,7 +19,10 @@ from ai_finance_assistant.observability.factory import (
     TelemetryRuntime,
     telemetry_runtime_from_settings,
 )
-from ai_finance_assistant.persistence.checkpoints import create_sqlite_checkpointer
+from ai_finance_assistant.persistence.checkpoints import (
+    create_sqlite_checkpointer,
+    scope_legacy_checkpoint_threads,
+)
 from ai_finance_assistant.persistence.database import SQLiteDatabase
 from ai_finance_assistant.persistence.models import SessionRecord
 from ai_finance_assistant.persistence.repositories import (
@@ -91,6 +97,7 @@ class ApplicationServices:
         settings: Settings,
         *,
         telemetry: TelemetryRuntime | None = None,
+        iap_assertion_verifier: IAPAssertionVerifier | None = None,
     ) -> None:
         self.settings = settings
         self.telemetry = telemetry or telemetry_runtime_from_settings(settings)
@@ -102,15 +109,28 @@ class ApplicationServices:
             observability=self.observability,
         )
         self.database.migrate()
+        self.principal_repository = SQLitePrincipalRepository(self.database)
+        self.identity_access = IdentityAccess(
+            settings,
+            self.principal_repository,
+            iap_assertion_verifier=iap_assertion_verifier,
+        )
         self.checkpointer, self._checkpoint_connection = create_sqlite_checkpointer(self.database)
+        scope_legacy_checkpoint_threads(self.database, self._checkpoint_connection)
         self.application_repository = SQLiteApplicationRepository(
             self.database,
             session_retention_days=settings.session_retention_days,
             portfolio_retention_days=settings.portfolio_retention_days,
             run_event_retention_days=settings.run_event_retention_days,
         )
-        for expired_session_id in self.application_repository.purge_expired():
-            self.checkpointer.delete_thread(f"{expired_session_id}:{self.settings.workflow_id}")
+        for principal_id, expired_session_id in self.application_repository.purge_expired():
+            self.checkpointer.delete_thread(
+                f"{principal_id}:{expired_session_id}:{self.settings.workflow_id}"
+            )
+            self.response_cache.purge_session(
+                expired_session_id,
+                principal_id=principal_id,
+            )
             self.response_cache.purge_session(expired_session_id)
         self.event_repository = SQLiteRunEventRepository(self.database)
         self.context_repository = SQLiteAgentContextRepository(self.database)
@@ -189,16 +209,20 @@ class ApplicationServices:
             news=selected.news,
         )
 
-    def archive_session(self, session_id: str) -> SessionRecord | None:
-        archived = self.application_repository.archive_session(session_id)
+    def archive_session(self, principal_id: str, session_id: str) -> SessionRecord | None:
+        archived = self.application_repository.archive_session(principal_id, session_id)
         if archived is not None:
+            self.response_cache.purge_session(session_id, principal_id=principal_id)
             self.response_cache.purge_session(session_id)
         return archived
 
-    def delete_session(self, session_id: str) -> bool:
-        deleted = self.application_repository.delete_archived_session(session_id)
+    def delete_session(self, principal_id: str, session_id: str) -> bool:
+        deleted = self.application_repository.delete_archived_session(principal_id, session_id)
         if deleted:
-            self.checkpointer.delete_thread(f"{session_id}:{self.settings.workflow_id}")
+            self.checkpointer.delete_thread(
+                f"{principal_id}:{session_id}:{self.settings.workflow_id}"
+            )
+            self.response_cache.purge_session(session_id, principal_id=principal_id)
             self.response_cache.purge_session(session_id)
         return deleted
 

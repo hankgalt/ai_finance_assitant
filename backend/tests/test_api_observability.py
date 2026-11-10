@@ -82,10 +82,10 @@ def test_http_metrics_use_route_templates_and_exclude_health(tmp_path: Path) -> 
         assert isinstance(route, str)
         routes.add(route)
     assert routes == {
-        "/api/v1/sessions",
-        "/api/v1/sessions/{session_id}",
-        "/api/v1/sessions/{session_id}/market/history",
-        "/api/v1/sessions/{session_id}/runs",
+        "/finance_assistant/api/v1/sessions",
+        "/finance_assistant/api/v1/sessions/{session_id}",
+        "/finance_assistant/api/v1/sessions/{session_id}/market/history",
+        "/finance_assistant/api/v1/sessions/{session_id}/runs",
     }
     assert all(session_id not in str(metric.attributes) for metric in request_metrics)
     metric_names = {metric.name for metric in memory.metrics}

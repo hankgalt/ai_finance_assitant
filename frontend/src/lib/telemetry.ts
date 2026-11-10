@@ -1,8 +1,7 @@
 import { onCLS, onFCP, onINP, onLCP, onTTFB } from "web-vitals";
 
 import type { BrowserTelemetryEvent } from "../types/contracts";
-
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+import { apiUrl } from "./urls";
 
 export type BrowserPage = BrowserTelemetryEvent["page"];
 
@@ -22,7 +21,7 @@ export function emitBrowserTelemetry(
     headers.traceparent = `00-${event.trace_id}-${spanId}-01`;
   }
   if (event.request_id) headers["X-Request-ID"] = event.request_id;
-  void fetch(apiBaseUrl + "/api/v1/telemetry/browser", {
+  void fetch(apiUrl("/api/v1/telemetry/browser"), {
     method: "POST",
     headers,
     body: JSON.stringify(body),

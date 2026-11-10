@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 2.9 | Status: M0–M9.1/M6.1 and M2.1 complete; M10 and M11 independently planned | 2026-11-05
+Version 3.0 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access implemented, deployment not provisioned; M10 planned | 2026-11-09
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -42,7 +42,9 @@ Milestone completion evidence is recorded separately from the design authority. 
 [M9 delivery report](M9_delivery_report.md) records the product/coursework release package,
 read-only MCP client evidence, clean-start record, documentation, and demonstration bundle.
 [M9.1 delivery report](M9_1_delivery_report.md) records the product-oriented repository-layout
-migration, integrity reconciliation, and passing release qualification.
+migration, integrity reconciliation, and passing release qualification. [M11 application-access
+delivery report](M11_application_access_delivery_report.md) records the implemented identity,
+base-path, and per-Principal isolation slice without claiming cloud deployment qualification.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under
@@ -58,7 +60,8 @@ If documents conflict, use this precedence: product requirements, accepted ADRs,
 - **Planned enhancement:** architecturally acknowledged work that is not part of the initial release.
 - **Private multi-user deployment:** an internet-routable deployment protected by strong identity,
   an explicit allow-list, and per-Principal authorization; it is not anonymous public access. M11
-  plans this posture but does not make it operational until qualification passes.
+  now implements the application-access boundary, but the deployment is not operational until its
+  remaining cloud and integrated qualification slices pass.
 - **Production hardening:** required before operating outside the initial local release, including
   the private multi-user boundary planned in M11; proposed or documented controls are not represented
   as implemented.

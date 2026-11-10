@@ -155,6 +155,7 @@ BrowserPage = Literal[
 ]
 BrowserApiRoute = Literal[
     "health",
+    "identity",
     "sessions",
     "runs",
     "run_events",

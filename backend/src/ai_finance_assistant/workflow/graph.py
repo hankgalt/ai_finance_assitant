@@ -70,6 +70,12 @@ class SpecialistAgent(Protocol):
     def invoke(self, request: AgentRequest) -> AgentResult: ...
 
 
+def _thread_id(request: WorkflowRequest) -> str:
+    if request.principal_id is None:
+        return f"{request.session_id}:{request.workflow_id}"
+    return f"{request.principal_id}:{request.session_id}:{request.workflow_id}"
+
+
 def _merge_agent_results(
     current: dict[str, AgentResult], update: dict[str, AgentResult]
 ) -> dict[str, AgentResult]:
@@ -77,6 +83,7 @@ def _merge_agent_results(
 
 
 class FinanceState(TypedDict, total=False):
+    principal_id: str
     execution_id: str
     session_id: str
     workflow_id: str
@@ -152,6 +159,11 @@ class FinanceWorkflow:
             )
             try:
                 initial_state: FinanceState = {
+                    **(
+                        {"principal_id": request.principal_id}
+                        if request.principal_id is not None
+                        else {}
+                    ),
                     "execution_id": request.execution_id,
                     "session_id": request.session_id,
                     "workflow_id": request.workflow_id,
@@ -177,9 +189,7 @@ class FinanceWorkflow:
                     initial_state,
                     {
                         "run_name": request.workflow_id,
-                        "configurable": {
-                            "thread_id": f"{request.session_id}:{request.workflow_id}"
-                        },
+                        "configurable": {"thread_id": _thread_id(request)},
                         "recursion_limit": self._maximum_graph_hops,
                     },
                 )
@@ -348,6 +358,7 @@ class FinanceWorkflow:
         identity = self._identity(state)
         model_metadata = self._router.model_metadata
         context = RouteCacheContext(
+            principal_id=state.get("principal_id"),
             session_id=state["session_id"],
             message=state["message"],
             locale=state["locale"],
@@ -672,6 +683,7 @@ class FinanceWorkflow:
                 )
             else:
                 request = AgentRequest(
+                    principal_id=state.get("principal_id"),
                     execution_id=state["execution_id"],
                     session_id=state["session_id"],
                     workflow_id=state["workflow_id"],

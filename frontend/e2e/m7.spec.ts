@@ -209,7 +209,10 @@ const eventsByRun: Record<string, unknown[]> = {
 async function mockM7Api(page: Page) {
   await page.route("**/api/**", async (route: Route) => {
     const request = route.request();
-    const path = new URL(request.url()).pathname;
+    const path = new URL(request.url()).pathname.replace(
+      /^\/finance_assistant/,
+      "",
+    );
     const json = (body: unknown, status = 200) =>
       route.fulfill({
         status,
@@ -223,6 +226,14 @@ async function mockM7Api(page: Page) {
         mode: "test",
         liveness: { status: "ok", service: "API", version: "1" },
         readiness: { status: "ok", checks: [] },
+      });
+    if (path === "/api/v1/identity")
+      return json({
+        principal_id: "principal-e2e-owner",
+        email: "local-owner@example.invalid",
+        role: "owner",
+        status: "active",
+        identity_mode: "loopback_development",
       });
     if (path === "/api/v1/telemetry/browser")
       return route.fulfill({ status: 204 });
@@ -262,7 +273,7 @@ test("Inspector renders recorded success, partial, and failure paths accessibly"
   page,
 }) => {
   await mockM7Api(page);
-  await page.goto("/");
+  await page.goto("/finance_assistant/");
   await expect(
     page.getByRole("heading", { name: "Ask, explore, decide" }),
   ).toBeVisible();

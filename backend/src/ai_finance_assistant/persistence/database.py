@@ -10,9 +10,16 @@ from pathlib import Path
 from threading import RLock
 from time import monotonic
 
+from ai_finance_assistant.identity.models import (
+    LOOPBACK_EMAIL,
+    LOOPBACK_ISSUER,
+    LOOPBACK_SUBJECT,
+    derive_principal_id,
+)
 from ai_finance_assistant.observability.ports import NoOpObservability, Observability
 
-APPLICATION_SCHEMA_VERSION = 3
+APPLICATION_SCHEMA_VERSION = 4
+LOCAL_DEVELOPMENT_PRINCIPAL_ID = derive_principal_id(LOOPBACK_ISSUER, LOOPBACK_SUBJECT)
 
 _MIGRATION_1 = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -151,10 +158,193 @@ _MIGRATION_3 = """
 ALTER TABLE runs ADD COLUMN request_message TEXT;
 """
 
+_MIGRATION_4 = f"""
+CREATE TABLE application_principals (
+    principal_id TEXT PRIMARY KEY,
+    issuer TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (issuer, subject)
+);
+
+INSERT INTO application_principals(
+    principal_id, issuer, subject, email, role, status, created_at, updated_at
+)
+SELECT
+    '{LOCAL_DEVELOPMENT_PRINCIPAL_ID}',
+    '{LOOPBACK_ISSUER}',
+    '{LOOPBACK_SUBJECT}',
+    '{LOOPBACK_EMAIL}',
+    'owner',
+    'active',
+    strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now'),
+    strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now')
+WHERE EXISTS (SELECT 1 FROM sessions);
+
+CREATE TABLE sessions_v4 (
+    session_id TEXT PRIMARY KEY,
+    principal_id TEXT NOT NULL REFERENCES application_principals(principal_id),
+    label TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    archived_at TEXT,
+    UNIQUE (principal_id, session_id)
+);
+INSERT INTO sessions_v4
+SELECT session_id, '{LOCAL_DEVELOPMENT_PRINCIPAL_ID}', label, created_at, updated_at,
+       expires_at, archived_at
+FROM sessions;
+
+CREATE TABLE runs_v4 (
+    execution_id TEXT PRIMARY KEY,
+    principal_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    workflow_id TEXT NOT NULL,
+    workflow_version TEXT NOT NULL,
+    status TEXT NOT NULL,
+    result_json TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    request_message TEXT,
+    UNIQUE (principal_id, execution_id),
+    FOREIGN KEY (principal_id, session_id)
+        REFERENCES sessions_v4(principal_id, session_id) ON DELETE CASCADE
+);
+INSERT INTO runs_v4
+SELECT runs.execution_id, sessions_v4.principal_id, runs.session_id, runs.workflow_id,
+       runs.workflow_version, runs.status, runs.result_json, runs.created_at, runs.updated_at,
+       runs.request_message
+FROM runs JOIN sessions_v4 ON sessions_v4.session_id = runs.session_id;
+
+CREATE TABLE run_events_v4 (
+    principal_id TEXT NOT NULL,
+    execution_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    sequence INTEGER NOT NULL,
+    event_id TEXT NOT NULL UNIQUE,
+    event_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (principal_id, execution_id, sequence),
+    FOREIGN KEY (principal_id, execution_id)
+        REFERENCES runs_v4(principal_id, execution_id) ON DELETE CASCADE,
+    FOREIGN KEY (principal_id, session_id)
+        REFERENCES sessions_v4(principal_id, session_id) ON DELETE CASCADE
+);
+INSERT INTO run_events_v4
+SELECT sessions_v4.principal_id, run_events.execution_id, run_events.session_id,
+       run_events.sequence, run_events.event_id, run_events.event_json, run_events.created_at
+FROM run_events JOIN sessions_v4 ON sessions_v4.session_id = run_events.session_id;
+
+CREATE TABLE portfolios_v4 (
+    portfolio_id TEXT NOT NULL,
+    principal_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    portfolio_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    PRIMARY KEY (principal_id, portfolio_id),
+    UNIQUE (principal_id, session_id, portfolio_id),
+    FOREIGN KEY (principal_id, session_id)
+        REFERENCES sessions_v4(principal_id, session_id) ON DELETE CASCADE
+);
+INSERT INTO portfolios_v4
+SELECT portfolios.portfolio_id, sessions_v4.principal_id, portfolios.session_id,
+       portfolios.portfolio_json, portfolios.created_at, portfolios.updated_at,
+       portfolios.expires_at
+FROM portfolios JOIN sessions_v4 ON sessions_v4.session_id = portfolios.session_id;
+
+CREATE TABLE portfolio_snapshots_v4 (
+    snapshot_id TEXT NOT NULL,
+    portfolio_id TEXT NOT NULL,
+    principal_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (principal_id, snapshot_id),
+    FOREIGN KEY (principal_id, session_id, portfolio_id)
+        REFERENCES portfolios_v4(principal_id, session_id, portfolio_id) ON DELETE CASCADE
+);
+INSERT INTO portfolio_snapshots_v4
+SELECT portfolio_snapshots.snapshot_id, portfolio_snapshots.portfolio_id,
+       sessions_v4.principal_id, portfolio_snapshots.session_id,
+       portfolio_snapshots.snapshot_json, portfolio_snapshots.created_at
+FROM portfolio_snapshots
+JOIN sessions_v4 ON sessions_v4.session_id = portfolio_snapshots.session_id;
+
+CREATE TABLE agent_contexts_v4 (
+    principal_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    context_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    context_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (principal_id, session_id, context_id),
+    FOREIGN KEY (principal_id, session_id)
+        REFERENCES sessions_v4(principal_id, session_id) ON DELETE CASCADE
+);
+INSERT INTO agent_contexts_v4
+SELECT sessions_v4.principal_id, agent_contexts.session_id, agent_contexts.context_id,
+       agent_contexts.kind, agent_contexts.context_json, agent_contexts.created_at
+FROM agent_contexts JOIN sessions_v4 ON sessions_v4.session_id = agent_contexts.session_id;
+
+CREATE TABLE idempotency_records_v4 (
+    principal_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    request_hash TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (principal_id, session_id, scope, idempotency_key),
+    FOREIGN KEY (principal_id, session_id)
+        REFERENCES sessions_v4(principal_id, session_id) ON DELETE CASCADE
+);
+INSERT INTO idempotency_records_v4
+SELECT sessions_v4.principal_id, idempotency_records.session_id, idempotency_records.scope,
+       idempotency_records.idempotency_key, idempotency_records.request_hash,
+       idempotency_records.resource_id, idempotency_records.created_at
+FROM idempotency_records
+JOIN sessions_v4 ON sessions_v4.session_id = idempotency_records.session_id;
+
+DROP TABLE run_events;
+DROP TABLE portfolio_snapshots;
+DROP TABLE agent_contexts;
+DROP TABLE idempotency_records;
+DROP TABLE runs;
+DROP TABLE portfolios;
+DROP TABLE sessions;
+
+ALTER TABLE sessions_v4 RENAME TO sessions;
+ALTER TABLE runs_v4 RENAME TO runs;
+ALTER TABLE run_events_v4 RENAME TO run_events;
+ALTER TABLE portfolios_v4 RENAME TO portfolios;
+ALTER TABLE portfolio_snapshots_v4 RENAME TO portfolio_snapshots;
+ALTER TABLE agent_contexts_v4 RENAME TO agent_contexts;
+ALTER TABLE idempotency_records_v4 RENAME TO idempotency_records;
+
+CREATE INDEX sessions_state_updated_idx
+    ON sessions(principal_id, archived_at, updated_at DESC);
+CREATE INDEX runs_session_created_idx
+    ON runs(principal_id, session_id, created_at DESC);
+CREATE INDEX run_events_session_idx
+    ON run_events(principal_id, session_id, execution_id, sequence);
+CREATE INDEX portfolios_session_idx
+    ON portfolios(principal_id, session_id, created_at DESC);
+CREATE INDEX snapshots_portfolio_idx
+    ON portfolio_snapshots(principal_id, portfolio_id, created_at DESC);
+"""
+
 MIGRATIONS: tuple[tuple[int, str, str], ...] = (
     (1, "m5_initial_application_and_provider_cache", _MIGRATION_1),
     (2, "m5_session_archive_lifecycle", _MIGRATION_2),
     (3, "m5_run_request_message", _MIGRATION_3),
+    (4, "principal_owned_application_resources", _MIGRATION_4),
 )
 
 

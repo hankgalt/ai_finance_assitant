@@ -3,12 +3,16 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  base: "/finance_assistant/",
   plugins: [react(), tailwindcss()],
   server: {
     host: "127.0.0.1",
     port: 5174,
     proxy: {
-      "/api": "http://127.0.0.1:8000",
+      "/finance_assistant/api": {
+        target: "http://127.0.0.1:8000",
+        rewrite: (path) => path.replace(/^\/finance_assistant/, ""),
+      },
     },
   },
   test: {

@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from ai_finance_assistant.agents.context import GoalAgentContext, PortfolioAgentContext
 from ai_finance_assistant.api.errors import ApiProblem
+from ai_finance_assistant.api.middleware import current_principal
 from ai_finance_assistant.api.services import ApplicationServices
 from ai_finance_assistant.contracts.agents import AgentId
 from ai_finance_assistant.contracts.api import (
@@ -48,6 +49,7 @@ from ai_finance_assistant.finance.models import (
     PortfolioImportResult,
     PortfolioSnapshot,
 )
+from ai_finance_assistant.identity.models import PrincipalRole, PrincipalView
 from ai_finance_assistant.persistence.models import (
     IdempotencyConflict,
     RunRecord,
@@ -81,6 +83,7 @@ IdempotencyHeader = Annotated[
 def _create_and_execute_run(
     *,
     services: ApplicationServices,
+    principal_id: str,
     session_id: str,
     message: str,
     context_references: tuple[str, ...],
@@ -95,6 +98,7 @@ def _create_and_execute_run(
     execution_id = f"run-{uuid4().hex}"
     try:
         record, created = services.application_repository.create_run(
+            principal_id=principal_id,
             execution_id=execution_id,
             session_id=session_id,
             workflow_id=services.settings.workflow_id,
@@ -120,6 +124,7 @@ def _create_and_execute_run(
         try:
             result = services.workflow.run(
                 WorkflowRequest(
+                    principal_id=principal_id,
                     execution_id=record.execution_id,
                     session_id=session_id,
                     workflow_id=record.workflow_id,
@@ -158,7 +163,10 @@ def _create_and_execute_run(
                 jurisdiction=jurisdiction,
                 trace_unavailable_reason=("The unexpected failure prevented trace correlation."),
             )
-        finished = services.application_repository.finish_run(result)
+        finished = services.application_repository.finish_run(
+            result,
+            principal_id=principal_id,
+        )
     finally:
         reset_execution_id(execution_token)
         reset_session_id(session_token)
@@ -170,8 +178,16 @@ def _services(request: Request) -> ApplicationServices:
     return request.app.state.services  # type: ignore[no-any-return]
 
 
-def _require_session(services: ApplicationServices, session_id: str) -> SessionRecord:
-    session = services.application_repository.get_session(session_id)
+def _principal_id(request: Request) -> str:
+    return current_principal(request).principal_id
+
+
+def _require_session(
+    services: ApplicationServices,
+    principal_id: str,
+    session_id: str,
+) -> SessionRecord:
+    session = services.application_repository.get_session(principal_id, session_id)
     if session is None:
         raise ApiProblem(
             404,
@@ -184,9 +200,10 @@ def _require_session(services: ApplicationServices, session_id: str) -> SessionR
 
 def _require_active_session(
     services: ApplicationServices,
+    principal_id: str,
     session_id: str,
 ) -> SessionRecord:
-    session = _require_session(services, session_id)
+    session = _require_session(services, principal_id, session_id)
     if session.state == SessionState.ARCHIVED:
         raise ApiProblem(
             409,
@@ -205,9 +222,59 @@ def _request_hash(model: object) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def _require_admin(request: Request, admin_token: str | None) -> None:
+    services = _services(request)
+    if current_principal(request).role != PrincipalRole.OWNER:
+        raise ApiProblem(
+            403,
+            "ADMIN_SCOPE_DENIED",
+            ErrorCategory.AUTHORIZATION,
+            "Administrative authorization failed.",
+        )
+    if services.settings.identity_mode == "iap":
+        return
+    configured = services.settings.local_admin_token
+    if configured is None:
+        raise ApiProblem(
+            503,
+            "ADMIN_PURGE_NOT_READY",
+            ErrorCategory.NOT_READY,
+            "Administrative purge is disabled until a local admin token is configured.",
+        )
+    supplied = admin_token or ""
+    if not hmac.compare_digest(configured.get_secret_value(), supplied):
+        raise ApiProblem(
+            403,
+            "ADMIN_SCOPE_DENIED",
+            ErrorCategory.AUTHORIZATION,
+            "Administrative authorization failed.",
+        )
+
+
+def _require_provider_entitled(request: Request) -> None:
+    services = _services(request)
+    if (
+        services.settings.provider_mode == "live"
+        and current_principal(request).role != PrincipalRole.OWNER
+    ):
+        raise ApiProblem(
+            403,
+            "PROVIDER_SCOPE_DENIED",
+            ErrorCategory.AUTHORIZATION,
+            "Live provider use is unavailable for this role.",
+        )
+
+
+@router.get("/identity", response_model=PrincipalView)
+def get_identity(request: Request) -> PrincipalView:
+    services = _services(request)
+    return services.identity_access.view(current_principal(request))
+
+
 @router.post("/sessions", response_model=SessionRecord, status_code=201)
 def create_session(body: CreateSessionRequest, request: Request) -> SessionRecord:
     return _services(request).application_repository.create_session(
+        _principal_id(request),
         f"session-{uuid4().hex}",
         label=body.label,
     )
@@ -218,17 +285,22 @@ def list_sessions(
     request: Request,
     state: Annotated[SessionState | None, Query()] = None,
 ) -> SessionList:
-    return SessionList(items=_services(request).application_repository.list_sessions(state=state))
+    return SessionList(
+        items=_services(request).application_repository.list_sessions(
+            _principal_id(request),
+            state=state,
+        )
+    )
 
 
 @router.get("/sessions/{session_id}", response_model=SessionRecord)
 def get_session(session_id: str, request: Request) -> SessionRecord:
-    return _require_session(_services(request), session_id)
+    return _require_session(_services(request), _principal_id(request), session_id)
 
 
 @router.post("/sessions/{session_id}/archive", response_model=SessionRecord)
 def archive_session(session_id: str, request: Request) -> SessionRecord:
-    archived = _services(request).archive_session(session_id)
+    archived = _services(request).archive_session(_principal_id(request), session_id)
     if archived is None:
         raise ApiProblem(
             404,
@@ -242,7 +314,8 @@ def archive_session(session_id: str, request: Request) -> SessionRecord:
 @router.delete("/sessions/{session_id}", status_code=204)
 def delete_session(session_id: str, request: Request) -> Response:
     services = _services(request)
-    session = _require_session(services, session_id)
+    principal_id = _principal_id(request)
+    session = _require_session(services, principal_id, session_id)
     if session.state != SessionState.ARCHIVED:
         raise ApiProblem(
             409,
@@ -250,7 +323,7 @@ def delete_session(session_id: str, request: Request) -> Response:
             ErrorCategory.CONFLICT,
             "Archive the Session before permanently deleting it.",
         )
-    if not services.delete_session(session_id):
+    if not services.delete_session(principal_id, session_id):
         raise ApiProblem(
             404,
             "SESSION_NOT_FOUND",
@@ -269,9 +342,12 @@ def create_run(
     idempotency_key: IdempotencyHeader = None,
 ) -> RunRecord:
     services = _services(request)
-    _require_active_session(services, session_id)
+    principal_id = _principal_id(request)
+    _require_active_session(services, principal_id, session_id)
+    _require_provider_entitled(request)
     return _create_and_execute_run(
         services=services,
+        principal_id=principal_id,
         session_id=session_id,
         message=body.message,
         context_references=body.context_references,
@@ -298,9 +374,12 @@ def continue_run(
     idempotency_key: IdempotencyHeader = None,
 ) -> RunRecord:
     services = _services(request)
-    _require_active_session(services, session_id)
+    principal_id = _principal_id(request)
+    _require_active_session(services, principal_id, session_id)
+    _require_provider_entitled(request)
     try:
         source = services.application_repository.get_run(
+            principal_id,
             execution_id,
             session_id=session_id,
         )
@@ -334,7 +413,10 @@ def continue_run(
     existing = next(
         (
             item
-            for item in services.application_repository.list_runs(session_id=session_id)
+            for item in services.application_repository.list_runs(
+                principal_id,
+                session_id=session_id,
+            )
             if item.result is not None and item.result.continuation_of_execution_id == execution_id
         ),
         None,
@@ -358,6 +440,7 @@ def continue_run(
         )
     return _create_and_execute_run(
         services=services,
+        principal_id=principal_id,
         session_id=session_id,
         message=source.request_message,
         context_references=context_references,
@@ -379,15 +462,27 @@ def continue_run(
 @router.get("/sessions/{session_id}/runs", response_model=RunList)
 def list_runs(session_id: str, request: Request) -> RunList:
     services = _services(request)
-    _require_session(services, session_id)
-    return RunList(items=services.application_repository.list_runs(session_id=session_id))
+    principal_id = _principal_id(request)
+    _require_session(services, principal_id, session_id)
+    return RunList(
+        items=services.application_repository.list_runs(
+            principal_id,
+            session_id=session_id,
+        )
+    )
 
 
 @router.get("/sessions/{session_id}/runs/{execution_id}", response_model=RunRecord)
 def get_run(session_id: str, execution_id: str, request: Request) -> RunRecord:
     services = _services(request)
+    principal_id = _principal_id(request)
+    _require_session(services, principal_id, session_id)
     try:
-        run = services.application_repository.get_run(execution_id, session_id=session_id)
+        run = services.application_repository.get_run(
+            principal_id,
+            execution_id,
+            session_id=session_id,
+        )
     except PermissionError as exc:
         raise ApiProblem(
             403,
@@ -409,6 +504,7 @@ def run_events(session_id: str, execution_id: str, request: Request) -> RunEvent
     get_run(session_id, execution_id, request)
     try:
         events = services.event_repository.list_for_run(
+            _principal_id(request),
             execution_id,
             session_id=session_id,
             limit=services.settings.api_sse_replay_limit,
@@ -442,6 +538,7 @@ def stream_run(
     run = get_run(session_id, execution_id, request)
     after_sequence, chunk_seen = _sse_cursor(execution_id, last_event_id)
     events = services.event_repository.list_for_run(
+        _principal_id(request),
         execution_id,
         session_id=session_id,
         after_sequence=after_sequence,
@@ -479,7 +576,7 @@ def validate_portfolio_import(
     request: Request,
 ) -> PortfolioImportResult:
     services = _services(request)
-    _require_active_session(services, session_id)
+    _require_active_session(services, _principal_id(request), session_id)
     return services.portfolio_import.import_portfolio(body.to_domain())
 
 
@@ -495,7 +592,8 @@ def create_portfolio(
     idempotency_key: IdempotencyHeader = None,
 ) -> PortfolioImportResult:
     services = _services(request)
-    _require_active_session(services, session_id)
+    principal_id = _principal_id(request)
+    _require_active_session(services, principal_id, session_id)
     result = services.portfolio_import.import_portfolio(body.to_domain())
     if not result.accepted or result.portfolio is None:
         response.status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
@@ -503,6 +601,7 @@ def create_portfolio(
     try:
         portfolio, created = services.application_repository.save_portfolio(
             result.portfolio,
+            principal_id=principal_id,
             session_id=session_id,
             idempotency_key=idempotency_key,
             request_hash=_request_hash(body),
@@ -529,8 +628,12 @@ def create_portfolio(
 @router.get("/sessions/{session_id}/portfolios", response_model=tuple[ImportedPortfolio, ...])
 def list_portfolios(session_id: str, request: Request) -> tuple[ImportedPortfolio, ...]:
     services = _services(request)
-    _require_session(services, session_id)
-    return services.application_repository.list_portfolios(session_id=session_id)
+    principal_id = _principal_id(request)
+    _require_session(services, principal_id, session_id)
+    return services.application_repository.list_portfolios(
+        principal_id,
+        session_id=session_id,
+    )
 
 
 @router.get(
@@ -539,8 +642,11 @@ def list_portfolios(session_id: str, request: Request) -> tuple[ImportedPortfoli
 )
 def get_portfolio(session_id: str, portfolio_id: str, request: Request) -> ImportedPortfolio:
     services = _services(request)
+    principal_id = _principal_id(request)
+    _require_session(services, principal_id, session_id)
     try:
         portfolio = services.application_repository.get_portfolio(
+            principal_id,
             portfolio_id,
             session_id=session_id,
         )
@@ -564,9 +670,11 @@ def get_portfolio(session_id: str, portfolio_id: str, request: Request) -> Impor
 @router.delete("/sessions/{session_id}/portfolios/{portfolio_id}", status_code=204)
 def delete_portfolio(session_id: str, portfolio_id: str, request: Request) -> Response:
     services = _services(request)
-    _require_active_session(services, session_id)
+    principal_id = _principal_id(request)
+    _require_active_session(services, principal_id, session_id)
     try:
         deleted = services.application_repository.delete_portfolio(
+            principal_id,
             portfolio_id,
             session_id=session_id,
         )
@@ -599,7 +707,8 @@ def create_snapshot(
     request: Request,
 ) -> PortfolioSnapshot:
     services = _services(request)
-    _require_active_session(services, session_id)
+    principal_id = _principal_id(request)
+    _require_active_session(services, principal_id, session_id)
     portfolio = get_portfolio(session_id, portfolio_id, request)
     calculated_at = datetime.now(UTC)
     snapshot = services.portfolio_analysis.analyze(
@@ -611,7 +720,11 @@ def create_snapshot(
             quote_set=body.quote_set,
         )
     )
-    services.application_repository.save_snapshot(snapshot, session_id=session_id)
+    services.application_repository.save_snapshot(
+        principal_id,
+        snapshot,
+        session_id=session_id,
+    )
     services.context_repository.put(
         session_id,
         PortfolioAgentContext(
@@ -634,8 +747,11 @@ def list_snapshots(
     request: Request,
 ) -> tuple[PortfolioSnapshot, ...]:
     services = _services(request)
+    principal_id = _principal_id(request)
+    _require_session(services, principal_id, session_id)
     try:
         return services.application_repository.list_snapshots(
+            principal_id,
             portfolio_id,
             session_id=session_id,
         )
@@ -661,8 +777,11 @@ def list_snapshots(
 )
 def get_snapshot(session_id: str, snapshot_id: str, request: Request) -> PortfolioSnapshot:
     services = _services(request)
+    principal_id = _principal_id(request)
+    _require_session(services, principal_id, session_id)
     try:
         snapshot = services.application_repository.get_snapshot(
+            principal_id,
             snapshot_id,
             session_id=session_id,
         )
@@ -693,14 +812,16 @@ def search_instruments(
     request: Request,
 ) -> InstrumentSearchResult:
     services = _services(request)
-    _require_active_session(services, session_id)
+    _require_active_session(services, _principal_id(request), session_id)
+    _require_provider_entitled(request)
     return services.market.search_instruments(body)
 
 
 @router.post("/sessions/{session_id}/market/quotes", response_model=QuoteResult)
 def market_quote(session_id: str, body: QuoteRequest, request: Request) -> QuoteResult:
     services = _services(request)
-    _require_active_session(services, session_id)
+    _require_active_session(services, _principal_id(request), session_id)
+    _require_provider_entitled(request)
     return services.market.get_quote(body)
 
 
@@ -711,7 +832,8 @@ def market_history(
     request: Request,
 ) -> HistoricalResult:
     services = _services(request)
-    _require_active_session(services, session_id)
+    _require_active_session(services, _principal_id(request), session_id)
+    _require_provider_entitled(request)
     return services.market.get_history(body)
 
 
@@ -725,7 +847,7 @@ def goal_projection(
     request: Request,
 ) -> GoalProjectionResult:
     services = _services(request)
-    _require_active_session(services, session_id)
+    _require_active_session(services, _principal_id(request), session_id)
     services.context_repository.put(
         session_id,
         GoalAgentContext(context_id=body.projection_id, projection=body),
@@ -740,22 +862,7 @@ def purge_provider_cache(
     admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
 ) -> PurgeResult:
     services = _services(request)
-    configured = services.settings.local_admin_token
-    if configured is None:
-        raise ApiProblem(
-            503,
-            "ADMIN_PURGE_NOT_READY",
-            ErrorCategory.NOT_READY,
-            "Administrative purge is disabled until a local admin token is configured.",
-        )
-    supplied = admin_token or ""
-    if not hmac.compare_digest(configured.get_secret_value(), supplied):
-        raise ApiProblem(
-            403,
-            "ADMIN_SCOPE_DENIED",
-            ErrorCategory.AUTHORIZATION,
-            "Administrative authorization failed.",
-        )
+    _require_admin(request, admin_token)
     count = services.purge_provider_cache(provider=provider)
     return PurgeResult(provider=provider, deleted_bar_count=count)
 
@@ -766,22 +873,7 @@ def purge_response_cache(
     admin_token: Annotated[str | None, Header(alias="X-Admin-Token")] = None,
 ) -> ResponseCachePurgeResult:
     services = _services(request)
-    configured = services.settings.local_admin_token
-    if configured is None:
-        raise ApiProblem(
-            503,
-            "ADMIN_PURGE_NOT_READY",
-            ErrorCategory.NOT_READY,
-            "Administrative purge is disabled until a local admin token is configured.",
-        )
-    supplied = admin_token or ""
-    if not hmac.compare_digest(configured.get_secret_value(), supplied):
-        raise ApiProblem(
-            403,
-            "ADMIN_SCOPE_DENIED",
-            ErrorCategory.AUTHORIZATION,
-            "Administrative authorization failed.",
-        )
+    _require_admin(request, admin_token)
     return ResponseCachePurgeResult(deleted_entry_count=services.purge_response_cache())
 
 

@@ -7,6 +7,7 @@ import type {
   PortfolioImportApiRequest,
   PortfolioImportResult,
   PortfolioSnapshot,
+  PrincipalView,
   QuoteResult,
   RunEventHistory,
   RunList,
@@ -16,11 +17,11 @@ import type {
   SseFrame,
 } from "../types/contracts";
 import { emitBrowserTelemetry, type BrowserPage } from "./telemetry";
-
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+import { apiUrl } from "./urls";
 
 type ApiRoute =
   | "health"
+  | "identity"
   | "sessions"
   | "runs"
   | "run_events"
@@ -83,7 +84,7 @@ async function apiRequest<T>(
   let responseStatus: number | null = null;
 
   try {
-    const response = await fetch(apiBaseUrl + path, {
+    const response = await fetch(apiUrl(path), {
       ...init,
       headers: {
         Accept: "application/json",
@@ -152,7 +153,9 @@ export const api = {
       "shell",
       { signal },
     ),
-  createSession: (label = "Local demo") =>
+  identity: () =>
+    apiRequest<PrincipalView>("/api/v1/identity", "identity", "shell"),
+  createSession: (label = "Private demo") =>
     apiRequest<SessionRecord>(
       "/api/v1/sessions",
       "sessions",

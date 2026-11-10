@@ -45,6 +45,7 @@ _WHITESPACE = re.compile(r"\s+")
 class RouteCacheContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    principal_id: str | None = Field(default=None, min_length=1, max_length=256)
     session_id: str = Field(min_length=1, max_length=256)
     message: str = Field(min_length=1, max_length=20_000)
     locale: str = Field(min_length=2, max_length=35)
@@ -60,6 +61,7 @@ class RouteCacheContext(BaseModel):
 class GenerationCacheContext(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, arbitrary_types_allowed=True)
 
+    principal_id: str | None = Field(default=None, min_length=1, max_length=256)
     session_id: str = Field(min_length=1, max_length=256)
     agent_id: AgentId
     message: str = Field(min_length=1, max_length=20_000)
@@ -252,7 +254,7 @@ class ResponseCacheService:
             return
         key = self._coalescing_key(
             CacheRecordKind.ROUTE,
-            self._session_scope(context.session_id),
+            self._session_scope(context.session_id, principal_id=context.principal_id),
             normalize_query(context.message),
             self._route_filter_fingerprint(context),
         )
@@ -267,16 +269,18 @@ class ResponseCacheService:
             return
         key = self._coalescing_key(
             CacheRecordKind.GENERATION,
-            self._session_scope(context.session_id),
+            self._session_scope(context.session_id, principal_id=context.principal_id),
             normalize_query(context.message),
             self._generation_filter_fingerprint(context),
         )
         with self._coalescer.guard(key):
             yield
 
-    def purge_session(self, session_id: str) -> int:
+    def purge_session(self, session_id: str, *, principal_id: str | None = None) -> int:
         try:
-            return self._adapter.purge_session(self._session_scope(session_id))
+            return self._adapter.purge_session(
+                self._session_scope(session_id, principal_id=principal_id)
+            )
         except Exception:
             return 0
 
@@ -300,7 +304,10 @@ class ResponseCacheService:
     ) -> CacheLookupRequest:
         return CacheLookupRequest(
             kind=CacheRecordKind.ROUTE,
-            session_scope=self._session_scope(context.session_id),
+            session_scope=self._session_scope(
+                context.session_id,
+                principal_id=context.principal_id,
+            ),
             normalized_query=normalize_query(context.message),
             filter_fingerprint=self._route_filter_fingerprint(context),
             observed_at=observed_at or self._clock(),
@@ -315,7 +322,10 @@ class ResponseCacheService:
         vector = tuple(float(value) for value in self._encoder.embed_dense([context.message])[0])
         return CacheLookupRequest(
             kind=CacheRecordKind.GENERATION,
-            session_scope=self._session_scope(context.session_id),
+            session_scope=self._session_scope(
+                context.session_id,
+                principal_id=context.principal_id,
+            ),
             normalized_query=normalize_query(context.message),
             filter_fingerprint=self._generation_filter_fingerprint(context),
             vector=vector,
@@ -408,8 +418,12 @@ class ResponseCacheService:
         return CacheWriteResult(outcome=CacheWriteOutcome.STORED)
 
     @staticmethod
-    def _session_scope(session_id: str) -> str:
-        return hashlib.sha256(f"response-cache-scope-v1\0{session_id}".encode()).hexdigest()
+    def _session_scope(session_id: str, *, principal_id: str | None = None) -> str:
+        if principal_id is None:
+            material = f"response-cache-scope-v1\0{session_id}"
+        else:
+            material = f"response-cache-scope-v2\0{principal_id}\0{session_id}"
+        return hashlib.sha256(material.encode()).hexdigest()
 
     @staticmethod
     def _coalescing_key(

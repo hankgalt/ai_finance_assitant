@@ -34,3 +34,36 @@ def create_sqlite_checkpointer(
     saver = SqliteSaver(connection, serde=serializer)
     saver.setup()
     return saver, connection
+
+
+def scope_legacy_checkpoint_threads(
+    database: SQLiteDatabase,
+    connection: sqlite3.Connection,
+) -> int:
+    """Attach schema-v3 checkpoint threads to their migrated local principal."""
+
+    with database.read() as application_connection:
+        sessions = tuple(
+            (str(row["principal_id"]), str(row["session_id"]))
+            for row in application_connection.execute(
+                "SELECT principal_id, session_id FROM sessions"
+            ).fetchall()
+        )
+    changed = 0
+    with connection:
+        for principal_id, session_id in sessions:
+            legacy_prefix = f"{session_id}:%"
+            scoped_prefix = f"{principal_id}:{session_id}:"
+            for table in ("checkpoints", "writes"):
+                cursor = connection.execute(
+                    f"UPDATE {table} SET thread_id = ? || substr(thread_id, ?) "
+                    "WHERE thread_id LIKE ? AND thread_id NOT LIKE ?",
+                    (
+                        scoped_prefix,
+                        len(session_id) + 2,
+                        legacy_prefix,
+                        f"{scoped_prefix}%",
+                    ),
+                )
+                changed += cursor.rowcount
+    return changed

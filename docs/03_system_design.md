@@ -350,16 +350,25 @@ Data classes and initial local policy:
 | Durable provider cache | Reliability, quota control, and reusable historical ranges | Normalized historical bars survive restart; recent bars are revalidated; quote/news retention stays endpoint-specific; local owner-only long retention requires explicit unverified-rights risk acceptance | Server only; provider/schema/policy scoped, administratively purgeable, and never presented without provenance |
 | Model response cache | Reduce repeated model latency/cost for qualified standalone public Finance Q&A and U.S. Tax Education | Optional non-persistent loopback Redis; maximum 24-hour TTL; current domain evidence is rechecked before generation reuse; Tax is exactly year/jurisdiction partitioned | Server only; opaque Session/version/evidence scoped; purged on archive/deletion or administratively; no raw Session/Run identifiers, context references, or financial/provider payloads |
 
-The local demo is unauthenticated only when explicitly configured and bound for local use. Opaque identifiers are not authentication. Every resource lookup and stream still checks Session scope to prevent accidental cross-session leakage. Any non-loopback multi-user or public deployment requires the ADR-019 production controls before release.
+The local demo uses a synthetic development Principal only when explicitly configured and bound to
+loopback. It is not external authentication. Opaque identifiers are not authentication. Every
+resource lookup and stream checks Principal and Session scope to prevent cross-user or cross-session
+leakage. Any non-loopback multi-user or public deployment requires the ADR-019 production controls
+before release.
 
-### Proposed private multi-user identity and authorization boundary
+### Private multi-user identity and authorization boundary
 
-M11 proposes an internet-routable but non-public deployment behind Google IAP. IAP performs browser
+M11 implements the application boundary for an internet-routable but non-public deployment behind
+Google IAP. IAP performs browser
 authentication and coarse allow-list admission; it is not the resource-authorization layer. FastAPI
 validates `x-goog-iap-jwt-assertion` for the configured audience and derives an immutable Application
 Principal from the verified issuer and subject. Unsigned identity headers, email addresses, Session
 identifiers, and frontend state are not proof of identity. The owner and each approved viewer have a
-separate Principal and role; an email change does not transfer ownership.
+separate Principal and role; an email change does not transfer ownership. Owner and viewer roles
+have full read/write access only to their own product resources; only the owner role has application
+administrative access. A disabled Principal is denied at the next request boundary. An existing
+in-flight request is not force-cancelled, and revocation neither reassigns nor automatically deletes
+retained data.
 
 Every Session, checkpoint, Run, RunEvent, Portfolio, enrichment, Snapshot, Goal, authorized context,
 idempotency record, stream cursor, History operation, and Inspector lookup is owned or explicitly
@@ -367,10 +376,24 @@ shared by policy and checked against the current Principal. Missing ownership an
 lookups fail closed without revealing whether another Principal's resource exists. Shared Finance and
 Tax knowledge collections remain read-only product data. Caches may be shared only when their policy
 contains no user context and provider/content rights allow it; the existing response-cache policy
-remains Session-scoped. Local unauthenticated mode stays a separate loopback-only configuration and
-cannot be enabled by a deployed environment fallback.
+remains Principal-and-Session scoped. Viewer live-provider access is denied until the provider-rights
+decision explicitly permits that role. Local development uses the fixed, visibly labeled
+loopback-development owner Principal and cannot be enabled in production or on a non-loopback host.
+Both local and deployed browser navigation use `/finance_assistant`.
 
-M5 local persistence uses application schema version 3 in SQLite with foreign keys, WAL for file-backed databases, a five-second busy timeout, and transactional migrations. Version 2 adds nullable `archived_at` state to Sessions; version 3 adds nullable `request_message` to Runs so new conversation history can display the submitted question while legacy Runs remain readable. Application tables store Sessions, Runs, privacy-filtered RunEvents, saved Portfolios, Snapshots, authorized agent contexts, idempotency records, normalized market bars, and range coverage. The official LangGraph SQLite saver uses a dedicated connection to the same local file and strict allow-listed checkpoint deserialization. Startup rejects a newer schema, purges expired application/cache records, and removes expired Session checkpoint threads. Archiving preserves Session-owned records and checkpoints; permanent Archived Session deletion cascades user artifacts, including submitted Run messages, and explicitly deletes its checkpoint thread. Provider cache purge is a separately token-protected local administrative operation.
+Local persistence uses application schema version 4 in SQLite with foreign keys, WAL for
+file-backed databases, a five-second busy timeout, and transactional migrations. Version 2 adds
+nullable `archived_at` state to Sessions; version 3 adds nullable `request_message` to Runs; version
+4 adds Application Principals and Principal ownership to Sessions, Runs, privacy-filtered RunEvents,
+Portfolios, Snapshots, authorized agent contexts, and idempotency. Legacy local rows and checkpoint
+threads migrate only to the fixed loopback-development Principal. This local upgrade is not a
+cloud-data migration: the deployed store starts empty. The official LangGraph SQLite saver uses a
+dedicated connection to the same local file and strict allow-listed checkpoint deserialization.
+Startup rejects a newer schema, purges expired application/cache records, and removes expired
+Principal/Session checkpoint threads. Archiving preserves Principal-owned records and checkpoints;
+permanent Archived Session deletion cascades user artifacts, including submitted Run messages, and
+explicitly deletes its checkpoint thread. Local provider-cache purge remains token-protected; under
+IAP, administrative purge additionally requires the owner role.
 
 Default local retention is 30 days for Sessions and RunEvents and 365 days for saved Portfolios. Historical cache retention is at most 3,650 days, with a seven-day recent tail revalidated after six hours and a 128-entry/five-minute memory tier. These are private-demo defaults, not public legal-policy approval. A later public or multi-user store requires a new ADR, authentication/authorization, protected storage, enforced retention jobs, backup/recovery, and migration qualification.
 
@@ -441,10 +464,12 @@ appear only in plans and historical delivery records. The current development to
 Vite, FastAPI, Qdrant, Redis, and ingestion commands/processes and remains the qualified local
 private-demo release.
 
-Proposed ADR-030 and M11 select the GCP/IAP/base-path direction but do not represent it as operational.
-The exact workload, managed application/checkpoint/provider-cache and response-cache stores,
-production Qdrant topology, region, encryption, retention, backup/recovery, capacity, SLO, and cost
-configuration remain validation decisions. The deployed design must keep knowledge ingestion and
+Proposed ADR-030 and M11 select the GCP/IAP/base-path direction, and the application-access boundary
+is implemented, but no cloud control is represented as operational. The selected region is
+`us-west1` and the selected vector store is Qdrant Managed Cloud on GCP. The exact workload, managed
+application/checkpoint/provider-cache and response-cache stores, encryption, retention,
+backup/recovery, capacity, SLO, and cost configuration remain validation decisions. The deployed
+design must keep knowledge ingestion and
 activation separate from runtime, deny direct workload bypass, and retain explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the proposal.

@@ -427,11 +427,11 @@ M11 managed persistence for the cash-flow capability.
 
 **Owner decisions required before implementation slices**
 
-- Before application access/isolation: approve the owner/viewer role matrix and revocation behavior;
-  decide whether the existing local Sessions, Portfolios, Snapshots, and Goals migrate to the owner
-  Principal or the deployed store starts empty; approve the local-development identity fixture; and
-  decide whether local navigation also uses `/finance_assistant` or keeps a documented root-path
-  convenience mode.
+- Application access/isolation decisions resolved for slice 2: initial owner
+  `vtalwar.w@comfforts.com`; owner/viewer/disabled matrix; request-boundary revocation; fixed
+  loopback-development owner fixture; empty deployed application store; separate RAG transfer; and
+  `/finance_assistant` for local as well as deployed navigation. Viewer live-provider access remains
+  denied until ADR-024–026 rights permit it.
 - Before managed-state and infrastructure work: identify the GCP organization/project and billing
   owner, preferred region and cost ceiling, selected workload/database/Qdrant/Redis services,
   retention and backup objectives, GitHub environment approvers, and staging/production separation.

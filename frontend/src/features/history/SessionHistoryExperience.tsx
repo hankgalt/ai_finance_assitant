@@ -38,7 +38,7 @@ export function SessionHistoryExperience() {
       <PageHeader
         eyebrow="Session lifecycle"
         title="Session history"
-        description="Archived Sessions are read-only and retain their saved conversation until permanently deleted or their local retention expires."
+        description="Archived Sessions are read-only and retain their saved conversation until permanently deleted or the configured retention period expires."
         action={<span className="milestone-chip">Archived only</span>}
       />
 
@@ -76,7 +76,7 @@ export function SessionHistoryExperience() {
           <section className="panel" aria-labelledby="archived-sessions-title">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">Saved locally</p>
+                <p className="eyebrow">Saved privately</p>
                 <h3 id="archived-sessions-title">Archived Sessions</h3>
               </div>
             </div>

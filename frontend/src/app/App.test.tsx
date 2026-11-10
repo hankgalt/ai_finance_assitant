@@ -5,6 +5,9 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { TEST_WORKFLOW_ID } from "../test/config";
 import { App } from "./App";
 
+const principalId = "principal-local-test";
+const scopedStorageKey = `aifa.session.${principalId}`;
+
 function response(
   data: unknown,
   status = 200,
@@ -35,6 +38,14 @@ function successfulFetch() {
         readiness: { status: "not_ready", checks: [] },
       });
     }
+    if (url.endsWith("/api/v1/identity"))
+      return response({
+        principal_id: principalId,
+        email: "local-owner@example.invalid",
+        role: "owner",
+        status: "active",
+        identity_mode: "loopback_development",
+      });
     if (url.endsWith("/api/v1/sessions")) {
       return response(
         {
@@ -338,7 +349,7 @@ test("archives the active backend session and opens a fresh local session", asyn
 
   renderApp();
   await screen.findByRole("heading", { name: "Ask, explore, decide" });
-  expect(localStorage.getItem("aifa.local-session-id")).toBe("session-1");
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-1");
 
   fireEvent.click(screen.getByRole("button", { name: "Clear active session" }));
   expect(
@@ -349,11 +360,11 @@ test("archives the active backend session and opens a fresh local session", asyn
   );
 
   await waitFor(() =>
-    expect(localStorage.getItem("aifa.local-session-id")).toBe("session-2"),
+    expect(localStorage.getItem(scopedStorageKey)).toBe("session-2"),
   );
   expect(requests).toContainEqual({
     method: "POST",
-    url: "/api/v1/sessions/session-1/archive",
+    url: "/finance_assistant/api/v1/sessions/session-1/archive",
   });
   expect(
     await screen.findByRole("heading", { name: "Ask, explore, decide" }),
@@ -399,7 +410,7 @@ test("preserves the active session when backend archiving fails", async () => {
   expect(
     await screen.findByText("The Session could not be archived safely."),
   ).toHaveAttribute("role", "alert");
-  expect(localStorage.getItem("aifa.local-session-id")).toBe("session-test");
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-test");
 });
 
 test("views and permanently deletes an archived Session from history", async () => {
@@ -468,7 +479,7 @@ test("views and permanently deletes an archived Session from history", async () 
   ).toBeInTheDocument();
   expect(requests).toContainEqual({
     method: "DELETE",
-    url: "/api/v1/sessions/session-archived",
+    url: "/finance_assistant/api/v1/sessions/session-archived",
   });
 });
 
@@ -532,5 +543,5 @@ test("preserves an archived Session when permanent deletion fails", async () => 
     ),
   ).toHaveAttribute("role", "alert");
   expect(screen.getByText("Preserved Session")).toBeInTheDocument();
-  expect(localStorage.getItem("aifa.local-session-id")).toBe("session-test");
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-test");
 });

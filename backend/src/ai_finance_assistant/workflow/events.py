@@ -37,8 +37,6 @@ class EventIdentity:
 class RunEventRepository(Protocol):
     def append(self, event: RunEvent) -> None: ...
 
-    def list_for_run(self, execution_id: str, *, session_id: str) -> tuple[RunEvent, ...]: ...
-
 
 class InMemoryRunEventRepository:
     def __init__(self) -> None:

@@ -96,7 +96,7 @@ test("deletes a Session-scoped portfolio through the authoritative API", async (
   ).resolves.toBeUndefined();
 
   expect(fetchMock).toHaveBeenCalledWith(
-    "/api/v1/sessions/session-1/portfolios/portfolio-1",
+    "/finance_assistant/api/v1/sessions/session-1/portfolios/portfolio-1",
     expect.objectContaining({ method: "DELETE" }),
   );
 });
@@ -118,7 +118,7 @@ test("loads authorized persisted RunEvents for the Inspector", async () => {
     execution_id: "run-1",
   });
   expect(fetchMock).toHaveBeenCalledWith(
-    "/api/v1/sessions/session-1/runs/run-1/events",
+    "/finance_assistant/api/v1/sessions/session-1/runs/run-1/events",
     expect.objectContaining({
       headers: expect.objectContaining({ Accept: "application/json" }),
     }),
@@ -146,7 +146,7 @@ test("submits only the explicitly selected contexts to the Run continuation", as
 
   const [url, request] = fetchMock.mock.calls[0]!;
   expect(url).toBe(
-    "/api/v1/sessions/session-1/runs/run-clarification/continue",
+    "/finance_assistant/api/v1/sessions/session-1/runs/run-clarification/continue",
   );
   expect(JSON.parse(String(request?.body))).toEqual({
     context_references: ["portfolio-1", "portfolio-2"],
@@ -170,7 +170,7 @@ test("submits an explicit portfolio switch with a new Run", async () => {
   ]);
 
   const [url, request] = fetchMock.mock.calls[0]!;
-  expect(url).toBe("/api/v1/sessions/session-1/runs");
+  expect(url).toBe("/finance_assistant/api/v1/sessions/session-1/runs");
   expect(JSON.parse(String(request?.body))).toEqual({
     message: "Analyze the other portfolio",
     context_references: ["portfolio-2"],

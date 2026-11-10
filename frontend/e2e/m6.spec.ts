@@ -68,7 +68,7 @@ async function mockApi(page: Page) {
   await page.route("**/api/**", async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const path = url.pathname;
+    const path = url.pathname.replace(/^\/finance_assistant/, "");
     const json = (body: unknown, status = 200) =>
       route.fulfill({
         status,
@@ -82,6 +82,14 @@ async function mockApi(page: Page) {
         mode: "test",
         liveness: { status: "ok", service: "API", version: "1" },
         readiness: { status: "ok", checks: [] },
+      });
+    if (path === "/api/v1/identity")
+      return json({
+        principal_id: "principal-e2e-owner",
+        email: "local-owner@example.invalid",
+        role: "owner",
+        status: "active",
+        identity_mode: "loopback_development",
       });
     if (path === "/api/v1/telemetry/browser")
       return route.fulfill({ status: 204 });
@@ -489,7 +497,7 @@ async function capture(page: Page, path: string) {
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/finance_assistant/");
   await expect(
     page.getByRole("heading", { name: "Ask, explore, decide" }),
   ).toBeVisible();
@@ -1249,7 +1257,9 @@ test("archives the active session and deletes it only from history", async ({
   ).toHaveCount(0);
   await expect
     .poll(() =>
-      page.evaluate(() => localStorage.getItem("aifa.local-session-id")),
+      page.evaluate(() =>
+        localStorage.getItem("aifa.session.principal-e2e-owner"),
+      ),
     )
     .toBe("session-e2e-1");
 
@@ -1258,7 +1268,9 @@ test("archives the active session and deletes it only from history", async ({
 
   await expect
     .poll(() =>
-      page.evaluate(() => localStorage.getItem("aifa.local-session-id")),
+      page.evaluate(() =>
+        localStorage.getItem("aifa.session.principal-e2e-owner"),
+      ),
     )
     .toBe("session-e2e-2");
   await expect(

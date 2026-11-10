@@ -76,13 +76,13 @@ export function App() {
 
   const content = (() => {
     if (session.isPending)
-      return <StateNotice title="Opening your local demo session" />;
+      return <StateNotice title="Opening your private session" />;
     if (session.isError) {
       return (
-        <StateNotice tone="error" title="A local session could not be opened">
+        <StateNotice tone="error" title="A private session could not be opened">
           <p>
-            Start the FastAPI backend, then retry. No browser credential is
-            required.
+            Confirm that the Finance Assistant service is available, then retry.
+            Deployed access requires an approved Google identity.
           </p>
           <button
             className="secondary-button"
@@ -201,10 +201,15 @@ export function App() {
             })}
           </nav>
           <div className="local-note">
-            <strong>Owner-only local demo</strong>
+            <strong>
+              {session.identity
+                ? `${session.identity.email} · ${session.identity.role}`
+                : "Private demo identity"}
+            </strong>
             <span>
-              Educational information. Imported financial data stays in the
-              configured local application store.
+              {session.identity?.identity_mode === "iap"
+                ? "Access verified by Google IAP. Your application resources are isolated from other viewers."
+                : "Explicit loopback-development identity. Data stays in the configured local application store."}
             </span>
             {clearConfirmationOpen ? (
               <div

@@ -166,8 +166,22 @@ Anonymous access, trusting unsigned IAP headers, frontend-only authorization, an
 `@react-oauth/google` login to this application are rejected because they either weaken the boundary
 or create competing identities.
 
+The application-access decisions are approved as follows. The initial owner admission email is
+`vtalwar.w@comfforts.com`; additional consumer-Google viewers are admitted only by explicit
+allow-list. Owner and viewer Principals may read and mutate only their own product resources. Only
+the owner role may invoke application administrative operations. A disabled Principal has no
+application access. Removing the edge IAP grant blocks a viewer at the edge; setting the application
+Principal to disabled is enforced at the next HTTP request or SSE reconnect. Revocation does not
+cancel a request already executing, reassign data, or silently delete retained data. Live-provider
+use by viewers stays denied until role-specific rights are approved under ADRs 024–026.
+
 The application remains available locally through a separately configured, explicitly labeled
-local mode. The deployed path is served through an HTTPS load balancer with HTTP redirect, IAP, and
+loopback-development Principal (`urn:ai-finance-assistant:identity:loopback-development`, subject
+`owner`, display email `local-owner@example.invalid`, owner role). Local and deployed navigation
+both use `/finance_assistant`. The deployed application store starts empty; existing local product
+data is not copied to the owner Principal, and current RAG collections are transferred by the
+separate knowledge-release workflow. The deployed path is served through an HTTPS load balancer
+with HTTP redirect, IAP, and
 no direct workload bypass. Application workloads are stateless with respect to authoritative user
 state; managed persistence, production Qdrant, response-cache topology, encryption, retention,
 backup/recovery, region, capacity, and cost ceilings must be selected and qualified before this ADR
@@ -193,11 +207,18 @@ cross-Principal denial across every product experience, IAP-bypass resistance, m
 rollback, collection promotion/rollback, retention/deletion, backup/restore, provider gates,
 monitoring, capacity, and clean deployment before this proposal may become Accepted.
 
+The selected deployment inputs are GCP project `comfforts-369117` (project number
+`730340912967`) in the `comfforts.com` organization, region `us-west1`, a single-region/low-traffic
+posture, and Qdrant Managed Cloud free tier on GCP. Secret values are entered directly in Google
+Secret Manager and never committed or passed as Terraform variables. The owner retains Squarespace
+DNS control and will add the reviewed record after a load-balancer address exists. These selections
+do not authorize infrastructure provisioning in the application-access slice.
+
 ## Decision register still open
 
 The following are not silently decided by these records: acceptance of the proposed GCP deployment
-topology; exact managed application/checkpoint/provider-cache and response-cache stores; production
-Qdrant hosting mode; regions, retention, backup/recovery, capacity, and cost ceilings; commercial
+topology; exact managed application/checkpoint/provider-cache and response-cache stores; retention,
+backup/recovery, staging separation, GitHub approvers, capacity, and cost ceilings; commercial
 market-data rights for approved viewers; initial institution-specific Cash-flow import profiles; and
 authoritative coursework rubric interpretations. M1 resolved the initial representation and ranking
 experiment; ADR-021 resolves initial multi-currency behavior, short positions, and the

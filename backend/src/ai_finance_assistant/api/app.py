@@ -9,18 +9,26 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 
 from ai_finance_assistant.api.errors import register_error_handlers
-from ai_finance_assistant.api.middleware import RequestCorrelationMiddleware
+from ai_finance_assistant.api.middleware import (
+    PrincipalIdentityMiddleware,
+    RequestCorrelationMiddleware,
+)
 from ai_finance_assistant.api.routes.health import router as health_router
 from ai_finance_assistant.api.routes.v1 import router as v1_router
 from ai_finance_assistant.api.services import ApplicationServices
 from ai_finance_assistant.core.config import Settings, get_settings
 from ai_finance_assistant.core.logging import configure_logging
+from ai_finance_assistant.identity.verification import IAPAssertionVerifier
 from ai_finance_assistant.observability.factory import telemetry_runtime_from_settings
 
 _httpx_instrumented = False
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    iap_assertion_verifier: IAPAssertionVerifier | None = None,
+) -> FastAPI:
     global _httpx_instrumented
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
@@ -28,7 +36,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
-        services = ApplicationServices(resolved_settings, telemetry=telemetry)
+        services = ApplicationServices(
+            resolved_settings,
+            telemetry=telemetry,
+            iap_assertion_verifier=iap_assertion_verifier,
+        )
         application.state.services = services
         try:
             yield
@@ -44,11 +56,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "an evidence-bound optional response cache, the six-agent LangGraph workflow, and "
             "bounded first-party browser telemetry."
         ),
+        servers=[{"url": resolved_settings.base_path}],
         lifespan=lifespan,
     )
     app.state.settings = resolved_settings
     app.state.telemetry_runtime = telemetry
     register_error_handlers(app)
+    app.add_middleware(PrincipalIdentityMiddleware)
     app.add_middleware(RequestCorrelationMiddleware)
     app.add_middleware(
         CORSMiddleware,

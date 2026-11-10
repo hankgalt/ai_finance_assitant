@@ -1,6 +1,7 @@
 {
   "schema_version": "1",
   "authority": "FastAPI OpenAPI and persisted RunEvent v1",
+  "external_base_path": "/finance_assistant",
   "frontend_type_file": "frontend/src/types/contracts.ts",
   "inspector_model_file": "frontend/src/features/inspector/inspectorModel.ts",
   "required_paths": {

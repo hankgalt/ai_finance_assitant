@@ -195,6 +195,7 @@ class AgentRuntime:
                 facts=facts,
             )
         context = GenerationCacheContext(
+            principal_id=request.principal_id,
             session_id=request.session_id,
             agent_id=request.agent_id,
             message=request.message,

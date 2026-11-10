@@ -4,6 +4,9 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { App } from "./App";
 
+const principalId = "principal-local-test";
+const scopedStorageKey = `aifa.session.${principalId}`;
+
 type Handler = (
   url: string,
   method: string,
@@ -74,6 +77,14 @@ function stubFetch(handler: Handler = () => undefined) {
           readiness: { status: "ready", checks: [] },
         });
       }
+      if (url.endsWith("/api/v1/identity"))
+        return response({
+          principal_id: principalId,
+          email: "local-owner@example.invalid",
+          role: "owner",
+          status: "active",
+          identity_mode: "loopback_development",
+        });
       if (url.endsWith("/api/v1/sessions") && method === "POST")
         return response(sessionRecord("session-new"), 201);
       if (url.includes("?state=archived")) return response({ items: [] });
@@ -145,11 +156,36 @@ test("restores an active stored session instead of creating another", async () =
   renderApp();
   await ready();
 
-  expect(localStorage.getItem("aifa.local-session-id")).toBe("session-stored");
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-stored");
+  expect(localStorage.getItem("aifa.local-session-id")).toBeNull();
   expect(requests).not.toContainEqual({
     method: "POST",
-    url: "/api/v1/sessions",
+    url: "/finance_assistant/api/v1/sessions",
   });
+});
+
+test("keeps browser session pointers isolated by Application Principal", async () => {
+  localStorage.setItem(scopedStorageKey, "session-owner");
+  const viewerPrincipalId = "principal-viewer-test";
+  stubFetch((url) =>
+    url.endsWith("/api/v1/identity")
+      ? response({
+          principal_id: viewerPrincipalId,
+          email: "viewer@gmail.com",
+          role: "viewer",
+          status: "active",
+          identity_mode: "iap",
+        })
+      : undefined,
+  );
+
+  renderApp();
+  await ready();
+
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-owner");
+  expect(localStorage.getItem(`aifa.session.${viewerPrincipalId}`)).toBe(
+    "session-new",
+  );
 });
 
 test("replaces a stored session that was archived elsewhere", async () => {
@@ -163,7 +199,7 @@ test("replaces a stored session that was archived elsewhere", async () => {
   renderApp();
   await ready();
 
-  expect(localStorage.getItem("aifa.local-session-id")).toBe("session-new");
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-new");
 });
 
 test("replaces a stored session the backend no longer knows", async () => {
@@ -177,7 +213,7 @@ test("replaces a stored session the backend no longer knows", async () => {
   renderApp();
   await ready();
 
-  expect(localStorage.getItem("aifa.local-session-id")).toBe("session-new");
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-new");
 });
 
 test("keeps the stored session and offers retry when restore fails unexpectedly", async () => {
@@ -196,12 +232,12 @@ test("keeps the stored session and offers retry when restore fails unexpectedly"
   renderApp();
 
   expect(
-    await screen.findByText("A local session could not be opened"),
+    await screen.findByText("A private session could not be opened"),
   ).toBeInTheDocument();
-  expect(localStorage.getItem("aifa.local-session-id")).toBe("session-stored");
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-stored");
   fireEvent.click(screen.getByRole("button", { name: "Retry session" }));
   await ready();
-  expect(localStorage.getItem("aifa.local-session-id")).toBe("session-stored");
+  expect(localStorage.getItem(scopedStorageKey)).toBe("session-stored");
 });
 
 test("toggles the mobile navigation and cancels session clearing", async () => {

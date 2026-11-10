@@ -1,11 +1,13 @@
 """Local-safe configuration with environment-only secret loading."""
 
+from __future__ import annotations
+
 import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, cast
 
-from pydantic import AliasChoices, Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_core import PydanticUndefined
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -33,6 +35,11 @@ class Settings(BaseSettings):
     mode: Literal["local", "test", "production"] = "local"
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
+    base_path: str = Field(default="/finance_assistant", pattern=r"^/[A-Za-z0-9_-]+$")
+    identity_mode: Literal["loopback_development", "iap"] = "loopback_development"
+    iap_audience: str | None = Field(default=None, min_length=1, max_length=512)
+    iap_owner_email: str | None = Field(default=None, min_length=3, max_length=320)
+    iap_viewer_emails: list[str] = Field(default_factory=list)
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     log_level: str = "INFO"
     qdrant_url: str | None = None
@@ -94,7 +101,7 @@ class Settings(BaseSettings):
     model_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     model_maximum_input_characters: int = Field(default=40_000, ge=1_000, le=200_000)
     storage_path: Path = Path("data/ai_finance_assistant.sqlite3")
-    storage_expected_schema_version: int = Field(default=3, ge=1, le=1000)
+    storage_expected_schema_version: int = Field(default=4, ge=1, le=1000)
     local_deployment_audience: Literal["owner_only", "shared_demo", "public"] = "owner_only"
     local_admin_token: SecretStr | None = None
     session_retention_days: int = Field(default=30, ge=1, le=3650)
@@ -180,6 +187,33 @@ class Settings(BaseSettings):
         ),
     )
     workflow_maximum_graph_hops: int = Field(default=16, ge=4, le=64)
+
+    @model_validator(mode="after")
+    def validate_identity_mode(self) -> Settings:
+        if self.storage_expected_schema_version != 4:
+            raise ValueError("runtime storage schema version must be 4")
+        loopback_hosts = {"127.0.0.1", "::1", "localhost"}
+        if self.identity_mode == "loopback_development":
+            if self.mode == "production":
+                raise ValueError("production mode requires IAP identity")
+            if self.host not in loopback_hosts:
+                raise ValueError("loopback development identity requires a loopback host")
+        else:
+            if self.iap_audience is None or self.iap_owner_email is None:
+                raise ValueError("IAP identity requires its audience and owner email")
+        normalized = [email.strip().lower() for email in self.iap_viewer_emails]
+        if any("@" not in email for email in normalized):
+            raise ValueError("IAP viewer emails must be valid email-like identifiers")
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("IAP viewer emails must be unique")
+        self.iap_viewer_emails = normalized
+        if self.iap_owner_email is not None:
+            self.iap_owner_email = self.iap_owner_email.strip().lower()
+            if "@" not in self.iap_owner_email:
+                raise ValueError("IAP owner email must be a valid email-like identifier")
+            if self.iap_owner_email in normalized:
+                raise ValueError("IAP owner email cannot also be a viewer email")
+        return self
 
 
 @lru_cache

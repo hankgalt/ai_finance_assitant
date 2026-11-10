@@ -24,6 +24,14 @@ export interface HealthSummary {
   };
 }
 
+export interface PrincipalView {
+  principal_id: string;
+  email: string;
+  role: "owner" | "viewer";
+  status: "active" | "disabled";
+  identity_mode: "loopback_development" | "iap";
+}
+
 export type EventType =
   | "run_started"
   | "run_completed"

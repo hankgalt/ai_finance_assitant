@@ -151,7 +151,7 @@ curl -fsS http://127.0.0.1:8000/api/health/live
 curl -fsS http://127.0.0.1:8000/api/health/ready
 ~~~
 
-Open http://127.0.0.1:5174. Vite proxies `/api` to the backend at http://127.0.0.1:8000.
+Open http://127.0.0.1:5174/finance_assistant/. Vite proxies `/api` to the backend at http://127.0.0.1:8000.
 
 Health interfaces:
 

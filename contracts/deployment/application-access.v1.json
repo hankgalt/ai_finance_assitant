@@ -1,0 +1,49 @@
+{
+  "schema_version": "1",
+  "deployment_class": "iap_protected_private_multi_user",
+  "external_origin": "https://apps.comfforts.com",
+  "external_base_path": "/finance_assistant",
+  "internal_api_prefix": "/api",
+  "iap": {
+    "assertion_header": "x-goog-iap-jwt-assertion",
+    "issuer": "https://cloud.google.com/iap",
+    "principal_claims": ["iss", "sub"],
+    "metadata_claim": "email",
+    "initial_owner_email": "vtalwar.w@comfforts.com",
+    "unsigned_identity_headers_trusted": false
+  },
+  "roles": {
+    "owner": {
+      "own_product_resources": "read_write",
+      "administrative_cache_purge": true,
+      "live_provider_access": "subject_to_accepted_provider_adrs"
+    },
+    "viewer": {
+      "own_product_resources": "read_write",
+      "administrative_cache_purge": false,
+      "live_provider_access": "denied_until_role_specific_rights_are_approved"
+    },
+    "disabled": {
+      "application_access": "denied"
+    }
+  },
+  "revocation": {
+    "application_status": "disabled",
+    "effective_boundary": "next_http_or_sse_reconnect_request",
+    "in_flight_request_cancelled": false,
+    "owned_data_reassigned": false,
+    "owned_data_deleted_automatically": false
+  },
+  "local_development": {
+    "mode": "loopback_development",
+    "allowed_hosts": ["127.0.0.1", "::1", "localhost"],
+    "issuer": "urn:ai-finance-assistant:identity:loopback-development",
+    "subject": "owner",
+    "email": "local-owner@example.invalid",
+    "role": "owner",
+    "external_base_path": "/finance_assistant"
+  },
+  "deployed_store_initialization": "empty",
+  "legacy_local_data": "migrated_only_to_the_loopback_development_principal",
+  "authoritative_schema_version": 4
+}

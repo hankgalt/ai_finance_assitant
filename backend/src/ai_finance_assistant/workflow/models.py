@@ -37,6 +37,7 @@ class WorkflowRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: str = Field(default="1", pattern=r"^1$")
+    principal_id: Identifier | None = None
     execution_id: Identifier
     session_id: Identifier
     workflow_id: Identifier

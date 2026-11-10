@@ -164,16 +164,22 @@ test("routes every product call to its versioned resource", async () => {
 
   const product = productCalls(calls);
   expect(product.map((call) => [call.init.method ?? "GET", call.url])).toEqual([
-    ["GET", "/api/v1/sessions?state=archived"],
-    ["POST", "/api/v1/sessions/session-1/archive"],
-    ["DELETE", "/api/v1/sessions/session-1"],
-    ["POST", "/api/v1/sessions/session-1/portfolio-imports/validate"],
-    ["POST", "/api/v1/sessions/session-1/portfolios"],
-    ["GET", "/api/v1/sessions/session-1/portfolios"],
-    ["POST", "/api/v1/sessions/session-1/portfolios/portfolio-9/snapshots"],
-    ["POST", "/api/v1/sessions/session-1/market/quotes"],
-    ["POST", "/api/v1/sessions/session-1/market/history"],
-    ["POST", "/api/v1/sessions/session-1/goal-projections"],
+    ["GET", "/finance_assistant/api/v1/sessions?state=archived"],
+    ["POST", "/finance_assistant/api/v1/sessions/session-1/archive"],
+    ["DELETE", "/finance_assistant/api/v1/sessions/session-1"],
+    [
+      "POST",
+      "/finance_assistant/api/v1/sessions/session-1/portfolio-imports/validate",
+    ],
+    ["POST", "/finance_assistant/api/v1/sessions/session-1/portfolios"],
+    ["GET", "/finance_assistant/api/v1/sessions/session-1/portfolios"],
+    [
+      "POST",
+      "/finance_assistant/api/v1/sessions/session-1/portfolios/portfolio-9/snapshots",
+    ],
+    ["POST", "/finance_assistant/api/v1/sessions/session-1/market/quotes"],
+    ["POST", "/finance_assistant/api/v1/sessions/session-1/market/history"],
+    ["POST", "/finance_assistant/api/v1/sessions/session-1/goal-projections"],
   ]);
   expect(new Headers(product[4]!.init.headers).get("Idempotency-Key")).toBe(
     "portfolio-portfolio-9",
@@ -209,7 +215,9 @@ test("reads a replayable run stream with Last-Event-ID recovery", async () => {
   ]);
   expect(fresh).toHaveLength(1);
   const [first, second] = productCalls(calls);
-  expect(first!.url).toBe("/api/v1/sessions/session-1/runs/run-1/stream");
+  expect(first!.url).toBe(
+    "/finance_assistant/api/v1/sessions/session-1/runs/run-1/stream",
+  );
   expect(new Headers(first!.init.headers).get("Last-Event-ID")).toBe(
     "evt:run-1:4",
   );

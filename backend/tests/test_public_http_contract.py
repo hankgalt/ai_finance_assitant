@@ -21,6 +21,8 @@ def test_public_http_contract_manifest_matches_openapi() -> None:
         )
     ).openapi()
 
+    assert openapi["servers"] == [{"url": manifest["external_base_path"]}]
+
     for path, methods in manifest["paths"].items():
         assert path in openapi["paths"]
         assert set(methods).issubset(openapi["paths"][path])

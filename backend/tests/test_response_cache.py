@@ -106,12 +106,14 @@ def cache_service(
 
 def route_context(
     *,
+    principal_id: str | None = None,
     session_id: str = "session-a",
     message: str = "What is diversification?",
     workflow_version: str = "1",
     has_context_references: bool = False,
 ) -> RouteCacheContext:
     return RouteCacheContext(
+        principal_id=principal_id,
         session_id=session_id,
         message=message,
         locale="en-US",
@@ -126,6 +128,7 @@ def route_context(
 
 def generation_context(
     *,
+    principal_id: str | None = None,
     agent_id: AgentId = AgentId.FINANCE_QA,
     session_id: str = "session-a",
     message: str = "What is diversification?",
@@ -135,6 +138,7 @@ def generation_context(
     has_context_references: bool = False,
 ) -> GenerationCacheContext:
     return GenerationCacheContext(
+        principal_id=principal_id,
         session_id=session_id,
         agent_id=agent_id,
         message=message,
@@ -353,10 +357,24 @@ def test_session_purge_and_expiry_remove_entries() -> None:
 
     assert cache.purge_session("session-a") == 1
     assert cache.lookup_generation(context).outcome == CacheLookupOutcome.MISS
-
     cache.store_generation(context, ModelOutput(summary="Cached response."))
     clock.value = now + timedelta(minutes=6)
     assert cache.lookup_generation(context).outcome == CacheLookupOutcome.MISS
+
+
+def test_cache_namespace_is_principal_and_session_scoped() -> None:
+    cache = cache_service()
+    owner = route_context(principal_id="principal-owner", session_id="session-shared")
+    viewer = route_context(principal_id="principal-viewer", session_id="session-shared")
+    output = RoutingModelOutput(
+        selected_agent_ids=(AgentId.FINANCE_QA,),
+        reason_category=RoutingReason.SINGLE_DOMAIN,
+        cache_eligibility=PublicRagCacheEligibility.PUBLIC_RAG,
+    )
+
+    assert cache.store_route(owner, output).outcome == CacheWriteOutcome.STORED
+    assert cache.lookup_route(owner).outcome == CacheLookupOutcome.HIT
+    assert cache.lookup_route(viewer).outcome == CacheLookupOutcome.MISS
 
 
 @pytest.mark.parametrize(

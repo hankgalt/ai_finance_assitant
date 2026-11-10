@@ -51,10 +51,11 @@ Capability directories may contain internal subdirectories when they improve loc
 directory per knowledge base. Do not duplicate an artifact across capability and milestone trees;
 the delivery report links to its single current location.
 
-## Planned private multi-user deployment ownership
+## Private multi-user deployment ownership
 
-Proposed ADR-030 and M11 may add the following capability-owned paths after their owning decisions
-are approved. This table reserves ownership, not implementation status.
+Proposed ADR-030 and M11 use the following capability-owned paths as their slices are approved and
+implemented. The table defines ownership; the presence of a path or artifact is not evidence that
+the complete cloud deployment is operational.
 
 | Path | Owner |
 | --- | --- |

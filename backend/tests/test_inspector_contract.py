@@ -25,6 +25,8 @@ def test_inspector_contract_manifest_matches_openapi_and_frontend_seam() -> None
         )
     ).openapi()
 
+    assert openapi["servers"] == [{"url": manifest["external_base_path"]}]
+
     for path, methods in manifest["required_paths"].items():
         assert path in openapi["paths"]
         assert set(methods).issubset(openapi["paths"][path])

@@ -7,7 +7,12 @@ from fastapi.testclient import TestClient
 
 from ai_finance_assistant.api.app import create_app
 from ai_finance_assistant.core.config import Settings
-from ai_finance_assistant.persistence.database import MigrationError, SQLiteDatabase
+from ai_finance_assistant.persistence.checkpoints import create_sqlite_checkpointer
+from ai_finance_assistant.persistence.database import (
+    LOCAL_DEVELOPMENT_PRINCIPAL_ID,
+    MigrationError,
+    SQLiteDatabase,
+)
 
 
 def _settings(path: Path) -> Settings:
@@ -73,9 +78,14 @@ def test_session_archive_preserves_history_then_deletion_cascades_resources_and_
         assert archived.status_code == 200
         assert archived.json()["state"] == "archived"
         assert client.get(f"/api/v1/sessions/{session_id}/runs/{execution_id}").status_code == 200
+        principal_id = client.get("/api/v1/identity").json()["principal_id"]
         checkpoints = tuple(
             app.state.services.checkpointer.list(
-                {"configurable": {"thread_id": f"{session_id}:{settings.workflow_id}"}}
+                {
+                    "configurable": {
+                        "thread_id": f"{principal_id}:{session_id}:{settings.workflow_id}"
+                    }
+                }
             )
         )
         assert checkpoints
@@ -84,7 +94,11 @@ def test_session_archive_preserves_history_then_deletion_cascades_resources_and_
         assert client.get(f"/api/v1/sessions/{session_id}/runs/{execution_id}").status_code == 404
         deleted_checkpoints = tuple(
             app.state.services.checkpointer.list(
-                {"configurable": {"thread_id": f"{session_id}:{settings.workflow_id}"}}
+                {
+                    "configurable": {
+                        "thread_id": f"{principal_id}:{session_id}:{settings.workflow_id}"
+                    }
+                }
             )
         )
         assert deleted_checkpoints == ()
@@ -97,12 +111,12 @@ def test_newer_storage_schema_blocks_startup(tmp_path: Path) -> None:
     database.close()
     connection = sqlite3.connect(path)
     connection.execute(
-        "INSERT INTO schema_migrations(version, name, applied_at) VALUES (4, 'future', 'now')"
+        "INSERT INTO schema_migrations(version, name, applied_at) VALUES (5, 'future', 'now')"
     )
     connection.commit()
     connection.close()
 
-    incompatible = SQLiteDatabase(path, expected_version=3)
+    incompatible = SQLiteDatabase(path, expected_version=4)
     with pytest.raises(MigrationError, match="newer"):
         incompatible.migrate()
     incompatible.close()
@@ -112,6 +126,26 @@ def test_schema_one_database_migrates_sessions_and_run_question_contract(tmp_pat
     path = tmp_path / "schema-one.sqlite3"
     original = SQLiteDatabase(path, expected_version=1)
     original.migrate()
+    observed = datetime.now(UTC).isoformat()
+    with original.transaction() as connection:
+        connection.execute(
+            "INSERT INTO sessions(session_id, label, created_at, updated_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("legacy-session", "Legacy", observed, observed, observed),
+        )
+        connection.execute(
+            "INSERT INTO runs(execution_id, session_id, workflow_id, workflow_version, status, "
+            "result_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
+            (
+                "legacy-run",
+                "legacy-session",
+                "finance-assistant",
+                "1",
+                "running",
+                observed,
+                observed,
+            ),
+        )
     original.close()
 
     upgraded = SQLiteDatabase(path)
@@ -123,11 +157,58 @@ def test_schema_one_database_migrates_sessions_and_run_question_contract(tmp_pat
         run_columns = {
             str(row["name"]) for row in connection.execute("PRAGMA table_info(runs)").fetchall()
         }
+        principal_id = connection.execute(
+            "SELECT principal_id FROM sessions WHERE session_id = 'legacy-session'"
+        ).fetchone()[0]
+        run_principal_id = connection.execute(
+            "SELECT principal_id FROM runs WHERE execution_id = 'legacy-run'"
+        ).fetchone()[0]
 
-    assert upgraded.schema_version() == 3
+    assert upgraded.schema_version() == 4
     assert "archived_at" in columns
+    assert "principal_id" in columns
     assert "request_message" in run_columns
+    assert principal_id == LOCAL_DEVELOPMENT_PRINCIPAL_ID
+    assert run_principal_id == LOCAL_DEVELOPMENT_PRINCIPAL_ID
     upgraded.close()
+
+
+def test_schema_three_local_checkpoint_is_scoped_to_loopback_principal(tmp_path: Path) -> None:
+    path = tmp_path / "schema-three-checkpoint.sqlite3"
+    legacy = SQLiteDatabase(path, expected_version=3)
+    legacy.migrate()
+    observed = datetime.now(UTC)
+    with legacy.transaction() as connection:
+        connection.execute(
+            "INSERT INTO sessions(session_id, label, created_at, updated_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                "legacy-session",
+                "Legacy",
+                observed.isoformat(),
+                observed.isoformat(),
+                (observed + timedelta(days=1)).isoformat(),
+            ),
+        )
+    _, checkpoint_connection = create_sqlite_checkpointer(legacy)
+    checkpoint_connection.execute(
+        "INSERT INTO checkpoints(thread_id, checkpoint_ns, checkpoint_id, type, checkpoint, "
+        "metadata) VALUES (?, '', ?, ?, ?, ?)",
+        ("legacy-session:finance-assistant-test", "checkpoint-1", "json", b"{}", b"{}"),
+    )
+    checkpoint_connection.commit()
+    checkpoint_connection.close()
+    legacy.close()
+
+    app = create_app(_settings(path))
+    with TestClient(app):
+        rows = app.state.services._checkpoint_connection.execute(
+            "SELECT thread_id FROM checkpoints"
+        ).fetchall()
+
+    assert [str(row[0]) for row in rows] == [
+        f"{LOCAL_DEVELOPMENT_PRINCIPAL_ID}:legacy-session:finance-assistant-test"
+    ]
 
 
 def test_expired_session_and_checkpoint_are_purged_on_restart(tmp_path: Path) -> None:
@@ -137,6 +218,7 @@ def test_expired_session_and_checkpoint_are_purged_on_restart(tmp_path: Path) ->
 
     with TestClient(app) as client:
         session_id = client.post("/api/v1/sessions", json={}).json()["session_id"]
+        principal_id = client.get("/api/v1/identity").json()["principal_id"]
         created = client.post(
             f"/api/v1/sessions/{session_id}/runs",
             json={"message": "What is an ETF?"},
@@ -156,7 +238,11 @@ def test_expired_session_and_checkpoint_are_purged_on_restart(tmp_path: Path) ->
         assert restarted.get(f"/api/v1/sessions/{session_id}").status_code == 404
         checkpoints = tuple(
             restarted_app.state.services.checkpointer.list(
-                {"configurable": {"thread_id": f"{session_id}:{settings.workflow_id}"}}
+                {
+                    "configurable": {
+                        "thread_id": f"{principal_id}:{session_id}:{settings.workflow_id}"
+                    }
+                }
             )
         )
         assert checkpoints == ()
