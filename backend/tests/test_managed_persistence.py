@@ -31,13 +31,139 @@ from ai_finance_assistant.persistence.checkpoints import (
     verify_postgres_checkpoint_schema,
 )
 from ai_finance_assistant.persistence.cli import migrate, run_retention, status
+from ai_finance_assistant.persistence.config import PersistenceOperatorSettings
 from ai_finance_assistant.persistence.postgres import PostgresDatabase, _postgres_placeholders
+from ai_finance_assistant.persistence.privileges import (
+    apply_database_role_policy,
+    database_role_policy_statements,
+    migration_default_privilege_statements,
+)
+from ai_finance_assistant.persistence.qualification import (
+    prepare_qualification,
+    verify_recovered_state,
+    verify_retention_and_cleanup,
+)
 from ai_finance_assistant.persistence.repositories import ApplicationRepository
 
 IAP_ISSUER = "https://cloud.google.com/iap"
 IAP_AUDIENCE = "/projects/730340912967/global/backendServices/123456789"
 OWNER_EMAIL = "vtalwar.w@comfforts.com"
 VIEWER_EMAIL = "finance.viewer@gmail.com"
+
+
+def test_persistence_operator_configuration_is_independent_and_redacts_dsn() -> None:
+    settings = PersistenceOperatorSettings(
+        storage_backend="postgres",
+        postgres_dsn="postgresql://runtime:private-value@127.0.0.1:5432/aifa",
+    )
+
+    assert settings.storage_backend == "postgres"
+    assert settings.postgres_dsn is not None
+    assert settings.postgres_dsn.get_secret_value().endswith("/aifa")
+    assert "private-value" not in repr(settings)
+    assert not hasattr(settings, "qdrant_api_key")
+    assert not hasattr(settings, "iap_audience")
+
+
+def test_database_role_policy_sql_is_reviewable_and_identifier_quoted() -> None:
+    statements = database_role_policy_statements(
+        database='aifa"db',
+        schema="public",
+        migration_role="aifa-migration@example.iam",
+        runtime_role="aifa-runtime@example.iam",
+        retention_role="aifa-retention@example.iam",
+    )
+    rendered = "\n".join(statements)
+
+    assert 'GRANT CONNECT ON DATABASE "aifa""db"' in rendered
+    assert 'GRANT USAGE, CREATE ON SCHEMA "public"' in rendered
+    assert "ALTER DEFAULT PRIVILEGES" not in rendered
+    assert "PUBLIC" in rendered
+    assert "DROP ROLE" not in rendered
+
+    migration_defaults = "\n".join(
+        migration_default_privilege_statements(
+            schema="public",
+            runtime_role="aifa-runtime@example.iam",
+            retention_role="aifa-retention@example.iam",
+        )
+    )
+    assert (
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA "public" '
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "
+        '"aifa-runtime@example.iam"' in migration_defaults
+    )
+    assert 'GRANT SELECT, DELETE ON TABLES TO "aifa-retention@example.iam"' in migration_defaults
+    assert "FOR ROLE" not in migration_defaults
+
+
+@pytest.mark.postgres
+def test_database_role_policy_separates_migration_runtime_and_retention() -> None:
+    root_dsn = os.getenv("AIFA_TEST_POSTGRES_DSN")
+    if root_dsn is None:
+        pytest.skip("AIFA_TEST_POSTGRES_DSN is not configured")
+
+    suffix = uuid4().hex
+    schema = f"aifa_roles_{suffix}"
+    migration_role = f"aifa_migration_{suffix}"
+    runtime_role = f"aifa_runtime_{suffix}"
+    retention_role = f"aifa_retention_{suffix}"
+    with psycopg.connect(root_dsn, autocommit=True) as admin:
+        database = admin.info.dbname
+        assert database is not None
+        admin.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema)))
+        for role in (migration_role, runtime_role, retention_role):
+            admin.execute(sql.SQL("CREATE ROLE {} LOGIN").format(sql.Identifier(role)))
+        apply_database_role_policy(
+            admin,
+            database=database,
+            schema=schema,
+            migration_role=migration_role,
+            runtime_role=runtime_role,
+            retention_role=retention_role,
+        )
+
+    migration_dsn = make_conninfo(root_dsn, user=migration_role)
+    runtime_dsn = make_conninfo(root_dsn, user=runtime_role)
+    retention_dsn = make_conninfo(root_dsn, user=retention_role)
+    try:
+        migrate(
+            PersistenceOperatorSettings(
+                storage_backend="postgres",
+                postgres_dsn=migration_dsn,
+            ),
+            runtime_role=runtime_role,
+            retention_role=retention_role,
+            schema=schema,
+        )
+        with psycopg.connect(migration_dsn, autocommit=True) as migration:
+            migration.execute("CREATE TABLE privilege_probe(id BIGSERIAL PRIMARY KEY, value TEXT)")
+
+        with psycopg.connect(runtime_dsn, autocommit=True) as runtime:
+            inserted = runtime.execute(
+                "INSERT INTO privilege_probe(value) VALUES ('runtime') RETURNING id"
+            ).fetchone()
+            assert inserted is not None
+            runtime.execute(
+                "UPDATE privilege_probe SET value = 'updated' WHERE id = %s",
+                (inserted[0],),
+            )
+            assert runtime.execute("SELECT value FROM privilege_probe").fetchone() == ("updated",)
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                runtime.execute("CREATE TABLE runtime_must_not_create(value INTEGER)")
+
+        with psycopg.connect(retention_dsn, autocommit=True) as retention:
+            assert retention.execute("DELETE FROM privilege_probe").rowcount == 1
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                retention.execute("INSERT INTO privilege_probe(value) VALUES ('denied')")
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                retention.execute("CREATE TABLE retention_must_not_create(value INTEGER)")
+    finally:
+        with psycopg.connect(root_dsn, autocommit=True) as admin:
+            admin.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(schema)))
+            for role in (migration_role, runtime_role, retention_role):
+                admin.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role)))
+                admin.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
 
 
 class SignedIAPFixture:
@@ -627,3 +753,62 @@ def test_postgres_application_and_checkpoint_state_survive_adapter_restart() -> 
             database.close()
         with psycopg.connect(root_dsn, autocommit=True) as admin:
             admin.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(schema)))
+
+
+@pytest.mark.postgres
+def test_managed_state_qualification_is_synthetic_restart_safe_and_retention_verifiable(
+    managed_postgres_dsn: str,
+) -> None:
+    settings = PersistenceOperatorSettings(
+        storage_backend="postgres",
+        postgres_dsn=managed_postgres_dsn,
+        postgres_pool_max_size=4,
+    )
+    migrate(settings)
+    qualification_id = f"test-{uuid4().hex[:12]}"
+
+    prepared = prepare_qualification(settings, qualification_id=qualification_id)
+    prepared_json = prepared.model_dump_json()
+
+    assert prepared.phase == "prepare"
+    assert prepared.status == "passed"
+    assert prepared.synthetic_data is True
+    assert prepared.cleanup_performed is False
+    assert {check.check_id for check in prepared.checks} == {
+        "schema_ready",
+        "concurrent_principal_writes",
+        "cross_principal_denial",
+        "principal_owned_goal_contexts",
+        "checkpoint_state",
+        "restart_durability",
+        "retention_probe_prepared",
+    }
+    assert managed_postgres_dsn not in prepared_json
+    assert "postgresql://" not in prepared_json
+
+    recovered = verify_recovered_state(settings, qualification_id=qualification_id)
+
+    assert recovered.phase == "verify_recovery"
+    assert recovered.status == "passed"
+    assert recovered.cleanup_performed is False
+    assert {check.check_id for check in recovered.checks} == {
+        "recovered_schema_ready",
+        "recovered_principal_state",
+        "recovered_goal_contexts",
+        "recovered_checkpoints",
+        "recovered_retention_probe",
+    }
+
+    retention = run_retention(settings)
+    verified = verify_retention_and_cleanup(settings, qualification_id=qualification_id)
+
+    assert retention["expired_sessions"] == 1
+    assert verified.phase == "verify_retention"
+    assert verified.status == "passed"
+    assert verified.cleanup_performed is True
+    assert {check.check_id for check in verified.checks} == {
+        "retention_probe_removed",
+        "unexpired_state_preserved",
+        "synthetic_checkpoints_cleaned",
+        "synthetic_state_cleaned",
+    }

@@ -40,21 +40,9 @@ locals {
   }
 
   secret_access = {
-    runtime_postgres = {
-      secret   = "postgres-runtime-dsn"
-      identity = "runtime"
-    }
     runtime_qdrant = {
       secret   = "qdrant-runtime-api-key"
       identity = "runtime"
-    }
-    migration_postgres = {
-      secret   = "postgres-migration-dsn"
-      identity = "migration"
-    }
-    retention_postgres = {
-      secret   = "postgres-retention-dsn"
-      identity = "retention"
     }
   }
 }
@@ -99,6 +87,25 @@ module "managed_state" {
   runtime_service_account_email   = google_service_account.workload["runtime"].email
   migration_service_account_email = google_service_account.workload["migration"].email
   retention_service_account_email = google_service_account.workload["retention"].email
+}
+
+module "managed_state_jobs" {
+  source = "../../modules/managed_state_jobs"
+
+  project_id               = var.project_id
+  region                   = var.region
+  environment              = "staging"
+  backend_image            = var.backend_image
+  cloud_sql_proxy_image    = "gcr.io/cloud-sql-connectors/cloud-sql-proxy@sha256:7d156a5c466e31596afd6c8ed134f19c207a297418392fdad2686524ca4e7a3c"
+  network_id               = module.managed_state.network_id
+  subnetwork_id            = module.managed_state.subnetwork_id
+  instance_connection_name = module.managed_state.instance_connection_name
+  database_name            = module.managed_state.database_name
+  service_account_emails = {
+    runtime   = google_service_account.workload["runtime"].email
+    migration = google_service_account.workload["migration"].email
+    retention = google_service_account.workload["retention"].email
+  }
 }
 
 resource "google_secret_manager_regional_secret" "staging" {

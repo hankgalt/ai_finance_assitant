@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.1 | Status: M0–M9.1 complete; M10 planned; M11 slices 2–4 implemented and slice 5 foundation provisioned with remaining qualification gates | 2026-11-10
+Version 3.1 | Status: M0–M9.1 complete; M10 planned; M11 slices 2 and 4 implemented, slice 3 live-recovery gate pending, and slice 5 foundation provisioned with remaining qualification gates | 2026-11-10
 
 ## 1. Delivery rules
 
@@ -425,9 +425,13 @@ M11 managed persistence for the cash-flow capability.
    release qualification. Security controls and tests are implemented in every earlier slice; this
    final slice verifies the assembled system rather than adding security after deployment.
 
-Implementation status on 2026-11-10: slices 2–4 are implemented; the slice 5 Terraform state,
-registry, WIF, protected GitHub environments, budget, private network, Cloud SQL, service identities,
-and empty regional secret containers are provisioned and drift-free. The initial staging WIF smoke
+Implementation status on 2026-11-10: slices 2 and 4 are implemented. Slice 3's PostgreSQL adapter,
+operator configuration, role policy, synthetic migration/recovery/retention harness, recovery
+contract, and repeatable operator procedure are implemented and locally qualified, but its real-
+service Cloud SQL recovery gate remains pending. The slice 5 Terraform state, registry, WIF,
+protected GitHub environments, budget, private network, Cloud SQL, service identities, and empty
+regional secret containers are provisioned; the last applied foundation plans were drift-free. The
+three digest-pinned private Cloud Run operator jobs are defined but not yet applied. The initial staging WIF smoke
 failed closed on a legacy name-only subject condition; the immutable-ID subject remediation changed
 only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
 production smoke both passed after required review. Real-service recovery, the staging workload,

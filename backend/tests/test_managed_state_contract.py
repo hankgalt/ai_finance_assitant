@@ -39,6 +39,13 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "local_development_backend": "sqlite",
         "staging_instance": "aifa-staging-postgres",
         "external_configuration_status": "provisioned_recovery_qualification_pending",
+        "connection": {
+            "transport": "direct_vpc_egress_private_ipv4",
+            "authentication": "cloud_sql_auth_proxy_automatic_iam",
+            "database_password_required": False,
+            "dsn_secret_required": False,
+            "operator_jobs": "defined_not_applied",
+        },
     }
     assert manifest["response_cache"] == {
         "deployed_adapter": "disabled",
@@ -57,6 +64,9 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     }
     assert manifest["staging"]["separation"] == "same_project"
     assert manifest["staging"]["foundation_provisioned"] is True
+    assert manifest["staging"]["recovery_policy"] == (
+        "contracts/deployment/recovery-policy.v1.json"
+    )
 
 
 def test_qdrant_exception_and_single_operator_boundary_are_explicit() -> None:
@@ -91,3 +101,7 @@ def test_managed_state_contract_contains_no_secret_payloads() -> None:
     assert manifest["qdrant"]["api_key_committed"] is False
     assert manifest["encryption_and_secrets"]["secret_payloads_in_terraform"] is False
     assert manifest["encryption_and_secrets"]["long_lived_gcp_keys_in_github"] is False
+    assert manifest["encryption_and_secrets"]["cloud_run_native_regional_secret_injection"] is False
+    assert manifest["encryption_and_secrets"]["later_provider_secret_access_pattern"] == (
+        "unresolved_stop_gate"
+    )

@@ -8,24 +8,51 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from ai_finance_assistant.core.config import Settings
+import psycopg
+
 from ai_finance_assistant.persistence.checkpoints import (
     Closeable,
     create_postgres_checkpointer,
     create_sqlite_checkpointer,
     verify_postgres_checkpoint_schema,
 )
+from ai_finance_assistant.persistence.config import (
+    PersistenceConfiguration,
+    PersistenceOperatorSettings,
+)
 from ai_finance_assistant.persistence.database import MigrationError, SQLiteDatabase
 from ai_finance_assistant.persistence.ports import ApplicationDatabase
 from ai_finance_assistant.persistence.postgres import PostgresDatabase
+from ai_finance_assistant.persistence.privileges import apply_migration_default_privileges
 from ai_finance_assistant.persistence.repositories import ApplicationRepository
 from ai_finance_assistant.providers.durable_cache import HistoricalCacheRepository
 
 
-def migrate(settings: Settings) -> dict[str, Any]:
+def migrate(
+    settings: PersistenceConfiguration,
+    *,
+    runtime_role: str | None = None,
+    retention_role: str | None = None,
+    schema: str = "public",
+) -> dict[str, Any]:
+    if (runtime_role is None) != (retention_role is None):
+        raise ValueError("Runtime and retention roles must be configured together.")
     database = _database(settings)
     checkpoint_resource: Closeable | None = None
     try:
+        if settings.storage_backend == "postgres" and runtime_role is not None:
+            assert retention_role is not None
+            assert settings.postgres_dsn is not None
+            with psycopg.connect(
+                settings.postgres_dsn.get_secret_value(),
+                autocommit=True,
+            ) as migration_connection:
+                apply_migration_default_privileges(
+                    migration_connection,
+                    schema=schema,
+                    runtime_role=runtime_role,
+                    retention_role=retention_role,
+                )
         database.migrate()
         if settings.storage_backend == "sqlite":
             assert isinstance(database, SQLiteDatabase)
@@ -47,7 +74,7 @@ def migrate(settings: Settings) -> dict[str, Any]:
         database.close()
 
 
-def status(settings: Settings) -> dict[str, Any]:
+def status(settings: PersistenceConfiguration) -> dict[str, Any]:
     database = _database(settings)
     try:
         checkpoint_ready = settings.storage_backend == "sqlite"
@@ -64,7 +91,7 @@ def status(settings: Settings) -> dict[str, Any]:
 
 
 def run_retention(
-    settings: Settings,
+    settings: PersistenceConfiguration,
     *,
     now: datetime | None = None,
 ) -> dict[str, Any]:
@@ -112,9 +139,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("migrate", "status", "retention"))
     args = parser.parse_args(argv)
-    settings = Settings()
+    settings = PersistenceOperatorSettings()
     if args.command == "migrate":
-        result = migrate(settings)
+        result = migrate(
+            settings,
+            runtime_role=settings.postgres_runtime_role,
+            retention_role=settings.postgres_retention_role,
+            schema=settings.postgres_schema,
+        )
     elif args.command == "status":
         result = status(settings)
     else:
@@ -123,7 +155,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
-def _database(settings: Settings) -> ApplicationDatabase:
+def _database(settings: PersistenceConfiguration) -> ApplicationDatabase:
     if settings.storage_backend == "sqlite":
         return SQLiteDatabase(
             settings.storage_path,
@@ -141,7 +173,7 @@ def _database(settings: Settings) -> ApplicationDatabase:
 
 def _status(
     database: ApplicationDatabase,
-    settings: Settings,
+    settings: PersistenceConfiguration,
     *,
     checkpoint_ready: bool,
 ) -> dict[str, Any]:

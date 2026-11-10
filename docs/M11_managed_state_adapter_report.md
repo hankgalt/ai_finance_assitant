@@ -1,14 +1,16 @@
 # M11 delivery report — Managed-state adapter and operating contract
 
-Status: PostgreSQL adapter qualified locally and staging foundation provisioned; Cloud SQL recovery stop gate pending | 2026-11-10
+Status: PostgreSQL adapter and recovery procedure qualified locally; staging foundation provisioned;
+Cloud SQL live recovery stop gate pending | 2026-11-10
 
 ## Scope and decisions
 
 This slice advances the managed-state portion of PR-017 under ADR-019, ADR-029, and proposed
 ADR-030. It implements QR-005–QR-007, QR-010–QR-011, and QR-014–QR-015 adapter behavior and adds
-EVAL-18/EVAL-20 test seams. The real PostgreSQL adapter portion of the slice-3 qualification now
-passes locally. It does not claim that the complete M11 slice 3, EVAL-20, Cloud SQL backup/PITR, or
-the private multi-user deployment is qualified or operational.
+EVAL-18/EVAL-20 test seams. The real PostgreSQL adapter, least-privilege role boundary, synthetic
+recovery-marker harness, and repeatable recovery procedure now pass local qualification. It does not
+claim that the complete M11 slice 3, EVAL-20, Cloud SQL backup/PITR, or the private multi-user
+deployment is qualified or operational.
 
 The owner-approved topology is recorded in
 [`contracts/deployment/managed-state.v1.json`](../contracts/deployment/managed-state.v1.json).
@@ -33,6 +35,19 @@ Qdrant Free `us-central1` topology and sole GitHub approver are explicit private
 - `managed-state-migrate`, `managed-state-status`, and `managed-state-retention` Make targets expose
   explicit operator jobs. Retention runs outside the production web process and deletes expired
   checkpoint threads after application-owned Session cascades.
+- The operator CLI now has a persistence-only configuration surface, so migrations, retention, and
+  recovery checks do not require Qdrant, IAP, model, or provider configuration. DSNs remain redacted.
+- A reviewable PostgreSQL role contract separates owner bootstrap, migration-owned default grants,
+  runtime DML, and retention SELECT/DELETE. The owner path never receives or creates a password and
+  is designed for immediate removal after the base grants are installed. The Data API used for the
+  reviewed SQL is likewise temporary and is disabled on success or interruption.
+- The synthetic qualification command concurrently writes two isolated Principals, same-ID
+  principal-owned resources, Runs/RunEvents, and checkpoints; proves restart durability and cross-
+  Principal denial; and leaves a namespaced expired retention probe. Separate recovery and
+  retention phases verify recovered markers and remove every synthetic source record.
+- Digest-pinned private Cloud Run job definitions provide migration, qualification, and retention
+  execution through Direct VPC egress and a Cloud SQL Auth Proxy sidecar using automatic IAM
+  authentication. They are definitions only until the reviewed Terraform plan is applied.
 - A credential-gated PostgreSQL qualification test creates a randomly named schema, exercises
   Principal-owned application state and checkpoint-schema restart behavior, and drops only that
   generated schema. Ordinary CI skips it without `AIFA_TEST_POSTGRES_DSN`.
@@ -57,13 +72,17 @@ Qdrant Free `us-central1` topology and sole GitHub approver are explicit private
 | `backend/.venv/bin/mypy` | passed for 155 source/test files |
 | Focused persistence/managed-state/configuration/identity suite | 27 passed in 1.41 s |
 | `AIFA_TEST_POSTGRES_DSN=... pytest -q -m postgres tests/test_managed_persistence.py` against disposable PostgreSQL 17.11 | 5 passed, 2 deselected in 1.97 s |
-| `backend/.venv/bin/python -m pytest -q` | 364 passed, 6 skipped, 4 deselected in 6.09 s |
+| Updated `AIFA_TEST_POSTGRES_DSN=... pytest -q tests/test_managed_persistence.py` against disposable PostgreSQL 17 | 11 passed in 2.09 s |
+| `pytest -q tests/test_staging_infrastructure.py` | 12 passed in 0.03 s |
+| `terraform -chdir=infrastructure/terraform/environments/staging validate` | configuration valid with Google provider 8.9.0 |
+| `bash -n infrastructure/terraform/scripts/qualify-cloud-sql-recovery.sh` | passed; `shellcheck` unavailable locally |
+| `backend/.venv/bin/python -m pytest -q` | 392 passed, 8 skipped, 4 deselected in 6.16 s |
 | `UV_CACHE_DIR=/tmp/aifa-uv-cache uv lock --check --offline` | 136 packages resolved; lock current |
 | `docker compose config --quiet` | passed |
 | `git diff --check` | passed |
 
-The default credential-free suite skips the five opt-in PostgreSQL tests, but the same tests passed
-separately against the disposable loopback PostgreSQL 17.11 Compose fixture. That fixture used a
+The default credential-free suite skips the seven opt-in PostgreSQL tests, but the same tests passed
+separately against the disposable loopback PostgreSQL 17 Compose fixture. That fixture used a
 temporary filesystem, loopback-only trust authentication, and was stopped after qualification. It
 is not a deployment credential or topology. The other skip and four deselections are
 the existing opt-in integration and credential-gated live-provider/model tests. Dependency resolution added
@@ -83,13 +102,16 @@ API key.
 
 ## Stop gate and remaining evidence
 
-- The later staging-foundation slice has now provisioned Terraform state, IAM, private Cloud SQL,
-  and empty Secret Manager containers. This adapter report still claims no successful Cloud SQL
+- The later staging-foundation slice has provisioned Terraform state, IAM, private Cloud SQL, and
+  empty Secret Manager containers. The private operator-job definitions and recovery wizard are
+  ready for a reviewed merged-main digest, but this report still claims no successful Cloud SQL
   connection, migration, retention, backup/restore, or PITR rehearsal.
-- Repeat the passing PostgreSQL qualification test against Cloud SQL staging, then run the full
-  two-Principal REST/SSE/History/Inspector matrix there.
-- Reproduce the locally passing separate migration/runtime-role boundary with Cloud SQL IAM and
-  select/qualify the concrete Cloud SQL connection authentication path.
+- Qualify the expanded staging Terraform plan, apply only the three reviewed jobs, then run the
+  synthetic Cloud SQL migration/recovery/retention procedure. The locally passing complete
+  two-Principal REST/SSE/History/Inspector matrix remains required at the later assembled staging
+  workload gate.
+- Reproduce the locally passing migration/runtime/retention role boundary with Cloud SQL IAM and
+  retain the generated execution names and measured recovery result in the release artifact.
 - Measure `db-f1-micro` memory, latency, pool saturation, rollout overlap, and concurrent Runs;
   upgrade to `db-g1-small` if any acceptance threshold fails.
 - Provision and rehearse seven-backup/three-day-PITR restore, deletion reconciliation, schema/image
@@ -107,4 +129,7 @@ API key.
 - `backend/tests/test_managed_state_contract.py`
 - `backend/artifacts/persistence/managed-postgresql-qualification.v1.json`
 - `contracts/deployment/managed-state.v1.json`
+- `contracts/deployment/recovery-policy.v1.json`
+- `infrastructure/terraform/modules/managed_state_jobs/`
+- `infrastructure/terraform/scripts/qualify-cloud-sql-recovery.sh`
 - `docs/research/managed_state_deployment_recommendations.md`

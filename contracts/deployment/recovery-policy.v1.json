@@ -1,0 +1,86 @@
+{
+  "schema_version": "1",
+  "status": "defined_not_executed",
+  "source": {
+    "project_id": "comfforts-369117",
+    "region": "us-west1",
+    "instance": "aifa-staging-postgres",
+    "database": "aifa"
+  },
+  "objectives": {
+    "rpo_target_minutes": 5,
+    "rto_target_hours": 4,
+    "rto_measurement": "start_of_backup_restore_through_sequential_validation_of_both_targets",
+    "regional_disaster_recovery_claimed": false
+  },
+  "qualification": {
+    "qualification_id": "staging-cloud-sql-v1",
+    "synthetic_data_only": true,
+    "provider_calls_allowed": false,
+    "prepare_command": "ai_finance_assistant.persistence.qualification prepare",
+    "recovery_verification_command": "ai_finance_assistant.persistence.qualification verify-recovery",
+    "retention_verification_command": "ai_finance_assistant.persistence.qualification verify-retention"
+  },
+  "privilege_bootstrap": {
+    "temporary_owner": "vtalwar.w@comfforts.com",
+    "authentication": "cloud_sql_iam_database_authentication",
+    "database_role": "cloudsqlsuperuser",
+    "purpose": "install least-privilege migration, runtime, and retention grants",
+    "data_api_access": "temporarily_allow_then_disallow",
+    "remove_after_bootstrap": true,
+    "password_created": false
+  },
+  "targets": [
+    {
+      "method": "on_demand_backup_restore",
+      "temporary_instance": true,
+      "target_tier": "db-f1-micro",
+      "target_region": "us-west1",
+      "private_ipv4_only": true,
+      "retained_backups_after_delete": false,
+      "validate_before_delete": true,
+      "delete_after_validation": true
+    },
+    {
+      "method": "point_in_time_recovery",
+      "temporary_instance": true,
+      "target_tier": "source_configuration",
+      "target_region": "us-west1",
+      "private_ipv4_only": true,
+      "retained_backups_after_delete": false,
+      "validate_before_delete": true,
+      "delete_after_validation": true
+    }
+  ],
+  "cleanup": {
+    "source_synthetic_records_removed": true,
+    "qualification_on_demand_backup_deleted": true,
+    "temporary_instances_deleted": true,
+    "temporary_owner_database_user_deleted": true,
+    "temporary_data_api_access_disabled": true,
+    "terraform_final_drift_required": "no changes"
+  },
+  "evidence": {
+    "artifact": "backend/artifacts/release/deployment/cloud-sql-recovery.v1.json",
+    "required_fields": [
+      "source_image_digest",
+      "job_execution_names",
+      "backup_id",
+      "pitr_timestamp",
+      "temporary_instance_names",
+      "started_at",
+      "finished_at",
+      "observed_rpo_minutes",
+      "observed_rto_minutes",
+      "validation_results",
+      "cleanup_results",
+      "final_drift"
+    ],
+    "must_record_secret_values": false
+  },
+  "limitations": [
+    "Same-project staging has shared administrative, quota, and billing blast radius.",
+    "Single-zone recovery qualification does not demonstrate regional disaster recovery.",
+    "RPO and RTO are private-demo objectives until measured evidence passes."
+  ]
+}

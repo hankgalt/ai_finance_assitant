@@ -73,6 +73,19 @@
     "instance": "aifa-staging-postgres",
     "external_configuration_status": "provisioned_recovery_qualification_pending"
   },
+  "managed_state_operator_jobs": {
+    "operations": [
+      "migration",
+      "qualification",
+      "retention"
+    ],
+    "execution": "cloud_run_v2_jobs",
+    "network": "direct_vpc_private_ranges_only",
+    "database_authentication": "cloud_sql_auth_proxy_automatic_iam",
+    "image_policy": "immutable_digest_required",
+    "http_endpoint": false,
+    "status": "defined_not_applied"
+  },
   "workload_boundary": {
     "cloud_run_ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
     "default_uri_disabled": true,
