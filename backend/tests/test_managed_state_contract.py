@@ -45,6 +45,14 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     }
     assert manifest["backup_and_recovery"]["automated_daily_backups"] == 7
     assert manifest["backup_and_recovery"]["pitr_transaction_log_days"] == 3
+    assert manifest["run_recovery"] == {
+        "stale_running_cutoff": "api_run_deadline_seconds",
+        "terminal_status": "failed",
+        "error_code": "RUN_INTERRUPTED",
+        "fresh_running_rows_preserved": True,
+        "terminal_results_immutable": True,
+        "whole_run_atomicity_claimed": False,
+    }
     assert manifest["staging"]["separation"] == "same_project"
 
 

@@ -29,6 +29,14 @@
     "strict_deserialization_required": true,
     "application_and_checkpoint_atomicity_claimed": false
   },
+  "run_recovery": {
+    "stale_running_cutoff": "api_run_deadline_seconds",
+    "terminal_status": "failed",
+    "error_code": "RUN_INTERRUPTED",
+    "fresh_running_rows_preserved": true,
+    "terminal_results_immutable": true,
+    "whole_run_atomicity_claimed": false
+  },
   "provider_cache": {
     "database_service": "cloud_sql_postgresql",
     "separate_purge_boundary": true,

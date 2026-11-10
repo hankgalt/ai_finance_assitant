@@ -479,3 +479,12 @@ infrastructure, recovery, and security evidence passes. The deployed design must
 activation separate from runtime, deny direct workload bypass, and retain explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the proposal.
+
+Web-process startup verifies the application and checkpoint schemas without applying DDL. It also
+reconciles a persisted `running` Run only when its last update is older than the configured API Run
+deadline: that Run becomes an immutable `failed` terminal resource with safe
+`RUN_INTERRUPTED` evidence. A fresh `running` Run remains untouched so rollout overlap does not
+silently fail work owned by another instance. Scheduled retention evaluates application and
+provider expiry against one observed timestamp, removes expired Session cascades and checkpoint
+threads, and is safe to rerun. These adapter guarantees do not constitute Cloud SQL backup/PITR or
+regional-disaster-recovery evidence.

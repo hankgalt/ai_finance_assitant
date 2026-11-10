@@ -11,6 +11,7 @@ from ai_finance_assistant.agents.context import (
     NewsAgentContext,
     PortfolioAgentContext,
 )
+from ai_finance_assistant.contracts.errors import ErrorCategory, SafeError
 from ai_finance_assistant.contracts.events import RunEvent
 from ai_finance_assistant.finance.models import ImportedPortfolio, PortfolioSnapshot
 from ai_finance_assistant.persistence.models import (
@@ -25,7 +26,7 @@ from ai_finance_assistant.persistence.ports import (
     DatabaseConnection,
     DatabaseRow,
 )
-from ai_finance_assistant.workflow.models import WorkflowRunResult
+from ai_finance_assistant.workflow.models import WorkflowRunResult, WorkflowStatus
 
 
 class ApplicationRepository:
@@ -241,6 +242,60 @@ class ApplicationRepository:
             True,
         )
 
+    def reconcile_interrupted_runs(
+        self,
+        *,
+        deadline_before: datetime,
+        observed_at: datetime | None = None,
+    ) -> int:
+        """Terminalize Runs that outlived their request deadline without a persisted result."""
+
+        observed = observed_at or datetime.now(UTC)
+        with self._database.transaction() as connection:
+            rows = connection.execute(
+                "SELECT * FROM runs WHERE status = ? AND updated_at <= ? ORDER BY created_at",
+                (StoredRunStatus.RUNNING.value, deadline_before.isoformat()),
+            ).fetchall()
+            reconciled = 0
+            for row in rows:
+                result = WorkflowRunResult(
+                    execution_id=row["execution_id"],
+                    session_id=row["session_id"],
+                    workflow_id=row["workflow_id"],
+                    workflow_version=row["workflow_version"],
+                    status=WorkflowStatus.FAILED,
+                    selected_agent_ids=(),
+                    agent_results=(),
+                    summary="The Run was interrupted before completion.",
+                    errors=(
+                        SafeError(
+                            code="RUN_INTERRUPTED",
+                            category=ErrorCategory.INTERNAL,
+                            message=(
+                                "The Run was interrupted before a terminal result was persisted."
+                            ),
+                            retryable=True,
+                        ),
+                    ),
+                    trace_unavailable_reason=(
+                        "The process ended before terminal trace correlation was persisted."
+                    ),
+                )
+                cursor = connection.execute(
+                    "UPDATE runs SET status = ?, result_json = ?, updated_at = ? "
+                    "WHERE principal_id = ? AND execution_id = ? AND status = ?",
+                    (
+                        StoredRunStatus.FAILED.value,
+                        result.model_dump_json(),
+                        observed.isoformat(),
+                        row["principal_id"],
+                        row["execution_id"],
+                        StoredRunStatus.RUNNING.value,
+                    ),
+                )
+                reconciled += cursor.rowcount
+        return reconciled
+
     def finish_run(
         self,
         result: WorkflowRunResult,
@@ -250,9 +305,9 @@ class ApplicationRepository:
     ) -> RunRecord:
         observed = now or datetime.now(UTC)
         with self._database.transaction() as connection:
-            cursor = connection.execute(
+            connection.execute(
                 "UPDATE runs SET status = ?, result_json = ?, updated_at = ? "
-                "WHERE principal_id = ? AND execution_id = ? AND session_id = ?",
+                "WHERE principal_id = ? AND execution_id = ? AND session_id = ? AND status = ?",
                 (
                     result.status.value,
                     result.model_dump_json(),
@@ -260,15 +315,15 @@ class ApplicationRepository:
                     principal_id,
                     result.execution_id,
                     result.session_id,
+                    StoredRunStatus.RUNNING.value,
                 ),
             )
-            if cursor.rowcount != 1:
-                raise PermissionError("Run does not belong to this Session.")
             row = connection.execute(
                 "SELECT * FROM runs WHERE principal_id = ? AND execution_id = ?",
                 (principal_id, result.execution_id),
             ).fetchone()
-        assert row is not None
+            if row is None or row["session_id"] != result.session_id:
+                raise PermissionError("Run does not belong to this Session.")
         return _run_from_row(row)
 
     def get_run(

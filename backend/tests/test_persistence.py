@@ -13,6 +13,7 @@ from ai_finance_assistant.persistence.database import (
     MigrationError,
     SQLiteDatabase,
 )
+from ai_finance_assistant.workflow.models import WorkflowRunResult, WorkflowStatus
 
 
 def _settings(path: Path) -> Settings:
@@ -58,6 +59,69 @@ def test_sessions_runs_events_and_checkpoints_survive_restart(tmp_path: Path) ->
         assert persisted.json()["events"]
         assert follow_up.status_code == 201
         assert follow_up.json()["result"]["selected_agent_ids"] == ["finance_qa"]
+
+
+def test_restart_terminalizes_only_running_runs_older_than_request_deadline(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path / "interrupted.sqlite3").model_copy(
+        update={"api_run_deadline_seconds": 5}
+    )
+    now = datetime.now(UTC)
+
+    app = create_app(settings)
+    with TestClient(app) as client:
+        principal_id = client.get("/api/v1/identity").json()["principal_id"]
+        session_id = client.post("/api/v1/sessions", json={}).json()["session_id"]
+        repository = app.state.services.application_repository
+        repository.create_run(
+            principal_id=principal_id,
+            execution_id="expired-running-run",
+            session_id=session_id,
+            workflow_id=settings.workflow_id,
+            workflow_version="1",
+            request_message="expired",
+            idempotency_key=None,
+            request_hash="expired",
+            now=now - timedelta(seconds=6),
+        )
+        repository.create_run(
+            principal_id=principal_id,
+            execution_id="fresh-running-run",
+            session_id=session_id,
+            workflow_id=settings.workflow_id,
+            workflow_version="1",
+            request_message="fresh",
+            idempotency_key=None,
+            request_hash="fresh",
+            now=now,
+        )
+
+    restarted_app = create_app(settings)
+    with TestClient(restarted_app) as restarted:
+        expired = restarted.get(f"/api/v1/sessions/{session_id}/runs/expired-running-run").json()
+        fresh = restarted.get(f"/api/v1/sessions/{session_id}/runs/fresh-running-run").json()
+        late_finish = restarted_app.state.services.application_repository.finish_run(
+            WorkflowRunResult(
+                execution_id="expired-running-run",
+                session_id=session_id,
+                workflow_id=settings.workflow_id,
+                workflow_version="1",
+                status=WorkflowStatus.COMPLETED,
+                selected_agent_ids=(),
+                agent_results=(),
+                summary="A late result must not replace the recovery terminal state.",
+            ),
+            principal_id=principal_id,
+        )
+
+    assert expired["status"] == "failed"
+    assert expired["result"]["errors"][0]["code"] == "RUN_INTERRUPTED"
+    assert fresh["status"] == "running"
+    assert fresh["result"] is None
+    assert late_finish.status == "failed"
+    assert late_finish.result is not None
+    assert late_finish.result.errors[0].code == "RUN_INTERRUPTED"
 
 
 def test_session_archive_preserves_history_then_deletion_cascades_resources_and_checkpoint_thread(

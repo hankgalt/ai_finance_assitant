@@ -10,6 +10,9 @@
 - `backend/artifacts/observability/trace-correlation-sample.v1.json` records the deterministic W3C correlation assertion.
 - `backend/artifacts/observability/metric-inventory.v1.json` lists implemented bounded measurements and attributes.
 - `security-lifecycle.v1.json` records local retention, rights gating, and deployment limits.
+- `managed-postgresql-qualification.v1.json` records real-PostgreSQL restart, isolation,
+  interrupted-Run, scheduled-retention, readiness, and least-privilege adapter evidence without
+  claiming Cloud SQL backup/PITR qualification.
 
 The authoritative interface manifest is `contracts/api/public-http.v1.json`. The Collector
 configuration is `ops/otel-collector.yaml`; delivery history and limitations are in

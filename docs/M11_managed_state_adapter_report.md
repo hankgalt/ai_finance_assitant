@@ -1,13 +1,14 @@
 # M11 delivery report — Managed-state adapter and operating contract
 
-Status: Adapter implementation verified locally; real-service recovery stop gate pending | 2026-11-09
+Status: PostgreSQL adapter recovery qualified locally; Cloud SQL recovery stop gate pending | 2026-11-09
 
 ## Scope and decisions
 
 This slice advances the managed-state portion of PR-017 under ADR-019, ADR-029, and proposed
 ADR-030. It implements QR-005–QR-007, QR-010–QR-011, and QR-014–QR-015 adapter behavior and adds
-EVAL-18/EVAL-20 test seams. It does not claim that M11 slice 3, EVAL-20, Cloud SQL recovery, or the
-private multi-user deployment is qualified or operational.
+EVAL-18/EVAL-20 test seams. The real PostgreSQL adapter portion of the slice-3 qualification now
+passes locally. It does not claim that the complete M11 slice 3, EVAL-20, Cloud SQL backup/PITR, or
+the private multi-user deployment is qualified or operational.
 
 The owner-approved topology is recorded in
 [`contracts/deployment/managed-state.v1.json`](../contracts/deployment/managed-state.v1.json).
@@ -35,6 +36,15 @@ Qdrant Free `us-central1` topology and sole GitHub approver are explicit private
 - A credential-gated PostgreSQL qualification test creates a randomly named schema, exercises
   Principal-owned application state and checkpoint-schema restart behavior, and drops only that
   generated schema. Ordinary CI skips it without `AIFA_TEST_POSTGRES_DSN`.
+- The PostgreSQL suite now drives two signed IAP Principals through Sessions, Portfolios,
+  Snapshots, Goal contexts, Runs, RunEvents, History, Inspector traces, SSE, and idempotency before
+  and after application reconstruction. Guessed cross-Principal resource paths remain unavailable.
+- Startup turns only deadline-expired `running` Runs into immutable `failed` resources with a safe
+  `RUN_INTERRUPTED` result. Fresh Runs are preserved for rollout overlap, and late completion cannot
+  replace the recovery terminal state.
+- The independently invoked retention operation uses one observed timestamp, removes expired
+  Session cascades and checkpoint threads, and is idempotent. A separate runtime role proved that
+  verify-only startup and ordinary requests require DML but not DDL permission.
 - The environment example documents configuration names only. Database DSNs, Qdrant keys, and
   other secret payloads remain absent from Git, Terraform inputs, contracts, and test fixtures.
 
@@ -45,19 +55,21 @@ Qdrant Free `us-central1` topology and sole GitHub approver are explicit private
 | `backend/.venv/bin/ruff format src tests` | 155 files unchanged after formatting |
 | `backend/.venv/bin/ruff check src tests` | passed |
 | `backend/.venv/bin/mypy` | passed for 155 source/test files |
-| Focused managed-state/configuration/persistence/identity/API suite | 62 passed, 1 skipped |
-| `AIFA_TEST_POSTGRES_DSN=... pytest -q -m postgres tests/test_managed_persistence.py` against disposable PostgreSQL 17.11 | 1 passed, 2 deselected in 0.72 s |
-| `backend/.venv/bin/python -m pytest -q` | 363 passed, 2 skipped, 4 deselected in 5.92 s |
+| Focused persistence/managed-state/configuration/identity suite | 27 passed in 1.41 s |
+| `AIFA_TEST_POSTGRES_DSN=... pytest -q -m postgres tests/test_managed_persistence.py` against disposable PostgreSQL 17.11 | 5 passed, 2 deselected in 1.97 s |
+| `backend/.venv/bin/python -m pytest -q` | 364 passed, 6 skipped, 4 deselected in 6.09 s |
 | `UV_CACHE_DIR=/tmp/aifa-uv-cache uv lock --check --offline` | 136 packages resolved; lock current |
 | `docker compose config --quiet` | passed |
 | `git diff --check` | passed |
 
-The default credential-free suite skips the opt-in PostgreSQL test, but the same test passed
+The default credential-free suite skips the five opt-in PostgreSQL tests, but the same tests passed
 separately against the disposable loopback PostgreSQL 17.11 Compose fixture. That fixture used a
 temporary filesystem, loopback-only trust authentication, and was stopped after qualification. It
 is not a deployment credential or topology. The other skip and four deselections are
 the existing opt-in integration and credential-gated live-provider/model tests. Dependency resolution added
-`langgraph-checkpoint-postgres==3.2.0`, Psycopg 3, and its pool/binary packages to the lockfile.
+`langgraph-checkpoint-postgres==3.2.0`, Psycopg 3, and its pool/binary packages to the lockfile. The
+capability evidence is recorded in
+`backend/artifacts/persistence/managed-postgresql-qualification.v1.json`.
 
 ## Security and privacy impact
 
@@ -74,15 +86,16 @@ API key.
 - Provision no infrastructure from this report. Terraform, IAM, Cloud SQL, Secret Manager,
   Cloud Run, GitHub environments, IAP, DNS, and the Qdrant release transfer belong to later slices.
 - Repeat the passing PostgreSQL qualification test against Cloud SQL staging, then run the full
-  two-Principal REST/SSE/History/Inspector matrix through that managed adapter.
-- Apply migrations as a separate identity, prove the runtime identity cannot execute DDL, and
+  two-Principal REST/SSE/History/Inspector matrix there.
+- Reproduce the locally passing separate migration/runtime-role boundary with Cloud SQL IAM and
   select/qualify the concrete Cloud SQL connection authentication path.
 - Measure `db-f1-micro` memory, latency, pool saturation, rollout overlap, and concurrent Runs;
   upgrade to `db-g1-small` if any acceptance threshold fails.
 - Provision and rehearse seven-backup/three-day-PITR restore, deletion reconciliation, schema/image
   rollback, and timed RPO/RTO. The targets in the contract are not operational claims.
 - The application and checkpoint saver use separate transactions. No whole-Run atomic-commit claim
-  is made; crash-point and interrupted-Run reconciliation tests remain required.
+  is made; deadline-expired interrupted Runs are now reconciled, but more granular crash-point tests
+  remain part of Cloud SQL staging recovery.
 - Exercise Qdrant authenticated readiness and collection activation separately. No Qdrant key or
   collection was created, accessed, or migrated in this slice.
 
@@ -91,5 +104,6 @@ API key.
 - `backend/src/ai_finance_assistant/persistence/`
 - `backend/tests/test_managed_persistence.py`
 - `backend/tests/test_managed_state_contract.py`
+- `backend/artifacts/persistence/managed-postgresql-qualification.v1.json`
 - `contracts/deployment/managed-state.v1.json`
 - `docs/research/managed_state_deployment_recommendations.md`

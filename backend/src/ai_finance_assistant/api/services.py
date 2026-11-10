@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
@@ -122,6 +122,9 @@ class ApplicationServices:
             session_retention_days=settings.session_retention_days,
             portfolio_retention_days=settings.portfolio_retention_days,
             run_event_retention_days=settings.run_event_retention_days,
+        )
+        self.application_repository.reconcile_interrupted_runs(
+            deadline_before=datetime.now(UTC) - timedelta(seconds=settings.api_run_deadline_seconds)
         )
         if settings.retention_execution_mode == "startup":
             self.run_retention()

@@ -63,7 +63,11 @@ def status(settings: Settings) -> dict[str, Any]:
         database.close()
 
 
-def run_retention(settings: Settings) -> dict[str, Any]:
+def run_retention(
+    settings: Settings,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
     if settings.storage_backend != "postgres":
         raise RuntimeError("Scheduled retention is reserved for managed PostgreSQL storage.")
     if settings.response_cache_adapter != "disabled":
@@ -88,10 +92,11 @@ def run_retention(settings: Settings) -> dict[str, Any]:
             portfolio_retention_days=settings.portfolio_retention_days,
             run_event_retention_days=settings.run_event_retention_days,
         )
-        expired_sessions = repository.purge_expired()
+        observed = now or datetime.now(UTC)
+        expired_sessions = repository.purge_expired(now=observed)
         for principal_id, session_id in expired_sessions:
             checkpointer.delete_thread(f"{principal_id}:{session_id}:{settings.workflow_id}")
-        provider_rows = HistoricalCacheRepository(database).purge_expired(now=datetime.now(UTC))
+        provider_rows = HistoricalCacheRepository(database).purge_expired(now=observed)
         return {
             "backend": settings.storage_backend,
             "expired_sessions": len(expired_sessions),
