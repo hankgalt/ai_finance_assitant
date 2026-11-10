@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "qualification_date": "2026-11-09",
+  "qualification_date": "2026-11-10",
   "target": {
     "database": "PostgreSQL 17.11",
     "fixture": "disposable loopback container with temporary storage",
@@ -27,6 +27,14 @@
     {
       "behavior": "least-privilege runtime",
       "evidence": "the verify-only runtime role served identity, Session, and Run requests with DML grants while PostgreSQL rejected CREATE TABLE"
+    },
+    {
+      "behavior": "least-privilege operator roles",
+      "evidence": "the owner policy granted only database/schema access, the migration identity installed default privileges for its own objects, runtime could use DML but not DDL, and retention could select/delete but not insert or create"
+    },
+    {
+      "behavior": "synthetic recovery seam",
+      "evidence": "two isolated Principals, Portfolios, Snapshots, Goal contexts, Runs, RunEvents, and checkpoint threads survived adapter restart; an independent recovery phase found all markers and the retention phase removed the expired thread before final synthetic cleanup"
     },
     {
       "behavior": "readiness",

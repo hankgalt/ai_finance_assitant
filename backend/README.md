@@ -25,7 +25,11 @@ schema compatibility. The opt-in PostgreSQL integration test uses
 its loopback-bound qualification port, its data directory is a temporary filesystem, and the
 profile is not a deployment topology or credential pattern. Ordinary CI
 remains credential-free. Database DSNs and Qdrant keys are
-Secret Manager values and must never be committed or passed as Terraform variables.
+never committed. A DSN that contains a password is a secret; the selected Cloud SQL operator jobs
+instead construct a passwordless loopback DSN and use the Cloud SQL Auth Proxy's automatic IAM
+authentication. Qdrant and provider keys remain secret values. Cloud Run does not natively inject
+the approved regional Secret Manager versions, so the later browser-workload slice must qualify an
+explicit regional-secret access path before using those keys.
 
 The ordinary test suite loads the tracked, credential-free `backend/.test.env` and excludes tests marked `live_provider` and `live_model`; changes to `backend/.env` cannot alter those runs. With approved selected-market and Tavily credentials and terms flags in `backend/.env`, `make provider-live-check` explicitly opts into that file and enables two bounded smoke tests: at most three selected-market requests and one Tavily request. With an approved OpenAI key and terms flag, `make model-live-check` explicitly opts into `backend/.env`; an aggregate six-agent Run uses seven calls (one routing decision plus one response per specialist). Restart a running backend after changing an environment-selected adapter. For Massive, individual-plan data must remain owner-only unless Business/commercial display rights cover the demo audience.
 

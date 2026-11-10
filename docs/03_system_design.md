@@ -467,8 +467,10 @@ private-demo release.
 Proposed ADR-030 and M11 select the GCP/IAP/base-path direction, and the application-access boundary
 is implemented. Protected Terraform state, immutable Artifact Registry, environment-specific WIF,
 protected GitHub environments, the budget, and the private staging managed-state foundation are now
-provisioned; all three Terraform roots are drift-free. No application workload, load balancer, IAP
-edge, DNS record, or direct-workload-bypass control is represented as operational. The selected region is
+provisioned. The last applied foundation plans were drift-free. Digest-pinned non-HTTP Cloud Run
+jobs for migration, synthetic qualification, and retention are now defined but not applied or
+live-qualified. No application workload, load balancer, IAP edge, DNS record, or direct-workload-
+bypass control is represented as operational. The selected region is
 `us-west1`. The selected authoritative managed store is single-zone Cloud SQL PostgreSQL 17
 Enterprise, initially `db-f1-micro` with a 10 GiB SSD, seven daily backups, and three days of PITR.
 It owns separate application, checkpoint, and provider-cache persistence boundaries. Local
@@ -497,6 +499,32 @@ the legacy subject condition; the zero-destroy remediation is drift-free. After 
 both the staging retry and production smoke passed short-lived exchange and read-only project access.
 No automated cloud deployment is enabled by this contract, and repository files contain neither a
 service-account key nor another credential payload.
+
+The managed-state operator jobs connect from Cloud Run through Direct VPC egress to Cloud SQL's
+private address. A digest-pinned Cloud SQL Auth Proxy sidecar performs automatic IAM database
+authentication; the application container uses a loopback, passwordless DSN and does not require a
+database secret. Runtime, migration, and retention retain separate service-account/database-user
+identities. Temporary owner IAM database elevation may be used only to install the reviewed base
+schema/database grants and must be deleted immediately. Default object privileges are installed by
+the migration identity itself before it creates application and checkpoint objects, so the design
+does not assume unrestricted PostgreSQL superuser semantics. Cloud SQL Data API access is enabled
+only while the reviewed grant script runs and is disabled on success or interruption; it is not a
+durable path around the private workload boundary.
+
+The qualification command writes only namespaced synthetic state for two Principals, proves
+cross-Principal denial and restart durability, leaves an expired retention probe, and can verify
+that marker independently on a recovered target. The source retention job and final verification
+then prove expiry and remove all synthetic qualification records. The recovery policy requires both
+an on-demand-backup restore and a point-in-time clone, exact-target cleanup, measured RPO/RTO, a
+drift-free final Terraform plan, and a secret-free result artifact. These are executable contracts,
+not operational claims, until the live Cloud SQL run passes. The RTO measurement is conservative:
+it spans the start of backup restore through sequential validation of both temporary targets.
+
+Regional Secret Manager remains the approved metadata topology, but Cloud Run does not natively
+inject regional secret versions. The Cloud SQL jobs avoid that incompatibility through passwordless
+IAM authentication. The later browser workload/Qdrant slice must choose and qualify a regional-
+secret access method before it handles a provider or Qdrant credential; no global-secret fallback
+or provider-rights expansion is implied.
 
 Web-process startup verifies the application and checkpoint schemas without applying DDL. It also
 reconciles a persisted `running` Run only when its last update is older than the configured API Run

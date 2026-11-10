@@ -23,7 +23,14 @@
     "deployed_store_initialization": "empty",
     "local_development_backend": "sqlite",
     "staging_instance": "aifa-staging-postgres",
-    "external_configuration_status": "provisioned_recovery_qualification_pending"
+    "external_configuration_status": "provisioned_recovery_qualification_pending",
+    "connection": {
+      "transport": "direct_vpc_egress_private_ipv4",
+      "authentication": "cloud_sql_auth_proxy_automatic_iam",
+      "database_password_required": false,
+      "dsn_secret_required": false,
+      "operator_jobs": "defined_not_applied"
+    }
   },
   "checkpoint_state": {
     "service": "langgraph_postgresql_saver",
@@ -74,7 +81,9 @@
     "secret_service": "regional_secret_manager",
     "secret_region": "us-west1",
     "secret_payloads_in_terraform": false,
-    "long_lived_gcp_keys_in_github": false
+    "long_lived_gcp_keys_in_github": false,
+    "cloud_run_native_regional_secret_injection": false,
+    "later_provider_secret_access_pattern": "unresolved_stop_gate"
   },
   "staging": {
     "project_id": "comfforts-369117",
@@ -86,7 +95,8 @@
     "separate_database_role": true,
     "separate_secrets": true,
     "ephemeral_restore_instance": true,
-    "foundation_provisioned": true
+    "foundation_provisioned": true,
+    "recovery_policy": "contracts/deployment/recovery-policy.v1.json"
   },
   "qdrant": {
     "cluster_name": "finance-assistant-demo",

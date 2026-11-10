@@ -83,6 +83,7 @@ jobs:
         working-directory: infrastructure/terraform/environments/staging
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_backend_image: ${{ vars.GCP_BACKEND_IMAGE }}
         run: terraform plan -lock-timeout=5m -out=staging.tfplan
       - name: Render machine-readable plan evidence
         working-directory: infrastructure/terraform/environments/staging

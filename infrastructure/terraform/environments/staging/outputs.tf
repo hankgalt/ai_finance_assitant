@@ -25,3 +25,7 @@ output "retention_service_account" {
 output "regional_secret_names" {
   value = { for key, secret in google_secret_manager_regional_secret.staging : key => secret.id }
 }
+
+output "managed_state_job_names" {
+  value = module.managed_state_jobs.job_names
+}

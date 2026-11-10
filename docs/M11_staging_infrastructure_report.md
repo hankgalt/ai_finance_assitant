@@ -1,7 +1,8 @@
 # M11 delivery report — Staging infrastructure foundation
 
-Status: Foundation provisioned and drift-free; staging and production keyless identity qualified;
-real-service recovery, workload, and no-bypass qualification pending | 2026-11-10
+Status: Foundation provisioned and last applied plans drift-free; staging and production keyless
+identity qualified; managed-state operator jobs defined; real-service recovery, workload, and no-
+bypass qualification pending | 2026-11-10
 
 ## Scope and decisions
 
@@ -42,6 +43,16 @@ The live qualification record is
 - Capability-oriented Terraform modules, a non-secret operator wizard, a plan-only GitHub workflow,
   policy tests, and release evidence are committed under their infrastructure, delivery, contract,
   test, and release owners.
+- Three non-HTTP Cloud Run jobs are defined for migration, synthetic qualification, and retention.
+  Each uses its dedicated IAM database identity, Direct VPC private egress, a digest-pinned backend
+  image, and a digest-pinned Cloud SQL Auth Proxy with automatic IAM authentication. These new
+  resources are not yet applied or represented as operational.
+- Because the selected jobs no longer use DSN secret payloads, the expanded plan removes the three
+  PostgreSQL secret-access IAM bindings. The protected empty secret containers remain historical
+  metadata; only the runtime Qdrant identity retains its not-yet-used secret-access binding.
+- A separate staged recovery wizard requires a clean merged `main`, validates exact targets, removes
+  temporary owner database elevation, qualifies one backup restore and one PITR clone, deletes the
+  temporary instances, checks final Terraform drift, and writes only secret-free evidence.
 
 ## Provisioning and verification record
 
@@ -54,6 +65,7 @@ The live qualification record is
 | Final bootstrap/shared/staging plans | All returned `No changes` |
 | Infrastructure and delivery contract tests | 23 passed |
 | Complete credential-free backend suite | 387 passed, 6 skipped, 4 deselected |
+| Expanded operator/recovery regression suite | 392 passed, 8 skipped, 4 deselected; 11 opt-in managed PostgreSQL tests passed separately |
 | Cloud SQL live readback | `RUNNABLE`; PostgreSQL 17; private IP only; `ENCRYPTED_ONLY`; IAM auth on |
 | Backup/storage live readback | 10 GiB SSD; auto-grow limit 20 GiB; 7 backups; 3-day transaction logs |
 | Artifact Registry live readback | Docker standard repository with immutable tags |
@@ -78,8 +90,10 @@ replacement staging and production smokes passed after required review. Each ret
 
 The regional gcloud secret-version listing command incorrectly routed the regional resource to the
 global endpoint. This slice did not create or supply a version, the Terraform configuration contains
-no secret-version/payload resource, and no secret value appears in its plans or evidence. Live
-version enumeration remains an operator check after payload entry.
+no secret-version/payload resource, and no secret value appears in its plans or evidence. Cloud Run
+also does not natively inject regional Secret Manager versions. The Cloud SQL operator jobs require
+no database secret because they use automatic IAM authentication; the later application/Qdrant
+workload must select and qualify a regional-secret access pattern before payload entry.
 
 ## Security and privacy impact
 
@@ -97,8 +111,9 @@ qualification.
 
 ## Stop gate and remaining evidence
 
-- The new Terraform workflow must pass static validation and an approval-gated, read-only staging
-  plan after this branch is merged.
+- The earlier foundation Terraform workflow passed its approval-gated GitHub plan. The expanded
+  operator-job configuration must pass a new approval-gated staging plan after this branch is merged
+  and the staging environment receives the merged-main backend image digest.
 - Slice 3 remains short of its real-service gate: migrations, retention, restart behavior,
   backup/restore, PITR, and recovery must run from an authorized VPC-connected execution path.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls
@@ -113,6 +128,7 @@ qualification.
 - `contracts/deployment/delivery-policy.v1.json`
 - `infrastructure/terraform/`
 - `infrastructure/terraform/scripts/bootstrap-staging.sh`
+- `infrastructure/terraform/scripts/qualify-cloud-sql-recovery.sh`
 - `.github/workflows/terraform.yml`
 - `backend/tests/test_staging_infrastructure.py`
 - `backend/artifacts/release/deployment/staging-foundation.v1.json`
