@@ -1,0 +1,97 @@
+{
+  "schema_version": "1",
+  "status": "staging_foundation_provisioned",
+  "project": {
+    "id": "comfforts-369117",
+    "number": "730340912967",
+    "region": "us-west1"
+  },
+  "github": {
+    "repository": "hankgalt/ai_finance_assitant",
+    "repository_id": "1435001816",
+    "owner": "hankgalt",
+    "owner_id": "2118128",
+    "deployment_branch": "main"
+  },
+  "state": {
+    "bootstrap_bucket": "comfforts-369117-aifa-tf-bootstrap",
+    "staging_bucket": "comfforts-369117-aifa-tf-staging",
+    "production_bucket": "comfforts-369117-aifa-tf-production",
+    "environment_separation": true,
+    "public_access_prevention": "enforced",
+    "uniform_bucket_level_access": true,
+    "versioning": true,
+    "soft_delete_days": 7
+  },
+  "identity": {
+    "method": "github_oidc_workload_identity_federation",
+    "issuer": "https://token.actions.githubusercontent.com/",
+    "repository_numeric_identity_required": true,
+    "subject_format": "repo:OWNER@OWNER-ID/REPO@REPO-ID:environment:ENVIRONMENT",
+    "main_branch_required": true,
+    "github_environment_required": true,
+    "long_lived_service_account_keys_allowed": false,
+    "staging_pool": "aifa-stg-github",
+    "production_pool": "aifa-prod-github",
+    "terraform_plan_project_roles": [
+      "roles/viewer",
+      "roles/serviceusage.serviceUsageConsumer"
+    ],
+    "external_configuration_status": "provisioned_and_identity_smoke_qualified"
+  },
+  "artifact_registry": {
+    "location": "us-west1",
+    "repository": "aifa-containers",
+    "format": "DOCKER",
+    "immutable_tags": true,
+    "external_configuration_status": "provisioned"
+  },
+  "secrets": {
+    "service": "regional_secret_manager",
+    "location": "us-west1",
+    "payloads_managed_by_terraform": false,
+    "payloads_allowed_in_repository": false,
+    "payloads_allowed_in_github": false,
+    "metadata_status": "provisioned",
+    "payload_versions_created_by_this_slice": false
+  },
+  "managed_state": {
+    "service": "cloud_sql_postgresql",
+    "database_version": "POSTGRES_17",
+    "edition": "ENTERPRISE",
+    "tier": "db-f1-micro",
+    "availability": "ZONAL",
+    "disk_type": "PD_SSD",
+    "disk_size_gib": 10,
+    "disk_autoresize_limit_gib": 20,
+    "public_ipv4": false,
+    "tls_required": true,
+    "retained_daily_backups": 7,
+    "transaction_log_retention_days": 3,
+    "retain_backups_on_delete": true,
+    "deletion_protection": true,
+    "instance": "aifa-staging-postgres",
+    "external_configuration_status": "provisioned_recovery_qualification_pending"
+  },
+  "workload_boundary": {
+    "cloud_run_ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    "default_uri_disabled": true,
+    "anonymous_invoker_allowed": false,
+    "iap_edge_required": true,
+    "status": "policy_defined_workload_not_deployed"
+  },
+  "budget": {
+    "combined_monthly_usd": 100,
+    "threshold_percent": [50, 80, 100],
+    "hard_cap": false,
+    "external_configuration_status": "provisioned"
+  },
+  "operational_status": {
+    "terraform_foundation": "provisioned",
+    "final_drift": "no_changes",
+    "github_environments": "configured",
+    "oidc_smoke": "staging_and_production_qualified",
+    "staging_workload": "not_deployed",
+    "no_direct_workload_bypass": "not_yet_testable"
+  }
+}

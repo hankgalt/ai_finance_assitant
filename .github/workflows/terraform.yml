@@ -1,0 +1,96 @@
+name: Terraform infrastructure
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/terraform.yml"
+      - "backend/tests/test_staging_infrastructure.py"
+      - "contracts/deployment/**"
+      - "infrastructure/terraform/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/terraform.yml"
+      - "backend/tests/test_staging_infrastructure.py"
+      - "contracts/deployment/**"
+      - "infrastructure/terraform/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-validation:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: 3.12.12
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.12.5
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Install locked backend test dependencies
+        working-directory: backend
+        run: uv sync --frozen
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive infrastructure/terraform
+      - name: Validate bootstrap root
+        working-directory: infrastructure/terraform/bootstrap
+        run: terraform init -backend=false && terraform validate
+      - name: Validate shared root
+        working-directory: infrastructure/terraform/shared
+        run: terraform init -backend=false && terraform validate
+      - name: Validate staging root
+        working-directory: infrastructure/terraform/environments/staging
+        run: terraform init -backend=false && terraform validate
+      - name: Run infrastructure contract tests
+        working-directory: backend
+        run: uv run python -m pytest -q tests/test_staging_infrastructure.py
+
+  staging-plan:
+    if: github.event_name == 'workflow_dispatch'
+    needs: static-validation
+    runs-on: ubuntu-24.04
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Exchange GitHub OIDC token for short-lived GCP credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - name: Initialize staging state
+        working-directory: infrastructure/terraform/environments/staging
+        run: >-
+          terraform init
+          -backend-config=bucket=comfforts-369117-aifa-tf-staging
+          -backend-config=prefix=foundation
+      - name: Create reviewed staging plan
+        working-directory: infrastructure/terraform/environments/staging
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+        run: terraform plan -lock-timeout=5m -out=staging.tfplan
+      - name: Render machine-readable plan evidence
+        working-directory: infrastructure/terraform/environments/staging
+        run: terraform show -json staging.tfplan > staging.tfplan.json
+      - name: Retain staging plan evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: staging-terraform-plan-${{ github.sha }}
+          path: infrastructure/terraform/environments/staging/staging.tfplan.json
+          if-no-files-found: error
+          retention-days: 14

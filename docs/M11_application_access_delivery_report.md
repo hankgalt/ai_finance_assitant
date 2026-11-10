@@ -1,6 +1,6 @@
 # M11 delivery report — Application access and isolation
 
-Status: Slice 2 implemented and verified; GCP deployment not provisioned | 2026-11-09
+Status: Slice 2 implemented and verified; staging foundation later provisioned; workload/edge deployment pending | 2026-11-10
 
 ## Scope and decisions
 

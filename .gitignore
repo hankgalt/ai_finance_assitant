@@ -48,3 +48,15 @@ blob-report/
 
 # Local application state
 /backend/data/*.sqlite3*
+
+# Terraform runtime state, provider downloads, overrides, and plans
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

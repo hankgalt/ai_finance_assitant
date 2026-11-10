@@ -1,14 +1,17 @@
 # M11 delivery report — Delivery pipeline and short-lived identity boundary
 
-Status: Slice 4 repository controls implemented and locally qualified; GitHub/GCP activation pending | 2026-11-09
+Status: Slice 4 repository controls, GitHub scans, protected environments, and keyless GCP identity
+qualified | 2026-11-10
 
 ## Scope and decisions
 
-This slice implements the repository-controlled portion of M11 slice 4 for PR-017 under ADR-019,
+This report implements the repository-controlled portion of M11 slice 4 for PR-017 under ADR-019,
 ADR-029, and proposed ADR-030. It advances QR-003, QR-005–QR-007, QR-010–QR-011, and
-QR-014–QR-015 and adds source-side EVAL-20 evidence. It does not provision GCP, modify DNS, change
-GitHub repository settings, publish an image, or claim that Workload Identity Federation or any
-deployment control is operational.
+QR-014–QR-015 and adds EVAL-20 evidence. The controls were subsequently exercised on GitHub and the
+slice 5 foundation activated WIF and protected environments. The separate
+[`M11_staging_infrastructure_report.md`](M11_staging_infrastructure_report.md) is authoritative for
+cloud mutations, Terraform drift, and the remaining workload/no-bypass stop gates. DNS remains
+unchanged and no application workload is deployed.
 
 The owner-approved single-operator boundary remains explicit: the public GitHub Pro repository uses
 `hankgalt` as the required staging and production reviewer, permits self-review, and has no
@@ -58,7 +61,7 @@ independent backup approver. The machine-readable boundary is
 | `backend/.venv/bin/ruff format --check backend/src backend/tests` | 156 files already formatted |
 | `backend/.venv/bin/ruff check backend/src backend/tests` | passed |
 | `backend/.venv/bin/mypy` | passed for 156 source/test files |
-| `backend/.venv/bin/python -m pytest -q` (from `backend/`) | 378 passed, 6 skipped, 4 deselected in 6.19 s |
+| `backend/.venv/bin/python -m pytest -q` (from `backend/`) | 387 passed, 6 skipped, 4 deselected in 5.91 s |
 | Trivy installer URL check for v0.65.0 / v0.76.2 | HTTP 404 / HTTP 200 |
 | PostgreSQL 17.11 managed-state qualification | 5 passed, 2 deselected in 1.75 s |
 | `UV_CACHE_DIR=/tmp/aifa-uv-cache uv lock --check --offline` | 136 packages resolved; lock current |
@@ -88,8 +91,10 @@ exposed an upstream installer compatibility failure: the Trivy Action v0.33.1 de
 v0.65.0, while the installer it
 checked out from the current Trivy `main` branch returned HTTP 404 for that release's generated
 `get.trivy.dev` binary URL. Repository and image scans now use the immutable Trivy Action v0.36.0
-revision and explicitly pin Trivy v0.76.2; the generated binary URL returns HTTP 200. No successful
-GitHub-hosted Gitleaks or CodeQL run is claimed by this record.
+revision and explicitly pin Trivy v0.76.2; the generated binary URL returns HTTP 200. Main-branch
+run `42887806684` subsequently passed Gitleaks, Python and JavaScript CodeQL, dependency audits, and
+the repository scan at commit `7f880028`; pull-request run `42887435575` also passed dependency
+review and the complete security matrix.
 
 The subsequent GitHub Container images run `42758880644` built both images and reached the image
 scan, then failed because the digest-pinned runtime bases had aged past the workflow's
@@ -101,6 +106,19 @@ the discarded builder and the current official unprivileged NGINX 1.30.6 / Alpin
 Both rebuilt artifacts pass the exact Trivy gate locally with zero HIGH/CRITICAL findings. A
 replacement GitHub-hosted Container images run (`42761838064`) subsequently passed on main for
 commit `ae079ef`, including the push-only GHCR publication and provenance-attestation path.
+
+The later consolidated dependency merge at commit `7f880028` passed Deterministic CI run
+`42887806884`, Security checks run `42887806684`, and Container images run `42887806753`. The image
+run rebuilt, scanned, published, and attested both immutable-revision images. Staging and production
+WIF providers and GitHub environments are now configured without credential payloads. The first
+staging identity-smoke run `42903648350` reached the required-reviewer gate, then failed closed when
+the name-only subject condition rejected GitHub's immutable-ID subject for this repository. A
+reviewed Terraform remediation changed only the two provider conditions in place (`0` add, `2`
+change, `0` destroy), using
+`repo:OWNER@OWNER-ID/REPO@REPO-ID:environment:ENVIRONMENT`; its final plan was drift-free. After
+required review, replacement staging run `42906846762` and production run `42903653548` both
+exchanged short-lived credentials, returned `comfforts-369117` from the read-only project check,
+cleaned up their temporary credential files, and passed.
 
 Dependabot then opened Python 3.15 and Node 26 runtime-line PRs (`#2` and `#3`). Deterministic CI
 correctly exposed that the container-policy test had encoded exact qualified patch versions rather
@@ -121,16 +139,11 @@ This slice does not broaden any provider entitlement or retention right.
 
 ## Stop gate and remaining evidence
 
-- Create the `staging` and `production` GitHub environments and configure `hankgalt` as the required
-  reviewer only when the repository settings are ready to be activated.
-- Slice 5 must provision separate environment-specific Workload Identity Federation providers and
-  service accounts through reviewed Terraform. Only then can the three non-secret GitHub
-  environment variables be populated and the read-only identity smoke executed.
-- Execute the remaining workflows on GitHub and retain actual CodeQL, dependency-review, Gitleaks,
-  and repository-scan evidence. Container build, scan, publication, and attestation passed in run
-  `42761838064`; retain the published image digests with the final release evidence.
-- Automated GCP deployment remains disabled. Terraform plan/apply, migration, staging smoke,
-  no-direct-workload-bypass, promotion, rollback, and production/demo cutover belong to later slices.
+- Merge and run `.github/workflows/terraform.yml`; retain its static-validation and read-only staging
+  plan evidence.
+- Automated GCP deployment remains disabled. Real-service recovery, workload deployment, IAP,
+  no-direct-workload-bypass, promotion, rollback, and production/demo cutover remain later gates.
+- Retain final published image digests with the integrated release evidence.
 - Proposed ADR-030 remains Proposed until the complete M11 qualification passes.
 
 ## Artifact paths
@@ -139,8 +152,10 @@ This slice does not broaden any provider entitlement or retention right.
 - `.github/workflows/security.yml`
 - `.github/workflows/images.yml`
 - `.github/workflows/cloud-identity-smoke.yml`
+- `.github/workflows/terraform.yml`
 - `infrastructure/container/backend/Dockerfile`
 - `infrastructure/container/frontend/Dockerfile`
 - `contracts/deployment/delivery-policy.v1.json`
 - `backend/artifacts/release/deployment/delivery-controls.v1.json`
+- `backend/artifacts/release/deployment/staging-foundation.v1.json`
 - `backend/tests/test_delivery_workflows.py`
