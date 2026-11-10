@@ -1,6 +1,6 @@
 # M11 delivery report — Managed-state adapter and operating contract
 
-Status: PostgreSQL adapter recovery qualified locally; Cloud SQL recovery stop gate pending | 2026-11-09
+Status: PostgreSQL adapter qualified locally and staging foundation provisioned; Cloud SQL recovery stop gate pending | 2026-11-10
 
 ## Scope and decisions
 
@@ -83,8 +83,9 @@ API key.
 
 ## Stop gate and remaining evidence
 
-- Provision no infrastructure from this report. Terraform, IAM, Cloud SQL, Secret Manager,
-  Cloud Run, GitHub environments, IAP, DNS, and the Qdrant release transfer belong to later slices.
+- The later staging-foundation slice has now provisioned Terraform state, IAM, private Cloud SQL,
+  and empty Secret Manager containers. This adapter report still claims no successful Cloud SQL
+  connection, migration, retention, backup/restore, or PITR rehearsal.
 - Repeat the passing PostgreSQL qualification test against Cloud SQL staging, then run the full
   two-Principal REST/SSE/History/Inspector matrix there.
 - Reproduce the locally passing separate migration/runtime-role boundary with Cloud SQL IAM and

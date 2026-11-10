@@ -92,59 +92,66 @@ def _assert_container_image_policy(backend: str, frontend: str) -> None:
     assert "COPY contracts/ /workspace/contracts/" in frontend
 
 
-def test_delivery_contract_records_fail_closed_external_activation() -> None:
+def test_delivery_contract_records_activated_identity_and_remaining_gates() -> None:
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "repository_controls_implemented_external_activation_pending"
+    assert contract["status"] == (
+        "identity_and_environment_controls_activated_staging_foundation_provisioned"
+    )
     assert contract["repository"] == "hankgalt/ai_finance_assitant"
     assert contract["automated_cloud_deployment_enabled"] is False
     assert contract["long_lived_gcp_credentials_allowed"] is False
     assert contract["identity"]["method"] == "github_oidc_workload_identity_federation"
     assert contract["identity"]["credential_payload_in_github"] is False
     assert contract["identity"]["credential_payload_in_repository"] is False
+    assert contract["identity"]["subject_format"] == (
+        "repo:OWNER@OWNER-ID/REPO@REPO-ID:environment:ENVIRONMENT"
+    )
+    assert contract["identity"]["external_configuration_status"] == (
+        "provisioned_and_identity_smoke_qualified"
+    )
     assert contract["environments"] == {
         "staging": {
             "required_reviewer": "hankgalt",
             "prevent_self_review": False,
             "deployment_branch": "main",
-            "external_configuration_status": "pending",
+            "external_configuration_status": "configured_smoke_passed",
         },
         "production": {
             "required_reviewer": "hankgalt",
             "prevent_self_review": False,
             "deployment_branch": "main",
-            "external_configuration_status": "pending",
+            "external_configuration_status": "configured_smoke_passed",
         },
     }
 
 
-def test_delivery_evidence_is_capability_owned_and_truthful_about_pending_controls() -> None:
+def test_delivery_evidence_is_capability_owned_and_truthful_about_activated_controls() -> None:
     evidence = json.loads(DELIVERY_EVIDENCE.read_text(encoding="utf-8"))
 
     assert evidence["schema_version"] == "1"
-    assert evidence["status"] == "repository_controls_qualified_external_activation_pending"
+    assert evidence["status"] == "repository_controls_and_cloud_identity_qualified"
     assert evidence["secret_payloads_recorded"] is False
-    assert evidence["cloud_resources_mutated"] is False
-    assert evidence["github_repository_settings_mutated"] is False
-    assert evidence["github_qualification"] == [
-        {
-            "check": (
-                "container build, HIGH/CRITICAL image scan, GHCR publication, "
-                "and build-provenance attestation"
-            ),
-            "result": "passed",
-            "run_id": 42761838064,
-            "commit": "ae079ef7e8a3c2b8f2dc01b78869534d2a94dc70",
-            "url": ("https://github.com/hankgalt/ai_finance_assitant/actions/runs/42761838064"),
-        }
+    assert evidence["cloud_resources_mutated"] is True
+    assert evidence["github_repository_settings_mutated"] is True
+    assert [item["run_id"] for item in evidence["github_qualification"]] == [
+        42887806884,
+        42887806684,
+        42887435575,
+        42887806753,
+    ]
+    assert all(item["result"].startswith("passed") for item in evidence["github_qualification"])
+    assert [item["run_id"] for item in evidence["identity_smoke_qualification"]] == [
+        42903648350,
+        42906846762,
+        42903653548,
     ]
     assert evidence["external_qualification_pending"] == [
-        "remaining GitHub-hosted dependency-review, Gitleaks, CodeQL, and "
-        "repository-scan execution",
-        "staging and production GitHub environment protection",
-        "GCP Workload Identity Federation and read-only identity smoke",
-        "staging infrastructure, no-bypass, deployment, and rollback qualification",
+        "Terraform workflow qualification after this branch is merged",
+        "Cloud SQL real-service migration, retention, backup/restore, and recovery qualification",
+        "staging workload, IAP/load-balancer, no-direct-bypass, deployment, and "
+        "rollback qualification",
     ]
 
 
@@ -154,6 +161,7 @@ def test_workflows_are_known_and_third_party_actions_are_immutable() -> None:
         "cloud-identity-smoke.yml",
         "images.yml",
         "security.yml",
+        "terraform.yml",
     }
     observed = {path.name for path in WORKFLOW_ROOT.glob("*.yml")}
     assert observed == expected

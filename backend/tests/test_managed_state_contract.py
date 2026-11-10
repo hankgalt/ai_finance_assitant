@@ -19,7 +19,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     manifest = _manifest()
 
     assert manifest["schema_version"] == "1"
-    assert manifest["status"] == "owner_approved_not_provisioned"
+    assert manifest["status"] == ("staging_foundation_provisioned_recovery_qualification_pending")
     assert manifest["application_state"] == {
         "service": "cloud_sql_postgresql",
         "edition": "enterprise",
@@ -37,6 +37,8 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "application_schema_version": 4,
         "deployed_store_initialization": "empty",
         "local_development_backend": "sqlite",
+        "staging_instance": "aifa-staging-postgres",
+        "external_configuration_status": "provisioned_recovery_qualification_pending",
     }
     assert manifest["response_cache"] == {
         "deployed_adapter": "disabled",
@@ -54,6 +56,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "whole_run_atomicity_claimed": False,
     }
     assert manifest["staging"]["separation"] == "same_project"
+    assert manifest["staging"]["foundation_provisioned"] is True
 
 
 def test_qdrant_exception_and_single_operator_boundary_are_explicit() -> None:

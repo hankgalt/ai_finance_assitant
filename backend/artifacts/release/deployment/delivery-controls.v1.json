@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
-  "qualification_date": "2026-11-09",
-  "status": "repository_controls_qualified_external_activation_pending",
+  "qualification_date": "2026-11-10",
+  "status": "repository_controls_and_cloud_identity_qualified",
   "requirements": [
     "PR-017",
     "QR-003",
@@ -20,19 +20,20 @@
     "security_scanning": ".github/workflows/security.yml",
     "container_publication": ".github/workflows/images.yml",
     "manual_short_lived_identity_smoke": ".github/workflows/cloud-identity-smoke.yml",
+    "terraform_validation_and_plan": ".github/workflows/terraform.yml",
     "delivery_contract": "contracts/deployment/delivery-policy.v1.json"
   },
   "local_qualification": [
     {
-      "check": "delivery contract tests",
-      "result": "14 passed"
+      "check": "delivery and infrastructure contract tests",
+      "result": "23 passed"
     },
     {
       "check": "backend credential-free suite",
-      "result": "378 passed, 6 skipped, 4 deselected"
+      "result": "387 passed, 6 skipped, 4 deselected"
     },
     {
-      "check": "PostgreSQL managed-state qualification",
+      "check": "PostgreSQL adapter qualification",
       "result": "5 passed, 2 deselected"
     },
     {
@@ -52,31 +53,66 @@
       "result": "built from the maintained official unprivileged NGINX image; UID/GID 101:101; /finance_assistant served; root and missed API paths returned 404; Trivy v0.76.2 reported zero HIGH/CRITICAL findings"
     },
     {
-      "check": "locked Python production dependency audit",
-      "result": "no known vulnerabilities"
-    },
-    {
-      "check": "locked frontend production dependency audit",
-      "result": "no known vulnerabilities"
+      "check": "locked production dependency audits",
+      "result": "Python and frontend audits reported no known vulnerabilities"
     }
   ],
   "github_qualification": [
     {
+      "check": "deterministic backend, PostgreSQL-adapter, frontend, and base-path CI",
+      "result": "passed",
+      "run_id": 42887806884,
+      "commit": "7f88002872ca74b841c12c1d0c4ccb024746ad20",
+      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42887806884"
+    },
+    {
+      "check": "dependency audit, Gitleaks, Python/JavaScript CodeQL, and repository scan",
+      "result": "passed; dependency review is pull-request-only",
+      "run_id": 42887806684,
+      "commit": "7f88002872ca74b841c12c1d0c4ccb024746ad20",
+      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42887806684"
+    },
+    {
+      "check": "pull-request dependency review and complete security matrix",
+      "result": "passed",
+      "run_id": 42887435575,
+      "commit": "e0d4b9d1e2f0cafc4776c446379f7a357d26e0de",
+      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42887435575"
+    },
+    {
       "check": "container build, HIGH/CRITICAL image scan, GHCR publication, and build-provenance attestation",
       "result": "passed",
-      "run_id": 42761838064,
-      "commit": "ae079ef7e8a3c2b8f2dc01b78869534d2a94dc70",
-      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42761838064"
+      "run_id": 42887806753,
+      "commit": "7f88002872ca74b841c12c1d0c4ccb024746ad20",
+      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42887806753"
+    }
+  ],
+  "identity_smoke_qualification": [
+    {
+      "environment": "staging",
+      "result": "failed; the legacy name-only subject was rejected after GitHub issued the repository's immutable-ID subject",
+      "run_id": 42903648350,
+      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42903648350"
+    },
+    {
+      "environment": "staging",
+      "result": "passed after required review; short-lived credential exchange and read-only project access succeeded after the zero-destroy immutable-subject remediation",
+      "run_id": 42906846762,
+      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42906846762"
+    },
+    {
+      "environment": "production",
+      "result": "passed after required review; short-lived credential exchange and read-only project access succeeded",
+      "run_id": 42903653548,
+      "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42903653548"
     }
   ],
   "external_qualification_pending": [
-    "remaining GitHub-hosted dependency-review, Gitleaks, CodeQL, and repository-scan execution",
-    "staging and production GitHub environment protection",
-    "GCP Workload Identity Federation and read-only identity smoke",
-    "staging infrastructure, no-bypass, deployment, and rollback qualification"
+    "Terraform workflow qualification after this branch is merged",
+    "Cloud SQL real-service migration, retention, backup/restore, and recovery qualification",
+    "staging workload, IAP/load-balancer, no-direct-bypass, deployment, and rollback qualification"
   ],
   "secret_payloads_recorded": false,
-  "cloud_resources_mutated": false,
-  "github_repository_settings_mutated": false
+  "cloud_resources_mutated": true,
+  "github_repository_settings_mutated": true
 }
-

@@ -1,0 +1,165 @@
+{
+  "schema_version": "1",
+  "qualification_date": "2026-11-10",
+  "status": "foundation_provisioned_identity_smoke_qualified",
+  "requirements": [
+    "PR-017",
+    "QR-003",
+    "QR-005",
+    "QR-006",
+    "QR-007",
+    "QR-010",
+    "QR-011",
+    "QR-014",
+    "QR-015",
+    "EVAL-20"
+  ],
+  "decisions": ["ADR-019", "ADR-029", "ADR-030-proposed"],
+  "tools": {
+    "terraform": "1.17.1",
+    "google_provider": "8.9.0",
+    "gcloud": "593.0.0"
+  },
+  "scope": {
+    "project": "comfforts-369117",
+    "project_number": "730340912967",
+    "region": "us-west1",
+    "cloud_resources_mutated": true,
+    "github_repository_settings_mutated": true,
+    "secret_payloads_recorded": false,
+    "workload_deployed": false,
+    "dns_mutated": false
+  },
+  "terraform": {
+    "bootstrap": {
+      "state_bucket": "comfforts-369117-aifa-tf-bootstrap",
+      "state_prefix": "bootstrap",
+      "apply": "2 added, 1 changed, 0 destroyed after first bucket import",
+      "final_drift": "no changes"
+    },
+    "shared": {
+      "state_bucket": "comfforts-369117-aifa-tf-bootstrap",
+      "state_prefix": "shared",
+      "reviewed_plans": [
+        "31 to add, 0 to change, 0 to destroy",
+        "2 to add, 0 to change, 0 to destroy for quota-project use",
+        "0 to add, 2 to change, 0 to destroy for immutable GitHub OIDC subjects"
+      ],
+      "apply": "33 added in aggregate, 2 changed in place, 0 destroyed",
+      "final_drift": "no changes"
+    },
+    "staging": {
+      "state_bucket": "comfforts-369117-aifa-tf-staging",
+      "state_prefix": "foundation",
+      "reviewed_plans": [
+        "24 to add, 0 to change, 0 to destroy",
+        "1 to add, 0 to change, 0 to destroy for the retention IAM database user",
+        "2 to add, 0 to change, 1 stale empty-secret IAM binding to revoke for the dedicated retention DSN"
+      ],
+      "apply": "27 create operations, 0 in-place changes, 1 stale empty-secret IAM binding revoked; 26 resources net",
+      "final_drift": "no changes"
+    }
+  },
+  "remote_state": {
+    "buckets": [
+      "comfforts-369117-aifa-tf-bootstrap",
+      "comfforts-369117-aifa-tf-staging",
+      "comfforts-369117-aifa-tf-production"
+    ],
+    "public_access_prevention": "enforced",
+    "uniform_bucket_level_access": true,
+    "versioning": true,
+    "soft_delete_days": 7,
+    "prevent_destroy": true
+  },
+  "delivery_identity": {
+    "repository": "hankgalt/ai_finance_assitant",
+    "repository_id": "1435001816",
+    "owner_id": "2118128",
+    "branch": "refs/heads/main",
+    "subject_format": "repo:OWNER@OWNER-ID/REPO@REPO-ID:environment:ENVIRONMENT",
+    "staging_provider": "projects/730340912967/locations/global/workloadIdentityPools/aifa-stg-github/providers/github",
+    "production_provider": "projects/730340912967/locations/global/workloadIdentityPools/aifa-prod-github/providers/github",
+    "providers_live_state": "ACTIVE",
+    "long_lived_keys_created": false,
+    "terraform_plan_project_roles": [
+      "roles/viewer",
+      "roles/serviceusage.serviceUsageConsumer"
+    ],
+    "github_environments": {
+      "staging": "configured_main_only_required_reviewer_hankgalt",
+      "production": "configured_main_only_required_reviewer_hankgalt"
+    },
+    "smoke_runs": [
+      {
+        "environment": "staging",
+        "run_id": 42903648350,
+        "status": "failed_legacy_subject_rejected_by_attribute_condition",
+        "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42903648350"
+      },
+      {
+        "environment": "staging",
+        "run_id": 42906846762,
+        "status": "passed_short_lived_identity_and_read_only_project_access",
+        "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42906846762"
+      },
+      {
+        "environment": "production",
+        "run_id": 42903653548,
+        "status": "passed_short_lived_identity_and_read_only_project_access",
+        "url": "https://github.com/hankgalt/ai_finance_assitant/actions/runs/42903653548"
+      }
+    ]
+  },
+  "artifact_registry": {
+    "resource": "projects/comfforts-369117/locations/us-west1/repositories/aifa-containers",
+    "format": "DOCKER",
+    "immutable_tags": true
+  },
+  "managed_state": {
+    "instance": "aifa-staging-postgres",
+    "connection_name": "comfforts-369117:us-west1:aifa-staging-postgres",
+    "live_state": "RUNNABLE",
+    "database_version": "POSTGRES_17",
+    "edition": "ENTERPRISE",
+    "tier": "db-f1-micro",
+    "availability": "ZONAL",
+    "private_ip": "10.177.0.3",
+    "public_ipv4": false,
+    "ssl_mode": "ENCRYPTED_ONLY",
+    "iam_authentication": true,
+    "disk_size_gib": 10,
+    "disk_autoresize_limit_gib": 20,
+    "retained_backups": 7,
+    "transaction_log_retention_days": 3,
+    "deletion_protection": true,
+    "database": "aifa",
+    "runtime_identity": "aifa-stg-runtime@comfforts-369117.iam.gserviceaccount.com",
+    "migration_identity": "aifa-stg-migration@comfforts-369117.iam.gserviceaccount.com",
+    "retention_identity": "aifa-stg-retention@comfforts-369117.iam.gserviceaccount.com"
+  },
+  "regional_secret_metadata": {
+    "location": "us-west1",
+    "resources": [
+      "aifa-staging-postgres-runtime-dsn",
+      "aifa-staging-postgres-migration-dsn",
+      "aifa-staging-postgres-retention-dsn",
+      "aifa-staging-qdrant-runtime-api-key"
+    ],
+    "payload_versions_created_by_this_slice": false,
+    "payloads_managed_by_terraform": false
+  },
+  "budget": {
+    "monthly_usd": 100,
+    "threshold_percent": [50, 80, 100],
+    "hard_cap": false,
+    "status": "provisioned"
+  },
+  "remaining_gates": [
+    "Terraform workflow success after merge",
+    "real Cloud SQL migration, retention, backup/restore, and recovery qualification",
+    "staging workload and no-direct-workload-bypass qualification",
+    "Qdrant collection transfer and rollback",
+    "load balancer, HTTPS, DNS, IAP, deployment, and rollback qualification"
+  ]
+}

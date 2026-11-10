@@ -10,7 +10,7 @@ QDRANT_URL ?= http://127.0.0.1:6333
 	response-cache-check response-cache-calibrate response-cache-benchmark m6-1-check m8-check \
 	mcp-stdio m9-check managed-state-migrate managed-state-status managed-state-retention \
 	managed-state-postgres-up managed-state-postgres-status managed-state-postgres-stop \
-	managed-state-postgres-check delivery-check container-build
+	managed-state-postgres-check delivery-check infrastructure-check container-build
 
 backend-sync:
 	cd backend && uv sync
@@ -47,6 +47,13 @@ managed-state-postgres-check:
 
 delivery-check:
 	cd backend && uv run pytest -q tests/test_delivery_workflows.py tests/test_release_bundle.py
+
+infrastructure-check:
+	terraform fmt -check -recursive infrastructure/terraform
+	cd infrastructure/terraform/bootstrap && terraform init -backend=false && terraform validate
+	cd infrastructure/terraform/shared && terraform init -backend=false && terraform validate
+	cd infrastructure/terraform/environments/staging && terraform init -backend=false && terraform validate
+	cd backend && uv run pytest -q tests/test_staging_infrastructure.py tests/test_delivery_workflows.py
 
 container-build:
 	docker build --file infrastructure/container/backend/Dockerfile --tag ai-finance-assistant-backend:local .

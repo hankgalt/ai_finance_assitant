@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "owner_approved_not_provisioned",
+  "status": "staging_foundation_provisioned_recovery_qualification_pending",
   "application_state": {
     "service": "cloud_sql_postgresql",
     "edition": "enterprise",
@@ -21,7 +21,9 @@
     },
     "application_schema_version": 4,
     "deployed_store_initialization": "empty",
-    "local_development_backend": "sqlite"
+    "local_development_backend": "sqlite",
+    "staging_instance": "aifa-staging-postgres",
+    "external_configuration_status": "provisioned_recovery_qualification_pending"
   },
   "checkpoint_state": {
     "service": "langgraph_postgresql_saver",
@@ -83,7 +85,8 @@
     "separate_runtime_identity": true,
     "separate_database_role": true,
     "separate_secrets": true,
-    "ephemeral_restore_instance": true
+    "ephemeral_restore_instance": true,
+    "foundation_provisioned": true
   },
   "qdrant": {
     "cluster_name": "finance-assistant-demo",

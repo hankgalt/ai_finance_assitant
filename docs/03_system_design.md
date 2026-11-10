@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.16 | Status: Product baseline plus proposed M11 private multi-user deployment | 2026-11-05
+Version 1.17 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries and provisioned staging foundation; proposed M11 deployment incomplete | 2026-11-10
 
 ## 1. Architecture principles
 
@@ -465,7 +465,10 @@ Vite, FastAPI, Qdrant, Redis, and ingestion commands/processes and remains the q
 private-demo release.
 
 Proposed ADR-030 and M11 select the GCP/IAP/base-path direction, and the application-access boundary
-is implemented, but no cloud control is represented as operational. The selected region is
+is implemented. Protected Terraform state, immutable Artifact Registry, environment-specific WIF,
+protected GitHub environments, the budget, and the private staging managed-state foundation are now
+provisioned; all three Terraform roots are drift-free. No application workload, load balancer, IAP
+edge, DNS record, or direct-workload-bypass control is represented as operational. The selected region is
 `us-west1`. The selected authoritative managed store is single-zone Cloud SQL PostgreSQL 17
 Enterprise, initially `db-f1-micro` with a 10 GiB SSD, seven daily backups, and three days of PITR.
 It owns separate application, checkpoint, and provider-cache persistence boundaries. Local
@@ -474,8 +477,8 @@ the initial topology. Same-project staging uses separate state, identities, secr
 and synthetic data, with ephemeral restore infrastructure. The selected Qdrant Managed Cloud Free
 cluster is a documented private-demo exception in `us-central1`; it contains shared knowledge only
 and provides no production SLA. The owner-approved values are versioned in
-`contracts/deployment/managed-state.v1.json`, but none is operational until its adapter,
-infrastructure, recovery, and security evidence passes. The deployed design must keep knowledge ingestion and
+`contracts/deployment/managed-state.v1.json`. The adapter and foundation exist, but recovery and
+integrated security qualification remain incomplete. The deployed design must keep knowledge ingestion and
 activation separate from runtime, deny direct workload bypass, and retain explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the proposal.
@@ -486,9 +489,14 @@ to run locked backend/frontend checks plus security scanning; main-branch image 
 configured to use Git-revision tags and build-provenance attestations. The deployable backend and
 frontend images use digest-pinned base
 images and non-root runtime identities. GCP authentication is limited to a manual,
-protected-environment, read-only Workload Identity Federation smoke until slice 5 provisions the
-environment-specific trust and service accounts. No automated cloud deployment is enabled by this
-contract, and repository files contain neither a service-account key nor another credential payload.
+protected-environment, read-only Workload Identity Federation smoke. Slice 5 has provisioned the
+environment-specific trust, service accounts, environment variables, and reviewer gates. The trust
+uses GitHub's immutable `OWNER@OWNER-ID/REPO@REPO-ID` subject form in addition to independent
+repository-ID, owner-ID, branch, and environment checks. The initial staging smoke failed closed on
+the legacy subject condition; the zero-destroy remediation is drift-free. After required review,
+both the staging retry and production smoke passed short-lived exchange and read-only project access.
+No automated cloud deployment is enabled by this contract, and repository files contain neither a
+service-account key nor another credential payload.
 
 Web-process startup verifies the application and checkpoint schemas without applying DDL. It also
 reconciles a persisted `running` Run only when its last update is older than the configured API Run
