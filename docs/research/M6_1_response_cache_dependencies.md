@@ -1,6 +1,6 @@
 # M6.1 response-cache dependency and infrastructure record
 
-Status: Implemented private-demo selection | 2026-10-31
+Status: Implemented private-demo selection | selected 2026-10-31 | dependency maintenance qualified 2026-11-10
 
 ## Decision scope
 
@@ -11,7 +11,7 @@ This record supports ADR-028 and M6.1. It approves a loopback-only, non-persiste
 | Component | Pin | Integrity/identity | Role |
 |---|---|---|---|
 | Redis Open Source | `8.10.2-alpine3.23` | multi-architecture digest `sha256:9f8d2d789b9a1d1e3f283f979aa9cbf393373806472e1ccd460e2f9c869b833b` | loopback cache and vector-search index |
-| RedisVL | `0.28.0` | wheel `sha256:0f013853a54219651355ec3a6c5a3d2c5cdf02935ffc0aa27c9cb80e2023d306` in `uv.lock` | filtered semantic-cache adapter |
+| RedisVL | `0.31.0` | wheel `sha256:fb20dc06f02a99bbc3d61512bb5e8261b5630e70e744e2cd8046c0e86df3490e` in `uv.lock` | filtered semantic-cache adapter |
 | redis-py | resolved by `uv.lock` through RedisVL | locked transitive dependency | Redis protocol client |
 | FastEmbed | `0.9.1` from the lock | wheel `sha256:95042ac7f685bda6697861066d49f8b119fbde8b75ed5162bbb7e84e2dad0e1d` | local query vectors; no external embedding request |
 | Dense encoder | `BAAI/bge-small-en-v1.5` | revision `aa8f8b060edb00e03bfdd08813a2949946c8ba55`; artifact `sha256:51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431` | 384-dimensional semantic comparison shared with M1 |
@@ -45,4 +45,6 @@ Redis 8 offers RSALv2, SSPLv1, or AGPLv3; the private demo consumes the unmodifi
 ## Qualification result
 
 The pinned image started successfully on 2026-10-31. `redis-cli CONFIG GET` confirmed `save` empty, `appendonly no`, `maxmemory 268435456`, and `maxmemory-policy allkeys-lru`. The opt-in real-Redis test passed and verified filtered exact/semantic lookup, Session isolation, and purge. Ordinary tests keep the cache disabled and do not require Docker or credentials.
+
+RedisVL `0.31.0` was requalified on 2026-11-10 against the same pinned Redis image. The opt-in real-Redis test passed and again verified filtered lookup, cross-Session isolation, and purge; the ordinary backend suite and strict type check also passed. This maintenance update does not change the application-owned eligibility, scope, evidence, TTL, or fail-open policies.
 
