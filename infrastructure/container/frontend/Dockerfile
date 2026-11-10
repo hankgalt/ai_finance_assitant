@@ -1,4 +1,4 @@
-FROM node:24.11.0-alpine3.22@sha256:f36fed0b2129a8492535e2853c64fbdbd2d29dc1219ee3217023ca48aebd3787 AS build
+FROM node:24.22.2-alpine3.24@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS build
 
 ARG VCS_REF=unknown
 WORKDIR /workspace/frontend
@@ -10,7 +10,7 @@ COPY frontend/ ./
 COPY contracts/ /workspace/contracts/
 RUN pnpm build
 
-FROM nginxinc/nginx-unprivileged:1.29.3-alpine3.22-slim@sha256:df9d99123d80117ea348470175f20abe85befd1ed361ea6207eaf49ab5a30ed9
+FROM nginx/nginx-unprivileged:1.30.6-alpine3.24-slim@sha256:e333a5b95605942b5e495645ee54fab02b112081de6dbe45d2ead3ef38e03e31 AS runtime
 
 ARG VCS_REF=unknown
 LABEL org.opencontainers.image.source="https://github.com/hankgalt/ai_finance_assitant" \

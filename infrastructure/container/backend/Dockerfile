@@ -1,10 +1,6 @@
-FROM python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c
+FROM python:3.12.16-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS builder
 
-ARG UV_VERSION=0.12.5
-ARG VCS_REF=unknown
-
-LABEL org.opencontainers.image.source="https://github.com/hankgalt/ai_finance_assitant" \
-      org.opencontainers.image.revision="${VCS_REF}"
+ARG UV_VERSION=0.13.4
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -22,12 +18,28 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 COPY backend/src ./src
 RUN uv sync --frozen --no-dev --no-editable \
-    && python -c "from ai_finance_assistant.knowledge.representations import FastEmbedEncoder; encoder = FastEmbedEncoder(); encoder.embed_dense(['cache warmup']); encoder.embed_sparse(['cache warmup'])" \
-    && groupadd --gid 10001 aifa \
-    && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin aifa \
-    && chown -R 10001:10001 /app /opt/fastembed-cache
+    && python -c "from ai_finance_assistant.knowledge.representations import FastEmbedEncoder; encoder = FastEmbedEncoder(); encoder.embed_dense(['cache warmup']); encoder.embed_sparse(['cache warmup'])"
 
-ENV HF_HUB_OFFLINE=1
+FROM python:3.12.16-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS runtime
+
+ARG VCS_REF=unknown
+
+LABEL org.opencontainers.image.source="https://github.com/hankgalt/ai_finance_assitant" \
+      org.opencontainers.image.revision="${VCS_REF}"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    FASTEMBED_CACHE_PATH=/opt/fastembed-cache \
+    PATH="/app/.venv/bin:${PATH}" \
+    HF_HUB_OFFLINE=1
+
+WORKDIR /app
+
+RUN groupadd --gid 10001 aifa \
+    && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin aifa
+
+COPY --from=builder --chown=10001:10001 /app /app
+COPY --from=builder --chown=10001:10001 /opt/fastembed-cache /opt/fastembed-cache
 
 USER 10001:10001
 EXPOSE 8080

@@ -190,10 +190,36 @@ def test_container_builds_are_non_root_pinned_and_base_path_scoped() -> None:
     )
     nginx = (REPO_ROOT / "infrastructure/container/frontend/nginx.conf").read_text(encoding="utf-8")
 
-    assert re.search(r"^FROM [^\n]+@sha256:[0-9a-f]{64}", backend, re.MULTILINE)
+    backend_base = (
+        "python:3.12.16-slim-bookworm@sha256:"
+        "935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df"
+    )
+    assert backend.count(f"FROM {backend_base}") == 2
+    assert f"FROM {backend_base} AS builder" in backend
+    assert f"FROM {backend_base} AS runtime" in backend
+    assert "ARG UV_VERSION=0.13.4" in backend
+    runtime_stage = backend.split(f"FROM {backend_base} AS runtime", maxsplit=1)[1]
+    assert "pip install" not in runtime_stage
+    assert "uv sync" not in runtime_stage
+    assert "COPY --from=builder --chown=10001:10001 /app /app" in runtime_stage
+    assert (
+        "COPY --from=builder --chown=10001:10001 /opt/fastembed-cache "
+        "/opt/fastembed-cache" in runtime_stage
+    )
     assert "USER 10001:10001" in backend
     assert "HF_HUB_OFFLINE=1" in backend
     assert "FastEmbedEncoder" in backend
+    frontend_builder = (
+        "node:24.22.2-alpine3.24@sha256:"
+        "a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8"
+    )
+    frontend_runtime = (
+        "nginx/nginx-unprivileged:1.30.6-alpine3.24-slim@sha256:"
+        "e333a5b95605942b5e495645ee54fab02b112081de6dbe45d2ead3ef38e03e31"
+    )
+    assert f"FROM {frontend_builder} AS build" in frontend
+    assert f"FROM {frontend_runtime} AS runtime" in frontend
+    assert "nginxinc/nginx-unprivileged" not in frontend
     assert len(re.findall(r"^FROM [^\n]+@sha256:[0-9a-f]{64}", frontend, re.MULTILINE)) == 2
     assert "USER 101:101" in frontend
     assert "COPY contracts/ /workspace/contracts/" in frontend

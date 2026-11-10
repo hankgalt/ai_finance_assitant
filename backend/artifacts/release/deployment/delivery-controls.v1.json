@@ -29,7 +29,7 @@
     },
     {
       "check": "backend credential-free suite",
-      "result": "375 passed, 10 skipped"
+      "result": "375 passed, 6 skipped, 4 deselected"
     },
     {
       "check": "PostgreSQL managed-state qualification",
@@ -45,11 +45,11 @@
     },
     {
       "check": "backend container",
-      "result": "built; UID/GID 10001:10001; dense and sparse encoders passed with networking disabled"
+      "result": "built as separate builder/runtime stages; UID/GID 10001:10001; uv and its build cache absent from runtime; dense and sparse encoders passed with networking disabled; Trivy v0.76.2 reported zero HIGH/CRITICAL findings"
     },
     {
       "check": "frontend container",
-      "result": "built; UID/GID 101:101; /finance_assistant served; root and missed API paths returned 404"
+      "result": "built from the maintained official unprivileged NGINX image; UID/GID 101:101; /finance_assistant served; root and missed API paths returned 404; Trivy v0.76.2 reported zero HIGH/CRITICAL findings"
     },
     {
       "check": "locked Python production dependency audit",
