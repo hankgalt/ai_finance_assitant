@@ -14,7 +14,7 @@ DELIVERY_EVIDENCE = REPO_ROOT / "backend/artifacts/release/deployment/delivery-c
 ACTION_REF = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)(?:\s+#.*)?$", re.MULTILINE)
 IMMUTABLE_ACTION_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
 PINNED_PNPM_SETUP = re.compile(
-    r"- uses: pnpm/action-setup@[0-9a-f]{40}[^\n]*\n"
+    r"- uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0\n"
     r"\s+with:\n"
     r"\s+version: 11\.25\.0(?:\n|$)"
 )

@@ -20,7 +20,8 @@ independent backup approver. The machine-readable boundary is
 - Deterministic backend CI uses the locked Python environment, formatting, lint, typing, the
   credential-free suite, and a digest-pinned PostgreSQL 17.11 service for the managed-state
   qualification. Frontend CI runs the frozen pnpm install, formatting, lint, typing, unit tests, and
-  the `/finance_assistant` production build.
+  the `/finance_assistant` production build. Both pnpm callers use the immutable
+  `pnpm/action-setup` v6.1.0 revision, whose action runtime is Node.js 24.
 - Every third-party GitHub Action reference is pinned to a full commit SHA. Dependabot covers
   GitHub Actions, Python/uv, pnpm, and both Dockerfiles; delivery paths are owned by `@hankgalt`.
 - Scheduled and change-triggered security checks cover dependency review/audits, secret scanning,
@@ -45,11 +46,12 @@ independent backup approver. The machine-readable boundary is
 | --- | --- |
 | Initial `pytest -q -x backend/tests/test_delivery_workflows.py` | expected red: delivery policy did not exist |
 | Initial `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py -k trivy` | expected red: workflows used the Trivy Action v0.33.1 default scanner |
+| Initial `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py -k pnpm_setup` | expected red: workflows used the Node.js 20-based pnpm Action v4 |
 | `backend/.venv/bin/python -m pytest -q backend/tests/test_delivery_workflows.py` | 11 passed |
 | `backend/.venv/bin/ruff format --check backend/src backend/tests` | 156 files already formatted |
 | `backend/.venv/bin/ruff check backend/src backend/tests` | passed |
 | `backend/.venv/bin/mypy` | passed for 156 source/test files |
-| `backend/.venv/bin/python -m pytest -q` | 375 passed, 10 skipped in 6.39 s |
+| `backend/.venv/bin/python -m pytest -q` | 375 passed, 10 skipped in 6.26 s |
 | Trivy installer URL check for v0.65.0 / v0.76.2 | HTTP 404 / HTTP 200 |
 | PostgreSQL 17.11 managed-state qualification | 5 passed, 2 deselected in 1.75 s |
 | `UV_CACHE_DIR=/tmp/aifa-uv-cache uv lock --check --offline` | 136 packages resolved; lock current |
@@ -68,10 +70,13 @@ Dockerfile now copies that shared contract without duplicating it. The first loc
 attempt was denied by the managed sandbox's loopback boundary; the identical test passed after the
 test process received loopback permission. The first GitHub dependency-audit run also showed that
 `pnpm/action-setup` cannot discover `frontend/package.json` from the repository root; both workflow
-callers now pass the locked pnpm version explicitly. The first Gitleaks pull-request run required
-GitHub's automatic token to be mapped explicitly; the secret-scan job now has read-only PR metadata
-access with commenting disabled. The first repository-scan run then exposed an upstream installer
-compatibility failure: the Trivy Action v0.33.1 defaulted to Trivy v0.65.0, while the installer it
+callers now pass the locked pnpm version explicitly. The next GitHub-hosted Deterministic CI run
+completed successfully but warned that the pnpm Action v4 runtime targeted deprecated Node.js 20;
+both callers now pin the Node.js 24-based pnpm Action v6.1.0 revision. The first Gitleaks
+pull-request run required GitHub's automatic token to be mapped explicitly; the secret-scan job now
+has read-only PR metadata access with commenting disabled. The first repository-scan run then
+exposed an upstream installer compatibility failure: the Trivy Action v0.33.1 defaulted to Trivy
+v0.65.0, while the installer it
 checked out from the current Trivy `main` branch returned HTTP 404 for that release's generated
 `get.trivy.dev` binary URL. Repository and image scans now use the immutable Trivy Action v0.36.0
 revision and explicitly pin Trivy v0.76.2; the generated binary URL returns HTTP 200. No successful
