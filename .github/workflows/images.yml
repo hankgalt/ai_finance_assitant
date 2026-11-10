@@ -1,0 +1,90 @@
+name: Container images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: images-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BACKEND_IMAGE: ghcr.io/hankgalt/ai-finance-assitant-backend
+  FRONTEND_IMAGE: ghcr.io/hankgalt/ai-finance-assitant-frontend
+
+jobs:
+  build-scan-publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Build immutable-revision images
+        run: |
+          docker build --file infrastructure/container/backend/Dockerfile --build-arg VCS_REF="$GITHUB_SHA" --tag "aifa-backend:$GITHUB_SHA" .
+          docker build --file infrastructure/container/frontend/Dockerfile --build-arg VCS_REF="$GITHUB_SHA" --tag "aifa-frontend:$GITHUB_SHA" .
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          scan-type: image
+          image-ref: aifa-backend:${{ github.sha }}
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          scan-type: image
+          image-ref: aifa-frontend:${{ github.sha }}
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Push revision-tagged images
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker tag "aifa-backend:$GITHUB_SHA" "$BACKEND_IMAGE:$GITHUB_SHA"
+          docker tag "aifa-frontend:$GITHUB_SHA" "$FRONTEND_IMAGE:$GITHUB_SHA"
+          backend_output="$(docker push "$BACKEND_IMAGE:$GITHUB_SHA")"
+          printf '%s\n' "$backend_output"
+          frontend_output="$(docker push "$FRONTEND_IMAGE:$GITHUB_SHA")"
+          printf '%s\n' "$frontend_output"
+          backend_digest="$(printf '%s\n' "$backend_output" | sed -n 's/^.*digest: \(sha256:[0-9a-f]\{64\}\).*$/\1/p' | tail -n 1)"
+          frontend_digest="$(printf '%s\n' "$frontend_output" | sed -n 's/^.*digest: \(sha256:[0-9a-f]\{64\}\).*$/\1/p' | tail -n 1)"
+          test -n "$backend_digest"
+          test -n "$frontend_digest"
+          echo "backend-digest=$backend_digest" >> "$GITHUB_OUTPUT"
+          echo "frontend-digest=$frontend_digest" >> "$GITHUB_OUTPUT"
+      - name: Attest backend image provenance
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ${{ env.BACKEND_IMAGE }}
+          subject-digest: ${{ steps.publish.outputs.backend-digest }}
+          push-to-registry: true
+      - name: Attest frontend image provenance
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ${{ env.FRONTEND_IMAGE }}
+          subject-digest: ${{ steps.publish.outputs.frontend-digest }}
+          push-to-registry: true
+

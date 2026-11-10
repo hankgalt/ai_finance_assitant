@@ -1,6 +1,6 @@
 services:
   qdrant:
-    image: qdrant/qdrant:v1.20.0
+    image: qdrant/qdrant:v1.20.0@sha256:9bfc89f9914fc14876a88c05270685921a55b8877b254a98bcc1cc2f0a424cd2
     restart: unless-stopped
     ports:
       - "127.0.0.1:6333:6333"
@@ -37,7 +37,7 @@ services:
       start_period: 5s
 
   postgres-managed-state:
-    image: postgres:17.11-alpine3.23
+    image: postgres:17.11-alpine3.23@sha256:bc2701f9a79f9248bcb18743bc9b2c732d9a1d16737ca44a8f577752fc43b61f
     profiles: ["managed-state"]
     restart: "no"
     environment:
@@ -56,7 +56,7 @@ services:
       start_period: 5s
 
   otel-collector:
-    image: otel/opentelemetry-collector:0.164.0
+    image: otel/opentelemetry-collector:0.164.0@sha256:28b6d41ac51bff6b41ba5e8fe503569ffb9d6a1ea90f7a78419e86f34e44f750
     profiles: ["observability"]
     restart: unless-stopped
     command: ["--config=/etc/otelcol/config.yaml"]

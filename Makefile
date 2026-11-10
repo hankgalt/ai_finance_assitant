@@ -10,7 +10,7 @@ QDRANT_URL ?= http://127.0.0.1:6333
 	response-cache-check response-cache-calibrate response-cache-benchmark m6-1-check m8-check \
 	mcp-stdio m9-check managed-state-migrate managed-state-status managed-state-retention \
 	managed-state-postgres-up managed-state-postgres-status managed-state-postgres-stop \
-	managed-state-postgres-check
+	managed-state-postgres-check delivery-check container-build
 
 backend-sync:
 	cd backend && uv sync
@@ -44,6 +44,13 @@ managed-state-postgres-stop:
 
 managed-state-postgres-check:
 	cd backend && AIFA_TEST_POSTGRES_DSN=postgresql://aifa_qualification@127.0.0.1:55432/aifa_qualification uv run pytest -q -m postgres tests/test_managed_persistence.py
+
+delivery-check:
+	cd backend && uv run pytest -q tests/test_delivery_workflows.py tests/test_release_bundle.py
+
+container-build:
+	docker build --file infrastructure/container/backend/Dockerfile --tag ai-finance-assistant-backend:local .
+	docker build --file infrastructure/container/frontend/Dockerfile --tag ai-finance-assistant-frontend:local .
 
 frontend-install:
 	cd frontend && pnpm install

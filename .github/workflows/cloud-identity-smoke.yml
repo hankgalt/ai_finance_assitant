@@ -1,0 +1,45 @@
+name: Cloud identity smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Protected GitHub environment to verify
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify-short-lived-gcp-identity:
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Require environment-owned non-secret identity configuration
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GCP_PROJECT_ID"
+          test -n "$GCP_WORKLOAD_IDENTITY_PROVIDER"
+          test -n "$GCP_DEPLOY_SERVICE_ACCOUNT"
+      - name: Exchange GitHub OIDC token for short-lived GCP credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+      - name: Verify read-only project access
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+        run: gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectId)'
+
