@@ -1,7 +1,7 @@
 # M11 delivery report — Staging infrastructure foundation
 
 Status: Foundation provisioned and last applied plans drift-free; staging and production keyless
-identity qualified; managed-state images mirrored and operator jobs defined; real-service recovery, workload, and no-
+identity qualified; managed-state images mirrored and operator jobs provisioned; real-service recovery, workload, and no-
 bypass qualification pending | 2026-11-10
 
 ## Scope and decisions
@@ -43,10 +43,11 @@ The live qualification record is
 - Capability-oriented Terraform modules, a non-secret operator wizard, a plan-only GitHub workflow,
   policy tests, and release evidence are committed under their infrastructure, delivery, contract,
   test, and release owners.
-- Three non-HTTP Cloud Run jobs are defined for migration, synthetic qualification, and retention.
+- Three non-HTTP Cloud Run jobs are provisioned for migration, synthetic qualification, and
+  retention.
   Each uses its dedicated IAM database identity, Direct VPC private egress, a digest-pinned backend
-  image, and a digest-pinned Cloud SQL Auth Proxy with automatic IAM authentication. These new
-  resources are not yet applied or represented as operational.
+  image, and a digest-pinned Cloud SQL Auth Proxy with automatic IAM authentication. The jobs have
+  not been executed and are not represented as operational or recovery-qualified.
 - Because the selected jobs no longer use DSN secret payloads, the expanded plan removes the three
   PostgreSQL secret-access IAM bindings. The protected empty secret containers remain historical
   metadata; only the runtime Qdrant identity retains its not-yet-used secret-access binding.
@@ -73,6 +74,7 @@ The live qualification record is
 | Expanded operator/recovery regression suite | 392 passed, 8 skipped, 4 deselected; 11 opt-in managed PostgreSQL tests passed separately |
 | First operator-job apply | failed closed on mixed GHCR/GCR registries; 0 jobs created; 3 obsolete PostgreSQL secret-access bindings removed as planned |
 | Artifact Registry mirror | backend and Cloud SQL proxy source manifests retained their reviewed sha256 digests |
+| Corrected operator-job apply | 3 jobs added, 0 changed, 0 destroyed; wizard stopped before execution on a post-apply `gcloud` JSON selector defect |
 | Cloud SQL live readback | `RUNNABLE`; PostgreSQL 17; private IP only; `ENCRYPTED_ONLY`; IAM auth on |
 | Backup/storage live readback | 10 GiB SSD; auto-grow limit 20 GiB; 7 backups; 3-day transaction logs |
 | Artifact Registry live readback | Docker standard repository with immutable tags |
@@ -118,9 +120,9 @@ qualification.
 
 ## Stop gate and remaining evidence
 
-- The earlier foundation Terraform workflow passed its approval-gated GitHub plan. The corrected
-  single-registry operator-job configuration must pass a new approval-gated staging plan after this
-  branch is merged and the staging environment receives the Artifact Registry backend digest.
+- The corrected single-registry plan added the three private operator jobs. A post-apply JSON
+  selector defect stopped the wizard before migration, qualification, retention, owner elevation,
+  backup restore, or PITR; the selector fix must merge before the wizard resumes from a clean `main`.
 - Slice 3 remains short of its real-service gate: migrations, retention, restart behavior,
   backup/restore, PITR, and recovery must run from an authorized VPC-connected execution path.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls

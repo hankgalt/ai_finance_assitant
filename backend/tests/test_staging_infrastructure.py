@@ -84,7 +84,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
         "mixed_registry_hosts_allowed": False,
         "http_endpoint": False,
-        "status": "defined_not_applied",
+        "status": "applied_not_executed",
     }
     assert contract["workload_boundary"]["cloud_run_ingress"] == (
         "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
@@ -348,6 +348,9 @@ def test_cloud_sql_recovery_wizard_removes_elevation_and_temporary_instances() -
     assert "--data-api-access=DISALLOW_DATA_API" in wizard
     assert 'gcloud run jobs execute "$MIGRATION_JOB"' in wizard
     assert 'gcloud run jobs execute "$RETENTION_JOB"' in wizard
+    assert "jq -er" in wizard
+    assert ".spec.template.spec.template.spec.containers[]" in wizard
+    assert ".template.template.containers[]" not in wizard
     assert "ai_finance_assistant.persistence.qualification" in wizard
     assert 'gcloud sql backups restore "$BACKUP_ID"' in wizard
     assert "--database-flags=cloudsql.iam_authentication=on" in wizard
