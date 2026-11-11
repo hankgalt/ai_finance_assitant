@@ -141,20 +141,20 @@
   "managed_state_operator_jobs": {
     "status": "migration_and_prepare_executed_recovery_pending",
     "migration": {
-      "execution": "aifa-staging-migrate-xrbw9",
+      "execution": "aifa-staging-migrate-cldkf",
       "status": "passed"
     },
     "qualification_prepare": {
-      "execution": "aifa-staging-qualify-gpp85",
+      "execution": "aifa-staging-qualify-nxtgm",
       "status": "passed"
     },
     "retention": {
       "status": "not_executed"
     },
     "recovery_attempt": {
-      "backup_run_id": "1794360676084",
-      "backup_name": "projects/comfforts-369117/backups/fd4e3c05-0df3-4ab8-a82f-c211ff4213b0",
-      "backup_restore": "rejected_before_instance_creation_because_configuration_overrides_used_numeric_backup_id",
+      "backup_run_id": "1794362874451",
+      "backup_name": "projects/comfforts-369117/backups/d06322a0-666b-4387-ba20-7c1d0d98d3e6",
+      "backup_restore": "not_attempted_because_create_output_exposed_no_id_field",
       "point_in_time_recovery": "not_executed",
       "temporary_instances_created": false,
       "qualification_backup_cleanup": "deleted_after_explicit_operator_confirmation"

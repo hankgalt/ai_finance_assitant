@@ -450,6 +450,12 @@ numeric backup-run ID. The corrected procedure resolves the unique fully qualifi
 uses that name for restore and cleanup, and regression-tests that `--backup-instance` is absent from
 the name-based restore. No temporary restore instance was created; the failed run's exact on-demand
 backup was deleted after explicit operator confirmation.
+The next run again passed migration and synthetic preparation and created a successful on-demand
+backup, but stopped before restore because the current named-backup create response exposed no `id`
+field. The procedure now treats the fully qualified backup name as authoritative and derives the
+legacy numeric run ID, retained only for evidence, from that resource's `backupRun` metadata. No
+temporary restore instance was created; this latest exact on-demand backup was deleted after
+explicit operator confirmation.
 The initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
 subject remediation changed only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
 production smoke both passed after required review. Real-service recovery, the staging workload,
