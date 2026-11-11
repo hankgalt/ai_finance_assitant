@@ -96,7 +96,7 @@ module "managed_state_jobs" {
   region                   = var.region
   environment              = "staging"
   backend_image            = var.backend_image
-  cloud_sql_proxy_image    = "gcr.io/cloud-sql-connectors/cloud-sql-proxy@sha256:7d156a5c466e31596afd6c8ed134f19c207a297418392fdad2686524ca4e7a3c"
+  cloud_sql_proxy_image    = "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/cloud-sql-proxy@sha256:7d156a5c466e31596afd6c8ed134f19c207a297418392fdad2686524ca4e7a3c"
   network_id               = module.managed_state.network_id
   subnetwork_id            = module.managed_state.subnetwork_id
   instance_connection_name = module.managed_state.instance_connection_name

@@ -47,7 +47,9 @@ Qdrant Free `us-central1` topology and sole GitHub approver are explicit private
   retention phases verify recovered markers and remove every synthetic source record.
 - Digest-pinned private Cloud Run job definitions provide migration, qualification, and retention
   execution through Direct VPC egress and a Cloud SQL Auth Proxy sidecar using automatic IAM
-  authentication. They are definitions only until the reviewed Terraform plan is applied.
+  authentication. Cloud Run requires the multi-container images to use one registry boundary, so
+  both reviewed manifests are mirrored without digest changes into the approved `us-west1` Artifact
+  Registry. The jobs remain definitions only until the corrected Terraform plan is applied.
 - A credential-gated PostgreSQL qualification test creates a randomly named schema, exercises
   Principal-owned application state and checkpoint-schema restart behavior, and drops only that
   generated schema. Ordinary CI skips it without `AIFA_TEST_POSTGRES_DSN`.

@@ -42,6 +42,12 @@
     "build_provenance_attestation_required": true,
     "high_or_critical_scan_findings_allowed": false
   },
+  "deployment_images": {
+    "source_registry": "ghcr.io",
+    "registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
+    "manifest_copy": "digest_preserving",
+    "mixed_registry_hosts_allowed": false
+  },
   "activation_gates": [
     "merge and pass the Terraform static-validation and staging-plan workflow",
     "complete real-service migration, retention, backup/restore, and recovery qualification",

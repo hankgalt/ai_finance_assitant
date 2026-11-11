@@ -44,6 +44,8 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
             "authentication": "cloud_sql_auth_proxy_automatic_iam",
             "database_password_required": False,
             "dsn_secret_required": False,
+            "operator_image_registry": ("us-west1-docker.pkg.dev/comfforts-369117/aifa-containers"),
+            "mixed_registry_hosts_allowed": False,
             "operator_jobs": "defined_not_applied",
         },
     }

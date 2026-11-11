@@ -431,7 +431,11 @@ contract, and repeatable operator procedure are implemented and locally qualifie
 service Cloud SQL recovery gate remains pending. The slice 5 Terraform state, registry, WIF,
 protected GitHub environments, budget, private network, Cloud SQL, service identities, and empty
 regional secret containers are provisioned; the last applied foundation plans were drift-free. The
-three digest-pinned private Cloud Run operator jobs are defined but not yet applied. The initial staging WIF smoke
+three digest-pinned private Cloud Run operator jobs are defined but not yet applied. Their first
+apply failed closed before creating a job because Cloud Run rejected mixed GHCR/GCR container
+registries; the obsolete PostgreSQL secret-access bindings were removed as planned. Both image
+manifests are now mirrored with unchanged digests into the approved `us-west1` Artifact Registry,
+and the corrected Terraform input rejects mixed registries before apply. The initial staging WIF smoke
 failed closed on a legacy name-only subject condition; the immutable-ID subject remediation changed
 only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
 production smoke both passed after required review. Real-service recovery, the staging workload,
