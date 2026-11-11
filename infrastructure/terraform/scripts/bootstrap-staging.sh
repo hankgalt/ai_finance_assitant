@@ -222,6 +222,37 @@ REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 BOOTSTRAP_ROOT="$REPO_ROOT/infrastructure/terraform/bootstrap"
 SHARED_ROOT="$REPO_ROOT/infrastructure/terraform/shared"
 STAGING_ROOT="$REPO_ROOT/infrastructure/terraform/environments/staging"
+NETWORKING_FOUNDATION_STATE=$(printf '%s\n' \
+  'module.managed_state.google_compute_global_address.private_services' \
+  'module.managed_state.google_compute_network.private' \
+  'module.managed_state.google_service_networking_connection.private_services' |
+  LC_ALL=C sort)
+
+networking_foundation_is_only_state() {
+  local current_state
+  current_state=$(terraform -chdir="$STAGING_ROOT" state list | LC_ALL=C sort) || return 1
+  [[ "$current_state" == "$NETWORKING_FOUNDATION_STATE" ]]
+}
+
+source_cloud_sql_is_absent() {
+  local source_instances
+  source_instances=$(gcloud sql instances list \
+    --project="$PROJECT_ID" \
+    --filter="name=$SOURCE_INSTANCE" \
+    --format='value(name)') || return 1
+  [[ -z "$source_instances" ]]
+}
+
+runtime_is_absent_with_networking_foundation() {
+  networking_foundation_is_only_state && source_cloud_sql_is_absent
+}
+
+finish_with_networking_foundation() {
+  say "The billable demo runtime is absent."
+  say "Retaining the approved private networking foundation."
+  note "Cloud SQL producer networking can remain reserved during Google's post-delete recovery window."
+  finish
+}
 
 # ── Stage 1: local identity and tool preflight ─────────────────────────────
 stage "Verify local identity and tools"
@@ -267,7 +298,8 @@ if [[ "$ACTION" == "down" ]]; then
   stage "Review and destroy the demo runtime"
   say "Bootstrap state, shared Artifact Registry, WIF, budget, and the Qdrant cluster are outside this staging state."
   warn "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data will be permanently deleted."
-  warn "This also deletes staging service identities, jobs, networking, and regional Secret Manager payloads."
+  warn "This also deletes staging service identities, jobs, and regional Secret Manager payloads."
+  say "The approved private networking foundation remains available for the next demo runtime."
   warn "Backup/PITR recovery is not part of the private-demo MVP."
   terraform -chdir="$STAGING_ROOT" init -reconfigure \
     -backend-config="bucket=$STAGING_BUCKET" \
@@ -275,6 +307,10 @@ if [[ "$ACTION" == "down" ]]; then
   if [[ -z "$(terraform -chdir="$STAGING_ROOT" state list)" ]]; then
     say "The staging runtime state is already empty; nothing needs to be destroyed."
     finish
+    return
+  fi
+  if runtime_is_absent_with_networking_foundation; then
+    finish_with_networking_foundation
     return
   fi
   if CURRENT_DATABASE_TIER=$(gcloud sql instances describe "$SOURCE_INSTANCE" \
@@ -327,10 +363,18 @@ if [[ "$ACTION" == "down" ]]; then
     warn "confirmation did not match; nothing was destroyed"
     exit 1
   }
-  terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"
-  say "The demo runtime is absent; the reproducibility foundation remains."
-  finish
-  return
+  if terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"; then
+    say "The demo runtime is absent; the reproducibility foundation remains."
+    finish
+    return
+  fi
+  if runtime_is_absent_with_networking_foundation; then
+    warn "Google still reserves the deleted Cloud SQL producer networking, so Terraform could not delete the connection."
+    finish_with_networking_foundation
+    return
+  fi
+  warn "the destroy apply failed and resources outside the approved networking foundation remain"
+  exit 1
 fi
 
 pause "Continue to the remote-state bootstrap?"

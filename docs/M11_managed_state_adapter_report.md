@@ -1,8 +1,8 @@
 # M11 delivery report — Managed-state adapter and operating contract
 
-Status: PostgreSQL adapter and recovery procedure qualified locally; the private-demo teardown
-partially completed, with database-before-user ordering and resume safety locally qualified but not
-yet applied; Cloud SQL live recovery deferred | 2026-11-11
+Status: PostgreSQL adapter and recovery procedure qualified locally; the billable private-demo
+runtime is absent, the approved private-networking foundation remains, and exact-residue acceptance
+is locally qualified but not yet applied; Cloud SQL live recovery deferred | 2026-11-11
 
 ## Scope and decisions
 
@@ -118,10 +118,10 @@ API key.
   successful recovered-target verification, backup restore, or PITR rehearsal. Retention and
   namespaced synthetic-state cleanup have passed through the private Cloud SQL path.
 - The locally passing complete two-Principal REST/SSE/History/Inspector matrix remains required at
-  the assembled staging workload gate. The first destroy removed the application database and
-  other staging resources, but left the historical instance and three IAM database users after a
-  concurrent deletion failure. Merge and apply the resume-safe ordering fix, then prove clean
-  `db-g1-small` recreation and the migration/runtime/retention role boundary. These are MVP gates.
+  the assembled staging workload gate. The reviewed teardown removed Cloud SQL and all billable
+  managed-state resources. The approved VPC, allocated internal range, and Service Networking
+  connection remain for reuse. Merge the exact-residue acceptance, then prove clean `db-g1-small`
+  recreation and the migration/runtime/retention role boundary. These are MVP gates.
 - Completing the synthetic recovery procedure, seven-backup/three-day-PITR restore, deletion
   reconciliation, timed RPO/RTO, capacity/overlap qualification, and schema/image rollback is
   deferred post-MVP hardening. The targets in the recovery contract are not operational claims.

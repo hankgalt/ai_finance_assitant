@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "partial_destroy_resume_fix_defined_not_applied",
+  "status": "runtime_absent_networking_foundation_retained",
   "private_demo_mvp": {
     "scope": "owner_operated_deployed_feature_parity",
     "target_machine_tier": "db-g1-small",
@@ -15,7 +15,8 @@
       "terraform_state",
       "artifact_registry_images",
       "workload_identity",
-      "non_secret_configuration"
+      "non_secret_configuration",
+      "private_networking"
     ]
   },
   "application_state": {
@@ -26,7 +27,7 @@
     "region": "us-west1",
     "availability": "single_zone",
     "machine_tier": "db-g1-small",
-    "provisioned_machine_tier": "db-f1-micro",
+    "provisioned_machine_tier": null,
     "storage": {
       "type": "ssd",
       "capacity_gib": 10,
@@ -41,7 +42,7 @@
     "deployed_store_initialization": "empty",
     "local_development_backend": "sqlite",
     "staging_instance": "aifa-staging-postgres",
-    "external_configuration_status": "partial_teardown_resume_fix_pending",
+    "external_configuration_status": "runtime_absent",
     "connection": {
       "transport": "direct_vpc_egress_private_ipv4",
       "authentication": "cloud_sql_auth_proxy_automatic_iam",
@@ -119,6 +120,7 @@
     "separate_secrets": true,
     "ephemeral_restore_instance": true,
     "foundation_provisioned": false,
+    "networking_foundation_retained": true,
     "recovery_policy": "contracts/deployment/recovery-policy.v1.json"
   },
   "qdrant": {

@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
+import textwrap
 from pathlib import Path
 from typing import Any, cast
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TERRAFORM_ROOT = REPO_ROOT / "infrastructure/terraform"
@@ -47,14 +52,15 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "partial_destroy_resume_fix_defined_not_applied"
+    assert contract["status"] == "runtime_absent_networking_foundation_retained"
     assert contract["private_demo_mvp"] == {
         "target_database_tier": "db-g1-small",
         "runtime_lifecycle": "on_demand_create_destroy_recreate",
         "empty_store_on_create": True,
         "data_preservation_on_destroy": False,
         "backup_restore_gate": "deferred_post_mvp",
-        "current_provisioned_foundation_requires_replacement": True,
+        "current_provisioned_foundation_requires_replacement": False,
+        "persistent_private_networking_foundation": True,
     }
     assert contract["project"] == {
         "id": "comfforts-369117",
@@ -72,6 +78,11 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     assert contract["state"]["public_access_prevention"] == "enforced"
     assert contract["state"]["uniform_bucket_level_access"] is True
     assert contract["state"]["versioning"] is True
+    assert contract["state"]["persistent_staging_networking"] == [
+        "vpc_network",
+        "private_service_allocated_range",
+        "service_networking_connection",
+    ]
     assert contract["secrets"]["service"] == "regional_secret_manager"
     assert contract["secrets"]["location"] == "us-west1"
     assert contract["secrets"]["payloads_managed_by_terraform"] is False
@@ -87,6 +98,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     assert contract["managed_state"]["transaction_log_retention_days"] == 0
     assert contract["managed_state"]["retain_backups_on_delete"] is False
     assert contract["managed_state"]["deletion_protection"] is False
+    assert contract["managed_state"]["external_configuration_status"] == "runtime_absent"
     assert contract["managed_state_operator_jobs"] == {
         "operations": ["migration", "qualification", "retention"],
         "execution": "cloud_run_v2_jobs",
@@ -109,13 +121,13 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     assert contract["workload_boundary"]["default_uri_disabled"] is True
     assert contract["workload_boundary"]["anonymous_invoker_allowed"] is False
     assert contract["operational_status"] == {
-        "terraform_foundation": "partial_teardown",
-        "final_drift": "create_delete_changes_pending_destroy",
+        "terraform_foundation": "networking_only",
+        "final_drift": "runtime_absent_expected_networking_residue",
         "github_environments": "configured",
         "oidc_smoke": "staging_and_production_qualified",
         "staging_workload": "not_deployed",
         "no_direct_workload_bypass": "not_yet_testable",
-        "mvp_lifecycle_code": "partial_destroy_resume_fix_defined_not_applied",
+        "mvp_lifecycle_code": "networking_foundation_acceptance_defined_not_applied",
     }
 
 
@@ -157,11 +169,11 @@ def test_staging_evidence_records_live_foundation_without_claiming_workload_depl
     assert evidence["regional_secret_metadata"]["payloads_managed_by_terraform"] is False
 
 
-def test_demo_runtime_lifecycle_evidence_records_partial_destroy_and_safe_resume() -> None:
+def test_demo_runtime_lifecycle_evidence_records_runtime_absence_and_networking() -> None:
     evidence = json.loads(LIFECYCLE_EVIDENCE.read_text(encoding="utf-8"))
 
     assert evidence["schema_version"] == "1"
-    assert evidence["status"] == "partial_destroy_resume_fix_defined_not_applied"
+    assert evidence["status"] == "runtime_absent_networking_acceptance_defined_not_applied"
     assert evidence["scope"]["cloud_resources_mutated"] is True
     assert evidence["scope"]["terraform_applied"] is True
     assert evidence["target"]["database_tier"] == "db-g1-small"
@@ -173,10 +185,14 @@ def test_demo_runtime_lifecycle_evidence_records_partial_destroy_and_safe_resume
         "down": "infrastructure/terraform/scripts/demo-runtime-down.sh",
         "destroy_confirmation": "DESTROY EMPTY-DEMO-RUNTIME",
     }
-    assert evidence["live_attempt"]["result"] == "partial_destroy"
+    assert evidence["live_attempt"]["result"] == "runtime_destroyed_networking_foundation_retained"
     assert evidence["live_attempt"]["application_database_present"] is False
-    assert evidence["live_attempt"]["source_instance_present"] is True
-    assert evidence["live_attempt"]["resume_fix_applied"] is False
+    assert evidence["live_attempt"]["source_instance_present"] is False
+    assert evidence["live_attempt"]["iam_database_users_present"] == []
+    assert evidence["live_attempt"]["networking_foundation_retained"] is True
+    assert evidence["live_attempt"]["networking_acceptance_fix_applied"] is False
+    assert "private_networking" in evidence["persistent_foundation"]
+    assert "private_networking" not in evidence["destroyed_staging_scope"]
     assert evidence["deferred"]["cloud_sql_recovery_qualification"] == "post_mvp"
     assert evidence["security"]["secrets_committed"] is False
 
@@ -332,6 +348,8 @@ def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() ->
     assert "SQL_GUARDS_ACTIVE=$(jq -r" in wizard
     assert 'if [[ "$HAS_CREATE_OR_DELETE" == "true" ]]' in wizard
     assert "Skipping the transition apply so deleted resources are not recreated" in wizard
+    assert "runtime_is_absent_with_networking_foundation" in wizard
+    assert "Retaining the approved private networking foundation" in wizard
     assert 'terraform -chdir="$STAGING_ROOT" plan -destroy' in wizard
     assert 'terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"' in wizard
     assert "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data" in wizard
@@ -341,6 +359,139 @@ def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() ->
     assert "tier                            = var.database_tier" in staging
     assert 'variable "database_tier"' in variables
     assert 'default     = "db-g1-small"' in variables
+
+
+@pytest.mark.parametrize(
+    ("residual_before_run", "unexpected_residue", "expected_returncode", "state_checks"),
+    [
+        (True, "", 0, 2),
+        (False, "", 0, 3),
+        (
+            False,
+            "module.regional_secrets.google_secret_manager_regional_secret.secret[unexpected]",
+            1,
+            3,
+        ),
+    ],
+)
+def test_demo_runtime_down_accepts_only_networking_residue_after_provider_delay(
+    tmp_path: Path,
+    residual_before_run: bool,
+    unexpected_residue: str,
+    expected_returncode: int,
+    state_checks: int,
+) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    log = tmp_path / "commands.log"
+    destroy_attempted = tmp_path / "destroy-attempted"
+
+    commands = {
+        "git": """
+            case "$*" in
+              "branch --show-current") printf 'main\\n' ;;
+              "status --porcelain") ;;
+              "rev-parse origin/main"|"rev-parse HEAD") printf 'approved-main\\n' ;;
+              *) exit 1 ;;
+            esac
+        """,
+        "gcloud": """
+            case "$*" in
+              "auth list --filter=status:ACTIVE --format=value(account)")
+                printf 'vtalwar.w@comfforts.com\\n'
+                ;;
+              "config get-value project") printf 'comfforts-369117\\n' ;;
+              *"sql instances describe aifa-staging-postgres"*)
+                if [[ -f "$DESTROY_ATTEMPTED" ]]; then exit 1; fi
+                if [[ "$*" == *"--format=json"* ]]; then
+                  printf '%s' '{"settings":{"tier":"db-f1-micro",'
+                  printf '%s' '"deletionProtectionEnabled":false,"backupConfiguration":{'
+                  printf '%s' '"enabled":false,"pointInTimeRecoveryEnabled":false},'
+                  printf '%s' '"retainBackupsOnDelete":false,'
+                  printf '%s\\n' '"finalBackupConfig":{"enabled":false}}}'
+                else
+                  printf 'db-f1-micro\\n'
+                fi
+                ;;
+              *"sql instances list"*)
+                if [[ ! -f "$DESTROY_ATTEMPTED" ]]; then
+                  printf 'aifa-staging-postgres\\n'
+                fi
+                ;;
+              *) exit 1 ;;
+            esac
+        """,
+        "terraform": """
+            printf '%s\\n' "$*" >> "$FAKE_COMMAND_LOG"
+            case "$*" in
+              "version") printf 'Terraform v1.17.1\\n' ;;
+              *" state list")
+                printf '%s\\n' \\
+                  'module.managed_state.google_compute_global_address.private_services' \\
+                  'module.managed_state.google_compute_network.private' \\
+                  'module.managed_state.google_service_networking_connection.private_services'
+                if [[ ! -f "$DESTROY_ATTEMPTED" ]]; then
+                  printf '%s\\n' 'module.managed_state.google_sql_database_instance.postgres'
+                elif [[ -n "$UNEXPECTED_RESIDUE" ]]; then
+                  printf '%s\\n' "$UNEXPECTED_RESIDUE"
+                fi
+                ;;
+              *" show -json "*)
+                printf '%s\\n' '{"resource_changes":[{"change":{"actions":["update"]}}]}'
+                ;;
+              *" show -no-color "*) printf 'reviewed plan\\n' ;;
+              *" apply "*"aifa-demo-destroy"*)
+                : > "$DESTROY_ATTEMPTED"
+                printf '%s%s\\n' 'Failed to delete connection; ' \\
+                  'Producer services are still using this connection.' >&2
+                exit 1
+                ;;
+              *" init "*|*" plan "*|*" apply "*) ;;
+              *) exit 1 ;;
+            esac
+        """,
+    }
+    for name, body in commands.items():
+        executable = fake_bin / name
+        executable.write_text(
+            "#!/usr/bin/env bash\nset -euo pipefail\n" + textwrap.dedent(body),
+            encoding="utf-8",
+        )
+        executable.chmod(0o755)
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "PATH": f"{fake_bin}:{environment['PATH']}",
+            "TMPDIR": str(tmp_path),
+            "FAKE_COMMAND_LOG": str(log),
+            "DESTROY_ATTEMPTED": str(destroy_attempted),
+            "UNEXPECTED_RESIDUE": unexpected_residue,
+            "GCP_BACKEND_IMAGE": (
+                "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/"
+                f"finance-assistant-backend@sha256:{'0' * 64}"
+            ),
+        }
+    )
+    if residual_before_run:
+        destroy_attempted.touch()
+    result = subprocess.run(
+        [str(TERRAFORM_ROOT / "scripts/demo-runtime-down.sh")],
+        cwd=REPO_ROOT,
+        env=environment,
+        input="\n\ny\nDESTROY EMPTY-DEMO-RUNTIME\n",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == expected_returncode, result.stdout + result.stderr
+    if expected_returncode == 0:
+        assert "Retaining the approved private networking foundation." in result.stdout
+        assert "The billable demo runtime is absent." in result.stdout
+    else:
+        assert "resources outside the approved networking foundation remain" in result.stdout
+    assert log.read_text(encoding="utf-8").count(" state list") == state_checks
 
 
 def test_cloud_sql_operator_jobs_are_iam_only_digest_pinned_and_vpc_scoped() -> None:

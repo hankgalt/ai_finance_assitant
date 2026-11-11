@@ -1,9 +1,9 @@
 # M11 delivery report — Staging infrastructure foundation
 
 Status: Staging and production keyless identity qualified; managed-state migration, synthetic
-preparation, and retention cleanup passed; the first on-demand teardown partially completed, and
-its database-before-user ordering plus resume-safe retry fix is locally qualified but not applied;
-workload/edge/knowledge/no-bypass qualification pending and real-service recovery deferred |
+preparation, and retention cleanup passed; the billable on-demand runtime is absent, the approved
+private-networking foundation remains, and exact-residue acceptance is locally qualified but not
+applied; workload/edge/knowledge/no-bypass qualification pending and real-service recovery deferred |
 2026-11-11
 
 ## Scope and decisions
@@ -23,12 +23,14 @@ MVP.
 The repository implements reviewed `demo-runtime-up.sh` and `demo-runtime-down.sh` entry points.
 The down path preserves the current database tier while first removing historical deletion guards,
 then applies only a separately reviewed staging destroy plan after the exact
-`DESTROY EMPTY-DEMO-RUNTIME` confirmation. The first down run deleted the application database and
-other staging resources, then failed to delete the three IAM database users because Terraform had
-scheduled user and database deletion concurrently. The source instance remains. The corrected
-dependency deletes the database before those users on future destroys; the retry path recognizes a
-partial teardown and skips a create/delete transition plan so it cannot recreate removed resources.
-That correction is locally qualified and must be merged before teardown resumes.
+`DESTROY EMPTY-DEMO-RUNTIME` confirmation. The first down run deleted the application database but
+failed to delete its IAM users because Terraform scheduled those operations concurrently. The
+merged database-before-user dependency corrected that ordering, and the reviewed retry removed the
+remaining Cloud SQL instance, users, jobs, service identities, subnetwork, and secret containers.
+Google retains deleted Cloud SQL producer networking for up to four days, so the VPC, allocated
+internal range, and Service Networking connection remain as the approved foundation. The down entry
+point now accepts only that exact residue after an independent empty Cloud SQL inventory; any other
+remainder fails closed. That acceptance correction is locally qualified but not yet applied.
 
 The machine-readable desired-state boundary is
 [`contracts/deployment/infrastructure-policy.v1.json`](../contracts/deployment/infrastructure-policy.v1.json).
@@ -50,13 +52,12 @@ The historical foundation qualification record is
 - GitHub `staging` and `production` environments require reviewer `hankgalt`, permit the approved
   single-operator self-review model, and accept deployments only from `main`. Each environment
   stores only the project ID, WIF provider identifier, and deploy-service-account identifier.
-- The partial teardown left the isolated VPC/private-service connection and private-only Cloud SQL
-  PostgreSQL 17 Enterprise `db-f1-micro` instance. The live instance is `RUNNABLE`; backup, PITR,
-  final-backup, retained-backup, and deletion-protection guards are disabled. The `aifa` database is
-  absent, while the runtime, migration, and retention IAM database users remain pending teardown.
-- Runtime, migration, and retention service accounts remain in Terraform state with their selected
-  Cloud SQL roles. Regional Secret Manager containers and versions have been removed. Terraform
-  owns no secret payload.
+- The billable staging runtime is absent. Cloud SQL inventory is empty, and its application
+  database, IAM users, Cloud Run jobs, service accounts/bindings, subnetwork, and regional Secret
+  Manager containers/versions have been removed. Terraform owns no secret payload.
+- Terraform state retains exactly the `aifa-staging` VPC, its allocated private-service internal
+  range, and Service Networking connection. They have [no hourly connection or internal-address
+  charge](https://cloud.google.com/vpc/network-pricing) and are reused by the next demo runtime.
 - Capability-oriented Terraform modules, a non-secret operator wizard, a plan-only GitHub workflow,
   policy tests, and release evidence are committed under their infrastructure, delivery, contract,
   test, and release owners.
@@ -88,8 +89,10 @@ The historical foundation qualification record is
 | Infrastructure and delivery contract tests | 23 passed |
 | Complete credential-free backend suite | 387 passed, 6 skipped, 4 deselected |
 | Expanded operator/recovery regression suite | 392 passed, 8 skipped, 4 deselected; 11 opt-in managed PostgreSQL tests passed separately |
-| First on-demand down run | Transition apply disabled legacy guards; destroy removed the application database and other staging resources, then IAM-user deletion failed on database privilege dependencies; source instance and three users remain |
-| Resume-fix static qualification | Terraform database-before-user dependency and partial-state no-recreate branch covered by regression tests; 25 focused tests and the 396-test backend suite passed; Terraform format/validate and shell syntax passed |
+| First on-demand down run | Transition apply disabled legacy guards; destroy removed the application database and other staging resources, then IAM-user deletion failed on database privilege dependencies |
+| Reviewed down retry | Database-before-user ordering removed the remaining Cloud SQL instance, IAM users, jobs, service identities, subnetwork, and secret containers; Service Networking deletion returned the documented producer-recovery-window error |
+| Live residual inventory | Cloud SQL inventory empty; Terraform state contains exactly the VPC, allocated private-service range, and Service Networking connection |
+| Networking-acceptance static qualification | Simulated provider-delay regression passes only for the exact three-resource network residue plus independently absent Cloud SQL and fails on any unexpected fourth resource; Terraform format/validate and shell syntax pass |
 | First operator-job apply | failed closed on mixed GHCR/GCR registries; 0 jobs created; 3 obsolete PostgreSQL secret-access bindings removed as planned |
 | Artifact Registry mirror | backend and Cloud SQL proxy source manifests retained their reviewed sha256 digests |
 | Corrected operator-job apply | 3 jobs added, 0 changed, 0 destroyed; wizard stopped before execution on a post-apply `gcloud` JSON selector defect |
@@ -97,8 +100,8 @@ The historical foundation qualification record is
 | First migration/recovery run | migration `aifa-staging-migrate-xrbw9` and prepare `aifa-staging-qualify-gpp85` passed; numeric-ID restore rejected configuration overrides before creating a temporary instance; PITR and retention did not run |
 | Second migration/recovery run | migration `aifa-staging-migrate-cldkf` and prepare `aifa-staging-qualify-nxtgm` passed; backup creation succeeded, but the named-backup response exposed no `id` field and restore was not attempted; no temporary instance was created |
 | Third migration/recovery run | migration `aifa-staging-migrate-wvsz2`, prepare `aifa-staging-qualify-mw4fs`, and backup restore passed; the PITR clone continued server-side after the synchronous `gcloud` client wait expired, so recovered-target validation and cleanup did not run |
-| Cloud SQL live readback after partial destroy | `RUNNABLE` `db-f1-micro`; `aifa` database absent; three IAM database users remain; private IP only; `ENCRYPTED_ONLY`; IAM auth on |
-| Backup/storage live readback after transition | Backup, PITR, final-backup, retained-backup, and deletion-protection guards disabled |
+| Cloud SQL live readback after reviewed retry | No instances |
+| Retained private networking | `aifa-staging` VPC, `aifa-staging-private-services` allocated range, and `servicenetworking-googleapis-com` connection |
 | Artifact Registry live readback | Docker standard repository with immutable tags |
 | WIF live readback | Staging and production providers `ACTIVE`; immutable IDs/branch/environment enforced |
 | GitHub environments | Staging and production configured with sole reviewer and exact `main` policy |
@@ -170,10 +173,10 @@ qualification.
   evidence remain incomplete and are explicitly deferred post-MVP hardening.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls
   are not yet testable and are not claimed operational.
-- The first down run partially removed staging. Merge the resume fix, then rerun the reviewed down
-  entry point; it must skip the create/delete transition plan and apply only the reviewed destroy
-  plan to the remaining `db-f1-micro`, IAM users, service identities, and networking. Clean
-  `db-g1-small` recreation evidence remains an MVP gate.
+- The billable runtime is absent. Merge the exact-residue acceptance, then rerun the down entry
+  point; it must confirm empty Cloud SQL inventory and only the approved three-resource networking
+  foundation without recreating or deleting it. Clean `db-g1-small` recreation evidence remains an
+  MVP gate.
 - Collection transfer/readiness, staging workload deployment, on-demand `db-g1-small`
   destroy/recreate, DNS/TLS/IAP cutover, direct-origin denial, critical feature-parity smoke, and the
   private-demo portion of EVAL-20 remain pending MVP gates. Collection rollback depth, integrated

@@ -19,7 +19,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     manifest = _manifest()
 
     assert manifest["schema_version"] == "1"
-    assert manifest["status"] == "partial_destroy_resume_fix_defined_not_applied"
+    assert manifest["status"] == "runtime_absent_networking_foundation_retained"
     assert manifest["private_demo_mvp"] == {
         "scope": "owner_operated_deployed_feature_parity",
         "target_machine_tier": "db-g1-small",
@@ -35,6 +35,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
             "artifact_registry_images",
             "workload_identity",
             "non_secret_configuration",
+            "private_networking",
         ],
     }
     assert manifest["application_state"] == {
@@ -45,7 +46,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "region": "us-west1",
         "availability": "single_zone",
         "machine_tier": "db-g1-small",
-        "provisioned_machine_tier": "db-f1-micro",
+        "provisioned_machine_tier": None,
         "storage": {"type": "ssd", "capacity_gib": 10, "service_minimum": True},
         "connection_pools": {
             "application_max": 2,
@@ -56,7 +57,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "deployed_store_initialization": "empty",
         "local_development_backend": "sqlite",
         "staging_instance": "aifa-staging-postgres",
-        "external_configuration_status": "partial_teardown_resume_fix_pending",
+        "external_configuration_status": "runtime_absent",
         "connection": {
             "transport": "direct_vpc_egress_private_ipv4",
             "authentication": "cloud_sql_auth_proxy_automatic_iam",
@@ -87,6 +88,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     }
     assert manifest["staging"]["separation"] == "same_project"
     assert manifest["staging"]["foundation_provisioned"] is False
+    assert manifest["staging"]["networking_foundation_retained"] is True
     assert manifest["staging"]["recovery_policy"] == (
         "contracts/deployment/recovery-policy.v1.json"
     )
