@@ -1,7 +1,7 @@
 # M11 delivery report — Staging infrastructure foundation
 
 Status: Foundation provisioned and last applied plans drift-free; staging and production keyless
-identity qualified; managed-state operator jobs defined; real-service recovery, workload, and no-
+identity qualified; managed-state images mirrored and operator jobs defined; real-service recovery, workload, and no-
 bypass qualification pending | 2026-11-10
 
 ## Scope and decisions
@@ -50,6 +50,11 @@ The live qualification record is
 - Because the selected jobs no longer use DSN secret payloads, the expanded plan removes the three
   PostgreSQL secret-access IAM bindings. The protected empty secret containers remain historical
   metadata; only the runtime Qdrant identity retains its not-yet-used secret-access binding.
+- The first reviewed apply removed those three obsolete IAM bindings, then failed closed before
+  creating any job because Cloud Run rejected a GHCR backend combined with a GCR proxy. No partial
+  job, database, network, service-account, secret-container, or user-data mutation remained. Both
+  reviewed manifests were subsequently mirrored with unchanged digests into the existing immutable
+  `us-west1` Artifact Registry; the corrected configuration now enforces that single registry.
 - A separate staged recovery wizard requires a clean merged `main`, validates exact targets, removes
   temporary owner database elevation, qualifies one backup restore and one PITR clone, deletes the
   temporary instances, checks final Terraform drift, and writes only secret-free evidence.
@@ -66,6 +71,8 @@ The live qualification record is
 | Infrastructure and delivery contract tests | 23 passed |
 | Complete credential-free backend suite | 387 passed, 6 skipped, 4 deselected |
 | Expanded operator/recovery regression suite | 392 passed, 8 skipped, 4 deselected; 11 opt-in managed PostgreSQL tests passed separately |
+| First operator-job apply | failed closed on mixed GHCR/GCR registries; 0 jobs created; 3 obsolete PostgreSQL secret-access bindings removed as planned |
+| Artifact Registry mirror | backend and Cloud SQL proxy source manifests retained their reviewed sha256 digests |
 | Cloud SQL live readback | `RUNNABLE`; PostgreSQL 17; private IP only; `ENCRYPTED_ONLY`; IAM auth on |
 | Backup/storage live readback | 10 GiB SSD; auto-grow limit 20 GiB; 7 backups; 3-day transaction logs |
 | Artifact Registry live readback | Docker standard repository with immutable tags |
@@ -111,9 +118,9 @@ qualification.
 
 ## Stop gate and remaining evidence
 
-- The earlier foundation Terraform workflow passed its approval-gated GitHub plan. The expanded
-  operator-job configuration must pass a new approval-gated staging plan after this branch is merged
-  and the staging environment receives the merged-main backend image digest.
+- The earlier foundation Terraform workflow passed its approval-gated GitHub plan. The corrected
+  single-registry operator-job configuration must pass a new approval-gated staging plan after this
+  branch is merged and the staging environment receives the Artifact Registry backend digest.
 - Slice 3 remains short of its real-service gate: migrations, retention, restart behavior,
   backup/restore, PITR, and recovery must run from an authorized VPC-connected execution path.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls

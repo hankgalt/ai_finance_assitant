@@ -17,6 +17,8 @@
     "qualification_id": "staging-cloud-sql-v1",
     "synthetic_data_only": true,
     "provider_calls_allowed": false,
+    "operator_image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
+    "mixed_registry_hosts_allowed": false,
     "prepare_command": "ai_finance_assistant.persistence.qualification prepare",
     "recovery_verification_command": "ai_finance_assistant.persistence.qualification verify-recovery",
     "retention_verification_command": "ai_finance_assistant.persistence.qualification verify-retention"

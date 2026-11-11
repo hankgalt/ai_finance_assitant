@@ -503,7 +503,9 @@ service-account key nor another credential payload.
 The managed-state operator jobs connect from Cloud Run through Direct VPC egress to Cloud SQL's
 private address. A digest-pinned Cloud SQL Auth Proxy sidecar performs automatic IAM database
 authentication; the application container uses a loopback, passwordless DSN and does not require a
-database secret. Runtime, migration, and retention retain separate service-account/database-user
+database secret. All containers in each job resolve from the approved `us-west1` Artifact Registry;
+source manifests from GHCR/GCR are mirrored without changing their reviewed digests because Cloud
+Run rejects mixed registry hosts in one multi-container job. Runtime, migration, and retention retain separate service-account/database-user
 identities. Temporary owner IAM database elevation may be used only to install the reviewed base
 schema/database grants and must be deleted immediately. Default object privileges are installed by
 the migration identity itself before it creates application and checkpoint objects, so the design

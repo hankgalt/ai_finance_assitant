@@ -125,6 +125,12 @@ def test_delivery_contract_records_activated_identity_and_remaining_gates() -> N
             "external_configuration_status": "configured_smoke_passed",
         },
     }
+    assert contract["deployment_images"] == {
+        "source_registry": "ghcr.io",
+        "registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
+        "manifest_copy": "digest_preserving",
+        "mixed_registry_hosts_allowed": False,
+    }
 
 
 def test_delivery_evidence_is_capability_owned_and_truthful_about_activated_controls() -> None:

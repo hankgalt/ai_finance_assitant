@@ -30,7 +30,25 @@ are entered separately through Secret Manager when their owning deployment slice
 `terraform plan` is credentialed through short-lived GitHub OIDC only after the local bootstrap has
 created WIF and the protected GitHub environment. No workflow in this slice performs
 `terraform apply`. The `staging` GitHub environment must provide `GCP_BACKEND_IMAGE` as the full
-merged-main backend image reference pinned by `@sha256:` before the expanded staging plan runs.
+merged-main backend image reference pinned by `@sha256:` in
+`us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/` before the expanded staging plan runs.
+
+Cloud Run rejected the first operator-job apply because the multi-container jobs combined a GHCR
+backend with a GCR proxy. Both reviewed manifests are now mirrored without digest changes into the
+existing immutable `aifa-containers` Artifact Registry, and Terraform rejects another mixed-registry
+input before apply. For a later backend revision, preserve the reviewed manifest with:
+
+```bash
+gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
+docker buildx imagetools create --prefer-index=false \
+  --tag us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-backend:<git-sha> \
+  ghcr.io/hankgalt/ai-finance-assitant-backend@sha256:<reviewed-digest>
+docker buildx imagetools inspect \
+  us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-backend:<git-sha>
+```
+
+Use the inspected Artifact Registry `name@sha256:digest` as `GCP_BACKEND_IMAGE`. The pinned proxy
+mirror is managed separately and must retain the digest recorded in the staging Terraform root.
 
 The Cloud SQL jobs use Direct VPC egress, private IP, and Cloud SQL Auth Proxy automatic IAM
 authentication. Their passwordless DSN is configuration, not a credential, and is not stored in

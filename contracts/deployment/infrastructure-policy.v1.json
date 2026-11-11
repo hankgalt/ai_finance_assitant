@@ -44,7 +44,12 @@
     "repository": "aifa-containers",
     "format": "DOCKER",
     "immutable_tags": true,
-    "external_configuration_status": "provisioned"
+    "external_configuration_status": "provisioned",
+    "managed_state_images": {
+      "backend_digest_mirrored": true,
+      "cloud_sql_proxy_digest_mirrored": true,
+      "source_manifests_preserved": true
+    }
   },
   "secrets": {
     "service": "regional_secret_manager",
@@ -83,6 +88,8 @@
     "network": "direct_vpc_private_ranges_only",
     "database_authentication": "cloud_sql_auth_proxy_automatic_iam",
     "image_policy": "immutable_digest_required",
+    "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
+    "mixed_registry_hosts_allowed": false,
     "http_endpoint": false,
     "status": "defined_not_applied"
   },

@@ -81,6 +81,8 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "network": "direct_vpc_private_ranges_only",
         "database_authentication": "cloud_sql_auth_proxy_automatic_iam",
         "image_policy": "immutable_digest_required",
+        "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
+        "mixed_registry_hosts_allowed": False,
         "http_endpoint": False,
         "status": "defined_not_applied",
     }
@@ -233,6 +235,7 @@ def test_cloud_sql_operator_jobs_are_iam_only_digest_pinned_and_vpc_scoped() -> 
     )
     staging = (TERRAFORM_ROOT / "environments/staging/main.tf").read_text(encoding="utf-8")
     workflow = (REPO_ROOT / ".github/workflows/terraform.yml").read_text(encoding="utf-8")
+    artifact_registry_prefix = "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/"
 
     assert 'resource "google_cloud_run_v2_job" "operator"' in jobs
     assert "migration = {" in jobs
@@ -282,8 +285,10 @@ def test_cloud_sql_operator_jobs_are_iam_only_digest_pinned_and_vpc_scoped() -> 
         )
     assert re.search(r"backend_image\s*=\s*var\.backend_image", staging)
     assert 'strcontains(var.backend_image, "@sha256:")' in staging_variables
+    assert artifact_registry_prefix in staging_variables
     assert "TF_VAR_backend_image: ${{ vars.GCP_BACKEND_IMAGE }}" in workflow
-    assert "gcr.io/cloud-sql-connectors/cloud-sql-proxy@sha256:" in staging
+    assert f'cloud_sql_proxy_image    = "{artifact_registry_prefix}' in staging
+    assert "gcr.io/cloud-sql-connectors/cloud-sql-proxy@sha256:" not in staging
 
 
 def test_cloud_sql_recovery_contract_requires_two_temporary_validated_targets() -> None:
@@ -308,6 +313,10 @@ def test_cloud_sql_recovery_contract_requires_two_temporary_validated_targets() 
     assert contract["qualification"]["synthetic_data_only"] is True
     assert contract["qualification"]["qualification_id"] == "staging-cloud-sql-v1"
     assert contract["qualification"]["provider_calls_allowed"] is False
+    assert contract["qualification"]["operator_image_registry"] == (
+        "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers"
+    )
+    assert contract["qualification"]["mixed_registry_hosts_allowed"] is False
     assert contract["privilege_bootstrap"]["temporary_owner"] == ("vtalwar.w@comfforts.com")
     assert contract["privilege_bootstrap"]["database_role"] == "cloudsqlsuperuser"
     assert contract["privilege_bootstrap"]["data_api_access"] == ("temporarily_allow_then_disallow")
@@ -330,7 +339,8 @@ def test_cloud_sql_recovery_wizard_removes_elevation_and_temporary_instances() -
     wizard = (TERRAFORM_ROOT / "scripts/qualify-cloud-sql-recovery.sh").read_text(encoding="utf-8")
 
     assert "TOTAL_STAGES=7" in wizard
-    assert 'ask BACKEND_IMAGE "Paste the merged main backend image' in wizard
+    assert 'ask BACKEND_IMAGE "Paste the Artifact Registry backend image' in wizard
+    assert "gcloud artifacts docker images describe" in wizard
     assert 'gcloud sql users create "$OWNER_DATABASE_USER"' in wizard
     assert 'gcloud sql instances execute-sql "$SOURCE_INSTANCE"' in wizard
     assert 'gcloud sql users delete "$OWNER_DATABASE_USER"' in wizard

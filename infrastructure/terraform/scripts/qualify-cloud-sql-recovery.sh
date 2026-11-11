@@ -216,6 +216,8 @@ RETENTION_ROLE="aifa-stg-retention@comfforts-369117.iam"
 MIGRATION_JOB="aifa-staging-migrate"
 QUALIFICATION_JOB="aifa-staging-qualify"
 RETENTION_JOB="aifa-staging-retention"
+ARTIFACT_REGISTRY_PREFIX="us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/"
+PROXY_IMAGE="${ARTIFACT_REGISTRY_PREFIX}cloud-sql-proxy@sha256:7d156a5c466e31596afd6c8ed134f19c207a297418392fdad2686524ca4e7a3c"
 RUN_SUFFIX=$(date -u +%Y%m%d%H%M%S)
 BACKUP_RESTORE_INSTANCE="aifa-stg-backup-${RUN_SUFFIX}"
 PITR_INSTANCE="aifa-stg-pitr-${RUN_SUFFIX}"
@@ -292,8 +294,15 @@ say "Temporary backup target: $BACKUP_RESTORE_INSTANCE"
 say "Temporary PITR target: $PITR_INSTANCE"
 warn "The two temporary db-f1-micro targets are billable until Stage 7 deletes them."
 confirm "Proceed with these exact targets and the approved temporary cost?" || exit 1
-ask BACKEND_IMAGE "Paste the merged main backend image reference pinned by @sha256:"
-[[ "$BACKEND_IMAGE" == *@sha256:* ]] || { warn "backend image must be pinned by digest"; exit 1; }
+ask BACKEND_IMAGE "Paste the Artifact Registry backend image reference pinned by @sha256:"
+[[ "$BACKEND_IMAGE" == "${ARTIFACT_REGISTRY_PREFIX}"*@sha256:* ]] || {
+  warn "backend image must use the approved us-west1 Artifact Registry and a digest"
+  exit 1
+}
+gcloud artifacts docker images describe "$BACKEND_IMAGE" \
+  --project="$PROJECT_ID" --format='value(image_summary.digest)' >/dev/null
+gcloud artifacts docker images describe "$PROXY_IMAGE" \
+  --project="$PROJECT_ID" --format='value(image_summary.digest)' >/dev/null
 
 # ── Stage 2: apply the reviewed operator jobs ─────────────────────────────
 stage "Plan and apply the managed-state operator jobs"
