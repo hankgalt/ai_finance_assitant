@@ -25,6 +25,11 @@ backups, three days of PITR logs, same-project staging with explicit weaker-isol
 GitHub Pro on the public `hankgalt/ai_finance_assitant` repository, and `hankgalt` as the sole
 deployment approver. The owner also created the one-node Qdrant Free cluster documented by the
 managed-state contract in `us-central1`; its cross-region and no-SLA limitations remain explicit.
+On 2026-11-10, the owner superseded only the managed-state lifecycle portion for the private-demo
+MVP: use on-demand `db-g1-small`, start empty on every creation, intentionally discard deployed data
+on destroy, and defer backup/PITR/RPO/RTO qualification. The earlier `db-f1-micro` and recovery
+recommendations below are retained as decision history and post-MVP research; the current contract
+and ADR-030 control implementation.
 
 External factual claims below use only official Google Cloud and Qdrant sources. **Facts** describe
 published capabilities as reviewed; **recommendations** and numerical operating targets are

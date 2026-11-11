@@ -12,6 +12,9 @@ TERRAFORM_ROOT = REPO_ROOT / "infrastructure/terraform"
 INFRASTRUCTURE_CONTRACT = REPO_ROOT / "contracts/deployment/infrastructure-policy.v1.json"
 RECOVERY_CONTRACT = REPO_ROOT / "contracts/deployment/recovery-policy.v1.json"
 STAGING_EVIDENCE = REPO_ROOT / "backend/artifacts/release/deployment/staging-foundation.v1.json"
+LIFECYCLE_EVIDENCE = (
+    REPO_ROOT / "backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json"
+)
 
 
 def _contract() -> dict[str, Any]:
@@ -47,6 +50,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     assert contract["status"] in {
         "defined_not_provisioned",
         "staging_foundation_provisioned",
+        "mvp_lifecycle_defined_not_applied",
     }
     assert contract["private_demo_mvp"] == {
         "target_database_tier": "db-g1-small",
@@ -79,10 +83,14 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "repo:OWNER@OWNER-ID/REPO@REPO-ID:environment:ENVIRONMENT"
     )
     assert contract["managed_state"]["database_version"] == "POSTGRES_17"
-    assert contract["managed_state"]["tier"] == "db-f1-micro"
+    assert contract["managed_state"]["tier"] == "db-g1-small"
     assert contract["managed_state"]["public_ipv4"] is False
-    assert contract["managed_state"]["retained_daily_backups"] == 7
-    assert contract["managed_state"]["transaction_log_retention_days"] == 3
+    assert contract["managed_state"]["automated_backups_enabled"] is False
+    assert contract["managed_state"]["retained_daily_backups"] == 0
+    assert contract["managed_state"]["point_in_time_recovery_enabled"] is False
+    assert contract["managed_state"]["transaction_log_retention_days"] == 0
+    assert contract["managed_state"]["retain_backups_on_delete"] is False
+    assert contract["managed_state"]["deletion_protection"] is False
     assert contract["managed_state_operator_jobs"] == {
         "operations": ["migration", "qualification", "retention"],
         "execution": "cloud_run_v2_jobs",
@@ -111,6 +119,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "oidc_smoke": "staging_and_production_qualified",
         "staging_workload": "not_deployed",
         "no_direct_workload_bypass": "not_yet_testable",
+        "mvp_lifecycle_code": "defined_not_applied",
     }
 
 
@@ -150,6 +159,26 @@ def test_staging_evidence_records_live_foundation_without_claiming_workload_depl
         "deleted_by_retention_verification"
     )
     assert evidence["regional_secret_metadata"]["payloads_managed_by_terraform"] is False
+
+
+def test_demo_runtime_lifecycle_evidence_is_defined_without_cloud_mutation() -> None:
+    evidence = json.loads(LIFECYCLE_EVIDENCE.read_text(encoding="utf-8"))
+
+    assert evidence["schema_version"] == "1"
+    assert evidence["status"] == "defined_not_applied"
+    assert evidence["scope"]["cloud_resources_mutated"] is False
+    assert evidence["scope"]["terraform_applied"] is False
+    assert evidence["target"]["database_tier"] == "db-g1-small"
+    assert evidence["target"]["automated_backups_enabled"] is False
+    assert evidence["target"]["point_in_time_recovery_enabled"] is False
+    assert evidence["target"]["destroy_discards_application_state"] is True
+    assert evidence["operator_entry_points"] == {
+        "up": "infrastructure/terraform/scripts/demo-runtime-up.sh",
+        "down": "infrastructure/terraform/scripts/demo-runtime-down.sh",
+        "destroy_confirmation": "DESTROY EMPTY-DEMO-RUNTIME",
+    }
+    assert evidence["deferred"]["cloud_sql_recovery_qualification"] == "post_mvp"
+    assert evidence["security"]["secrets_committed"] is False
 
 
 def test_remote_state_bootstrap_is_environment_separated_and_fail_closed() -> None:
@@ -203,23 +232,25 @@ def test_wif_is_repository_id_branch_and_environment_bound() -> None:
     assert 'billing_account = "billingAccounts/' not in shared
 
 
-def test_staging_cloud_sql_is_private_encrypted_bounded_and_recoverable() -> None:
+def test_staging_cloud_sql_is_private_encrypted_and_disposable_on_demand() -> None:
     managed_state = (TERRAFORM_ROOT / "modules/managed_state/main.tf").read_text(encoding="utf-8")
     staging = (TERRAFORM_ROOT / "environments/staging/main.tf").read_text(encoding="utf-8")
+    variables = (TERRAFORM_ROOT / "environments/staging/variables.tf").read_text(encoding="utf-8")
 
     assert 'database_version    = "POSTGRES_17"' in managed_state
     assert "ipv4_enabled                                  = false" in managed_state
     assert 'ssl_mode                                      = "ENCRYPTED_ONLY"' in managed_state
-    assert "point_in_time_recovery_enabled = true" in managed_state
-    assert "transaction_log_retention_days  = 3" in staging
-    assert "retained_backups                = 7" in staging
-    assert 'tier                            = "db-f1-micro"' in staging
+    assert "enabled                        = false" in managed_state
+    assert "point_in_time_recovery_enabled = false" in managed_state
+    assert "final_backup_config" in managed_state
+    assert "tier                            = var.database_tier" in staging
+    assert 'default     = "db-g1-small"' in variables
     assert "disk_size_gib                   = 10" in staging
     assert "disk_autoresize_limit_gib       = 20" in staging
-    assert "deletion_protection             = true" in staging
-    assert "retain_backups_on_delete        = true" in staging
-    assert managed_state.count("prevent_destroy = true") == 5
-    assert len(re.findall(r'deletion_policy\s*=\s*"ABANDON"', managed_state)) == 4
+    assert "deletion_protection             = false" in staging
+    assert "retain_backups_on_delete        = false" in staging
+    assert "prevent_destroy" not in managed_state
+    assert 'deletion_policy = "ABANDON"' not in managed_state
     assert 'google_sql_user" "retention"' in managed_state
     assert "retention_service_account_email" in managed_state
 
@@ -248,9 +279,51 @@ def test_regional_secret_metadata_has_separate_staging_boundaries() -> None:
     assert 'secret   = "postgres-migration-dsn"' not in staging
     assert 'secret   = "postgres-retention-dsn"' not in staging
     assert staging.count('role      = "roles/secretmanager.secretAccessor"') == 1
-    assert "deletion_protection = true" in staging
-    assert len(re.findall(r'deletion_policy\s*=\s*"ABANDON"', staging)) == 2
-    assert staging.count("prevent_destroy = true") == 2
+    assert "deletion_protection = false" in staging
+    assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 2
+    assert "prevent_destroy" not in staging
+
+
+def test_private_demo_runtime_resources_are_deleted_instead_of_abandoned() -> None:
+    staging = (TERRAFORM_ROOT / "environments/staging/main.tf").read_text(encoding="utf-8")
+    jobs = (TERRAFORM_ROOT / "modules/managed_state_jobs/main.tf").read_text(encoding="utf-8")
+
+    assert "prevent_destroy" not in staging
+    assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 2
+    assert staging.count("deletion_protection = false") == 1
+    assert 'deletion_policy = "ABANDON"' not in staging
+    assert "deletion_protection = false" in jobs
+    assert "prevent_destroy" not in jobs
+
+
+def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() -> None:
+    up = (TERRAFORM_ROOT / "scripts/demo-runtime-up.sh").read_text(encoding="utf-8")
+    down = (TERRAFORM_ROOT / "scripts/demo-runtime-down.sh").read_text(encoding="utf-8")
+    wizard = (TERRAFORM_ROOT / "scripts/bootstrap-staging.sh").read_text(encoding="utf-8")
+    staging = (TERRAFORM_ROOT / "environments/staging/main.tf").read_text(encoding="utf-8")
+    variables = (TERRAFORM_ROOT / "environments/staging/variables.tf").read_text(encoding="utf-8")
+
+    assert 'bootstrap-staging.sh" up' in up
+    assert 'bootstrap-staging.sh" down' in down
+    assert 'ACTION="${1:-}"' in wizard
+    assert "CURRENT_BRANCH=$(git branch --show-current)" in wizard
+    assert '[[ "$CURRENT_BRANCH" == "main" ]]' in wizard
+    assert '[[ -z "$(git status --porcelain)" ]]' in wizard
+    assert '[[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]]' in wizard
+    assert 'DESTROY_CONFIRMATION="DESTROY EMPTY-DEMO-RUNTIME"' in wizard
+    assert '[[ "$confirmation" == "$DESTROY_CONFIRMATION" ]]' in wizard
+    assert 'CURRENT_DATABASE_TIER=$(gcloud sql instances describe "$SOURCE_INSTANCE"' in wizard
+    assert 'export TF_VAR_database_tier="$CURRENT_DATABASE_TIER"' in wizard
+    assert 'terraform -chdir="$STAGING_ROOT" apply "$LIFECYCLE_PLAN"' in wizard
+    assert 'terraform -chdir="$STAGING_ROOT" plan -destroy' in wizard
+    assert 'terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"' in wizard
+    assert "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data" in wizard
+    assert "regional Secret Manager payloads" in wizard
+    assert "terraform destroy" not in wizard
+    assert "qualify-cloud-sql-recovery.sh" not in wizard
+    assert "tier                            = var.database_tier" in staging
+    assert 'variable "database_tier"' in variables
+    assert 'default     = "db-g1-small"' in variables
 
 
 def test_cloud_sql_operator_jobs_are_iam_only_digest_pinned_and_vpc_scoped() -> None:

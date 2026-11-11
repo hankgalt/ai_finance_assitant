@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "staging_foundation_provisioned",
+  "status": "mvp_lifecycle_defined_not_applied",
   "private_demo_mvp": {
     "target_database_tier": "db-g1-small",
     "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -72,19 +72,21 @@
     "service": "cloud_sql_postgresql",
     "database_version": "POSTGRES_17",
     "edition": "ENTERPRISE",
-    "tier": "db-f1-micro",
+    "tier": "db-g1-small",
     "availability": "ZONAL",
     "disk_type": "PD_SSD",
     "disk_size_gib": 10,
     "disk_autoresize_limit_gib": 20,
     "public_ipv4": false,
     "tls_required": true,
-    "retained_daily_backups": 7,
-    "transaction_log_retention_days": 3,
-    "retain_backups_on_delete": true,
-    "deletion_protection": true,
+    "automated_backups_enabled": false,
+    "retained_daily_backups": 0,
+    "point_in_time_recovery_enabled": false,
+    "transaction_log_retention_days": 0,
+    "retain_backups_on_delete": false,
+    "deletion_protection": false,
     "instance": "aifa-staging-postgres",
-    "external_configuration_status": "provisioned_recovery_qualification_pending"
+    "external_configuration_status": "mvp_replacement_pending"
   },
   "managed_state_operator_jobs": {
     "operations": [
@@ -125,6 +127,7 @@
     "github_environments": "configured",
     "oidc_smoke": "staging_and_production_qualified",
     "staging_workload": "not_deployed",
-    "no_direct_workload_bypass": "not_yet_testable"
+    "no_direct_workload_bypass": "not_yet_testable",
+    "mvp_lifecycle_code": "defined_not_applied"
   }
 }

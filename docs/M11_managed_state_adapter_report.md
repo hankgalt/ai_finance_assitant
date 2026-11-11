@@ -1,7 +1,8 @@
 # M11 delivery report — Managed-state adapter and operating contract
 
-Status: PostgreSQL adapter and recovery procedure qualified locally; staging foundation provisioned;
-private-demo MVP scope corrected and Cloud SQL live recovery deferred | 2026-11-10
+Status: PostgreSQL adapter and recovery procedure qualified locally; historical staging foundation
+provisioned; private-demo MVP lifecycle code locally qualified but not applied and Cloud SQL live
+recovery deferred | 2026-11-10
 
 ## Scope and decisions
 
@@ -117,9 +118,10 @@ API key.
   successful recovered-target verification, backup restore, or PITR rehearsal. Retention and
   namespaced synthetic-state cleanup have passed through the private Cloud SQL path.
 - The locally passing complete two-Principal REST/SSE/History/Inspector matrix remains required at
-  the assembled staging workload gate. Recreate the managed-state runtime as `db-g1-small`, prove
-  the migration/runtime/retention role boundary, and prove explicit destroy/clean recreation. These
-  are MVP gates.
+  the assembled staging workload gate. The `db-g1-small` target and reviewed create/destroy scripts
+  are implemented, but the historical runtime has not been removed and the target has not been
+  created. Apply the lifecycle, then prove the migration/runtime/retention role boundary and clean
+  recreation. These are MVP gates.
 - Completing the synthetic recovery procedure, seven-backup/three-day-PITR restore, deletion
   reconciliation, timed RPO/RTO, capacity/overlap qualification, and schema/image rollback is
   deferred post-MVP hardening. The targets in the recovery contract are not operational claims.
@@ -135,6 +137,7 @@ API key.
 - `backend/tests/test_managed_persistence.py`
 - `backend/tests/test_managed_state_contract.py`
 - `backend/artifacts/persistence/managed-postgresql-qualification.v1.json`
+- `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json`
 - `contracts/deployment/managed-state.v1.json`
 - `contracts/deployment/recovery-policy.v1.json`
 - `infrastructure/terraform/modules/managed_state_jobs/`

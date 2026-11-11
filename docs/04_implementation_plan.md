@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.2 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, and slice 5 foundation provisioned with workload/edge/knowledge gates pending | 2026-11-10
+Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, historical slice 5 foundation provisioned, and on-demand lifecycle code defined but not applied with workload/edge/knowledge gates pending | 2026-11-10
 
 ## 1. Delivery rules
 
@@ -487,17 +487,18 @@ from the protected source. The source instance and durable foundation were not d
 expanded.
 The initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
 subject remediation changed only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
-production smoke both passed after required review. The staging workload, knowledge transfer,
-on-demand `db-g1-small` lifecycle, edge, and no-direct-workload-bypass qualification remain MVP stop
-gates, so slice 5 is not complete and no internet-facing workload is claimed operational. Real-
-service recovery is deferred post-MVP hardening.
+production smoke both passed after required review. The on-demand `db-g1-small` lifecycle and
+reviewed up/down wizards are now implemented and locally qualified but have not been applied. The
+staging workload, knowledge transfer, lifecycle apply/recreation evidence, edge, and no-direct-
+workload-bypass qualification remain MVP stop gates, so slice 5 is not complete and no internet-
+facing workload is claimed operational. Real-service recovery is deferred post-MVP hardening.
 
 **Remaining private-demo MVP sequence**
 
-1. Change the Terraform target from the historical `db-f1-micro` foundation to an on-demand
-   `db-g1-small` demo runtime. Add reviewed create/destroy entry points, an explicit data-loss
-   confirmation, and policy tests that preserve only the reproducibility foundation recorded by
-   ADR-030. Do not run the recovery wizard.
+1. After merge, review and apply the defined lifecycle transition: use the staging-only down entry
+   point to remove the historical `db-f1-micro` runtime, then use the up entry point when a demo
+   environment is needed. Retain the saved-plan reviews and exact data-loss confirmation as
+   evidence. Do not run the recovery wizard.
 2. Deploy the pinned backend and frontend revisions to staging, execute migration/retention setup,
    and prove the Cloud Run default URL, anonymous invocation, and every non-IAP origin fail closed.
 3. Transfer and activate the existing qualified Finance and Tax collections in the selected Qdrant

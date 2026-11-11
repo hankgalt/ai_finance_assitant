@@ -54,11 +54,7 @@ resource "google_service_account" "workload" {
   account_id      = each.value
   display_name    = "Finance Assistant staging ${each.key}"
   description     = "Least-privilege staging identity for ${each.key} operations."
-  deletion_policy = "ABANDON"
-
-  lifecycle {
-    prevent_destroy = true
-  }
+  deletion_policy = "DELETE"
 }
 
 resource "google_project_iam_member" "workload_roles" {
@@ -77,13 +73,11 @@ module "managed_state" {
   environment                     = "staging"
   network_cidr                    = "10.30.0.0/24"
   private_service_prefix_length   = 16
-  tier                            = "db-f1-micro"
+  tier                            = var.database_tier
   disk_size_gib                   = 10
   disk_autoresize_limit_gib       = 20
-  retained_backups                = 7
-  transaction_log_retention_days  = 3
-  deletion_protection             = true
-  retain_backups_on_delete        = true
+  deletion_protection             = false
+  retain_backups_on_delete        = false
   runtime_service_account_email   = google_service_account.workload["runtime"].email
   migration_service_account_email = google_service_account.workload["migration"].email
   retention_service_account_email = google_service_account.workload["retention"].email
@@ -114,8 +108,8 @@ resource "google_secret_manager_regional_secret" "staging" {
   project             = var.project_id
   location            = "us-west1"
   secret_id           = "aifa-staging-${each.value}"
-  deletion_protection = true
-  deletion_policy     = "ABANDON"
+  deletion_protection = false
+  deletion_policy     = "DELETE"
 
   labels = {
     application = "finance-assistant"
@@ -123,9 +117,6 @@ resource "google_secret_manager_regional_secret" "staging" {
     managed-by  = "terraform"
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "google_secret_manager_regional_secret_iam_member" "access" {

@@ -1,16 +1,17 @@
 # Finance Assistant GCP infrastructure
 
 This capability-owned Terraform implements the M11 staging foundation selected by proposed
-ADR-030. It contains no secret payloads, service-account keys, or Terraform state. It now defines
-three private, non-HTTP Cloud Run operator jobs for Cloud SQL migration, qualification, and
-retention; it does not define or deploy the browser-facing application workload. The authoritative
-machine policy is
+ADR-030. It contains no secret payloads, service-account keys, or committed Terraform state. It
+defines an on-demand, disposable `db-g1-small` demo runtime plus three private, non-HTTP Cloud Run
+operator jobs for Cloud SQL migration, qualification, and retention; it does not yet define or
+deploy the browser-facing application workload. The authoritative machine policy is
 `contracts/deployment/infrastructure-policy.v1.json`.
 
-The bootstrap, shared, and staging roots were provisioned on 2026-11-10 and their final plans were
-drift-free. The operator-job expansion is defined but has not been applied or live-qualified. The
-application workload and external edge remain unprovisioned. See
-`docs/M11_staging_infrastructure_report.md` for evidence and stop gates.
+The bootstrap, shared, and historical `db-f1-micro` staging roots were provisioned on 2026-11-10.
+The corrected `db-g1-small` lifecycle is defined but has not been applied. The application workload
+and external edge remain unprovisioned. See `docs/M11_staging_infrastructure_report.md` for live
+evidence and `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json` for the
+defined-not-applied lifecycle record.
 
 Apply the roots in this order:
 
@@ -20,12 +21,30 @@ Apply the roots in this order:
    environment-bound GitHub Workload Identity Federation identities. Trust requires GitHub's
    immutable `OWNER@OWNER-ID/REPO@REPO-ID` subject plus independent numeric repository, owner,
    branch, and protected-environment checks.
-3. `environments/staging/` — create the isolated staging VPC, private Cloud SQL instance, workload
-   identities, regional secret metadata, and digest-pinned managed-state operator jobs.
+3. `environments/staging/` — create the disposable isolated staging VPC, private Cloud SQL instance,
+   workload identities, regional secret metadata, and digest-pinned managed-state operator jobs.
 
-Use `scripts/bootstrap-staging.sh` for the reviewed operator path. The script never accepts a
-service-account key or secret payload. Terraform manages regional secret containers only; payloads
-are entered separately through Secret Manager when their owning deployment slice is ready.
+Use the reviewed lifecycle entry points from a clean merged `main` checkout:
+
+```bash
+export GCP_BACKEND_IMAGE='us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-backend@sha256:<digest>'
+infrastructure/terraform/scripts/demo-runtime-up.sh
+infrastructure/terraform/scripts/demo-runtime-down.sh
+```
+
+The up wizard checks the exact owner identity and pinned Artifact Registry image, refreshes the
+persistent bootstrap/shared foundation, and applies only a displayed saved staging plan. It creates
+an empty `db-g1-small` instance with no automated backups, PITR, final backup, retained backup, or
+deletion protection. Provisioning does not bootstrap PostgreSQL grants or run schema migration;
+those remain part of the next staging-workload step.
+
+The down wizard first applies a displayed non-destructive transition plan that removes any live
+deletion guards while preserving the observed database tier. It then displays a separate
+staging-only destroy plan and requires the exact phrase `DESTROY EMPTY-DEMO-RUNTIME` before applying
+that saved plan. The staging VPC, Cloud SQL data, operator jobs, service identities, and regional
+secret containers/versions are deleted. Protected Terraform state, Artifact Registry, WIF, the
+budget, shared non-secret configuration, and the separately managed Qdrant cluster remain. The
+script never accepts a service-account key or secret payload.
 
 `terraform plan` is credentialed through short-lived GitHub OIDC only after the local bootstrap has
 created WIF and the protected GitHub environment. No workflow in this slice performs
@@ -56,10 +75,6 @@ Secret Manager. Cloud Run does not natively inject regional Secret Manager secre
 application/Qdrant deployment must select and qualify a regional-secret access pattern; it must not
 silently replace the approved regional topology with global secrets.
 
-After this change is merged and the new backend digest is available, run
-`scripts/qualify-cloud-sql-recovery.sh` from a clean `main` checkout. The staged wizard shows every
-plan and destructive target, removes temporary owner database elevation, validates one backup
-restore and one point-in-time clone with synthetic data, deletes both temporary instances, requires
-a drift-free final plan, and writes the recovery evidence artifact. Temporary Cloud SQL Data API
-access is disabled together with owner elevation on the success and interruption paths. Do not run it from an
-unreviewed branch or with a tag-only image reference.
+`scripts/qualify-cloud-sql-recovery.sh` is retained as deferred post-MVP hardening evidence. Do not
+run it as part of the private-demo create/destroy lifecycle. It does not replace the explicit
+destroy confirmation and its incomplete backup/PITR qualification is not an MVP gate.

@@ -200,15 +200,24 @@ finish() {
 
 run_wizard() {
 
-TOTAL_STAGES=6
+ACTION="${1:-}"
+case "$ACTION" in
+  up) TOTAL_STAGES=6 ;;
+  down) TOTAL_STAGES=2 ;;
+  *)
+    printf 'Usage: %s {up|down}\n' "${0##*/}" >&2
+    exit 2
+    ;;
+esac
 
-banner "Finance Assistant staging bootstrap"
+banner "Finance Assistant demo runtime $ACTION"
 
 REPOSITORY="hankgalt/ai_finance_assitant"
 PROJECT_ID="comfforts-369117"
 REGION="us-west1"
 BOOTSTRAP_BUCKET="${PROJECT_ID}-aifa-tf-bootstrap"
 STAGING_BUCKET="${PROJECT_ID}-aifa-tf-staging"
+SOURCE_INSTANCE="aifa-staging-postgres"
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 BOOTSTRAP_ROOT="$REPO_ROOT/infrastructure/terraform/bootstrap"
 SHARED_ROOT="$REPO_ROOT/infrastructure/terraform/shared"
@@ -217,16 +226,87 @@ STAGING_ROOT="$REPO_ROOT/infrastructure/terraform/environments/staging"
 # ── Stage 1: local identity and tool preflight ─────────────────────────────
 stage "Verify local identity and tools"
 say "This stage performs read-only checks and accepts no credential payload."
-for tool in gcloud terraform gh jq; do
+for tool in gcloud terraform git; do
   command -v "$tool" >/dev/null 2>&1 || { warn "$tool is not available on PATH"; exit 1; }
 done
+if [[ "$ACTION" == "up" ]]; then
+  for tool in gh jq; do
+    command -v "$tool" >/dev/null 2>&1 || { warn "$tool is not available on PATH"; exit 1; }
+  done
+fi
 ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format='value(account)')
 ACTIVE_PROJECT=$(gcloud config get-value project 2>/dev/null)
 [[ "$ACTIVE_ACCOUNT" == "vtalwar.w@comfforts.com" ]] || { warn "unexpected active account: $ACTIVE_ACCOUNT"; exit 1; }
 [[ "$ACTIVE_PROJECT" == "$PROJECT_ID" ]] || { warn "unexpected active project: $ACTIVE_PROJECT"; exit 1; }
-gh auth status >/dev/null
+CURRENT_BRANCH=$(git branch --show-current)
+[[ "$CURRENT_BRANCH" == "main" ]] || { warn "switch to main before managing the demo runtime"; exit 1; }
+[[ -z "$(git status --porcelain)" ]] || { warn "the repository has uncommitted changes"; exit 1; }
+git rev-parse origin/main >/dev/null 2>&1 || { warn "origin/main is unavailable; fetch before continuing"; exit 1; }
+[[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || {
+  warn "local main does not match the fetched origin/main"
+  exit 1
+}
+if [[ "$ACTION" == "up" ]]; then
+  gh auth status >/dev/null
+  export TF_VAR_database_tier="db-g1-small"
+fi
+BACKEND_IMAGE="${TF_VAR_backend_image:-${GCP_BACKEND_IMAGE:-}}"
+if [[ -z "$BACKEND_IMAGE" ]]; then
+  ask BACKEND_IMAGE "Artifact Registry backend image pinned by @sha256:"
+fi
+[[ "$BACKEND_IMAGE" == us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/*@sha256:* ]] || {
+  warn "backend image must use the approved Artifact Registry and an immutable sha256 digest"
+  exit 1
+}
+export TF_VAR_backend_image="$BACKEND_IMAGE"
 terraform version
 say "Verified $ACTIVE_ACCOUNT on $PROJECT_ID."
+
+if [[ "$ACTION" == "down" ]]; then
+  pause "Continue to the staging-only destroy-plan review?"
+
+  # ── Stage 2: reviewed staging runtime destruction ───────────────────────
+  stage "Review and destroy the demo runtime"
+  say "Bootstrap state, shared Artifact Registry, WIF, budget, and the Qdrant cluster are outside this staging state."
+  warn "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data will be permanently deleted."
+  warn "This also deletes staging service identities, jobs, networking, and regional Secret Manager payloads."
+  warn "Backup/PITR recovery is not part of the private-demo MVP."
+  terraform -chdir="$STAGING_ROOT" init -reconfigure \
+    -backend-config="bucket=$STAGING_BUCKET" \
+    -backend-config="prefix=foundation"
+  if [[ -z "$(terraform -chdir="$STAGING_ROOT" state list)" ]]; then
+    say "The staging runtime state is already empty; nothing needs to be destroyed."
+    finish
+    return
+  fi
+  CURRENT_DATABASE_TIER=$(gcloud sql instances describe "$SOURCE_INSTANCE" \
+    --project="$PROJECT_ID" \
+    --format='value(settings.tier)')
+  [[ -n "$CURRENT_DATABASE_TIER" ]] || { warn "could not resolve the current database tier"; exit 1; }
+  export TF_VAR_database_tier="$CURRENT_DATABASE_TIER"
+  LIFECYCLE_PLAN=$(mktemp "${TMPDIR:-/tmp}/aifa-demo-lifecycle.XXXXXX")
+  DESTROY_PLAN=$(mktemp "${TMPDIR:-/tmp}/aifa-demo-destroy.XXXXXX")
+  trap 'rm -f "$LIFECYCLE_PLAN" "$DESTROY_PLAN"' EXIT
+  terraform -chdir="$STAGING_ROOT" plan -lock-timeout=5m -out="$LIFECYCLE_PLAN"
+  terraform -chdir="$STAGING_ROOT" show -no-color "$LIFECYCLE_PLAN"
+  confirm "Apply only this reviewed transition plan to remove runtime deletion guards?" || exit 1
+  terraform -chdir="$STAGING_ROOT" apply "$LIFECYCLE_PLAN"
+  terraform -chdir="$STAGING_ROOT" plan -destroy -lock-timeout=5m -out="$DESTROY_PLAN"
+  terraform -chdir="$STAGING_ROOT" show -no-color "$DESTROY_PLAN"
+  DESTROY_CONFIRMATION="DESTROY EMPTY-DEMO-RUNTIME"
+  say "Type exactly: $DESTROY_CONFIRMATION"
+  printf '  > '
+  read -r confirmation
+  [[ "$confirmation" == "$DESTROY_CONFIRMATION" ]] || {
+    warn "confirmation did not match; nothing was destroyed"
+    exit 1
+  }
+  terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"
+  say "The demo runtime is absent; the reproducibility foundation remains."
+  finish
+  return
+fi
+
 pause "Continue to the remote-state bootstrap?"
 
 # ── Stage 2: bootstrap remote state ────────────────────────────────────────
@@ -268,7 +348,7 @@ terraform -chdir="$SHARED_ROOT" apply shared.tfplan
 
 # ── Stage 4: staging managed-state foundation ─────────────────────────────
 stage "Apply the staging managed-state foundation"
-warn "This creates the approved billable single-zone db-f1-micro Cloud SQL instance."
+warn "This creates the approved billable, disposable single-zone db-g1-small Cloud SQL instance."
 terraform -chdir="$STAGING_ROOT" init -reconfigure \
   -backend-config="bucket=$STAGING_BUCKET" \
   -backend-config="prefix=foundation"
