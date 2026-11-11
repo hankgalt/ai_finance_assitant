@@ -1,9 +1,10 @@
 # M11 delivery report — Staging infrastructure foundation
 
-Status: Foundation provisioned and last applied plans drift-free; staging and production keyless
-identity qualified; managed-state migration, synthetic preparation, and retention cleanup passed;
-private-demo MVP scope corrected; workload/edge/knowledge/no-bypass qualification pending and
-real-service recovery deferred | 2026-11-10
+Status: Historical foundation provisioned and last applied plans drift-free; staging and production
+keyless identity qualified; managed-state migration, synthetic preparation, and retention cleanup
+passed; on-demand MVP lifecycle code locally qualified but not applied;
+workload/edge/knowledge/no-bypass qualification pending and real-service recovery deferred |
+2026-11-10
 
 ## Scope and decisions
 
@@ -18,6 +19,12 @@ creation and explicit data loss on destroy. The provisioned `db-f1-micro`, seven
 three-day-PITR configuration below remains truthful evidence of the earlier foundation apply, but it
 is not the target configuration and its recovery qualification no longer blocks the private-demo
 MVP.
+
+The repository now implements reviewed `demo-runtime-up.sh` and `demo-runtime-down.sh` entry points.
+The down path preserves the current database tier while first removing historical deletion guards,
+then applies only a separately reviewed staging destroy plan after the exact
+`DESTROY EMPTY-DEMO-RUNTIME` confirmation. This implementation has not been applied to GCP; the
+historical live-state evidence below remains authoritative until a reviewed lifecycle run occurs.
 
 The machine-readable desired-state boundary is
 [`contracts/deployment/infrastructure-policy.v1.json`](../contracts/deployment/infrastructure-policy.v1.json).
@@ -80,6 +87,7 @@ The live qualification record is
 | Infrastructure and delivery contract tests | 23 passed |
 | Complete credential-free backend suite | 387 passed, 6 skipped, 4 deselected |
 | Expanded operator/recovery regression suite | 392 passed, 8 skipped, 4 deselected; 11 opt-in managed PostgreSQL tests passed separately |
+| On-demand lifecycle static qualification | Terraform format/validate and shell syntax passed; infrastructure/managed-state contract tests passed; no cloud resource mutated |
 | First operator-job apply | failed closed on mixed GHCR/GCR registries; 0 jobs created; 3 obsolete PostgreSQL secret-access bindings removed as planned |
 | Artifact Registry mirror | backend and Cloud SQL proxy source manifests retained their reviewed sha256 digests |
 | Corrected operator-job apply | 3 jobs added, 0 changed, 0 destroyed; wizard stopped before execution on a post-apply `gcloud` JSON selector defect |
@@ -160,6 +168,9 @@ qualification.
   evidence remain incomplete and are explicitly deferred post-MVP hardening.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls
   are not yet testable and are not claimed operational.
+- The `db-g1-small` target and reviewed up/down entry points are defined but not applied. The live
+  `db-f1-micro` foundation remains until an approved merged-main down run removes it; clean
+  recreation evidence remains an MVP gate.
 - Collection transfer/readiness, staging workload deployment, on-demand `db-g1-small`
   destroy/recreate, DNS/TLS/IAP cutover, direct-origin denial, critical feature-parity smoke, and the
   private-demo portion of EVAL-20 remain pending MVP gates. Collection rollback depth, integrated
@@ -174,8 +185,11 @@ qualification.
 - `contracts/deployment/delivery-policy.v1.json`
 - `infrastructure/terraform/`
 - `infrastructure/terraform/scripts/bootstrap-staging.sh`
+- `infrastructure/terraform/scripts/demo-runtime-up.sh`
+- `infrastructure/terraform/scripts/demo-runtime-down.sh`
 - `infrastructure/terraform/scripts/qualify-cloud-sql-recovery.sh`
 - `.github/workflows/terraform.yml`
 - `backend/tests/test_staging_infrastructure.py`
 - `backend/artifacts/release/deployment/staging-foundation.v1.json`
+- `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json`
 - `backend/artifacts/release/deployment/delivery-controls.v1.json`

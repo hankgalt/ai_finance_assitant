@@ -1,0 +1,91 @@
+{
+  "schema_version": "1",
+  "status": "defined_not_applied",
+  "scope": {
+    "milestone": "M11",
+    "requirements": ["PR-017", "QR-005", "QR-010", "QR-014", "QR-015"],
+    "decision": "ADR-030",
+    "evaluation": "EVAL-20",
+    "cloud_resources_mutated": false,
+    "terraform_applied": false,
+    "secret_payloads_recorded": false
+  },
+  "target": {
+    "project_id": "comfforts-369117",
+    "region": "us-west1",
+    "database_service": "cloud_sql_postgresql_17_enterprise",
+    "database_tier": "db-g1-small",
+    "availability": "single_zone",
+    "storage_gib": 10,
+    "automated_backups_enabled": false,
+    "point_in_time_recovery_enabled": false,
+    "deletion_protection": false,
+    "retain_backups_on_delete": false,
+    "destroy_discards_application_state": true,
+    "new_store_initialization": "empty"
+  },
+  "operator_entry_points": {
+    "up": "infrastructure/terraform/scripts/demo-runtime-up.sh",
+    "down": "infrastructure/terraform/scripts/demo-runtime-down.sh",
+    "destroy_confirmation": "DESTROY EMPTY-DEMO-RUNTIME"
+  },
+  "persistent_foundation": [
+    "protected_terraform_state",
+    "artifact_registry_images",
+    "workload_identity_federation",
+    "budget_and_non_secret_shared_configuration"
+  ],
+  "destroyed_staging_scope": [
+    "private_networking",
+    "cloud_sql_instance_and_database_users",
+    "managed_state_operator_jobs",
+    "staging_service_accounts_and_bindings",
+    "regional_secret_containers_and_versions"
+  ],
+  "security": {
+    "clean_merged_main_required": true,
+    "owner_gcp_identity_required": "vtalwar.w@comfforts.com",
+    "immutable_backend_image_required": true,
+    "saved_plan_apply_required": true,
+    "exact_destroy_confirmation_required": true,
+    "secrets_committed": false
+  },
+  "deferred": {
+    "cloud_sql_recovery_qualification": "post_mvp",
+    "backup_restore": "post_mvp",
+    "pitr": "post_mvp",
+    "rpo_rto": "post_mvp"
+  },
+  "verification": [
+    {
+      "command": "terraform fmt -check -recursive infrastructure/terraform",
+      "result": "passed"
+    },
+    {
+      "command": "terraform validate for bootstrap, shared, and staging roots",
+      "result": "passed for all three roots"
+    },
+    {
+      "command": "bash -n run separately for bootstrap-staging.sh, demo-runtime-up.sh, and demo-runtime-down.sh",
+      "result": "all three passed"
+    },
+    {
+      "command": "cd backend && UV_CACHE_DIR=/tmp/aifa-uv-cache uv run python -m pytest -q tests/test_staging_infrastructure.py tests/test_managed_state_contract.py tests/test_release_bundle.py",
+      "result": "24 passed"
+    },
+    {
+      "command": "cd backend && UV_CACHE_DIR=/tmp/aifa-uv-cache uv run python -m pytest -q",
+      "result": "395 passed, 8 skipped, 4 deselected"
+    },
+    {
+      "command": "shellcheck",
+      "result": "not available locally; bash syntax checks passed"
+    }
+  ],
+  "limitations": [
+    "The Terraform target and operator entry points have not been applied to GCP.",
+    "The historical db-f1-micro staging instance remains live until an approved lifecycle plan is applied.",
+    "Destroy intentionally removes regional staging secret containers and versions; payloads must be re-entered for a later create.",
+    "No backup, PITR, RPO, RTO, availability, or production-readiness claim is made."
+  ]
+}

@@ -48,16 +48,8 @@ resource "google_sql_database_instance" "postgres" {
     retain_backups_on_delete    = var.retain_backups_on_delete
 
     backup_configuration {
-      enabled                        = true
-      start_time                     = "10:00"
-      location                       = var.region
-      point_in_time_recovery_enabled = true
-      transaction_log_retention_days = var.transaction_log_retention_days
-
-      backup_retention_settings {
-        retained_backups = var.retained_backups
-        retention_unit   = "COUNT"
-      }
+      enabled                        = false
+      point_in_time_recovery_enabled = false
     }
 
     ip_configuration {
@@ -73,8 +65,7 @@ resource "google_sql_database_instance" "postgres" {
     }
 
     final_backup_config {
-      enabled        = true
-      retention_days = 7
+      enabled = false
     }
 
     user_labels = {
@@ -86,20 +77,13 @@ resource "google_sql_database_instance" "postgres" {
 
   depends_on = [google_service_networking_connection.private_services]
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "google_sql_database" "application" {
   project         = var.project_id
   name            = "aifa"
   instance        = google_sql_database_instance.postgres.name
-  deletion_policy = "ABANDON"
-
-  lifecycle {
-    prevent_destroy = true
-  }
+  deletion_policy = "DELETE"
 }
 
 resource "google_sql_user" "runtime" {
@@ -107,11 +91,7 @@ resource "google_sql_user" "runtime" {
   name            = trimsuffix(var.runtime_service_account_email, ".gserviceaccount.com")
   instance        = google_sql_database_instance.postgres.name
   type            = "CLOUD_IAM_SERVICE_ACCOUNT"
-  deletion_policy = "ABANDON"
-
-  lifecycle {
-    prevent_destroy = true
-  }
+  deletion_policy = "DELETE"
 }
 
 resource "google_sql_user" "migration" {
@@ -119,11 +99,7 @@ resource "google_sql_user" "migration" {
   name            = trimsuffix(var.migration_service_account_email, ".gserviceaccount.com")
   instance        = google_sql_database_instance.postgres.name
   type            = "CLOUD_IAM_SERVICE_ACCOUNT"
-  deletion_policy = "ABANDON"
-
-  lifecycle {
-    prevent_destroy = true
-  }
+  deletion_policy = "DELETE"
 }
 
 resource "google_sql_user" "retention" {
@@ -131,9 +107,5 @@ resource "google_sql_user" "retention" {
   name            = trimsuffix(var.retention_service_account_email, ".gserviceaccount.com")
   instance        = google_sql_database_instance.postgres.name
   type            = "CLOUD_IAM_SERVICE_ACCOUNT"
-  deletion_policy = "ABANDON"
-
-  lifecycle {
-    prevent_destroy = true
-  }
+  deletion_policy = "DELETE"
 }

@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "staging_foundation_provisioned_recovery_qualification_pending",
+  "status": "mvp_lifecycle_defined_not_applied",
   "private_demo_mvp": {
     "scope": "owner_operated_deployed_feature_parity",
     "target_machine_tier": "db-g1-small",
@@ -25,7 +25,8 @@
     "project_id": "comfforts-369117",
     "region": "us-west1",
     "availability": "single_zone",
-    "machine_tier": "db-f1-micro",
+    "machine_tier": "db-g1-small",
+    "provisioned_machine_tier": "db-f1-micro",
     "storage": {
       "type": "ssd",
       "capacity_gib": 10,
@@ -40,7 +41,7 @@
     "deployed_store_initialization": "empty",
     "local_development_backend": "sqlite",
     "staging_instance": "aifa-staging-postgres",
-    "external_configuration_status": "provisioned_recovery_qualification_pending",
+    "external_configuration_status": "mvp_replacement_pending",
     "connection": {
       "transport": "direct_vpc_egress_private_ipv4",
       "authentication": "cloud_sql_auth_proxy_automatic_iam",
@@ -85,8 +86,11 @@
     "provider_observations": "provider_specific_approved_ttl_only"
   },
   "backup_and_recovery": {
-    "automated_daily_backups": 7,
-    "pitr_transaction_log_days": 3,
+    "automated_backups_enabled": false,
+    "automated_daily_backups": 0,
+    "pitr_enabled": false,
+    "pitr_transaction_log_days": 0,
+    "qualification_required_for_mvp": false,
     "pre_migration_backup_retention_days": 7,
     "rpo_target_minutes": 5,
     "rto_target_hours": 4,

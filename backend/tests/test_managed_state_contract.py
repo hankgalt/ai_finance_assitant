@@ -19,7 +19,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     manifest = _manifest()
 
     assert manifest["schema_version"] == "1"
-    assert manifest["status"] == ("staging_foundation_provisioned_recovery_qualification_pending")
+    assert manifest["status"] == "mvp_lifecycle_defined_not_applied"
     assert manifest["private_demo_mvp"] == {
         "scope": "owner_operated_deployed_feature_parity",
         "target_machine_tier": "db-g1-small",
@@ -44,7 +44,8 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "project_id": "comfforts-369117",
         "region": "us-west1",
         "availability": "single_zone",
-        "machine_tier": "db-f1-micro",
+        "machine_tier": "db-g1-small",
+        "provisioned_machine_tier": "db-f1-micro",
         "storage": {"type": "ssd", "capacity_gib": 10, "service_minimum": True},
         "connection_pools": {
             "application_max": 2,
@@ -55,7 +56,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "deployed_store_initialization": "empty",
         "local_development_backend": "sqlite",
         "staging_instance": "aifa-staging-postgres",
-        "external_configuration_status": "provisioned_recovery_qualification_pending",
+        "external_configuration_status": "mvp_replacement_pending",
         "connection": {
             "transport": "direct_vpc_egress_private_ipv4",
             "authentication": "cloud_sql_auth_proxy_automatic_iam",
@@ -71,8 +72,11 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "managed_redis_provisioned": False,
         "correctness_requires_cache": False,
     }
-    assert manifest["backup_and_recovery"]["automated_daily_backups"] == 7
-    assert manifest["backup_and_recovery"]["pitr_transaction_log_days"] == 3
+    assert manifest["backup_and_recovery"]["automated_backups_enabled"] is False
+    assert manifest["backup_and_recovery"]["automated_daily_backups"] == 0
+    assert manifest["backup_and_recovery"]["pitr_enabled"] is False
+    assert manifest["backup_and_recovery"]["pitr_transaction_log_days"] == 0
+    assert manifest["backup_and_recovery"]["qualification_required_for_mvp"] is False
     assert manifest["run_recovery"] == {
         "stale_running_cutoff": "api_run_deadline_seconds",
         "terminal_status": "failed",

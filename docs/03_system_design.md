@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.18 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, provisioned staging foundation, and corrected private-demo MVP scope; deployment incomplete | 2026-11-10
+Version 1.19 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, provisioned historical staging foundation, corrected private-demo MVP scope, and defined on-demand lifecycle; lifecycle not applied and deployment incomplete | 2026-11-10
 
 ## 1. Architecture principles
 
@@ -497,6 +497,15 @@ runtime after an explicit data-loss acknowledgement. Protected Terraform state, 
 short-lived delivery identity, and non-secret reproducibility configuration may persist so the
 environment can be recreated. This lifecycle is distinct from backup/restore: teardown discards
 demo application data rather than promising its recovery.
+
+The repository now defines, but has not applied, that lifecycle. The up entry point targets
+`db-g1-small` with backups, PITR, final backup, retained backups, and deletion guards disabled. The
+down entry point first reviews a non-destructive transition that removes any historical live guards
+without changing the observed database tier, then reviews a staging-only destroy plan and requires
+the exact `DESTROY EMPTY-DEMO-RUNTIME` phrase. It deletes staging networking, Cloud SQL state,
+operator jobs, service identities, and regional secret containers/versions while leaving the
+reproducibility foundation outside the staging state. Schema/grant initialization and the
+browser-facing workload remain later MVP steps.
 
 Repository-side delivery controls are versioned in
 `contracts/deployment/delivery-policy.v1.json`. Pull requests and main-branch changes are configured

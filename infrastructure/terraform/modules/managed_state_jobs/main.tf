@@ -51,7 +51,7 @@ resource "google_cloud_run_v2_job" "operator" {
   project             = var.project_id
   location            = var.region
   name                = "aifa-${var.environment}-${each.value.name}"
-  deletion_protection = true
+  deletion_protection = false
 
   labels = {
     application = "finance-assistant"
@@ -164,7 +164,4 @@ resource "google_cloud_run_v2_job" "operator" {
     }
   }
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
