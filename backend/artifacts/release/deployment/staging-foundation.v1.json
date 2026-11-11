@@ -138,6 +138,28 @@
     "migration_identity": "aifa-stg-migration@comfforts-369117.iam.gserviceaccount.com",
     "retention_identity": "aifa-stg-retention@comfforts-369117.iam.gserviceaccount.com"
   },
+  "managed_state_operator_jobs": {
+    "status": "migration_and_prepare_executed_recovery_pending",
+    "migration": {
+      "execution": "aifa-staging-migrate-xrbw9",
+      "status": "passed"
+    },
+    "qualification_prepare": {
+      "execution": "aifa-staging-qualify-gpp85",
+      "status": "passed"
+    },
+    "retention": {
+      "status": "not_executed"
+    },
+    "recovery_attempt": {
+      "backup_run_id": "1794360676084",
+      "backup_name": "projects/comfforts-369117/backups/fd4e3c05-0df3-4ab8-a82f-c211ff4213b0",
+      "backup_restore": "rejected_before_instance_creation_because_configuration_overrides_used_numeric_backup_id",
+      "point_in_time_recovery": "not_executed",
+      "temporary_instances_created": false,
+      "qualification_backup_cleanup": "deleted_after_explicit_operator_confirmation"
+    }
+  },
   "regional_secret_metadata": {
     "location": "us-west1",
     "resources": [
@@ -156,8 +178,7 @@
     "status": "provisioned"
   },
   "remaining_gates": [
-    "Terraform workflow success after merge",
-    "real Cloud SQL migration, retention, backup/restore, and recovery qualification",
+    "real Cloud SQL retention, backup/restore, and point-in-time recovery qualification",
     "staging workload and no-direct-workload-bypass qualification",
     "Qdrant collection transfer and rollback",
     "load balancer, HTTPS, DNS, IAP, deployment, and rollback qualification"

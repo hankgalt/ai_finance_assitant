@@ -110,11 +110,11 @@ API key.
 ## Stop gate and remaining evidence
 
 - The later staging-foundation slice has provisioned Terraform state, IAM, private Cloud SQL, and
-  empty Secret Manager containers. The private operator-job definitions and recovery wizard are
-  ready for a reviewed merged-main digest, but this report still claims no successful Cloud SQL
-  connection, migration, retention, backup/restore, or PITR rehearsal.
-- Qualify the expanded staging Terraform plan, apply only the three reviewed jobs, then run the
-  synthetic Cloud SQL migration/recovery/retention procedure. The locally passing complete
+  empty Secret Manager containers. The private migration and synthetic-prepare jobs have now run
+  successfully through the Cloud SQL IAM/private-network path. This report still claims no
+  successful retention, recovered-target verification, backup restore, or PITR rehearsal.
+- Complete the synthetic Cloud SQL recovery/retention procedure using the fully qualified backup
+  name for the configured new-instance restore. The locally passing complete
   two-Principal REST/SSE/History/Inspector matrix remains required at the later assembled staging
   workload gate.
 - Reproduce the locally passing migration/runtime/retention role boundary with Cloud SQL IAM and

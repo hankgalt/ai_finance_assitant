@@ -1,7 +1,7 @@
 # M11 delivery report — Staging infrastructure foundation
 
 Status: Foundation provisioned and last applied plans drift-free; staging and production keyless
-identity qualified; managed-state images mirrored and operator jobs provisioned; real-service recovery, workload, and no-
+identity qualified; managed-state migration and synthetic preparation passed; real-service recovery, workload, and no-
 bypass qualification pending | 2026-11-10
 
 ## Scope and decisions
@@ -47,7 +47,8 @@ The live qualification record is
   retention.
   Each uses its dedicated IAM database identity, Direct VPC private egress, a digest-pinned backend
   image, and a digest-pinned Cloud SQL Auth Proxy with automatic IAM authentication. The jobs have
-  not been executed and are not represented as operational or recovery-qualified.
+  passed migration and synthetic preparation. Retention, restored-target validation, and the complete
+  recovery procedure have not passed and are not represented as recovery-qualified.
 - Because the selected jobs no longer use DSN secret payloads, the expanded plan removes the three
   PostgreSQL secret-access IAM bindings. The protected empty secret containers remain historical
   metadata; only the runtime Qdrant identity retains its not-yet-used secret-access binding.
@@ -76,6 +77,7 @@ The live qualification record is
 | Artifact Registry mirror | backend and Cloud SQL proxy source manifests retained their reviewed sha256 digests |
 | Corrected operator-job apply | 3 jobs added, 0 changed, 0 destroyed; wizard stopped before execution on a post-apply `gcloud` JSON selector defect |
 | First privilege-bootstrap run | reviewed grants installed; unsupported delete flag stopped before job execution; Data API disabled and temporary owner user removed |
+| First migration/recovery run | migration `aifa-staging-migrate-xrbw9` and prepare `aifa-staging-qualify-gpp85` passed; numeric-ID restore rejected configuration overrides before creating a temporary instance; PITR and retention did not run |
 | Cloud SQL live readback | `RUNNABLE`; PostgreSQL 17; private IP only; `ENCRYPTED_ONLY`; IAM auth on |
 | Backup/storage live readback | 10 GiB SSD; auto-grow limit 20 GiB; 7 backups; 3-day transaction logs |
 | Artifact Registry live readback | Docker standard repository with immutable tags |
@@ -123,11 +125,15 @@ qualification.
 
 - The corrected single-registry plan added the three private operator jobs. A post-apply JSON
   selector defect was corrected. The next run installed the reviewed grants but stopped before
-  migration, qualification, retention, backup restore, or PITR when owner cleanup supplied an
-  unsupported delete flag. Data API access is disabled, the temporary owner user is absent, and the
-  cleanup fix must merge before the wizard resumes from a clean `main`.
-- Slice 3 remains short of its real-service gate: migrations, retention, restart behavior,
-  backup/restore, PITR, and recovery must run from an authorized VPC-connected execution path.
+  job execution when owner cleanup supplied an unsupported delete flag. Data API access is disabled
+  and the temporary owner user is absent. The subsequent run passed migration and synthetic
+  preparation but stopped before creating either temporary recovery instance because `gcloud`
+  permits new-instance overrides only with the fully qualified backup name, not the numeric backup
+  run ID. No temporary instance was created, and the exact on-demand backup was deleted after
+  explicit operator confirmation. The corrected wizard resolves and validates the unique backup
+  name before restore.
+- Slice 3 remains short of its real-service gate: retention, recovered-target validation,
+  backup/restore, PITR, restart behavior, cleanup, RPO/RTO, and final drift must all pass.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls
   are not yet testable and are not claimed operational.
 - Collection transfer/rollback, staging workload deployment, DNS/IAP cutover, integrated capacity/
