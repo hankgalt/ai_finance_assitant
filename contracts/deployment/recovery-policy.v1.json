@@ -1,6 +1,8 @@
 {
   "schema_version": "1",
   "status": "prepare_and_retention_executed_recovery_pending",
+  "private_demo_mvp_gate": false,
+  "execution_priority": "deferred_post_mvp",
   "source": {
     "project_id": "comfforts-369117",
     "region": "us-west1",

@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.17 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries and provisioned staging foundation; proposed M11 deployment incomplete | 2026-11-10
+Version 1.18 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, provisioned staging foundation, and corrected private-demo MVP scope; deployment incomplete | 2026-11-10
 
 ## 1. Architecture principles
 
@@ -395,7 +395,7 @@ permanent Archived Session deletion cascades user artifacts, including submitted
 explicitly deletes its checkpoint thread. Local provider-cache purge remains token-protected; under
 IAP, administrative purge additionally requires the owner role.
 
-Default local retention is 30 days for Sessions and RunEvents and 365 days for saved Portfolios. Historical cache retention is at most 3,650 days, with a seven-day recent tail revalidated after six hours and a 128-entry/five-minute memory tier. These are private-demo defaults, not public legal-policy approval. A later public or multi-user store requires a new ADR, authentication/authorization, protected storage, enforced retention jobs, backup/recovery, and migration qualification.
+Default local retention is 30 days for Sessions and RunEvents and 365 days for saved Portfolios. Historical cache retention is at most 3,650 days, with a seven-day recent tail revalidated after six hours and a 128-entry/five-minute memory tier. These are private-demo defaults, not public legal-policy approval. The M11 private-demo store requires ADR-030, authentication/authorization, protected storage, explicit retention jobs, and migration qualification. Backup/recovery and availability qualification remain required before a later production-readiness claim, not before the disposable private-demo MVP.
 
 Logs and traces use allow-listed fields, pseudonymous correlation identifiers, and field-level redaction. Raw prompts, raw portfolio rows, transactions, credentials, hidden reasoning, and unrestricted tool payloads are excluded. Secrets remain server-side. File parsing enforces content and resource limits and cannot execute formulas, macros, or embedded objects.
 
@@ -470,22 +470,33 @@ protected GitHub environments, the budget, and the private staging managed-state
 provisioned. The last applied foundation plans were drift-free. Digest-pinned non-HTTP Cloud Run
 jobs for migration, synthetic qualification, and retention are provisioned. Migration and synthetic
 preparation have executed successfully, and retention/cleanup has removed the namespaced synthetic
-source state. Recovered-target verification and complete backup/PITR qualification remain pending.
+source state. Recovered-target verification and complete backup/PITR qualification remain pending as
+deferred post-MVP hardening, not as a private-demo cutover gate.
 No application workload, load balancer, IAP edge, DNS record, or
 direct-workload-bypass control is represented as operational. The selected region is
-`us-west1`. The selected authoritative managed store is single-zone Cloud SQL PostgreSQL 17
-Enterprise, initially `db-f1-micro` with a 10 GiB SSD, seven daily backups, and three days of PITR.
+`us-west1`. The currently provisioned staging store is single-zone Cloud SQL PostgreSQL 17
+Enterprise on `db-f1-micro` with a 10 GiB SSD, seven daily backups, and three days of PITR; that is
+historical foundation state, not the corrected MVP target. The next demo-runtime creation targets
+`db-g1-small`, starts with an empty store, and carries no MVP backup/PITR/RPO/RTO guarantee.
 It owns separate application, checkpoint, and provider-cache persistence boundaries. Local
 development remains SQLite, deployed response caching is disabled, and managed Redis is not part of
 the initial topology. Same-project staging uses separate state, identities, secrets, database roles,
 and synthetic data, with ephemeral restore infrastructure. The selected Qdrant Managed Cloud Free
 cluster is a documented private-demo exception in `us-central1`; it contains shared knowledge only
 and provides no production SLA. The owner-approved values are versioned in
-`contracts/deployment/managed-state.v1.json`. The adapter and foundation exist, but recovery and
-integrated security qualification remain incomplete. The deployed design must keep knowledge ingestion and
+`contracts/deployment/managed-state.v1.json`. The adapter and foundation exist, but the workload,
+edge, knowledge transfer, destroy/recreate lifecycle, and integrated security qualification remain
+incomplete. The deployed design must keep knowledge ingestion and
 activation separate from runtime, deny direct workload bypass, and retain explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the proposal.
+
+The demo runtime is intentionally on demand. Reviewed Terraform must be able to create the empty
+Cloud SQL store and application/edge resources, run migration and readiness checks, and destroy the
+runtime after an explicit data-loss acknowledgement. Protected Terraform state, immutable images,
+short-lived delivery identity, and non-secret reproducibility configuration may persist so the
+environment can be recreated. This lifecycle is distinct from backup/restore: teardown discards
+demo application data rather than promising its recovery.
 
 Repository-side delivery controls are versioned in
 `contracts/deployment/delivery-policy.v1.json`. Pull requests and main-branch changes are configured
@@ -518,10 +529,10 @@ durable path around the private workload boundary.
 The qualification command writes only namespaced synthetic state for two Principals, proves
 cross-Principal denial and restart durability, leaves an expired retention probe, and can verify
 that marker independently on a recovered target. The source retention job and final verification
-then prove expiry and remove all synthetic qualification records. The recovery policy requires both
+then prove expiry and remove all synthetic qualification records. The deferred recovery policy requires both
 an on-demand-backup restore and a point-in-time clone, exact-target cleanup, measured RPO/RTO, a
 drift-free final Terraform plan, and a secret-free result artifact. These are executable contracts,
-not operational claims, until the live Cloud SQL run passes. The RTO measurement is conservative:
+not MVP gates or operational claims. If post-MVP recovery qualification resumes, the RTO measurement is conservative:
 it spans the start of backup restore through sequential validation of both temporary targets.
 
 Regional Secret Manager remains the approved metadata topology, but Cloud Run does not natively

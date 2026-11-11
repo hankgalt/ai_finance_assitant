@@ -48,6 +48,14 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "defined_not_provisioned",
         "staging_foundation_provisioned",
     }
+    assert contract["private_demo_mvp"] == {
+        "target_database_tier": "db-g1-small",
+        "runtime_lifecycle": "on_demand_create_destroy_recreate",
+        "empty_store_on_create": True,
+        "data_preservation_on_destroy": False,
+        "backup_restore_gate": "deferred_post_mvp",
+        "current_provisioned_foundation_requires_replacement": True,
+    }
     assert contract["project"] == {
         "id": "comfforts-369117",
         "number": "730340912967",
@@ -316,6 +324,8 @@ def test_cloud_sql_recovery_contract_requires_two_temporary_validated_targets() 
 
     assert contract["schema_version"] == "1"
     assert contract["status"] == "prepare_and_retention_executed_recovery_pending"
+    assert contract["private_demo_mvp_gate"] is False
+    assert contract["execution_priority"] == "deferred_post_mvp"
     assert contract["source"] == {
         "project_id": "comfforts-369117",
         "region": "us-west1",

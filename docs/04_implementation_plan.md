@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.1 | Status: M0–M9.1 complete; M10 planned; M11 slices 2 and 4 implemented, slice 3 live-recovery gate pending, and slice 5 foundation provisioned with remaining qualification gates | 2026-11-10
+Version 3.2 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, and slice 5 foundation provisioned with workload/edge/knowledge gates pending | 2026-11-10
 
 ## 1. Delivery rules
 
@@ -354,11 +354,22 @@ verification commands/results, security/privacy statement, and unresolved limita
 
 ### M11 — IAP-protected GCP private multi-user deployment
 
-M11 is an independent post-release production-hardening track. It may proceed before, after, or in
-parallel with M10 and must not imply that cash-flow import is implemented. Its first slice is
+M11 is an independent post-release private-demo deployment track. It may proceed before, after, or
+in parallel with M10 and must not imply that cash-flow import is implemented. Its first slice is
 documentation-only: proposed ADR-030, the requirements/design/evaluation updates, deployment threat
 boundaries, open owner decisions, and rollback gates. Later slices may begin only after their
 dependencies and ADR-030 validation questions are resolved.
+
+**Corrected MVP boundary:** The immediate goal is a working owner-only application at
+`https://apps.comfforts.com/finance_assistant` with the capabilities of the qualified local app,
+not a production-ready or generally available service. The mandatory MVP gates are verified IAP
+identity, per-Principal isolation, protected managed state and secrets, schema migration, active
+Finance/Tax collections, the exact base path, no direct Cloud Run access, and deployed
+browser/API/SSE/History/Inspector smoke. The demo runtime uses an empty `db-g1-small` Cloud SQL
+store and is created/destroyed on demand; teardown explicitly discards demo application data.
+Backup/PITR, HA, disaster recovery, load/soak, formal SLO/alert rehearsal, and full
+application/infrastructure/collection rollback qualification are deferred post-MVP hardening and
+must not block this private-demo cutover or be represented as operational.
 
 **Deliverables**
 
@@ -373,9 +384,9 @@ dependencies and ADR-030 validation questions are resolved.
   namespaces, deletion, and Inspector access. Shared knowledge remains read-only, and any shared
   provider observation or cache entry requires an approved non-user-specific policy.
 - Stateless deployable frontend/backend images plus selected managed application/checkpoint storage,
-  production Qdrant, Redis topology, secret management, encryption, migrations, retention jobs,
-  backup/restore, readiness, observability, quotas, and cost controls. Exact GCP services, region,
-  sizing, and retention periods require the owner decisions and validation named by ADR-030.
+  deployed Qdrant, secret management, encryption, migrations, retention jobs, readiness, and basic
+  cost controls. The deployed response cache remains disabled. The on-demand lifecycle creates an
+  empty `db-g1-small` store and destroys demo runtime state only after explicit data-loss review.
 - Capability-owned Terraform for the GCP foundation, workload identity, Artifact Registry,
   workloads, networking, load balancer, IAP, managed data services, Secret Manager, monitoring,
   budgets, HTTPS, and no-direct-workload-bypass controls. Registrar/DNS actions that cannot be owned
@@ -384,7 +395,7 @@ dependencies and ADR-030 validation questions are resolved.
   scanning, image publication, Terraform validation/plan, approval-gated apply/deploy, migration,
   smoke verification, and rollback. GCP authentication uses Workload Identity Federation and stores
   no long-lived service-account key in GitHub.
-- A production knowledge-release workflow that transfers immutable collection artifacts to the
+- A deployed knowledge-release workflow that transfers immutable collection artifacts to the
   selected Qdrant service, verifies manifests/schema/models/qrels, activates aliases only after the
   fixed gates pass, and proves rollback. Application startup continues to perform readiness checks
   only and never fetches sources or generates embeddings.
@@ -392,10 +403,12 @@ dependencies and ADR-030 validation questions are resolved.
   balancer and IAP custom External OAuth client, with the owner and explicitly approved Workspace or
   Gmail viewers allow-listed. Plain HTTP redirects to HTTPS; anonymous access and direct workload
   URLs are denied.
-- A deployment threat review and release-qualification package covering identity, cross-Principal
-  isolation, provider entitlements, file handling, privacy/redaction, retention/deletion,
-  backup/restore, availability, capacity, alerting, incident response, DNS/certificate and IAM
-  rollback, application/data migration rollback, and collection rollback.
+- An MVP deployment threat review and release-qualification package covering identity,
+  cross-Principal isolation, provider entitlements, file handling, privacy/redaction,
+  retention/deletion while deployed, clean migration, on-demand destroy/recreate, DNS/TLS/IAP,
+  direct-origin denial, and end-to-end feature-parity smoke. Recovery, availability, capacity,
+  alerting/incident rehearsal, and rollback-depth qualification remain separately tracked
+  post-MVP hardening.
 
 **Dependencies:** Completed M9.1 capability-layout maintenance plus accepted ADR-019 and ADR-029.
 The documentation slice creates proposed ADR-030. Application access/isolation requires approval of
@@ -411,24 +424,29 @@ M11 managed persistence for the cash-flow capability.
 2. Implement `/finance_assistant`, verified IAP identity, Application Principal mapping, and complete
    per-Principal application authorization. Stop until the two-Principal negative matrix passes.
 3. Replace local-only runtime assumptions with selected managed-state, secret, migration, retention,
-   readiness, backup/restore, telemetry, and stateless-workload behavior. Stop until recovery and
-   privacy tests pass against the real adapter seams.
+   readiness, telemetry, and stateless-workload behavior. Stop until migration, restart, retention,
+   privacy, and two-Principal tests pass against the real adapter seams. Keep the implemented
+   backup/restore procedure as deferred hardening evidence; live recovery is not an MVP stop gate.
 4. Establish deterministic GitHub CI, artifact provenance, security scanning, Workload Identity
    Federation, and approval boundaries before permitting automated cloud deployment.
-5. Provision and validate staging GCP infrastructure through Terraform, including the no-direct-
-   workload-bypass boundary, before any production/demo cutover.
+5. Provision and validate staging GCP infrastructure through Terraform, including the on-demand
+   `db-g1-small` lifecycle and no-direct-workload-bypass boundary, before the private-demo cutover.
 6. Transfer, validate, activate, and roll back the versioned Finance and Tax collections in the
    selected production Qdrant topology.
 7. Deploy to staging, then configure HTTPS, external DNS, IAP OAuth branding/allow-list, and
    `apps.comfforts.com/finance_assistant`; promote only the pinned qualified revision.
-8. Run the integrated security, privacy, recovery, capacity, cost, accessibility, observability, and
-   release qualification. Security controls and tests are implemented in every earlier slice; this
-   final slice verifies the assembled system rather than adding security after deployment.
+8. Run the minimum integrated MVP qualification: identity/isolation, privacy, base-path,
+   migration/restart/retention, Qdrant readiness, provider gates, direct-origin denial,
+   destroy/recreate, accessibility-critical journeys, and deployed feature-parity smoke. Security
+   controls and tests are implemented in every earlier slice; this final slice verifies the
+   assembled system rather than adding security after deployment. Recovery, load/soak, SLO/alert,
+   incident, and full rollback rehearsals remain post-MVP hardening.
 
 Implementation status on 2026-11-10: slices 2 and 4 are implemented. Slice 3's PostgreSQL adapter,
 operator configuration, role policy, synthetic migration/recovery/retention harness, recovery
-contract, and repeatable operator procedure are implemented and locally qualified, but its real-
-service Cloud SQL recovery gate remains pending. The slice 5 Terraform state, registry, WIF,
+contract, and repeatable operator procedure are implemented and locally qualified. Real-service
+Cloud SQL recovery remains pending but is now explicitly deferred from the private-demo MVP. The
+slice 5 Terraform state, registry, WIF,
 protected GitHub environments, budget, private network, Cloud SQL, service identities, and empty
 regional secret containers are provisioned; the last applied foundation plans were drift-free. The
 three digest-pinned private Cloud Run operator jobs are provisioned. Migration and synthetic
@@ -469,9 +487,28 @@ from the protected source. The source instance and durable foundation were not d
 expanded.
 The initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
 subject remediation changed only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
-production smoke both passed after required review. Real-service recovery, the staging workload,
-and no-direct-workload-bypass qualification remain stop gates, so slice 5 is not complete and no
-internet-facing workload is claimed operational.
+production smoke both passed after required review. The staging workload, knowledge transfer,
+on-demand `db-g1-small` lifecycle, edge, and no-direct-workload-bypass qualification remain MVP stop
+gates, so slice 5 is not complete and no internet-facing workload is claimed operational. Real-
+service recovery is deferred post-MVP hardening.
+
+**Remaining private-demo MVP sequence**
+
+1. Change the Terraform target from the historical `db-f1-micro` foundation to an on-demand
+   `db-g1-small` demo runtime. Add reviewed create/destroy entry points, an explicit data-loss
+   confirmation, and policy tests that preserve only the reproducibility foundation recorded by
+   ADR-030. Do not run the recovery wizard.
+2. Deploy the pinned backend and frontend revisions to staging, execute migration/retention setup,
+   and prove the Cloud Run default URL, anonymous invocation, and every non-IAP origin fail closed.
+3. Transfer and activate the existing qualified Finance and Tax collections in the selected Qdrant
+   cluster, supply secret values only through Secret Manager, and pass authenticated readiness.
+4. Configure the exact `/finance_assistant` load-balancer route, HTTPS, IAP owner allow-list, stable
+   DNS target, and registrar record. Keep viewer admission and viewer live-provider use disabled
+   until separately approved.
+5. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
+   journeys; record identity/isolation and direct-origin evidence; then prove reviewed teardown and
+   clean recreation from the persistent foundation. This evidence is the private-demo MVP release
+   gate. Stop there rather than expanding into deferred production hardening.
 
 **Owner decisions required before implementation slices**
 
@@ -483,11 +520,14 @@ internet-facing workload is claimed operational.
 - Before managed-state and infrastructure work: identify the GCP organization/project and billing
   owner, preferred region and cost ceiling, selected workload/database/Qdrant/Redis services,
   retention and backup objectives, GitHub environment approvers, and staging/production separation.
-  Resolved for implementation: same-project staging in `comfforts-369117`; single-zone Cloud SQL
-  PostgreSQL 17 Enterprise `db-f1-micro` with 10 GiB SSD, seven daily backups, and three-day PITR;
-  deployed response cache disabled; the documented `us-central1` Qdrant Free exception; regional
-  Secret Manager with Google-managed encryption; credential-free deployed providers; USD 100 soft
-  monthly budget; and sole public-repository approver `hankgalt` without independent review.
+  Corrected for the private-demo MVP: same-project staging in `comfforts-369117`; on-demand,
+  single-zone Cloud SQL PostgreSQL 17 Enterprise `db-g1-small` with 10 GiB SSD and an empty store on
+  every creation; explicit data loss on destroy; no MVP backup/PITR/RPO/RTO claim; deployed response
+  cache disabled; the documented `us-central1` Qdrant Free exception; regional Secret Manager with
+  Google-managed encryption; credential-free deployed providers; USD 100 soft monthly budget; and
+  sole public-repository approver `hankgalt` without independent review. The existing provisioned
+  `db-f1-micro` plus backup/PITR settings are historical staging state to replace through Terraform,
+  not the target or an MVP acceptance gate.
 - Before cutover: provide registrar/DNS authority, the final approved-viewer list, OAuth branding and
   public privacy/support URLs, provider modes/entitlements per role, and the maintenance/incident
   contact. Credentials and secret values are supplied only through their approved secret systems,
@@ -497,30 +537,35 @@ internet-facing workload is claimed operational.
 or bypassed IAP assertions, and two approved viewers cannot read, mutate, stream, resume, inspect,
 archive, delete, or infer each other's resources across any product experience. The deployed path
 and all generated assets/interfaces work under `/finance_assistant`; direct workload access is
-denied. Authoritative state survives restart and controlled rollout, retention/deletion and
-backup/restore are enforced, active RAG collections pass the fixed qualification and rollback gates,
-provider data is selected and displayed only within recorded rights, and measured capacity/cost/SLO
-targets pass. CI/CD deploys a pinned reviewed revision through short-lived identity and supports a
-tested application, infrastructure, schema, and collection rollback. No control is called
-operational until the deployed evidence passes, and accepting ADR-030 requires the final threat and
-release review.
+denied. An empty `db-g1-small` store migrates cleanly, authoritative state survives application
+restart while the runtime exists, retention/deletion works, and active Finance/Tax collections pass
+readiness and fixed retrieval gates. Provider data is selected and displayed only within recorded
+rights. The owner can complete the critical Assistant, Portfolio, Snapshot, Goal, History, Run,
+SSE, and Inspector journeys at the protected URL, then explicitly destroy and cleanly recreate the
+demo runtime. CI/CD uses a pinned reviewed revision and short-lived identity. No control is called
+operational until its deployed evidence passes. Backup/PITR, HA, disaster recovery, capacity/soak,
+formal SLO/alert rehearsal, and full rollback qualification are not MVP acceptance requirements and
+remain visible limitations.
 
 **Tests:** Base-path/static-asset/API/SSE/browser navigation; signed-IAP assertion signature,
 issuer/audience/expiry and unsigned-header rejection; owner/viewer/disabled/unknown identities;
 cross-Principal matrix tests for every resource and lifecycle operation; guessed identifiers,
 idempotency, concurrent Sessions, stream reconnect, Inspector, cache and administrative boundaries;
-migration/restart/retention/deletion; backup/restore and disaster rehearsal; Qdrant transfer,
-readiness, activation and rollback; Redis/provider/telemetry outage and privacy behavior; Terraform
+migration/restart/retention/deletion; clean create/destroy/recreate with explicit data-loss review;
+Qdrant transfer, readiness, and active-collection retrieval; provider/telemetry outage and privacy behavior; Terraform
 format/validate/plan/policy and URL-map tests; direct-origin bypass, TLS, headers, CSRF/XSS/SSRF,
 malicious imports and prompt injection; container/dependency/secret/IaC scans; staging smoke,
-supported-browser accessibility, load/soak, cost/quota/alert, deploy and rollback tests.
+supported-browser accessibility, and critical deployed feature-parity journeys. Backup/restore,
+PITR, disaster rehearsal, load/soak, formal cost/SLO/alert, and full deploy/rollback tests remain in
+the post-MVP hardening backlog.
 
 **Evidence:** Proposed/accepted ADR-030 history; identity and authorization matrix; data inventory and
 threat model; migration and rollback transcripts; Terraform plans and drift checks; CI/CD
 attestations and image digests; collection manifests/evaluations/activation records; provider-rights
-matrix; backup/restore, load/cost/SLO and incident-response reports; correlated privacy-filtered
-telemetry; DNS/TLS/IAP and no-bypass verification; clean staging/production deployment record; known
-limitations; and an explicit private multi-user release recommendation. Current artifacts live under
+matrix; correlated privacy-filtered telemetry; DNS/TLS/IAP and no-bypass verification; clean
+staging deployment, destroy/recreate, and feature-parity records; known limitations; and an explicit
+private-demo MVP release recommendation. Backup/restore, load/cost/SLO, incident-response, and full
+rollback reports are required only before a later production-readiness claim. Current artifacts live under
 their capability, `backend/artifacts/quality/`, or `backend/artifacts/release/`; milestone delivery
 reports link to those single sources of truth.
 
@@ -539,9 +584,10 @@ M9.1 → M11, independent of M10
 ~~~
 
 M1, M2, and provider-contract portions of M3 can proceed in parallel after M0 when staffing allows. M7 renders generic persisted RunEvents first. M6.1 later emits response-cache activity through that existing tool-event contract, and M8 independently qualifies both features for release. Evaluation fixtures begin with their owning milestone and are consolidated in M8. No milestone waits until M8 to add its critical tests. M9.1 changes repository ownership after the release without changing product behavior. M10 is a post-release planned enhancement; its provider-independent import path remains useful even if no live banking provider is ever approved.
-M11 is a separate production-hardening and deployment track rooted in the M9.1 product-oriented
-layout. It may be delivered before or in parallel with M10. Security, isolation, and rollback tests
-arrive with their owning M11 slice rather than being deferred to final qualification.
+M11 is a separate private-demo deployment track rooted in the M9.1 product-oriented layout. It may
+be delivered before or in parallel with M10. Security and isolation tests arrive with their owning
+M11 slice rather than being deferred to final qualification. Production-hardening depth beyond the
+corrected MVP remains explicitly deferred and separately gated.
 
 ## 4. Mapping from the previous milestone plan
 
@@ -559,11 +605,11 @@ arrive with their owning M11 slice rather than being deferred to final qualifica
 | Old M8: MCP tools | New M9 | Kept as a coursework release obligation after validated core modules |
 | Old M9: documentation and demo | New M9 | Preserved and broadened into product release packaging |
 | Previously unsequenced PR-016 cash-flow implementation | New M10 | Adds a provider-independent JSON/CSV path after the initial/coursework release while preserving the M2 domain seam |
-| Previously unsequenced private multi-user GCP deployment | New M11 | Adds IAP identity, per-Principal authorization, managed infrastructure, production knowledge deployment, CI/CD, and release qualification without depending on or reorganizing around M10 |
+| Previously unsequenced private multi-user GCP deployment | New M11 | Adds IAP identity, per-Principal authorization, managed infrastructure, deployed knowledge, CI/CD, and private-demo release qualification without depending on or reorganizing around M10 |
 | Old M10: optional hybrid retrieval or voice | New M1 evaluation and future backlog | Hybrid retrieval is evaluated as a retrieval strategy, not bonus theater; voice remains out of initial scope |
 
 ## 5. Release sequencing and stop conditions
 
-The **initial product release** requires M0 through M8, including M4.1 and M6.1, plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the independent post-release cash-flow implementation and does not require a banking-data provider. M11 is the independent post-release private multi-user deployment and production-hardening track. Neither M10 nor M11 delays the other; anonymous public availability remains out of scope unless separately approved.
+The **initial product release** requires M0 through M8, including M4.1 and M6.1, plus the product documentation and packaging portions of M9. It is released only as a private demonstration release. The **coursework release** additionally requires the submission-specific portions of M9, including MCP unless authoritative clarification removes it. M10 is the independent post-release cash-flow implementation and does not require a banking-data provider. M11 is the independent post-release private multi-user deployment track whose immediate release is the corrected owner-operated demo MVP; production-hardening depth remains later work. Neither M10 nor M11 delays the other; anonymous public availability remains out of scope unless separately approved.
 
 Stop a milestone when a critical dependency, source-use right, data-integrity policy, security decision, or external authority is missing. Record the blocker rather than substituting invented data, bypassing a gate, or weakening the requirement. Near-complete work is not milestone completion.

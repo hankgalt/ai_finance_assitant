@@ -1,8 +1,9 @@
 # M11 delivery report — Staging infrastructure foundation
 
 Status: Foundation provisioned and last applied plans drift-free; staging and production keyless
-identity qualified; managed-state migration, synthetic preparation, and retention cleanup passed; real-service recovery, workload, and no-
-bypass qualification pending | 2026-11-10
+identity qualified; managed-state migration, synthetic preparation, and retention cleanup passed;
+private-demo MVP scope corrected; workload/edge/knowledge/no-bypass qualification pending and
+real-service recovery deferred | 2026-11-10
 
 ## Scope and decisions
 
@@ -11,6 +12,12 @@ under accepted ADR-019/ADR-029 and proposed ADR-030. It implements the approved 
 staging foundation in GCP project `comfforts-369117`, region `us-west1`. It does not deploy a Cloud
 Run workload, configure load balancing/IAP/DNS, transfer Qdrant collections, enter secret payloads,
 or broaden any provider entitlement.
+
+The corrected MVP target is an on-demand `db-g1-small` demo runtime with an empty store on every
+creation and explicit data loss on destroy. The provisioned `db-f1-micro`, seven-backup, and
+three-day-PITR configuration below remains truthful evidence of the earlier foundation apply, but it
+is not the target configuration and its recovery qualification no longer blocks the private-demo
+MVP.
 
 The machine-readable desired-state boundary is
 [`contracts/deployment/infrastructure-policy.v1.json`](../contracts/deployment/infrastructure-policy.v1.json).
@@ -123,7 +130,7 @@ remains denied by the existing identity/provider policy, deployed response cachi
 and the Qdrant Free cluster remains a separate shared-knowledge exception pending slice 6 transfer
 qualification.
 
-## Stop gate and remaining evidence
+## Remaining MVP gates and deferred hardening
 
 - The corrected single-registry plan added the three private operator jobs. A post-apply JSON
   selector defect was corrected. The next run installed the reviewed grants but stopped before
@@ -149,13 +156,17 @@ qualification.
   corrected wizard uses asynchronous operations plus a shared four-hour polling deadline, reapplies
   deletion protection and backup controls after restore, and disables PITR before disabling clone
   backups.
-- Slice 3 remains short of its real-service gate: recovered-target validation, backup/restore,
-  PITR, restart behavior, RPO/RTO, and final drift must all pass.
+- Recovered-target validation, backup/restore, PITR, measured RPO/RTO, and recovery final-drift
+  evidence remain incomplete and are explicitly deferred post-MVP hardening.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls
   are not yet testable and are not claimed operational.
-- Collection transfer/rollback, staging workload deployment, DNS/IAP cutover, integrated capacity/
-  cost/observability checks, application/infrastructure rollback, and final EVAL-20 remain pending.
-- Proposed ADR-030 remains Proposed until the complete M11 threat and release qualification passes.
+- Collection transfer/readiness, staging workload deployment, on-demand `db-g1-small`
+  destroy/recreate, DNS/TLS/IAP cutover, direct-origin denial, critical feature-parity smoke, and the
+  private-demo portion of EVAL-20 remain pending MVP gates. Collection rollback depth, integrated
+  capacity/soak/SLO/alerting, incident rehearsal, and application/infrastructure rollback remain
+  post-MVP hardening.
+- Proposed ADR-030 remains Proposed until the corrected private-demo M11 threat and release
+  qualification passes; that acceptance will not imply production readiness.
 
 ## Artifact paths
 

@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 3.1 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access, managed-state adapter, delivery controls, and staging foundation implemented, remaining qualification and deployment pending; M10 planned | 2026-11-10
+Version 3.2 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 private-demo MVP scope corrected, application access, managed-state adapter, delivery controls, and staging foundation implemented, workload/edge/knowledge deployment pending; M10 planned | 2026-11-10
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -50,11 +50,12 @@ delivery report](M11_application_access_delivery_report.md) records the implemen
 base-path, and per-Principal isolation slice without claiming cloud deployment qualification.
 [M11 managed-state adapter report](M11_managed_state_adapter_report.md) records the selected
 managed-state contract, PostgreSQL/checkpoint adapter, operator migration/retention seams, and the
-remaining real-service recovery stop gate. [M11 delivery pipeline report](M11_delivery_pipeline_report.md)
+deferred real-service recovery qualification. [M11 delivery pipeline report](M11_delivery_pipeline_report.md)
 records digest-pinned non-root images, deterministic/security workflows, provenance and keyless
 identity seams. [M11 staging infrastructure report](M11_staging_infrastructure_report.md) records the
 provisioned Terraform state, registry, keyless identities, protected GitHub environments, budget,
-private Cloud SQL foundation, drift evidence, and remaining human/recovery/workload stop gates.
+private Cloud SQL foundation, drift evidence, deferred recovery work, and remaining MVP
+workload/edge/knowledge gates.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under
@@ -70,11 +71,14 @@ If documents conflict, use this precedence: product requirements, accepted ADRs,
 - **Planned enhancement:** architecturally acknowledged work that is not part of the initial release.
 - **Private multi-user deployment:** an internet-routable deployment protected by strong identity,
   an explicit allow-list, and per-Principal authorization; it is not anonymous public access. M11
-  now implements the application-access boundary, but the deployment is not operational until its
-  remaining cloud and integrated qualification slices pass.
-- **Production hardening:** required before operating outside the initial local release, including
-  the private multi-user boundary planned in M11; proposed or documented controls are not represented
-  as implemented.
+  now implements the application-access boundary. Its first cloud objective is a revocable,
+  owner-operated private-demo MVP at the documented URL, not a production-ready service. The MVP is
+  not operational until the workload, knowledge, IAP edge, direct-origin denial, and feature-parity
+  gates pass.
+- **Production hardening:** controls beyond the private-demo MVP that are required before claiming
+  production readiness or broader availability, including tested backup/recovery, availability,
+  capacity/SLO, alerting, and incident-response objectives. Proposed or documented controls are not
+  represented as implemented.
 - **Out of scope:** excluded unless separately approved.
 
 All controls and capabilities in these documents are requirements or designs until supported by completion evidence from the implementation plan. Documentation must not describe an unimplemented control as operational.

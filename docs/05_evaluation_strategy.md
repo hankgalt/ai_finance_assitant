@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.4 | Status: Product baseline plus proposed M11 deployment qualification | 2026-11-05
+Version 1.5 | Status: Product baseline plus corrected M11 private-demo MVP qualification | 2026-11-10
 
 ## 1. Evaluation principles
 
@@ -33,9 +33,11 @@ Maintain reviewable datasets with stable case IDs:
 - identity/authorization: signed-IAP claim cases plus owner, approved-viewer, disabled, unknown,
   malformed, expired, wrong-issuer/audience, unsigned-header, guessed-resource, and two-Principal
   matrices across every REST, SSE, History, deletion, cache, and Inspector boundary;
-- deployment/recovery: base-path and URL-map cases, Terraform plans/policies, direct-origin bypass,
-  schema and collection migrations, backup/restore, workload and collection rollback, staging smoke,
-  capacity/soak, quota/cost, alert, and incident-response rehearsals.
+- private deployment MVP: base-path and URL-map cases, Terraform plans/policies, direct-origin
+  bypass, schema and collection migration/readiness, on-demand destroy/recreate, IAP-protected
+  staging smoke, and critical local-feature-parity journeys. Backup/restore, workload/collection
+  rollback depth, capacity/soak, formal quota/cost/SLO alerts, and incident-response rehearsals are
+  maintained as post-MVP production-hardening cases.
 
 Dataset size targets can grow after difficulty and independence review. Do not inflate corpus or test counts with paraphrases that exercise the same behavior.
 
@@ -64,7 +66,13 @@ Thresholds below are initial candidate gates. M8 must calibrate noncritical stat
 | EVAL-17 | Latency and API cost | p50/p95/end-to-end and per-module timing, provider/response-cache outcome, avoided/fetched provider ranges, avoided model calls/tokens, tokens, and monetary cost with availability/method | Actual cache-disabled/exact-hit/qualified-semantic-hit/near-miss baselines and configuration reported; milestone-approved budgets and response-cache false-hit gate must pass once set |
 | EVAL-18 | Persistence/privacy lifecycle | Restart, retention, administrative provider-cache purge, deletion, cross-session, and log/trace data-flow review | 100% isolation/deletion/purge critical cases pass; uploaded temporary data cleanup verified |
 | EVAL-19 | Identity and Principal isolation | Verified IAP assertion handling plus two-Principal authorization matrix over all product resources, streams, caches, lifecycle and administrative operations | Zero authentication bypass, cross-Principal disclosure/mutation/inference, unsigned-header trust, or resource-ID enumeration in critical cases |
-| EVAL-20 | Deployment, recovery and operations | Base-path/browser/API/SSE smoke, IaC policy and drift, artifact provenance, managed-state migration, backup/restore, application/infrastructure/collection rollback, capacity/cost/SLO and alert rehearsal | Clean staging and protected deployment pass; direct workload bypass is denied; every authoritative store and active collection has a tested recovery/rollback path; approved budgets and operational gates pass |
+| EVAL-20 | Private deployment MVP and operations | Base-path/browser/API/SSE/History/Inspector smoke, IaC policy and drift, artifact provenance, managed-state migration/restart/retention, Qdrant readiness, direct-origin denial, and on-demand destroy/recreate | Clean staging and protected owner deployment pass; critical local product journeys work at the target URL; direct workload bypass is denied; the empty store recreates cleanly; provider rights and the approved budget boundary remain enforced. Backup/PITR, HA, disaster recovery, load/soak, formal SLO/alert rehearsal, and full rollback qualification are deferred and cannot be claimed from this gate |
+
+EVAL-20 has two deliberately separate horizons. Passing the private-demo MVP gate permits only the
+owner-operated, allow-listed demonstration posture in PR-017. Backup/restore, PITR, regional or
+multi-zone availability, measured RPO/RTO, full application/infrastructure/collection rollback,
+capacity/soak, formal SLO/alerting, and incident rehearsal must pass before any later
+production-readiness or broader-availability claim.
 
 ## 4. Retrieval evaluation and collection activation
 
@@ -165,7 +173,9 @@ Block release for any open critical defect involving:
 - Inspector execution fabrication;
 - loss of user data beyond the documented local durability mode.
 - invalid or bypassed deployed identity, cross-Principal access, or direct workload-origin access;
-- an untested or failed migration, backup/restore, infrastructure, application, or active-collection rollback;
+- an untested or failed deployed schema migration, empty-store recreation, or active-collection
+  readiness check. Backup/restore and full infrastructure/application/collection rollback remain
+  blocking only for a later production-readiness claim, not for the disposable private-demo MVP;
 - provider data displayed outside the recorded account rights or Principal entitlement.
 
 Noncritical threshold exceptions require a named owner, impact, mitigation, approval, and expiry. M8 produces the initial product release recommendation; M9 separately audits coursework acceptance and packaging. M11 requires a new private multi-user deployment recommendation and cannot inherit the local release decision.

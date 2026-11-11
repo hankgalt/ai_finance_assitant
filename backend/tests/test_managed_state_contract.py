@@ -20,6 +20,23 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
 
     assert manifest["schema_version"] == "1"
     assert manifest["status"] == ("staging_foundation_provisioned_recovery_qualification_pending")
+    assert manifest["private_demo_mvp"] == {
+        "scope": "owner_operated_deployed_feature_parity",
+        "target_machine_tier": "db-g1-small",
+        "runtime_lifecycle": "on_demand_create_destroy_recreate",
+        "store_initialization": "empty_each_create",
+        "destroy_discards_principal_owned_state": True,
+        "backup_pitr_required": False,
+        "recovery_qualification": "deferred_post_mvp",
+        "production_readiness_claimed": False,
+        "current_provisioned_foundation_matches_target": False,
+        "reproducibility_foundation_may_persist": [
+            "terraform_state",
+            "artifact_registry_images",
+            "workload_identity",
+            "non_secret_configuration",
+        ],
+    }
     assert manifest["application_state"] == {
         "service": "cloud_sql_postgresql",
         "edition": "enterprise",

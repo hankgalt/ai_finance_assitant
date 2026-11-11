@@ -1,6 +1,6 @@
 # AI Finance Assistant — Architecture decision records
 
-Version 1.9 | Status: Product architecture baseline plus proposed private multi-user deployment | 2026-11-05
+Version 1.10 | Status: Product architecture baseline plus corrected proposed private-demo deployment | 2026-11-10
 
 The existing single-file register is retained to avoid unnecessary file churn. “Accepted” records are architectural constraints; “Proposed” records require validation during the named milestone. Proof references are future completion evidence, not claims of implementation.
 
@@ -155,6 +155,12 @@ checksum validation.
 
 ### ADR-030: IAP-protected GCP private multi-user deployment — Proposed
 
+The first accepted outcome of this decision is a private-demo MVP: the existing locally qualified
+product is usable by the owner at the target URL with equivalent product capabilities. It is not a
+production-readiness decision, availability commitment, disaster-recovery claim, or approval for
+anonymous/general-public access. Controls needed to protect identity, Principal-owned data,
+secrets, and the workload origin remain mandatory even for the demo.
+
 Deploy the Finance Assistant as an internet-routable but non-public application at
 `https://apps.comfforts.com/finance_assistant`, with Google Cloud as the target platform and Google
 Identity-Aware Proxy as the only browser authentication flow. IAP admits only the owner and
@@ -183,9 +189,11 @@ data is not copied to the owner Principal, and current RAG collections are trans
 separate knowledge-release workflow. The deployed path is served through an HTTPS load balancer
 with HTTP redirect, IAP, and
 no direct workload bypass. Application workloads are stateless with respect to authoritative user
-state; managed persistence, production Qdrant, response-cache topology, encryption, retention,
-backup/recovery, region, capacity, and cost ceilings must be selected and qualified before this ADR
-can be accepted. Finance and Tax collections continue to be built, evaluated, and activated by the
+state; managed persistence, deployed Qdrant, response-cache topology, encryption, region, and cost
+controls must be selected and the MVP identity, migration, readiness, and destroy/recreate paths
+must be qualified before this ADR can be accepted. Backup/PITR, HA, disaster recovery, load/soak,
+formal SLO/alert rehearsal, and production capacity qualification are deferred hardening work and
+cannot be inferred from MVP acceptance. Finance and Tax collections continue to be built, evaluated, and activated by the
 offline knowledge workflow rather than application startup. Provider access remains governed by
 ADRs 024–026 and must be entitlement-aware for each Application Principal; this deployment decision
 does not create display, caching, or redistribution rights.
@@ -197,15 +205,24 @@ Principal. Because paths on one hostname share a browser origin, such an applica
 browser trust boundary unless it moves to a separate hostname; that future application is outside
 M11.
 
-The owner-approved managed-state design uses single-zone Cloud SQL for PostgreSQL 17 Enterprise in
-`us-west1`, initially on `db-f1-micro` with the service-minimum 10 GiB SSD. It holds distinct
+The corrected owner-approved MVP managed-state target uses single-zone Cloud SQL for PostgreSQL 17
+Enterprise in `us-west1` on `db-g1-small` with the service-minimum 10 GiB SSD. It holds distinct
 application, LangGraph checkpoint, and purgeable provider-cache boundaries; local development
 continues to use SQLite. The deployed response cache is disabled and no managed Redis service is
-provisioned. The empty deployed store retains seven daily backups and three days of point-in-time
-recovery logs. Session/Run/checkpoint and RunEvent retention remains 30 days, saved Portfolio and
-Snapshot retention remains 365 days, and provider observations require provider-specific approved
-rights and TTLs. Google-managed encryption and regional Secret Manager are selected initially;
-CMEK is not selected.
+provisioned. Each created demo store starts empty. Destroying the demo runtime intentionally
+discards its Principal-owned application data; no local data migration, backup, PITR, RPO, or RTO
+guarantee is part of the MVP. Session/Run/checkpoint and RunEvent retention remains 30 days while an
+instance exists, saved Portfolio and Snapshot retention remains 365 days while an instance exists,
+and provider observations require provider-specific approved rights and TTLs. Google-managed
+encryption and regional Secret Manager are selected initially; CMEK is not selected.
+
+The demo runtime is created and destroyed on demand through reviewed Terraform workflows rather
+than kept live continuously. The reproducibility foundation needed to recreate it—protected
+Terraform state, immutable images, short-lived delivery identity, and non-secret configuration—may
+remain. The lifecycle contract must make data loss explicit before destroy and prove clean
+recreation, schema migration, readiness, and application smoke. The previously provisioned
+`db-f1-micro`, backup, and PITR settings remain truthful historical staging evidence; they are not
+the corrected MVP target and do not make recovery qualification an MVP gate.
 
 Staging and the protected demo share project `comfforts-369117` as an accepted private-demo
 limitation, but use separate Terraform state, workload identities, secrets, database roles, and
@@ -227,10 +244,14 @@ Federation rather than stored service-account keys for validated plan, build, an
 deployment workflows. DNS changes at the external registrar may remain a documented operator step.
 Implementation assets and evidence are organized under durable identity/access, persistence,
 knowledge, infrastructure, observability, quality, and release ownership in accordance with
-ADR-029; `M11` appears only in planning and historical delivery evidence. M11 must validate
-cross-Principal denial across every product experience, IAP-bypass resistance, migration and
-rollback, collection promotion/rollback, retention/deletion, backup/restore, provider gates,
-monitoring, capacity, and clean deployment before this proposal may become Accepted.
+ADR-029; `M11` appears only in planning and historical delivery evidence. Before this proposal may
+become Accepted for the private-demo MVP, M11 must validate cross-Principal denial across every
+product experience, IAP-bypass and direct-origin resistance, clean empty-store creation, schema
+migration, retention/deletion while deployed, active-collection readiness, provider gates,
+destroy/recreate, and local-feature-parity smoke at the protected URL. Backup/restore, PITR,
+application/infrastructure/collection rollback rehearsal, capacity/soak, production monitoring,
+and disaster recovery remain explicit post-MVP hardening gates for any later production-readiness
+claim.
 
 The selected deployment inputs are GCP project `comfforts-369117` (project number
 `730340912967`) in the `comfforts.com` organization, region `us-west1`, a single-region/low-traffic
@@ -243,7 +264,8 @@ do not authorize infrastructure provisioning in the application-access slice.
 ## Decision register still open
 
 The following are not silently decided by these records: final acceptance of the proposed GCP
-deployment topology before measured qualification; commercial market-data rights for approved
+private-demo topology before measured MVP qualification; the exact post-MVP backup/recovery,
+availability, capacity, and production-operations posture; commercial market-data rights for approved
 viewers; initial institution-specific Cash-flow import profiles; and authoritative coursework rubric
 interpretations. M1 resolved the initial representation and ranking
 experiment; ADR-021 resolves initial multi-currency behavior, short positions, and the

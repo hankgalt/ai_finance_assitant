@@ -1,7 +1,7 @@
 # M11 delivery report — Managed-state adapter and operating contract
 
 Status: PostgreSQL adapter and recovery procedure qualified locally; staging foundation provisioned;
-Cloud SQL live recovery stop gate pending | 2026-11-10
+private-demo MVP scope corrected and Cloud SQL live recovery deferred | 2026-11-10
 
 ## Scope and decisions
 
@@ -14,10 +14,12 @@ deployment is qualified or operational.
 
 The owner-approved topology is recorded in
 [`contracts/deployment/managed-state.v1.json`](../contracts/deployment/managed-state.v1.json).
-It selects single-zone Cloud SQL PostgreSQL 17 Enterprise `db-f1-micro` with the 10 GiB service
-minimum SSD, seven daily backups, three-day PITR, no deployed response cache, same-project staging,
-Google-managed encryption, regional Secret Manager, and credential-free deployed providers. The
-Qdrant Free `us-central1` topology and sole GitHub approver are explicit private-demo limitations.
+The contract truthfully records the provisioned single-zone Cloud SQL PostgreSQL 17 Enterprise
+`db-f1-micro` foundation with its earlier backup/PITR configuration and separately records the
+corrected MVP target: on-demand `db-g1-small`, an empty store on every creation, explicit data loss
+on destroy, and no backup/PITR MVP gate. Deployed response caching remains disabled. Same-project
+staging, Google-managed encryption, regional Secret Manager, the Qdrant Free `us-central1`
+topology, and the sole GitHub approver remain explicit private-demo limitations.
 
 ## Delivered implementation
 
@@ -53,8 +55,8 @@ Qdrant Free `us-central1` topology and sole GitHub approver are explicit private
   execution through Direct VPC egress and a Cloud SQL Auth Proxy sidecar using automatic IAM
   authentication. Cloud Run requires the multi-container images to use one registry boundary, so
   both reviewed manifests are mirrored without digest changes into the approved `us-west1` Artifact
-  Registry. The jobs are now provisioned, but remain unexecuted and do not satisfy the real-service
-  recovery gate until the staged qualification completes.
+  Registry. Migration, synthetic preparation, retention, and cleanup executions have passed. Live
+  recovered-target verification remains incomplete and is deferred from the private-demo MVP.
 - A credential-gated PostgreSQL qualification test creates a randomly named schema, exercises
   Principal-owned application state and checkpoint-schema restart behavior, and drops only that
   generated schema. Ordinary CI skips it without `AIFA_TEST_POSTGRES_DSN`.
@@ -107,23 +109,20 @@ idempotency. Provider observations remain separately purgeable and live retentio
 without provider-specific rights. Readiness and operator output disclose no connection string or
 API key.
 
-## Stop gate and remaining evidence
+## Remaining MVP gates and deferred hardening
 
 - The later staging-foundation slice has provisioned Terraform state, IAM, private Cloud SQL, and
   empty Secret Manager containers. The private migration and synthetic-prepare jobs have now run
   successfully through the Cloud SQL IAM/private-network path. This report still claims no
   successful recovered-target verification, backup restore, or PITR rehearsal. Retention and
   namespaced synthetic-state cleanup have passed through the private Cloud SQL path.
-- Complete the synthetic Cloud SQL recovery/retention procedure using the fully qualified backup
-  name for the configured new-instance restore. The locally passing complete
-  two-Principal REST/SSE/History/Inspector matrix remains required at the later assembled staging
-  workload gate.
-- Reproduce the locally passing migration/runtime/retention role boundary with Cloud SQL IAM and
-  retain the generated execution names and measured recovery result in the release artifact.
-- Measure `db-f1-micro` memory, latency, pool saturation, rollout overlap, and concurrent Runs;
-  upgrade to `db-g1-small` if any acceptance threshold fails.
-- Provision and rehearse seven-backup/three-day-PITR restore, deletion reconciliation, schema/image
-  rollback, and timed RPO/RTO. The targets in the contract are not operational claims.
+- The locally passing complete two-Principal REST/SSE/History/Inspector matrix remains required at
+  the assembled staging workload gate. Recreate the managed-state runtime as `db-g1-small`, prove
+  the migration/runtime/retention role boundary, and prove explicit destroy/clean recreation. These
+  are MVP gates.
+- Completing the synthetic recovery procedure, seven-backup/three-day-PITR restore, deletion
+  reconciliation, timed RPO/RTO, capacity/overlap qualification, and schema/image rollback is
+  deferred post-MVP hardening. The targets in the recovery contract are not operational claims.
 - The application and checkpoint saver use separate transactions. No whole-Run atomic-commit claim
   is made; deadline-expired interrupted Runs are now reconciled, but more granular crash-point tests
   remain part of Cloud SQL staging recovery.

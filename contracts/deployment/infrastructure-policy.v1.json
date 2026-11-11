@@ -1,6 +1,14 @@
 {
   "schema_version": "1",
   "status": "staging_foundation_provisioned",
+  "private_demo_mvp": {
+    "target_database_tier": "db-g1-small",
+    "runtime_lifecycle": "on_demand_create_destroy_recreate",
+    "empty_store_on_create": true,
+    "data_preservation_on_destroy": false,
+    "backup_restore_gate": "deferred_post_mvp",
+    "current_provisioned_foundation_requires_replacement": true
+  },
   "project": {
     "id": "comfforts-369117",
     "number": "730340912967",
