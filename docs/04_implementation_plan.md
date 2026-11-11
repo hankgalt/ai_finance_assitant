@@ -439,7 +439,10 @@ and the corrected Terraform input rejects mixed registries before apply. The cor
 all three jobs without changing or destroying another resource. The recovery wizard then stopped
 before any job execution because its post-apply digest inspection used the Terraform API JSON path
 instead of the `gcloud` Knative JSON path; the selector is corrected and regression-tested. The
-initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
+next run installed the reviewed least-privilege grants, then stopped before job execution because
+the owner-user delete command supplied a create-only `--type` flag. The exit trap disabled Data API
+access, the exact temporary owner user was removed, and both delete paths are corrected and tested.
+The initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
 subject remediation changed only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
 production smoke both passed after required review. Real-service recovery, the staging workload,
 and no-direct-workload-bypass qualification remain stop gates, so slice 5 is not complete and no
