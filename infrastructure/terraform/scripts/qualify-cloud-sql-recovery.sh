@@ -230,6 +230,7 @@ ROLE_POLICY_FILE=$(mktemp)
 PLAN_FILE="$STAGING_ROOT/recovery-qualification.tfplan"
 OWNER_ELEVATED=0
 DATA_API_ENABLED=0
+SQL_OPERATION_TIMEOUT_SECONDS=$((4 * 60 * 60))
 
 cleanup_sensitive() {
   if (( OWNER_ELEVATED )); then
@@ -259,6 +260,50 @@ latest_execution() {
     --sort-by='~metadata.creationTimestamp' \
     --limit=1 \
     --format='value(metadata.name)'
+}
+
+wait_for_sql_operation() {
+  local operation="$1" label="$2" description status error_count error_messages now_epoch
+  local poll_count=0
+  [[ "$operation" =~ ^[[:alnum:]-]+$ ]] || {
+    warn "$label did not return a Cloud SQL operation name"
+    return 1
+  }
+  while true; do
+    description=$(gcloud sql operations describe "$operation" \
+      --project="$PROJECT_ID" \
+      --format=json)
+    status=$(printf '%s' "$description" | jq -r '.status // empty')
+    case "$status" in
+      DONE)
+        error_count=$(printf '%s' "$description" | jq -r '(.error.errors // []) | length')
+        if (( error_count > 0 )); then
+          error_messages=$(printf '%s' "$description" | jq -r \
+            '[.error.errors[]?.message] | join("; ")')
+          warn "$label failed: $error_messages"
+          return 1
+        fi
+        say "$label operation $operation completed."
+        return 0
+        ;;
+      PENDING|RUNNING)
+        if (( poll_count % 3 == 0 )); then
+          say "$label operation $operation is $status; continuing to wait."
+        fi
+        poll_count=$((poll_count + 1))
+        ;;
+      *)
+        warn "$label operation $operation returned unexpected status: ${status:-missing}"
+        return 1
+        ;;
+    esac
+    now_epoch=$(date -u +%s)
+    if (( now_epoch >= SQL_OPERATION_DEADLINE_EPOCH )); then
+      warn "$label exceeded the four-hour recovery qualification deadline; operation $operation may still be running"
+      return 1
+    fi
+    sleep 20
+  done
 }
 
 verify_recovered_target() {
@@ -445,7 +490,8 @@ stage "Restore the backup and point-in-time targets"
 confirm "Create both reviewed temporary recovery instances now?" || exit 1
 BACKUP_RESTORE_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 BACKUP_RESTORE_STARTED_EPOCH=$(date -u +%s)
-gcloud sql backups restore "$BACKUP_NAME" \
+SQL_OPERATION_DEADLINE_EPOCH=$((BACKUP_RESTORE_STARTED_EPOCH + SQL_OPERATION_TIMEOUT_SECONDS))
+BACKUP_RESTORE_OPERATION=$(gcloud sql backups restore "$BACKUP_NAME" \
   --project="$PROJECT_ID" \
   --restore-instance="$BACKUP_RESTORE_INSTANCE" \
   --region="$REGION" \
@@ -461,15 +507,26 @@ gcloud sql backups restore "$BACKUP_NAME" \
   --no-final-backup \
   --no-retain-backups-on-delete \
   --no-deletion-protection \
-  --quiet
+  --quiet \
+  --async \
+  --format='value(name)')
+wait_for_sql_operation "$BACKUP_RESTORE_OPERATION" "Backup restore"
 gcloud sql instances patch "$BACKUP_RESTORE_INSTANCE" \
   --project="$PROJECT_ID" \
   --database-flags=cloudsql.iam_authentication=on \
+  --no-deletion-protection \
   --quiet
 PITR_RESTORE_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-gcloud sql instances clone "$SOURCE_INSTANCE" "$PITR_INSTANCE" \
+PITR_OPERATION=$(gcloud sql instances clone "$SOURCE_INSTANCE" "$PITR_INSTANCE" \
   --project="$PROJECT_ID" \
   --point-in-time="$PITR_TIMESTAMP" \
+  --quiet \
+  --async \
+  --format='value(name)')
+wait_for_sql_operation "$PITR_OPERATION" "Point-in-time clone"
+gcloud sql instances patch "$PITR_INSTANCE" \
+  --project="$PROJECT_ID" \
+  --no-enable-point-in-time-recovery \
   --quiet
 gcloud sql instances patch "$PITR_INSTANCE" \
   --project="$PROJECT_ID" \
@@ -486,6 +543,9 @@ for target in "$BACKUP_RESTORE_INSTANCE" "$PITR_INSTANCE"; do
   printf '%s' "$TARGET_DESCRIPTION" | jq -e \
     '.state == "RUNNABLE" and
      .settings.ipConfiguration.ipv4Enabled == false and
+     .settings.deletionProtectionEnabled == false and
+     .settings.backupConfiguration.enabled == false and
+     .settings.retainBackupsOnDelete == false and
      any(.settings.databaseFlags[]?; .name == "cloudsql.iam_authentication" and .value == "on")' \
     >/dev/null
   TARGET_CONNECTION=$(printf '%s' "$TARGET_DESCRIPTION" | jq -r '.connectionName')

@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "prepare_executed_recovery_pending",
+  "status": "prepare_and_retention_executed_recovery_pending",
   "source": {
     "project_id": "comfforts-369117",
     "region": "us-west1",

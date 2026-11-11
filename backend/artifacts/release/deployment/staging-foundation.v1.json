@@ -139,25 +139,30 @@
     "retention_identity": "aifa-stg-retention@comfforts-369117.iam.gserviceaccount.com"
   },
   "managed_state_operator_jobs": {
-    "status": "migration_and_prepare_executed_recovery_pending",
+    "status": "migration_prepare_retention_executed_recovery_pending",
     "migration": {
-      "execution": "aifa-staging-migrate-cldkf",
+      "execution": "aifa-staging-migrate-wvsz2",
       "status": "passed"
     },
     "qualification_prepare": {
-      "execution": "aifa-staging-qualify-nxtgm",
+      "execution": "aifa-staging-qualify-mw4fs",
       "status": "passed"
     },
     "retention": {
-      "status": "not_executed"
+      "execution": "aifa-staging-retention-x8gwt",
+      "verification_execution": "aifa-staging-qualify-wmpdz",
+      "status": "passed_and_synthetic_state_deleted"
     },
     "recovery_attempt": {
-      "backup_run_id": "1794362874451",
-      "backup_name": "projects/comfforts-369117/backups/d06322a0-666b-4387-ba20-7c1d0d98d3e6",
-      "backup_restore": "not_attempted_because_create_output_exposed_no_id_field",
-      "point_in_time_recovery": "not_executed",
-      "temporary_instances_created": false,
-      "qualification_backup_cleanup": "deleted_after_explicit_operator_confirmation"
+      "backup_run_id": "1794364760838",
+      "backup_name": "projects/comfforts-369117/backups/7efda92b-a295-44be-bc63-c3ffe7462a0e",
+      "backup_restore": "completed_recovered_target_validation_not_executed",
+      "point_in_time_recovery": "completed_recovered_target_validation_not_executed",
+      "pitr_operation": "68521fda-e842-439a-ad92-72a600000033",
+      "temporary_instances_created": true,
+      "temporary_instances_cleanup": "deleted_after_explicit_operator_confirmation",
+      "qualification_backup_cleanup": "deleted_after_explicit_operator_confirmation",
+      "source_synthetic_state_cleanup": "deleted_by_retention_verification"
     }
   },
   "regional_secret_metadata": {

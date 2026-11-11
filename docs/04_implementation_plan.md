@@ -432,8 +432,8 @@ service Cloud SQL recovery gate remains pending. The slice 5 Terraform state, re
 protected GitHub environments, budget, private network, Cloud SQL, service identities, and empty
 regional secret containers are provisioned; the last applied foundation plans were drift-free. The
 three digest-pinned private Cloud Run operator jobs are provisioned. Migration and synthetic
-qualification preparation have executed successfully; retention and recovered-target verification
-remain pending. Their first
+qualification preparation have executed successfully, and retention/cleanup has removed the
+namespaced synthetic source state; recovered-target verification remains pending. Their first
 apply failed closed before creating a job because Cloud Run rejected mixed GHCR/GCR container
 registries; the obsolete PostgreSQL secret-access bindings were removed as planned. Both image
 manifests are now mirrored with unchanged digests into the approved `us-west1` Artifact Registry,
@@ -456,6 +456,17 @@ field. The procedure now treats the fully qualified backup name as authoritative
 legacy numeric run ID, retained only for evidence, from that resource's `backupRun` metadata. No
 temporary restore instance was created; this latest exact on-demand backup was deleted after
 explicit operator confirmation.
+The following run completed the backup restore and started the PITR clone, but the synchronous
+`gcloud` client wait expired while the server operation remained `RUNNING`; the wizard exited before
+recovered-target validation or cleanup. The corrected procedure launches both long-running recovery
+operations asynchronously and polls their authoritative operation resources against the shared
+four-hour qualification deadline. It also reapplies and validates temporary-target deletion and
+backup protections after restore because live readback showed inherited deletion protection on the
+backup target. Recovery validation was deprioritized before completion; after the non-cancellable
+PITR operation reached `DONE`, both exact temporary instances and the exact qualification backup
+were deleted. Retention and verification executions then removed all namespaced synthetic state
+from the protected source. The source instance and durable foundation were not deleted or otherwise
+expanded.
 The initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
 subject remediation changed only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
 production smoke both passed after required review. Real-service recovery, the staging workload,

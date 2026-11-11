@@ -469,8 +469,9 @@ is implemented. Protected Terraform state, immutable Artifact Registry, environm
 protected GitHub environments, the budget, and the private staging managed-state foundation are now
 provisioned. The last applied foundation plans were drift-free. Digest-pinned non-HTTP Cloud Run
 jobs for migration, synthetic qualification, and retention are provisioned. Migration and synthetic
-preparation have executed successfully; retention, backup/PITR restore, and recovered-target
-verification remain pending. No application workload, load balancer, IAP edge, DNS record, or
+preparation have executed successfully, and retention/cleanup has removed the namespaced synthetic
+source state. Recovered-target verification and complete backup/PITR qualification remain pending.
+No application workload, load balancer, IAP edge, DNS record, or
 direct-workload-bypass control is represented as operational. The selected region is
 `us-west1`. The selected authoritative managed store is single-zone Cloud SQL PostgreSQL 17
 Enterprise, initially `db-f1-micro` with a 10 GiB SSD, seven daily backups, and three days of PITR.

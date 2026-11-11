@@ -84,11 +84,11 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
         "mixed_registry_hosts_allowed": False,
         "http_endpoint": False,
-        "status": "migration_and_prepare_executed_recovery_pending",
+        "status": "migration_prepare_retention_executed_recovery_pending",
         "execution_status": {
             "migration": "passed",
             "qualification_prepare": "passed",
-            "retention": "not_executed",
+            "retention": "passed_and_synthetic_state_deleted",
         },
     }
     assert contract["workload_boundary"]["cloud_run_ingress"] == (
@@ -127,13 +127,19 @@ def test_staging_evidence_records_live_foundation_without_claiming_workload_depl
     assert evidence["managed_state"]["public_ipv4"] is False
     assert evidence["managed_state"]["ssl_mode"] == "ENCRYPTED_ONLY"
     operator_jobs = evidence["managed_state_operator_jobs"]
-    assert operator_jobs["status"] == "migration_and_prepare_executed_recovery_pending"
+    assert operator_jobs["status"] == "migration_prepare_retention_executed_recovery_pending"
     assert operator_jobs["migration"]["status"] == "passed"
     assert operator_jobs["qualification_prepare"]["status"] == "passed"
-    assert operator_jobs["retention"]["status"] == "not_executed"
-    assert operator_jobs["recovery_attempt"]["temporary_instances_created"] is False
+    assert operator_jobs["retention"]["status"] == "passed_and_synthetic_state_deleted"
+    assert operator_jobs["recovery_attempt"]["temporary_instances_created"] is True
+    assert operator_jobs["recovery_attempt"]["temporary_instances_cleanup"] == (
+        "deleted_after_explicit_operator_confirmation"
+    )
     assert operator_jobs["recovery_attempt"]["qualification_backup_cleanup"] == (
         "deleted_after_explicit_operator_confirmation"
+    )
+    assert operator_jobs["recovery_attempt"]["source_synthetic_state_cleanup"] == (
+        "deleted_by_retention_verification"
     )
     assert evidence["regional_secret_metadata"]["payloads_managed_by_terraform"] is False
 
@@ -309,7 +315,7 @@ def test_cloud_sql_recovery_contract_requires_two_temporary_validated_targets() 
     contract = json.loads(RECOVERY_CONTRACT.read_text(encoding="utf-8"))
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "prepare_executed_recovery_pending"
+    assert contract["status"] == "prepare_and_retention_executed_recovery_pending"
     assert contract["source"] == {
         "project_id": "comfforts-369117",
         "region": "us-west1",
@@ -383,7 +389,22 @@ def test_cloud_sql_recovery_wizard_removes_elevation_and_temporary_instances() -
     restore_command = wizard.split('gcloud sql backups restore "$BACKUP_NAME"', maxsplit=1)[1]
     restore_command = restore_command.partition("--quiet")[0]
     assert "--backup-instance=" not in restore_command
+    assert "wait_for_sql_operation()" in wizard
+    assert "SQL_OPERATION_TIMEOUT_SECONDS=$((4 * 60 * 60))" in wizard
+    assert 'BACKUP_RESTORE_OPERATION=$(gcloud sql backups restore "$BACKUP_NAME"' in wizard
+    assert (
+        'PITR_OPERATION=$(gcloud sql instances clone "$SOURCE_INSTANCE" "$PITR_INSTANCE"' in wizard
+    )
+    assert 'wait_for_sql_operation "$BACKUP_RESTORE_OPERATION" "Backup restore"' in wizard
+    assert 'wait_for_sql_operation "$PITR_OPERATION" "Point-in-time clone"' in wizard
+    assert "is $status; continuing to wait" in wizard
+    assert wizard.count("--async") >= 2
+    assert wizard.count("--no-deletion-protection") >= 3
+    assert "--no-enable-point-in-time-recovery" in wizard
     assert "--database-flags=cloudsql.iam_authentication=on" in wizard
+    assert ".settings.deletionProtectionEnabled == false" in wizard
+    assert ".settings.backupConfiguration.enabled == false" in wizard
+    assert ".settings.retainBackupsOnDelete == false" in wizard
     assert 'gcloud sql instances clone "$SOURCE_INSTANCE" "$PITR_INSTANCE"' in wizard
     assert 'gcloud sql instances delete "$BACKUP_RESTORE_INSTANCE"' in wizard
     assert 'gcloud sql instances delete "$PITR_INSTANCE"' in wizard

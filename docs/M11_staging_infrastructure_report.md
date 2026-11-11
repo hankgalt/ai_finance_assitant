@@ -1,7 +1,7 @@
 # M11 delivery report — Staging infrastructure foundation
 
 Status: Foundation provisioned and last applied plans drift-free; staging and production keyless
-identity qualified; managed-state migration and synthetic preparation passed; real-service recovery, workload, and no-
+identity qualified; managed-state migration, synthetic preparation, and retention cleanup passed; real-service recovery, workload, and no-
 bypass qualification pending | 2026-11-10
 
 ## Scope and decisions
@@ -47,8 +47,8 @@ The live qualification record is
   retention.
   Each uses its dedicated IAM database identity, Direct VPC private egress, a digest-pinned backend
   image, and a digest-pinned Cloud SQL Auth Proxy with automatic IAM authentication. The jobs have
-  passed migration and synthetic preparation. Retention, restored-target validation, and the complete
-  recovery procedure have not passed and are not represented as recovery-qualified.
+  passed migration, synthetic preparation, retention, and source cleanup. Restored-target validation
+  and the complete recovery procedure have not passed and are not represented as recovery-qualified.
 - Because the selected jobs no longer use DSN secret payloads, the expanded plan removes the three
   PostgreSQL secret-access IAM bindings. The protected empty secret containers remain historical
   metadata; only the runtime Qdrant identity retains its not-yet-used secret-access binding.
@@ -79,6 +79,7 @@ The live qualification record is
 | First privilege-bootstrap run | reviewed grants installed; unsupported delete flag stopped before job execution; Data API disabled and temporary owner user removed |
 | First migration/recovery run | migration `aifa-staging-migrate-xrbw9` and prepare `aifa-staging-qualify-gpp85` passed; numeric-ID restore rejected configuration overrides before creating a temporary instance; PITR and retention did not run |
 | Second migration/recovery run | migration `aifa-staging-migrate-cldkf` and prepare `aifa-staging-qualify-nxtgm` passed; backup creation succeeded, but the named-backup response exposed no `id` field and restore was not attempted; no temporary instance was created |
+| Third migration/recovery run | migration `aifa-staging-migrate-wvsz2`, prepare `aifa-staging-qualify-mw4fs`, and backup restore passed; the PITR clone continued server-side after the synchronous `gcloud` client wait expired, so recovered-target validation and cleanup did not run |
 | Cloud SQL live readback | `RUNNABLE`; PostgreSQL 17; private IP only; `ENCRYPTED_ONLY`; IAM auth on |
 | Backup/storage live readback | 10 GiB SSD; auto-grow limit 20 GiB; 7 backups; 3-day transaction logs |
 | Artifact Registry live readback | Docker standard repository with immutable tags |
@@ -138,8 +139,18 @@ qualification.
   backup was deleted after explicit operator confirmation; no temporary instance exists. The
   corrected wizard now derives the evidence-only numeric run ID from the resolved backup resource's
   `backupRun` metadata.
-- Slice 3 remains short of its real-service gate: retention, recovered-target validation,
-  backup/restore, PITR, restart behavior, cleanup, RPO/RTO, and final drift must all pass.
+- The following run completed backup restore and started PITR operation
+  `68521fda-e842-439a-ad92-72a600000033`, but the client wait expired while Cloud SQL still reported
+  `RUNNING`. The wizard exited before validation and cleanup. Recovery validation was deprioritized;
+  after the non-cancellable clone reached `DONE`, both exact temporary instances and the exact
+  qualification backup were deleted, while the protected source and durable foundation remained
+  intact. Retention `aifa-staging-retention-x8gwt` and verification/cleanup
+  `aifa-staging-qualify-wmpdz` then passed and removed all namespaced synthetic source state. The
+  corrected wizard uses asynchronous operations plus a shared four-hour polling deadline, reapplies
+  deletion protection and backup controls after restore, and disables PITR before disabling clone
+  backups.
+- Slice 3 remains short of its real-service gate: recovered-target validation, backup/restore,
+  PITR, restart behavior, RPO/RTO, and final drift must all pass.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls
   are not yet testable and are not claimed operational.
 - Collection transfer/rollback, staging workload deployment, DNS/IAP cutover, integrated capacity/
