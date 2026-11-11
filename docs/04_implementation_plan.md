@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, historical slice 5 foundation provisioned, and on-demand lifecycle code defined but not applied with workload/edge/knowledge gates pending | 2026-11-10
+Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, and the historical slice 5 runtime partially torn down with a locally qualified resume fix; workload/edge/knowledge gates remain pending | 2026-11-11
 
 ## 1. Delivery rules
 
@@ -487,16 +487,20 @@ from the protected source. The source instance and durable foundation were not d
 expanded.
 The initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
 subject remediation changed only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
-production smoke both passed after required review. The on-demand `db-g1-small` lifecycle and
-reviewed up/down wizards are now implemented and locally qualified but have not been applied. The
-staging workload, knowledge transfer, lifecycle apply/recreation evidence, edge, and no-direct-
+production smoke both passed after required review. The first reviewed down run disabled the
+historical guards and partially removed staging, but concurrent Cloud SQL database/user deletion
+left the instance and its three IAM database users after the application database was deleted. The
+resume fix orders database deletion first and prevents retries from recreating already-removed
+resources; it is locally qualified but not yet applied. The staging workload, knowledge transfer,
+lifecycle completion/recreation evidence, edge, and no-direct-
 workload-bypass qualification remain MVP stop gates, so slice 5 is not complete and no internet-
 facing workload is claimed operational. Real-service recovery is deferred post-MVP hardening.
 
 **Remaining private-demo MVP sequence**
 
-1. After merge, review and apply the defined lifecycle transition: use the staging-only down entry
-   point to remove the historical `db-f1-micro` runtime, then use the up entry point when a demo
+1. After the resume fix is merged, rerun the staging-only down entry point. It must skip the
+   create/delete transition plan for the partial state, review a destroy-only saved plan, and remove
+   the remaining `db-f1-micro` instance and IAM users. Use the up entry point only when a demo
    environment is needed. Retain the saved-plan reviews and exact data-loss confirmation as
    evidence. Do not run the recovery wizard.
 2. Deploy the pinned backend and frontend revisions to staging, execute migration/retention setup,

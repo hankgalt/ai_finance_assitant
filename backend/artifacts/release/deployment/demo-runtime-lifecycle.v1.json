@@ -1,13 +1,13 @@
 {
   "schema_version": "1",
-  "status": "defined_not_applied",
+  "status": "partial_destroy_resume_fix_defined_not_applied",
   "scope": {
     "milestone": "M11",
     "requirements": ["PR-017", "QR-005", "QR-010", "QR-014", "QR-015"],
     "decision": "ADR-030",
     "evaluation": "EVAL-20",
-    "cloud_resources_mutated": false,
-    "terraform_applied": false,
+    "cloud_resources_mutated": true,
+    "terraform_applied": true,
     "secret_payloads_recorded": false
   },
   "target": {
@@ -28,6 +28,23 @@
     "up": "infrastructure/terraform/scripts/demo-runtime-up.sh",
     "down": "infrastructure/terraform/scripts/demo-runtime-down.sh",
     "destroy_confirmation": "DESTROY EMPTY-DEMO-RUNTIME"
+  },
+  "live_attempt": {
+    "observed_at": "2026-11-11",
+    "result": "partial_destroy",
+    "source_instance": "aifa-staging-postgres",
+    "source_instance_present": true,
+    "source_instance_tier": "db-f1-micro",
+    "application_database_present": false,
+    "iam_database_users_present": [
+      "migration",
+      "runtime",
+      "retention"
+    ],
+    "database_deletion_guards_active": false,
+    "cause": "Terraform attempted application-database and IAM-user deletion concurrently; PostgreSQL rejected each user deletion while privileges still depended on that role, then database deletion succeeded.",
+    "resume_fix": "Order application-database destruction before IAM-user destruction and skip create/delete transition plans after an interrupted teardown so removed resources are not recreated.",
+    "resume_fix_applied": false
   },
   "persistent_foundation": [
     "protected_terraform_state",
@@ -71,11 +88,11 @@
     },
     {
       "command": "cd backend && UV_CACHE_DIR=/tmp/aifa-uv-cache uv run python -m pytest -q tests/test_staging_infrastructure.py tests/test_managed_state_contract.py tests/test_release_bundle.py",
-      "result": "24 passed"
+      "result": "25 passed"
     },
     {
       "command": "cd backend && UV_CACHE_DIR=/tmp/aifa-uv-cache uv run python -m pytest -q",
-      "result": "395 passed, 8 skipped, 4 deselected"
+      "result": "396 passed, 8 skipped, 4 deselected"
     },
     {
       "command": "shellcheck",
@@ -83,8 +100,8 @@
     }
   ],
   "limitations": [
-    "The Terraform target and operator entry points have not been applied to GCP.",
-    "The historical db-f1-micro staging instance remains live until an approved lifecycle plan is applied.",
+    "The first down run partially destroyed staging. The aifa application database and already-removed staging resources are absent; the db-f1-micro source instance and three IAM database users remain.",
+    "The resume-safe ordering fix is locally defined but must be merged before the down entry point is run again.",
     "Destroy intentionally removes regional staging secret containers and versions; payloads must be re-entered for a later create.",
     "No backup, PITR, RPO, RTO, availability, or production-readiness claim is made."
   ]

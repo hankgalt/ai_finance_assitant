@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.19 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, provisioned historical staging foundation, corrected private-demo MVP scope, and defined on-demand lifecycle; lifecycle not applied and deployment incomplete | 2026-11-10
+Version 1.19 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, corrected private-demo MVP scope, and a partially completed on-demand teardown with a locally qualified resume fix; deployment remains incomplete | 2026-11-11
 
 ## 1. Architecture principles
 
@@ -466,18 +466,18 @@ private-demo release.
 
 Proposed ADR-030 and M11 select the GCP/IAP/base-path direction, and the application-access boundary
 is implemented. Protected Terraform state, immutable Artifact Registry, environment-specific WIF,
-protected GitHub environments, the budget, and the private staging managed-state foundation are now
-provisioned. The last applied foundation plans were drift-free. Digest-pinned non-HTTP Cloud Run
-jobs for migration, synthetic qualification, and retention are provisioned. Migration and synthetic
-preparation have executed successfully, and retention/cleanup has removed the namespaced synthetic
-source state. Recovered-target verification and complete backup/PITR qualification remain pending as
-deferred post-MVP hardening, not as a private-demo cutover gate.
+protected GitHub environments, and the budget remain provisioned. The earlier private staging
+managed-state foundation was drift-free before teardown. Its digest-pinned non-HTTP Cloud Run jobs
+successfully executed migration, synthetic preparation, and retention/cleanup before the partial
+teardown removed them. Recovered-target verification and complete backup/PITR qualification remain
+pending as deferred post-MVP hardening, not as a private-demo cutover gate.
 No application workload, load balancer, IAP edge, DNS record, or
 direct-workload-bypass control is represented as operational. The selected region is
-`us-west1`. The currently provisioned staging store is single-zone Cloud SQL PostgreSQL 17
-Enterprise on `db-f1-micro` with a 10 GiB SSD, seven daily backups, and three days of PITR; that is
-historical foundation state, not the corrected MVP target. The next demo-runtime creation targets
-`db-g1-small`, starts with an empty store, and carries no MVP backup/PITR/RPO/RTO guarantee.
+`us-west1`. The partial teardown left a single-zone Cloud SQL PostgreSQL 17 Enterprise
+`db-f1-micro` instance but deleted its `aifa` application database. Its backup, PITR, retained-
+backup, and deletion-protection controls are disabled; three IAM database users remain pending the
+resume-safe destroy. The next demo-runtime creation targets `db-g1-small`, starts with an empty
+store, and carries no MVP backup/PITR/RPO/RTO guarantee.
 It owns separate application, checkpoint, and provider-cache persistence boundaries. Local
 development remains SQLite, deployed response caching is disabled, and managed Redis is not part of
 the initial topology. Same-project staging uses separate state, identities, secrets, database roles,
@@ -498,14 +498,17 @@ short-lived delivery identity, and non-secret reproducibility configuration may 
 environment can be recreated. This lifecycle is distinct from backup/restore: teardown discards
 demo application data rather than promising its recovery.
 
-The repository now defines, but has not applied, that lifecycle. The up entry point targets
-`db-g1-small` with backups, PITR, final backup, retained backups, and deletion guards disabled. The
-down entry point first reviews a non-destructive transition that removes any historical live guards
-without changing the observed database tier, then reviews a staging-only destroy plan and requires
-the exact `DESTROY EMPTY-DEMO-RUNTIME` phrase. It deletes staging networking, Cloud SQL state,
-operator jobs, service identities, and regional secret containers/versions while leaving the
-reproducibility foundation outside the staging state. Schema/grant initialization and the
-browser-facing workload remain later MVP steps.
+The up entry point targets `db-g1-small` with backups, PITR, final backup, retained backups, and
+deletion guards disabled. The down entry point first reviews a non-destructive transition that
+removes any historical live guards without changing the observed database tier, then reviews a
+staging-only destroy plan and requires the exact `DESTROY EMPTY-DEMO-RUNTIME` phrase. The first down
+run removed the `aifa` database and other staging resources but could not delete its IAM database
+users because Terraform attempted those operations concurrently. The corrected dependency drops
+the database before its users, and the retry path skips any create/delete transition plan once the
+guards are already disabled so an interrupted teardown cannot recreate removed resources. That fix
+is locally qualified but not yet applied. The remaining destroy leaves the reproducibility
+foundation outside staging state. Schema/grant initialization and the browser-facing workload
+remain later MVP steps.
 
 Repository-side delivery controls are versioned in
 `contracts/deployment/delivery-policy.v1.json`. Pull requests and main-branch changes are configured

@@ -84,6 +84,15 @@ resource "google_sql_database" "application" {
   name            = "aifa"
   instance        = google_sql_database_instance.postgres.name
   deletion_policy = "DELETE"
+
+  # The IAM roles hold privileges on this database after migration. Creating the
+  # database after the users makes Terraform drop the database before the users
+  # during destroy, which removes those dependent grants with the database.
+  depends_on = [
+    google_sql_user.runtime,
+    google_sql_user.migration,
+    google_sql_user.retention,
+  ]
 }
 
 resource "google_sql_user" "runtime" {
