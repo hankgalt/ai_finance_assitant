@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, and the historical slice 5 runtime partially torn down with a locally qualified resume fix; workload/edge/knowledge gates remain pending | 2026-11-11
+Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, and the historical slice 5 billable runtime removed with its approved private-networking foundation retained; exact-residue acceptance is locally qualified and workload/edge/knowledge gates remain pending | 2026-11-11
 
 ## 1. Delivery rules
 
@@ -387,6 +387,8 @@ must not block this private-demo cutover or be represented as operational.
   deployed Qdrant, secret management, encryption, migrations, retention jobs, readiness, and basic
   cost controls. The deployed response cache remains disabled. The on-demand lifecycle creates an
   empty `db-g1-small` store and destroys demo runtime state only after explicit data-loss review.
+  The staging VPC, allocated private-service range, and Service Networking connection persist as
+  the no-hourly-charge networking foundation reused by later demo runtimes.
 - Capability-owned Terraform for the GCP foundation, workload identity, Artifact Registry,
   workloads, networking, load balancer, IAP, managed data services, Secret Manager, monitoring,
   budgets, HTTPS, and no-direct-workload-bypass controls. Registrar/DNS actions that cannot be owned
@@ -487,22 +489,21 @@ from the protected source. The source instance and durable foundation were not d
 expanded.
 The initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
 subject remediation changed only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
-production smoke both passed after required review. The first reviewed down run disabled the
-historical guards and partially removed staging, but concurrent Cloud SQL database/user deletion
-left the instance and its three IAM database users after the application database was deleted. The
-resume fix orders database deletion first and prevents retries from recreating already-removed
-resources; it is locally qualified but not yet applied. The staging workload, knowledge transfer,
+production smoke both passed after required review. The reviewed retry applied database-before-user
+ordering and removed the remaining Cloud SQL instance, IAM users, and other billable staging
+runtime resources. Only the VPC, allocated private-service range, and Service Networking connection
+remain because Google retains deleted Cloud SQL producer networking for up to four days. The
+approved exact-residue acceptance is locally qualified but not yet applied. The staging workload, knowledge transfer,
 lifecycle completion/recreation evidence, edge, and no-direct-
 workload-bypass qualification remain MVP stop gates, so slice 5 is not complete and no internet-
 facing workload is claimed operational. Real-service recovery is deferred post-MVP hardening.
 
 **Remaining private-demo MVP sequence**
 
-1. After the resume fix is merged, rerun the staging-only down entry point. It must skip the
-   create/delete transition plan for the partial state, review a destroy-only saved plan, and remove
-   the remaining `db-f1-micro` instance and IAM users. Use the up entry point only when a demo
-   environment is needed. Retain the saved-plan reviews and exact data-loss confirmation as
-   evidence. Do not run the recovery wizard.
+1. Merge the exact-residue acceptance and rerun the staging-only down entry point. It must confirm
+   that Cloud SQL is absent and that Terraform contains only the approved private-networking
+   foundation, then exit successfully without recreating or deleting it. Use the up entry point
+   only when a demo environment is needed. Do not run the recovery wizard.
 2. Deploy the pinned backend and frontend revisions to staging, execute migration/retention setup,
    and prove the Cloud Run default URL, anonymous invocation, and every non-IAP origin fail closed.
 3. Transfer and activate the existing qualified Finance and Tax collections in the selected Qdrant

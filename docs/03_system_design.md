@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.19 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, corrected private-demo MVP scope, and a partially completed on-demand teardown with a locally qualified resume fix; deployment remains incomplete | 2026-11-11
+Version 1.19 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries and corrected private-demo MVP scope; the billable demo runtime is absent, the private-networking foundation remains, and exact-residue acceptance is locally qualified; deployment remains incomplete | 2026-11-11
 
 ## 1. Architecture principles
 
@@ -473,11 +473,11 @@ teardown removed them. Recovered-target verification and complete backup/PITR qu
 pending as deferred post-MVP hardening, not as a private-demo cutover gate.
 No application workload, load balancer, IAP edge, DNS record, or
 direct-workload-bypass control is represented as operational. The selected region is
-`us-west1`. The partial teardown left a single-zone Cloud SQL PostgreSQL 17 Enterprise
-`db-f1-micro` instance but deleted its `aifa` application database. Its backup, PITR, retained-
-backup, and deletion-protection controls are disabled; three IAM database users remain pending the
-resume-safe destroy. The next demo-runtime creation targets `db-g1-small`, starts with an empty
-store, and carries no MVP backup/PITR/RPO/RTO guarantee.
+`us-west1`. The billable staging runtime, including Cloud SQL, its database users, jobs, service
+identities, and secret containers, is absent. The staging VPC, private-service allocated range, and
+Service Networking connection remain as the approved reproducibility foundation. The next
+demo-runtime creation reuses that network, targets `db-g1-small`, starts with an empty store, and
+carries no MVP backup/PITR/RPO/RTO guarantee.
 It owns separate application, checkpoint, and provider-cache persistence boundaries. Local
 development remains SQLite, deployed response caching is disabled, and managed Redis is not part of
 the initial topology. Same-project staging uses separate state, identities, secrets, database roles,
@@ -494,21 +494,21 @@ the proposal.
 The demo runtime is intentionally on demand. Reviewed Terraform must be able to create the empty
 Cloud SQL store and application/edge resources, run migration and readiness checks, and destroy the
 runtime after an explicit data-loss acknowledgement. Protected Terraform state, immutable images,
-short-lived delivery identity, and non-secret reproducibility configuration may persist so the
-environment can be recreated. This lifecycle is distinct from backup/restore: teardown discards
-demo application data rather than promising its recovery.
+short-lived delivery identity, non-secret reproducibility configuration, and private networking may
+persist so the environment can be recreated. This lifecycle is distinct from backup/restore:
+teardown discards demo application data rather than promising its recovery.
 
 The up entry point targets `db-g1-small` with backups, PITR, final backup, retained backups, and
 deletion guards disabled. The down entry point first reviews a non-destructive transition that
 removes any historical live guards without changing the observed database tier, then reviews a
 staging-only destroy plan and requires the exact `DESTROY EMPTY-DEMO-RUNTIME` phrase. The first down
-run removed the `aifa` database and other staging resources but could not delete its IAM database
-users because Terraform attempted those operations concurrently. The corrected dependency drops
-the database before its users, and the retry path skips any create/delete transition plan once the
-guards are already disabled so an interrupted teardown cannot recreate removed resources. That fix
-is locally qualified but not yet applied. The remaining destroy leaves the reproducibility
-foundation outside staging state. Schema/grant initialization and the browser-facing workload
-remain later MVP steps.
+run removed the `aifa` database before its IAM users after the corrected dependency was merged, and
+the billable runtime is now absent. Google retains the deleted Cloud SQL producer networking for up
+to four days, so the Service Networking connection cannot be removed immediately. The down entry
+point now recognizes success only when Terraform state contains exactly the VPC, allocated internal
+range, and Service Networking connection and an independent Cloud SQL inventory is empty; any other
+residue fails closed. That acceptance correction is locally qualified but not yet applied. Schema/
+grant initialization and the browser-facing workload remain later MVP steps.
 
 Repository-side delivery controls are versioned in
 `contracts/deployment/delivery-policy.v1.json`. Pull requests and main-branch changes are configured

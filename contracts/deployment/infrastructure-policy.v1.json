@@ -1,13 +1,14 @@
 {
   "schema_version": "1",
-  "status": "partial_destroy_resume_fix_defined_not_applied",
+  "status": "runtime_absent_networking_foundation_retained",
   "private_demo_mvp": {
     "target_database_tier": "db-g1-small",
     "runtime_lifecycle": "on_demand_create_destroy_recreate",
     "empty_store_on_create": true,
     "data_preservation_on_destroy": false,
     "backup_restore_gate": "deferred_post_mvp",
-    "current_provisioned_foundation_requires_replacement": true
+    "current_provisioned_foundation_requires_replacement": false,
+    "persistent_private_networking_foundation": true
   },
   "project": {
     "id": "comfforts-369117",
@@ -29,7 +30,12 @@
     "public_access_prevention": "enforced",
     "uniform_bucket_level_access": true,
     "versioning": true,
-    "soft_delete_days": 7
+    "soft_delete_days": 7,
+    "persistent_staging_networking": [
+      "vpc_network",
+      "private_service_allocated_range",
+      "service_networking_connection"
+    ]
   },
   "identity": {
     "method": "github_oidc_workload_identity_federation",
@@ -86,7 +92,7 @@
     "retain_backups_on_delete": false,
     "deletion_protection": false,
     "instance": "aifa-staging-postgres",
-    "external_configuration_status": "partial_teardown_resume_fix_pending"
+    "external_configuration_status": "runtime_absent"
   },
   "managed_state_operator_jobs": {
     "operations": [
@@ -122,12 +128,12 @@
     "external_configuration_status": "provisioned"
   },
   "operational_status": {
-    "terraform_foundation": "partial_teardown",
-    "final_drift": "create_delete_changes_pending_destroy",
+    "terraform_foundation": "networking_only",
+    "final_drift": "runtime_absent_expected_networking_residue",
     "github_environments": "configured",
     "oidc_smoke": "staging_and_production_qualified",
     "staging_workload": "not_deployed",
     "no_direct_workload_bypass": "not_yet_testable",
-    "mvp_lifecycle_code": "partial_destroy_resume_fix_defined_not_applied"
+    "mvp_lifecycle_code": "networking_foundation_acceptance_defined_not_applied"
   }
 }

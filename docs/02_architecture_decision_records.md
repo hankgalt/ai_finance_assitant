@@ -218,9 +218,14 @@ encryption and regional Secret Manager are selected initially; CMEK is not selec
 
 The demo runtime is created and destroyed on demand through reviewed Terraform workflows rather
 than kept live continuously. The reproducibility foundation needed to recreate it—protected
-Terraform state, immutable images, short-lived delivery identity, and non-secret configuration—may
-remain. The lifecycle contract must make data loss explicit before destroy and prove clean
-recreation, schema migration, readiness, and application smoke. The previously provisioned
+Terraform state, immutable images, short-lived delivery identity, non-secret configuration, and
+the private VPC, allocated internal range, and Service Networking connection—may remain. [Google
+Cloud can retain deleted Cloud SQL producer networking for up to four
+days](https://docs.cloud.google.com/vpc/docs/configure-private-services-access); teardown therefore accepts only
+that exact three-resource networking residue after independently confirming that Cloud SQL and all
+other staging runtime resources are absent. The lifecycle contract must make data loss explicit
+before destroy and prove clean recreation, schema migration, readiness, and application smoke. The
+previously provisioned
 `db-f1-micro`, backup, and PITR settings remain truthful historical staging evidence; they are not
 the corrected MVP target and do not make recovery qualification an MVP gate.
 

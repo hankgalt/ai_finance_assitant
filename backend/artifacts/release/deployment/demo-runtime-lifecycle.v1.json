@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "partial_destroy_resume_fix_defined_not_applied",
+  "status": "runtime_absent_networking_acceptance_defined_not_applied",
   "scope": {
     "milestone": "M11",
     "requirements": ["PR-017", "QR-005", "QR-010", "QR-014", "QR-015"],
@@ -31,29 +31,34 @@
   },
   "live_attempt": {
     "observed_at": "2026-11-11",
-    "result": "partial_destroy",
+    "result": "runtime_destroyed_networking_foundation_retained",
     "source_instance": "aifa-staging-postgres",
-    "source_instance_present": true,
-    "source_instance_tier": "db-f1-micro",
+    "source_instance_present": false,
+    "source_instance_tier": null,
     "application_database_present": false,
-    "iam_database_users_present": [
-      "migration",
-      "runtime",
-      "retention"
-    ],
-    "database_deletion_guards_active": false,
+    "iam_database_users_present": [],
+    "database_deletion_guards_active": null,
     "cause": "Terraform attempted application-database and IAM-user deletion concurrently; PostgreSQL rejected each user deletion while privileges still depended on that role, then database deletion succeeded.",
     "resume_fix": "Order application-database destruction before IAM-user destruction and skip create/delete transition plans after an interrupted teardown so removed resources are not recreated.",
-    "resume_fix_applied": false
+    "resume_fix_applied": true,
+    "follow_up_result": "Cloud SQL and all other runtime resources were deleted; Service Networking rejected connection deletion while Google retained producer resources during its post-delete recovery window.",
+    "networking_foundation_retained": true,
+    "terraform_state_remaining": [
+      "vpc_network",
+      "private_service_allocated_range",
+      "service_networking_connection"
+    ],
+    "service_producer_release_window": "up_to_four_days",
+    "networking_acceptance_fix_applied": false
   },
   "persistent_foundation": [
     "protected_terraform_state",
     "artifact_registry_images",
     "workload_identity_federation",
-    "budget_and_non_secret_shared_configuration"
+    "budget_and_non_secret_shared_configuration",
+    "private_networking"
   ],
   "destroyed_staging_scope": [
-    "private_networking",
     "cloud_sql_instance_and_database_users",
     "managed_state_operator_jobs",
     "staging_service_accounts_and_bindings",
@@ -88,11 +93,11 @@
     },
     {
       "command": "cd backend && UV_CACHE_DIR=/tmp/aifa-uv-cache uv run python -m pytest -q tests/test_staging_infrastructure.py tests/test_managed_state_contract.py tests/test_release_bundle.py",
-      "result": "25 passed"
+      "result": "28 passed"
     },
     {
       "command": "cd backend && UV_CACHE_DIR=/tmp/aifa-uv-cache uv run python -m pytest -q",
-      "result": "396 passed, 8 skipped, 4 deselected"
+      "result": "399 passed, 8 skipped, 4 deselected"
     },
     {
       "command": "shellcheck",
@@ -100,8 +105,9 @@
     }
   ],
   "limitations": [
-    "The first down run partially destroyed staging. The aifa application database and already-removed staging resources are absent; the db-f1-micro source instance and three IAM database users remain.",
-    "The resume-safe ordering fix is locally defined but must be merged before the down entry point is run again.",
+    "The billable demo runtime is absent. The staging VPC, private-service allocated range, and Service Networking connection remain as the approved reproducibility foundation.",
+    "Google can retain deleted Cloud SQL producer networking for up to four days; the down entry point accepts only the exact three-resource networking residue after independently confirming Cloud SQL is absent.",
+    "The networking-foundation acceptance fix is locally defined but must be merged before the down entry point is run again.",
     "Destroy intentionally removes regional staging secret containers and versions; payloads must be re-entered for a later create.",
     "No backup, PITR, RPO, RTO, availability, or production-readiness claim is made."
   ]
