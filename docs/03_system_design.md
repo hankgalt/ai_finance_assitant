@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.19 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries and corrected private-demo MVP scope; the billable demo runtime is absent, the private-networking foundation remains, and exact-residue acceptance is locally qualified; deployment remains incomplete | 2026-11-11
+Version 1.20 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries and locally qualified private workload definitions; the billable demo runtime is absent and live workload/edge/knowledge deployment remains incomplete | 2026-11-11
 
 ## 1. Architecture principles
 
@@ -471,8 +471,9 @@ managed-state foundation was drift-free before teardown. Its digest-pinned non-H
 successfully executed migration, synthetic preparation, and retention/cleanup before the partial
 teardown removed them. Recovered-target verification and complete backup/PITR qualification remain
 pending as deferred post-MVP hardening, not as a private-demo cutover gate.
-No application workload, load balancer, IAP edge, DNS record, or
-direct-workload-bypass control is represented as operational. The selected region is
+The separate-state frontend/backend workload and migration-first lifecycle are defined but not
+applied. No application workload, load balancer, IAP edge, DNS record, or direct-workload-bypass
+control is represented as operational. The selected region is
 `us-west1`. The billable staging runtime, including Cloud SQL, its database users, jobs, service
 identities, and secret containers, is absent. The staging VPC, private-service allocated range, and
 Service Networking connection remain as the approved reproducibility foundation. The next
@@ -547,11 +548,13 @@ drift-free final Terraform plan, and a secret-free result artifact. These are ex
 not MVP gates or operational claims. If post-MVP recovery qualification resumes, the RTO measurement is conservative:
 it spans the start of backup restore through sequential validation of both temporary targets.
 
-Regional Secret Manager remains the approved metadata topology, but Cloud Run does not natively
-inject regional secret versions. The Cloud SQL jobs avoid that incompatibility through passwordless
-IAM authentication. The later browser workload/Qdrant slice must choose and qualify a regional-
-secret access method before it handles a provider or Qdrant credential; no global-secret fallback
-or provider-rights expansion is implied.
+The Qdrant runtime key uses a standard Secret Manager resource whose user-managed replication has a
+single `us-west1` replica. Cloud Run injects a positive numeric version into the backend environment;
+`latest` is rejected. Terraform owns only metadata and least-privilege accessor IAM, never a payload
+or version. The secret is part of the disposable runtime and must be re-entered directly in Secret
+Manager after clean recreation. The Cloud SQL jobs continue to use passwordless IAM authentication
+and no DSN secrets. This secret pattern does not authorize a live provider or broaden provider
+rights.
 
 Web-process startup verifies the application and checkpoint schemas without applying DDL. It also
 reconciles a persisted `running` Run only when its last update is older than the configured API Run

@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, and the historical slice 5 billable runtime removed with its approved private-networking foundation retained; exact-residue acceptance is locally qualified and workload/edge/knowledge gates remain pending | 2026-11-11
+Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, and the historical slice 5 billable runtime removed with its approved private-networking foundation retained; application-workload definitions are locally qualified while live workload, edge, and knowledge gates remain pending | 2026-11-11
 
 ## 1. Delivery rules
 
@@ -496,7 +496,10 @@ remain because Google retains deleted Cloud SQL producer networking for up to fo
 approved exact-residue acceptance is locally qualified but not yet applied. The staging workload, knowledge transfer,
 lifecycle completion/recreation evidence, edge, and no-direct-
 workload-bypass qualification remain MVP stop gates, so slice 5 is not complete and no internet-
-facing workload is claimed operational. Real-service recovery is deferred post-MVP hardening.
+facing workload is claimed operational. The separate-state frontend/backend Terraform, migration-
+first lifecycle ordering, standard Secret Manager access pattern, and direct-origin verification
+procedure are now defined locally but remain unapplied and unqualified. Real-service recovery is
+deferred post-MVP hardening.
 
 **Remaining private-demo MVP sequence**
 
@@ -529,8 +532,9 @@ facing workload is claimed operational. Real-service recovery is deferred post-M
   Corrected for the private-demo MVP: same-project staging in `comfforts-369117`; on-demand,
   single-zone Cloud SQL PostgreSQL 17 Enterprise `db-g1-small` with 10 GiB SSD and an empty store on
   every creation; explicit data loss on destroy; no MVP backup/PITR/RPO/RTO claim; deployed response
-  cache disabled; the documented `us-central1` Qdrant Free exception; regional Secret Manager with
-  Google-managed encryption; credential-free deployed providers; USD 100 soft monthly budget; and
+  cache disabled; the documented `us-central1` Qdrant Free exception; standard Secret Manager with
+  user-managed replication restricted to `us-west1`, native numeric-version Cloud Run injection,
+  and Google-managed encryption; credential-free deployed providers; USD 100 soft monthly budget; and
   sole public-repository approver `hankgalt` without independent review. The existing provisioned
   `db-f1-micro` plus backup/PITR settings are historical staging state to replace through Terraform,
   not the target or an MVP acceptance gate.

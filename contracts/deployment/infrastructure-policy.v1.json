@@ -66,13 +66,16 @@
     }
   },
   "secrets": {
-    "service": "regional_secret_manager",
-    "location": "us-west1",
+    "service": "standard_secret_manager",
+    "replication": "user_managed",
+    "payload_locations": ["us-west1"],
+    "cloud_run_injection": "native_environment_numeric_version",
     "payloads_managed_by_terraform": false,
     "payloads_allowed_in_repository": false,
     "payloads_allowed_in_github": false,
-    "metadata_status": "removed_by_partial_teardown",
-    "payload_versions_created_by_this_slice": false
+    "metadata_status": "defined_not_applied",
+    "payload_versions_created_by_terraform": false,
+    "runtime_lifecycle": "destroyed_and_reentered_with_each_clean_runtime"
   },
   "managed_state": {
     "service": "cloud_sql_postgresql",
@@ -115,11 +118,17 @@
     }
   },
   "workload_boundary": {
+    "services": ["aifa-staging-backend", "aifa-staging-frontend"],
+    "terraform_state_prefix": "workloads",
     "cloud_run_ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
     "default_uri_disabled": true,
     "anonymous_invoker_allowed": false,
     "iap_edge_required": true,
-    "status": "policy_defined_workload_not_deployed"
+    "pre_edge_iap_audience": "/projects/730340912967/global/backendServices/0",
+    "pre_edge_iap_audience_status": "intentional_fail_closed_sentinel",
+    "minimum_instances": 0,
+    "maximum_instances_per_service": 1,
+    "status": "terraform_defined_not_applied"
   },
   "budget": {
     "combined_monthly_usd": 100,
@@ -132,8 +141,8 @@
     "final_drift": "runtime_absent_expected_networking_residue",
     "github_environments": "configured",
     "oidc_smoke": "staging_and_production_qualified",
-    "staging_workload": "not_deployed",
-    "no_direct_workload_bypass": "not_yet_testable",
-    "mvp_lifecycle_code": "networking_foundation_acceptance_defined_not_applied"
+    "staging_workload": "terraform_defined_not_deployed",
+    "no_direct_workload_bypass": "controls_defined_not_qualified",
+    "mvp_lifecycle_code": "foundation_migration_workload_order_defined_not_applied"
   }
 }

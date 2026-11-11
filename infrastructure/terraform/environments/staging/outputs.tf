@@ -14,6 +14,10 @@ output "runtime_service_account" {
   value = google_service_account.workload["runtime"].email
 }
 
+output "frontend_service_account" {
+  value = google_service_account.workload["frontend"].email
+}
+
 output "migration_service_account" {
   value = google_service_account.workload["migration"].email
 }
@@ -22,8 +26,8 @@ output "retention_service_account" {
   value = google_service_account.workload["retention"].email
 }
 
-output "regional_secret_names" {
-  value = { for key, secret in google_secret_manager_regional_secret.staging : key => secret.id }
+output "qdrant_runtime_secret_id" {
+  value = google_secret_manager_secret.qdrant_runtime.secret_id
 }
 
 output "managed_state_job_names" {

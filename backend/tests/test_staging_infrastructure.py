@@ -20,6 +20,7 @@ STAGING_EVIDENCE = REPO_ROOT / "backend/artifacts/release/deployment/staging-fou
 LIFECYCLE_EVIDENCE = (
     REPO_ROOT / "backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json"
 )
+WORKLOAD_EVIDENCE = REPO_ROOT / "backend/artifacts/release/deployment/application-workloads.v1.json"
 
 
 def _contract() -> dict[str, Any]:
@@ -42,6 +43,7 @@ def test_every_terraform_root_bills_api_quota_to_the_target_project() -> None:
         TERRAFORM_ROOT / "bootstrap/versions.tf",
         TERRAFORM_ROOT / "shared/versions.tf",
         TERRAFORM_ROOT / "environments/staging/versions.tf",
+        TERRAFORM_ROOT / "environments/staging-workloads/versions.tf",
     ):
         versions = versions_file.read_text(encoding="utf-8")
         assert "billing_project       = var.project_id" in versions
@@ -83,8 +85,10 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "private_service_allocated_range",
         "service_networking_connection",
     ]
-    assert contract["secrets"]["service"] == "regional_secret_manager"
-    assert contract["secrets"]["location"] == "us-west1"
+    assert contract["secrets"]["service"] == "standard_secret_manager"
+    assert contract["secrets"]["replication"] == "user_managed"
+    assert contract["secrets"]["payload_locations"] == ["us-west1"]
+    assert contract["secrets"]["cloud_run_injection"] == ("native_environment_numeric_version")
     assert contract["secrets"]["payloads_managed_by_terraform"] is False
     assert contract["identity"]["subject_format"] == (
         "repo:OWNER@OWNER-ID/REPO@REPO-ID:environment:ENVIRONMENT"
@@ -120,14 +124,23 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     )
     assert contract["workload_boundary"]["default_uri_disabled"] is True
     assert contract["workload_boundary"]["anonymous_invoker_allowed"] is False
+    assert contract["workload_boundary"]["services"] == [
+        "aifa-staging-backend",
+        "aifa-staging-frontend",
+    ]
+    assert contract["workload_boundary"]["terraform_state_prefix"] == "workloads"
+    assert contract["workload_boundary"]["pre_edge_iap_audience_status"] == (
+        "intentional_fail_closed_sentinel"
+    )
+    assert contract["workload_boundary"]["status"] == "terraform_defined_not_applied"
     assert contract["operational_status"] == {
         "terraform_foundation": "networking_only",
         "final_drift": "runtime_absent_expected_networking_residue",
         "github_environments": "configured",
         "oidc_smoke": "staging_and_production_qualified",
-        "staging_workload": "not_deployed",
-        "no_direct_workload_bypass": "not_yet_testable",
-        "mvp_lifecycle_code": "networking_foundation_acceptance_defined_not_applied",
+        "staging_workload": "terraform_defined_not_deployed",
+        "no_direct_workload_bypass": "controls_defined_not_qualified",
+        "mvp_lifecycle_code": "foundation_migration_workload_order_defined_not_applied",
     }
 
 
@@ -195,6 +208,27 @@ def test_demo_runtime_lifecycle_evidence_records_runtime_absence_and_networking(
     assert "private_networking" not in evidence["destroyed_staging_scope"]
     assert evidence["deferred"]["cloud_sql_recovery_qualification"] == "post_mvp"
     assert evidence["security"]["secrets_committed"] is False
+
+
+def test_application_workload_evidence_is_truthful_about_unapplied_controls() -> None:
+    evidence = json.loads(WORKLOAD_EVIDENCE.read_text(encoding="utf-8"))
+
+    assert evidence["schema_version"] == "1"
+    assert evidence["status"] == "terraform_and_lifecycle_defined_not_applied"
+    assert evidence["scope"]["cloud_resources_mutated"] is False
+    assert evidence["scope"]["terraform_applied"] is False
+    assert evidence["scope"]["secret_payloads_recorded"] is False
+    assert evidence["terraform"]["foundation_state_prefix"] == "foundation"
+    assert evidence["terraform"]["workload_state_prefix"] == "workloads"
+    assert evidence["terraform"]["destroy_order"] == [
+        "application_workloads",
+        "managed_state_and_operator_jobs",
+    ]
+    assert evidence["workload_policy"]["default_uri_disabled"] is True
+    assert evidence["workload_policy"]["anonymous_invoker_allowed"] is False
+    assert evidence["secret_policy"]["payload_owned_by_terraform"] is False
+    assert evidence["secret_policy"]["latest_version_allowed"] is False
+    assert evidence["qualification"]["live_workload_apply"] == "pending_after_merge"
 
 
 def test_remote_state_bootstrap_is_environment_separated_and_fail_closed() -> None:
@@ -287,6 +321,7 @@ def test_terraform_never_owns_secret_payloads_or_anonymous_workload_access() -> 
     terraform = _terraform_text()
 
     assert "google_secret_manager_regional_secret_version" not in terraform
+    assert "google_secret_manager_secret_version" not in terraform
     assert "secret_data" not in terraform
     assert "password =" not in terraform
     assert "roles/run.invoker" not in terraform
@@ -294,21 +329,21 @@ def test_terraform_never_owns_secret_payloads_or_anonymous_workload_access() -> 
     assert "INGRESS_TRAFFIC_ALL" not in terraform
 
 
-def test_regional_secret_metadata_has_separate_staging_boundaries() -> None:
+def test_standard_qdrant_secret_has_us_west1_replication_and_runtime_only_access() -> None:
     staging = (TERRAFORM_ROOT / "environments/staging/main.tf").read_text(encoding="utf-8")
 
-    assert "google_secret_manager_regional_secret" in staging
-    assert 'location  = "us-west1"' in staging
-    assert '"postgres-runtime-dsn"' in staging
-    assert '"postgres-migration-dsn"' in staging
-    assert '"postgres-retention-dsn"' in staging
-    assert '"qdrant-runtime-api-key"' in staging
-    assert 'secret   = "postgres-runtime-dsn"' not in staging
-    assert 'secret   = "postgres-migration-dsn"' not in staging
-    assert 'secret   = "postgres-retention-dsn"' not in staging
+    assert 'resource "google_secret_manager_secret" "qdrant_runtime"' in staging
+    assert "google_secret_manager_regional_secret" not in staging
+    assert "user_managed" in staging
+    assert "location = var.region" in staging
+    assert 'secret_id           = "aifa-staging-qdrant-runtime-api-key"' in staging
+    assert "postgres-runtime-dsn" not in staging
+    assert "postgres-migration-dsn" not in staging
+    assert "postgres-retention-dsn" not in staging
     assert staging.count('role      = "roles/secretmanager.secretAccessor"') == 1
+    assert 'workload["runtime"].email' in staging
     assert "deletion_protection = false" in staging
-    assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 2
+    assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 1
     assert "prevent_destroy" not in staging
 
 
@@ -317,11 +352,96 @@ def test_private_demo_runtime_resources_are_deleted_instead_of_abandoned() -> No
     jobs = (TERRAFORM_ROOT / "modules/managed_state_jobs/main.tf").read_text(encoding="utf-8")
 
     assert "prevent_destroy" not in staging
-    assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 2
+    assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 1
     assert staging.count("deletion_protection = false") == 1
     assert 'deletion_policy = "ABANDON"' not in staging
     assert "deletion_protection = false" in jobs
     assert "prevent_destroy" not in jobs
+
+
+def test_application_workloads_are_private_pinned_bounded_and_separate_state() -> None:
+    workloads = (TERRAFORM_ROOT / "modules/application_workloads/main.tf").read_text(
+        encoding="utf-8"
+    )
+    variables = (TERRAFORM_ROOT / "modules/application_workloads/variables.tf").read_text(
+        encoding="utf-8"
+    )
+    root = (TERRAFORM_ROOT / "environments/staging-workloads/main.tf").read_text(encoding="utf-8")
+    root_variables = (TERRAFORM_ROOT / "environments/staging-workloads/variables.tf").read_text(
+        encoding="utf-8"
+    )
+
+    assert workloads.count('resource "google_cloud_run_v2_service"') == 2
+    assert 'resource "google_cloud_run_v2_service" "backend"' in workloads
+    assert 'resource "google_cloud_run_v2_service" "frontend"' in workloads
+    assert workloads.count('ingress              = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"') == 2
+    assert workloads.count("default_uri_disabled = true") == 2
+    assert workloads.count('launch_stage         = "BETA"') == 2
+    assert workloads.count("deletion_protection  = false") == 2
+    assert workloads.count("min_instance_count = 0") == 2
+    assert workloads.count("max_instance_count = 1") == 2
+    assert "max_instance_request_concurrency = 4" in workloads
+    assert "max_instance_request_concurrency = 40" in workloads
+    assert 'path = "/api/health/live"' in workloads
+    assert 'path = "/finance_assistant/healthz"' in workloads
+    assert re.search(r'name\s*=\s*"cloud-sql-proxy"', workloads)
+    assert 'depends_on = ["cloud-sql-proxy"]' in workloads
+    assert '"--private-ip"' in workloads
+    assert '"--auto-iam-authn"' in workloads
+    assert 'egress = "PRIVATE_RANGES_ONLY"' in workloads
+    assert "secret_key_ref {" in workloads
+    assert "version = var.qdrant_secret_version" in workloads
+    assert 'AIFA_PROVIDER_MODE                   = "credential_free"' in workloads
+    assert 'AIFA_MODEL_MODE                      = "credential_free"' in workloads
+    assert 'AIFA_STORAGE_MIGRATION_MODE          = "verify_only"' in workloads
+    assert 'AIFA_RETENTION_EXECUTION_MODE        = "scheduled"' in workloads
+    assert 'AIFA_RESPONSE_CACHE_ADAPTER          = "disabled"' in workloads
+    assert 'AIFA_IDENTITY_MODE                   = "iap"' in workloads
+    assert 'AIFA_BASE_PATH                       = "/finance_assistant"' in workloads
+    assert 'strcontains(var.backend_image, "@sha256:")' in variables
+    assert 'strcontains(var.frontend_image, "@sha256:")' in variables
+    assert 'regex("^[1-9][0-9]*$", var.qdrant_secret_version)' in variables
+    assert 'module "application_workloads"' in root
+    assert (
+        'iap_audience                   = "/projects/730340912967/global/backendServices/0"' in root
+    )
+    assert 'qdrant_secret_id               = "aifa-staging-qdrant-runtime-api-key"' in root
+    assert "terraform_remote_state" not in root
+    assert 'strcontains(var.backend_image, "@sha256:")' in root_variables
+    assert 'strcontains(var.frontend_image, "@sha256:")' in root_variables
+    frontend = workloads.split('resource "google_cloud_run_v2_service" "frontend"', maxsplit=1)[1]
+    assert "var.frontend_service_account_email" in frontend
+    assert "secret_key_ref" not in frontend
+    assert "vpc_access" not in frontend
+    staging = (TERRAFORM_ROOT / "environments/staging/main.tf").read_text(encoding="utf-8")
+    identity_roles = staging.split("identity_roles = {", maxsplit=1)[1].split("\n  }", maxsplit=1)[
+        0
+    ]
+    assert 'identity = "frontend"' not in identity_roles
+
+
+def test_lifecycle_migrates_before_workloads_and_verifies_no_direct_origin() -> None:
+    wizard = (TERRAFORM_ROOT / "scripts/bootstrap-staging.sh").read_text(encoding="utf-8")
+
+    migration = wizard.index('gcloud run jobs execute "$MIGRATION_JOB"')
+    workload_apply = wizard.index('terraform -chdir="$WORKLOAD_ROOT" apply "$WORKLOAD_PLAN"')
+    assert migration < workload_apply
+    assert 'open_url "https://console.cloud.google.com/security/secret-manager/secret/' in wizard
+    assert "The secret value must be entered directly in GCP" in wizard
+    assert "ask_secret" not in wizard.split("# STAGES:", maxsplit=1)[1]
+    assert "--filter='state=enabled'" in wizard
+    assert 'export TF_VAR_qdrant_secret_version="$QDRANT_SECRET_VERSION"' in wizard
+    assert 'gcloud sql users delete "$OWNER_DATABASE_USER"' in wizard
+    assert "--data-api-access=ALLOW_DATA_API" in wizard
+    assert "--data-api-access=DISALLOW_DATA_API" in wizard
+    assert '.metadata.annotations["run.googleapis.com/ingress"]' in wizard
+    assert '.metadata.annotations["run.googleapis.com/default-url-disabled"]' in wizard
+    assert "curl --silent --show-error --fail --max-time 15" in wizard
+    assert "accepted anonymous direct-origin traffic" in wizard
+    assert "allUsers" in wizard
+    assert "allAuthenticatedUsers" in wizard
+    assert "gh variable set GCP_FRONTEND_IMAGE" in wizard
+    assert "gh variable set GCP_QDRANT_SECRET_VERSION" in wizard
 
 
 def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() -> None:
@@ -353,7 +473,12 @@ def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() ->
     assert 'terraform -chdir="$STAGING_ROOT" plan -destroy' in wizard
     assert 'terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"' in wizard
     assert "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data" in wizard
-    assert "regional Secret Manager payloads" in wizard
+    assert "Qdrant Secret Manager payload" in wizard
+    assert 'terraform -chdir="$WORKLOAD_ROOT" plan -destroy' in wizard
+    assert 'terraform -chdir="$WORKLOAD_ROOT" apply "$WORKLOAD_DESTROY_PLAN"' in wizard
+    assert wizard.index('terraform -chdir="$WORKLOAD_ROOT" apply "$WORKLOAD_DESTROY_PLAN"') < (
+        wizard.index('terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"')
+    )
     assert "terraform destroy" not in wizard
     assert "qualify-cloud-sql-recovery.sh" not in wizard
     assert "tier                            = var.database_tier" in staging
@@ -364,13 +489,13 @@ def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() ->
 @pytest.mark.parametrize(
     ("residual_before_run", "unexpected_residue", "expected_returncode", "state_checks"),
     [
-        (True, "", 0, 2),
-        (False, "", 0, 3),
+        (True, "", 0, 3),
+        (False, "", 0, 6),
         (
             False,
-            "module.regional_secrets.google_secret_manager_regional_secret.secret[unexpected]",
+            "google_secret_manager_secret.unexpected",
             1,
-            3,
+            5,
         ),
     ],
 )
@@ -426,6 +551,7 @@ def test_demo_runtime_down_accepts_only_networking_residue_after_provider_delay(
             case "$*" in
               "version") printf 'Terraform v1.17.1\\n' ;;
               *" state list")
+                if [[ "$*" == *"staging-workloads"* ]]; then exit 0; fi
                 printf '%s\\n' \\
                   'module.managed_state.google_compute_global_address.private_services' \\
                   'module.managed_state.google_compute_network.private' \\
@@ -471,6 +597,10 @@ def test_demo_runtime_down_accepts_only_networking_residue_after_provider_delay(
                 "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/"
                 f"finance-assistant-backend@sha256:{'0' * 64}"
             ),
+            "GCP_FRONTEND_IMAGE": (
+                "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/"
+                f"finance-assistant-frontend@sha256:{'1' * 64}"
+            ),
         }
     )
     if residual_before_run:
@@ -492,6 +622,132 @@ def test_demo_runtime_down_accepts_only_networking_residue_after_provider_delay(
     else:
         assert "resources outside the approved networking foundation remain" in result.stdout
     assert log.read_text(encoding="utf-8").count(" state list") == state_checks
+
+
+def test_demo_runtime_up_migrates_before_applying_private_workloads(tmp_path: Path) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    log = tmp_path / "commands.log"
+    backend_image = (
+        "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/"
+        f"finance-assistant-backend@sha256:{'0' * 64}"
+    )
+    frontend_image = (
+        "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/"
+        f"finance-assistant-frontend@sha256:{'1' * 64}"
+    )
+    commands = {
+        "git": """
+            case "$*" in
+              "branch --show-current") printf 'main\\n' ;;
+              "status --porcelain") ;;
+              "rev-parse origin/main"|"rev-parse HEAD") printf 'approved-main\\n' ;;
+              *) exit 1 ;;
+            esac
+        """,
+        "gcloud": """
+            printf 'gcloud %s\\n' "$*" >> "$FAKE_COMMAND_LOG"
+            case "$*" in
+              "auth list --filter=status:ACTIVE --format=value(account)")
+                printf 'vtalwar.w@comfforts.com\\n'
+                ;;
+              "config get-value project") printf 'comfforts-369117\\n' ;;
+              *"billing projects describe"*) printf 'billingAccounts/123456\\n' ;;
+              *"secrets versions list"*)
+                printf 'projects/comfforts-369117/secrets/'
+                printf 'aifa-staging-qdrant-runtime-api-key/versions/1\\n'
+                ;;
+              *"sql users list"*) ;;
+              *"run services describe aifa-staging-backend"*)
+                printf '%s' '{"metadata":{"annotations":{"run.googleapis.com/ingress":'
+                printf '%s' '"internal-and-cloud-load-balancing",'
+                printf '%s' '"run.googleapis.com/default-url-disabled":"true"}},'
+                printf '%s' '"status":{"conditions":[{"type":"Ready","status":"True"}]},'
+                printf '%s' '"spec":{"template":{"spec":{"containers":['
+                printf '{"name":"backend","image":"%s"}]}}}}\\n' "$GCP_BACKEND_IMAGE"
+                ;;
+              *"run services describe aifa-staging-frontend"*)
+                printf '%s' '{"metadata":{"annotations":{"run.googleapis.com/ingress":'
+                printf '%s' '"internal-and-cloud-load-balancing",'
+                printf '%s' '"run.googleapis.com/default-url-disabled":"true"}},'
+                printf '%s' '"status":{"conditions":[{"type":"Ready","status":"True"}]},'
+                printf '%s' '"spec":{"template":{"spec":{"containers":['
+                printf '{"name":"frontend","image":"%s"}]}}}}\\n' "$GCP_FRONTEND_IMAGE"
+                ;;
+              *"run services get-iam-policy"*) printf '{}\\n' ;;
+              *"artifacts docker images describe"*|*"storage buckets describe"*|\\
+              *"storage buckets create"*|*"storage buckets update"*|\\
+              *"sql instances patch"*|*"sql users create"*|*"sql users delete"*|\\
+              *"sql instances execute-sql"*|*"run jobs execute"*) ;;
+              *) exit 1 ;;
+            esac
+        """,
+        "terraform": """
+            printf 'terraform %s\\n' "$*" >> "$FAKE_COMMAND_LOG"
+            case "$*" in
+              "version") printf 'Terraform v1.17.1\\n' ;;
+              *"output -raw staging_workload_identity_provider"*) printf 'staging-provider\\n' ;;
+              *"output -raw staging_deploy_service_account"*)
+                printf 'staging-sa@example.invalid\\n'
+                ;;
+              *"output -raw production_workload_identity_provider"*)
+                printf 'production-provider\\n'
+                ;;
+              *"output -raw production_deploy_service_account"*)
+                printf 'production-sa@example.invalid\\n'
+                ;;
+              *"state show "*|*" init "*|*" import "*|*" plan "*|*" apply "*) ;;
+              *"show -no-color "*) printf 'reviewed workload plan\\n' ;;
+              *) exit 1 ;;
+            esac
+        """,
+        "gh": """
+            printf 'gh %s\\n' "$*" >> "$FAKE_COMMAND_LOG"
+            case "$*" in
+              "auth status") ;;
+              *"deployment-branch-policies --jq"*) printf 'main\\n' ;;
+              "api "*|"variable set "*) ;;
+              *) exit 1 ;;
+            esac
+        """,
+    }
+    for name, body in commands.items():
+        executable = fake_bin / name
+        executable.write_text(
+            "#!/usr/bin/env bash\nset -euo pipefail\n" + textwrap.dedent(body),
+            encoding="utf-8",
+        )
+        executable.chmod(0o755)
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "PATH": f"{fake_bin}:{environment['PATH']}",
+            "TMPDIR": str(tmp_path),
+            "FAKE_COMMAND_LOG": str(log),
+            "GCP_BACKEND_IMAGE": backend_image,
+            "GCP_FRONTEND_IMAGE": frontend_image,
+        }
+    )
+    result = subprocess.run(
+        [str(TERRAFORM_ROOT / "scripts/demo-runtime-up.sh")],
+        cwd=REPO_ROOT,
+        env=environment,
+        input="\n\ny\ny\ny\ny\ny\ny\ny\n",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    command_log = log.read_text(encoding="utf-8")
+    migration = command_log.index("gcloud run jobs execute aifa-staging-migrate")
+    workload_apply = command_log.index("staging-workloads apply")
+    assert migration < workload_apply
+    assert "Pinned Qdrant secret version 1 without reading its payload." in result.stdout
+    assert "Both services are Ready, digest pinned" in result.stdout
+    assert "GCP_FRONTEND_IMAGE" in command_log
+    assert "GCP_QDRANT_SECRET_VERSION" in command_log
 
 
 def test_cloud_sql_operator_jobs_are_iam_only_digest_pinned_and_vpc_scoped() -> None:
@@ -556,6 +812,8 @@ def test_cloud_sql_operator_jobs_are_iam_only_digest_pinned_and_vpc_scoped() -> 
     assert 'strcontains(var.backend_image, "@sha256:")' in staging_variables
     assert artifact_registry_prefix in staging_variables
     assert "TF_VAR_backend_image: ${{ vars.GCP_BACKEND_IMAGE }}" in workflow
+    assert "TF_VAR_frontend_image: ${{ vars.GCP_FRONTEND_IMAGE }}" in workflow
+    assert "TF_VAR_qdrant_secret_version: ${{ vars.GCP_QDRANT_SECRET_VERSION }}" in workflow
     assert f'cloud_sql_proxy_image    = "{artifact_registry_prefix}' in staging
     assert "gcr.io/cloud-sql-connectors/cloud-sql-proxy@sha256:" not in staging
 
@@ -677,6 +935,9 @@ def test_terraform_workflow_is_manual_keyless_and_staging_only_for_apply() -> No
     assert "vars.GCP_WORKLOAD_IDENTITY_PROVIDER" in workflow
     assert "vars.GCP_DEPLOY_SERVICE_ACCOUNT" in workflow
     assert "terraform plan" in workflow
+    assert "Validate staging workload root" in workflow
+    assert "Create reviewed staging workload plan" in workflow
+    assert "staging-workloads.tfplan.json" in workflow
     assert "terraform apply" not in workflow
     assert "credentials_json" not in workflow
     assert "secrets." not in workflow

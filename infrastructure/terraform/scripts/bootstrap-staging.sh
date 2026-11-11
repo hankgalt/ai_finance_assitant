@@ -202,7 +202,7 @@ run_wizard() {
 
 ACTION="${1:-}"
 case "$ACTION" in
-  up) TOTAL_STAGES=6 ;;
+  up) TOTAL_STAGES=8 ;;
   down) TOTAL_STAGES=2 ;;
   *)
     printf 'Usage: %s {up|down}\n' "${0##*/}" >&2
@@ -218,10 +218,24 @@ REGION="us-west1"
 BOOTSTRAP_BUCKET="${PROJECT_ID}-aifa-tf-bootstrap"
 STAGING_BUCKET="${PROJECT_ID}-aifa-tf-staging"
 SOURCE_INSTANCE="aifa-staging-postgres"
+DATABASE="aifa"
+OWNER_DATABASE_USER="vtalwar.w@comfforts.com"
+MIGRATION_ROLE="aifa-stg-migration@comfforts-369117.iam"
+RUNTIME_ROLE="aifa-stg-runtime@comfforts-369117.iam"
+RETENTION_ROLE="aifa-stg-retention@comfforts-369117.iam"
+MIGRATION_JOB="aifa-staging-migrate"
+BACKEND_SERVICE="aifa-staging-backend"
+FRONTEND_SERVICE="aifa-staging-frontend"
+QDRANT_SECRET_ID="aifa-staging-qdrant-runtime-api-key"
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 BOOTSTRAP_ROOT="$REPO_ROOT/infrastructure/terraform/bootstrap"
 SHARED_ROOT="$REPO_ROOT/infrastructure/terraform/shared"
 STAGING_ROOT="$REPO_ROOT/infrastructure/terraform/environments/staging"
+WORKLOAD_ROOT="$REPO_ROOT/infrastructure/terraform/environments/staging-workloads"
+BACKEND_PYTHON="$REPO_ROOT/backend/.venv/bin/python"
+TEMP_FILES=()
+OWNER_ELEVATED=0
+DATA_API_ENABLED=0
 NETWORKING_FOUNDATION_STATE=$(printf '%s\n' \
   'module.managed_state.google_compute_global_address.private_services' \
   'module.managed_state.google_compute_network.private' \
@@ -234,6 +248,10 @@ networking_foundation_is_only_state() {
   [[ "$current_state" == "$NETWORKING_FOUNDATION_STATE" ]]
 }
 
+workload_state_is_empty() {
+  [[ -z "$(terraform -chdir="$WORKLOAD_ROOT" state list)" ]]
+}
+
 source_cloud_sql_is_absent() {
   local source_instances
   source_instances=$(gcloud sql instances list \
@@ -244,8 +262,32 @@ source_cloud_sql_is_absent() {
 }
 
 runtime_is_absent_with_networking_foundation() {
-  networking_foundation_is_only_state && source_cloud_sql_is_absent
+  networking_foundation_is_only_state && workload_state_is_empty && source_cloud_sql_is_absent
 }
+
+cleanup_runtime_bootstrap() {
+  local file
+  if (( OWNER_ELEVATED )); then
+    warn "attempting to remove the temporary owner database user after an interrupted run"
+    gcloud sql users delete "$OWNER_DATABASE_USER" \
+      --project="$PROJECT_ID" \
+      --instance="$SOURCE_INSTANCE" \
+      --quiet >/dev/null 2>&1 || true
+  fi
+  if (( DATA_API_ENABLED )); then
+    warn "attempting to disable temporary Cloud SQL Data API access after an interrupted run"
+    gcloud sql instances patch "$SOURCE_INSTANCE" \
+      --project="$PROJECT_ID" \
+      --data-api-access=DISALLOW_DATA_API \
+      --quiet >/dev/null 2>&1 || true
+  fi
+  if (( ${#TEMP_FILES[@]} )); then
+    for file in "${TEMP_FILES[@]}"; do
+      rm -f "$file"
+    done
+  fi
+}
+trap cleanup_runtime_bootstrap EXIT
 
 finish_with_networking_foundation() {
   say "The billable demo runtime is absent."
@@ -262,6 +304,8 @@ for tool in gcloud terraform git jq; do
 done
 if [[ "$ACTION" == "up" ]]; then
   command -v gh >/dev/null 2>&1 || { warn "gh is not available on PATH"; exit 1; }
+  command -v curl >/dev/null 2>&1 || { warn "curl is not available on PATH"; exit 1; }
+  [[ -x "$BACKEND_PYTHON" ]] || { warn "backend/.venv is not ready"; exit 1; }
 fi
 ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format='value(account)')
 ACTIVE_PROJECT=$(gcloud config get-value project 2>/dev/null)
@@ -288,6 +332,22 @@ fi
   exit 1
 }
 export TF_VAR_backend_image="$BACKEND_IMAGE"
+FRONTEND_IMAGE="${TF_VAR_frontend_image:-${GCP_FRONTEND_IMAGE:-}}"
+if [[ -z "$FRONTEND_IMAGE" ]]; then
+  ask FRONTEND_IMAGE "Artifact Registry frontend image pinned by @sha256:"
+fi
+[[ "$FRONTEND_IMAGE" == us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/*@sha256:* ]] || {
+  warn "frontend image must use the approved Artifact Registry and an immutable sha256 digest"
+  exit 1
+}
+export TF_VAR_frontend_image="$FRONTEND_IMAGE"
+export TF_VAR_qdrant_secret_version="${TF_VAR_qdrant_secret_version:-${GCP_QDRANT_SECRET_VERSION:-1}}"
+if [[ "$ACTION" == "up" ]]; then
+  gcloud artifacts docker images describe "$BACKEND_IMAGE" \
+    --project="$PROJECT_ID" --format='value(image_summary.digest)' >/dev/null
+  gcloud artifacts docker images describe "$FRONTEND_IMAGE" \
+    --project="$PROJECT_ID" --format='value(image_summary.digest)' >/dev/null
+fi
 terraform version
 say "Verified $ACTIVE_ACCOUNT on $PROJECT_ID."
 
@@ -298,13 +358,16 @@ if [[ "$ACTION" == "down" ]]; then
   stage "Review and destroy the demo runtime"
   say "Bootstrap state, shared Artifact Registry, WIF, budget, and the Qdrant cluster are outside this staging state."
   warn "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data will be permanently deleted."
-  warn "This also deletes staging service identities, jobs, and regional Secret Manager payloads."
+  warn "This also deletes staging workloads, service identities, jobs, and the Qdrant Secret Manager payload."
   say "The approved private networking foundation remains available for the next demo runtime."
   warn "Backup/PITR recovery is not part of the private-demo MVP."
   terraform -chdir="$STAGING_ROOT" init -reconfigure \
     -backend-config="bucket=$STAGING_BUCKET" \
     -backend-config="prefix=foundation"
-  if [[ -z "$(terraform -chdir="$STAGING_ROOT" state list)" ]]; then
+  terraform -chdir="$WORKLOAD_ROOT" init -reconfigure \
+    -backend-config="bucket=$STAGING_BUCKET" \
+    -backend-config="prefix=workloads"
+  if [[ -z "$(terraform -chdir="$STAGING_ROOT" state list)" ]] && workload_state_is_empty; then
     say "The staging runtime state is already empty; nothing needs to be destroyed."
     finish
     return
@@ -336,7 +399,8 @@ if [[ "$ACTION" == "down" ]]; then
   export TF_VAR_database_tier="$CURRENT_DATABASE_TIER"
   LIFECYCLE_PLAN=$(mktemp "${TMPDIR:-/tmp}/aifa-demo-lifecycle.XXXXXX")
   DESTROY_PLAN=$(mktemp "${TMPDIR:-/tmp}/aifa-demo-destroy.XXXXXX")
-  trap 'rm -f "$LIFECYCLE_PLAN" "$DESTROY_PLAN"' EXIT
+  WORKLOAD_DESTROY_PLAN=$(mktemp "${TMPDIR:-/tmp}/aifa-demo-workload-destroy.XXXXXX")
+  TEMP_FILES+=("$LIFECYCLE_PLAN" "$DESTROY_PLAN" "$WORKLOAD_DESTROY_PLAN")
   terraform -chdir="$STAGING_ROOT" plan -lock-timeout=5m -out="$LIFECYCLE_PLAN"
   terraform -chdir="$STAGING_ROOT" show -no-color "$LIFECYCLE_PLAN"
   HAS_CREATE_OR_DELETE=$(terraform -chdir="$STAGING_ROOT" show -json "$LIFECYCLE_PLAN" |
@@ -353,6 +417,11 @@ if [[ "$ACTION" == "down" ]]; then
     confirm "Apply only this reviewed transition plan to remove runtime deletion guards?" || exit 1
     terraform -chdir="$STAGING_ROOT" apply "$LIFECYCLE_PLAN"
   fi
+  if ! workload_state_is_empty; then
+    terraform -chdir="$WORKLOAD_ROOT" plan -destroy -lock-timeout=5m \
+      -out="$WORKLOAD_DESTROY_PLAN"
+    terraform -chdir="$WORKLOAD_ROOT" show -no-color "$WORKLOAD_DESTROY_PLAN"
+  fi
   terraform -chdir="$STAGING_ROOT" plan -destroy -lock-timeout=5m -out="$DESTROY_PLAN"
   terraform -chdir="$STAGING_ROOT" show -no-color "$DESTROY_PLAN"
   DESTROY_CONFIRMATION="DESTROY EMPTY-DEMO-RUNTIME"
@@ -363,6 +432,9 @@ if [[ "$ACTION" == "down" ]]; then
     warn "confirmation did not match; nothing was destroyed"
     exit 1
   }
+  if ! workload_state_is_empty; then
+    terraform -chdir="$WORKLOAD_ROOT" apply "$WORKLOAD_DESTROY_PLAN"
+  fi
   if terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"; then
     say "The demo runtime is absent; the reproducibility foundation remains."
     finish
@@ -426,10 +498,151 @@ terraform -chdir="$STAGING_ROOT" plan -lock-timeout=5m -out=staging.tfplan
 confirm "Apply the reviewed staging plan, including Cloud SQL?" || exit 1
 terraform -chdir="$STAGING_ROOT" apply staging.tfplan
 
-# ── Stage 5: protected GitHub environments and non-secret variables ───────
-stage "Activate protected GitHub environments"
-say "GitHub receives only project, provider, and service-account identifiers."
+# ── Stage 5: Qdrant runtime secret version ────────────────────────────────
+stage "Add the Qdrant runtime key to Secret Manager"
+say "Terraform created only standard Secret Manager metadata with user-managed replication in us-west1."
+say "The secret value must be entered directly in GCP and is never accepted by this wizard."
+QDRANT_SECRET_VERSION=$(gcloud secrets versions list "$QDRANT_SECRET_ID" \
+  --project="$PROJECT_ID" \
+  --filter='state=enabled' \
+  --sort-by='~createTime' \
+  --limit=1 \
+  --format='value(name)')
+QDRANT_SECRET_VERSION="${QDRANT_SECRET_VERSION##*/}"
+if [[ "$QDRANT_SECRET_VERSION" =~ ^[1-9][0-9]*$ ]] && \
+  confirm "Reuse existing enabled Qdrant secret version $QDRANT_SECRET_VERSION?"; then
+  say "Reusing existing enabled version $QDRANT_SECRET_VERSION."
+else
+  open_url "https://console.cloud.google.com/security/secret-manager/secret/$QDRANT_SECRET_ID/versions?project=$PROJECT_ID"
+  step "Choose New version, paste the Qdrant runtime API key, and enable the version."
+  pause "Return here after the enabled version exists."
+  QDRANT_SECRET_VERSION=$(gcloud secrets versions list "$QDRANT_SECRET_ID" \
+    --project="$PROJECT_ID" \
+    --filter='state=enabled' \
+    --sort-by='~createTime' \
+    --limit=1 \
+    --format='value(name)')
+  QDRANT_SECRET_VERSION="${QDRANT_SECRET_VERSION##*/}"
+fi
+[[ "$QDRANT_SECRET_VERSION" =~ ^[1-9][0-9]*$ ]] || {
+  warn "no enabled numeric version exists for $QDRANT_SECRET_ID"
+  exit 1
+}
+export TF_VAR_qdrant_secret_version="$QDRANT_SECRET_VERSION"
+say "Pinned Qdrant secret version $QDRANT_SECRET_VERSION without reading its payload."
+
+# ── Stage 6: least-privilege grants and schema migration ──────────────────
+stage "Bootstrap PostgreSQL privileges and migrate the empty store"
+warn "This stage temporarily assigns cloudsqlsuperuser to $OWNER_DATABASE_USER."
+warn "It temporarily enables the Cloud SQL Data API only for the reviewed grant script."
+confirm "Install the reviewed least-privilege grants and remove owner elevation afterward?" || exit 1
+ROLE_POLICY_FILE=$(mktemp "${TMPDIR:-/tmp}/aifa-role-policy.XXXXXX")
+TEMP_FILES+=("$ROLE_POLICY_FILE")
+gcloud sql instances patch "$SOURCE_INSTANCE" \
+  --project="$PROJECT_ID" \
+  --data-api-access=ALLOW_DATA_API \
+  --quiet
+DATA_API_ENABLED=1
+if gcloud sql users list --project="$PROJECT_ID" --instance="$SOURCE_INSTANCE" \
+  --format='value(name,type)' | grep -Fq "$OWNER_DATABASE_USER"; then
+  gcloud sql users assign-roles "$OWNER_DATABASE_USER" \
+    --project="$PROJECT_ID" \
+    --instance="$SOURCE_INSTANCE" \
+    --type=CLOUD_IAM_USER \
+    --database-roles=cloudsqlsuperuser \
+    --revoke-existing-roles
+else
+  gcloud sql users create "$OWNER_DATABASE_USER" \
+    --project="$PROJECT_ID" \
+    --instance="$SOURCE_INSTANCE" \
+    --type=CLOUD_IAM_USER \
+    --database-roles=cloudsqlsuperuser
+fi
+OWNER_ELEVATED=1
+"$BACKEND_PYTHON" -m ai_finance_assistant.persistence.privileges \
+  --database="$DATABASE" \
+  --schema=public \
+  --migration-role="$MIGRATION_ROLE" \
+  --runtime-role="$RUNTIME_ROLE" \
+  --retention-role="$RETENTION_ROLE" > "$ROLE_POLICY_FILE"
+say "Reviewing generated grants before execution:"
+sed 's/^/  /' "$ROLE_POLICY_FILE"
+confirm "Execute exactly these grants through the temporary Data API path?" || exit 1
+gcloud sql instances execute-sql "$SOURCE_INSTANCE" \
+  --project="$PROJECT_ID" \
+  --database="$DATABASE" \
+  --sql="@$ROLE_POLICY_FILE" \
+  --partial-result-mode=FAIL_PARTIAL_RESULT
+gcloud sql users delete "$OWNER_DATABASE_USER" \
+  --project="$PROJECT_ID" \
+  --instance="$SOURCE_INSTANCE" \
+  --quiet
+OWNER_ELEVATED=0
+gcloud sql instances patch "$SOURCE_INSTANCE" \
+  --project="$PROJECT_ID" \
+  --data-api-access=DISALLOW_DATA_API \
+  --quiet
+DATA_API_ENABLED=0
+gcloud run jobs execute "$MIGRATION_JOB" \
+  --project="$PROJECT_ID" \
+  --region="$REGION" \
+  --wait
+say "The empty store is migrated; the retention operator job remains available for explicit execution."
+
+# ── Stage 7: private application workloads ────────────────────────────────
+stage "Deploy and verify private application workloads"
+terraform -chdir="$WORKLOAD_ROOT" init -reconfigure \
+  -backend-config="bucket=$STAGING_BUCKET" \
+  -backend-config="prefix=workloads"
+WORKLOAD_PLAN=$(mktemp "${TMPDIR:-/tmp}/aifa-demo-workloads.XXXXXX")
+TEMP_FILES+=("$WORKLOAD_PLAN")
+terraform -chdir="$WORKLOAD_ROOT" plan -lock-timeout=5m -out="$WORKLOAD_PLAN"
+terraform -chdir="$WORKLOAD_ROOT" show -no-color "$WORKLOAD_PLAN"
+confirm "Apply only this reviewed frontend/backend workload plan?" || exit 1
+terraform -chdir="$WORKLOAD_ROOT" apply "$WORKLOAD_PLAN"
+for service in "$BACKEND_SERVICE" "$FRONTEND_SERVICE"; do
+  SERVICE_DESCRIPTION=$(gcloud run services describe "$service" \
+    --project="$PROJECT_ID" \
+    --region="$REGION" \
+    --format=json)
+  printf '%s' "$SERVICE_DESCRIPTION" | jq -e '
+    .metadata.annotations["run.googleapis.com/ingress"] == "internal-and-cloud-load-balancing" and
+    .metadata.annotations["run.googleapis.com/default-url-disabled"] == "true" and
+    any(.status.conditions[]?; .type == "Ready" and .status == "True")
+  ' >/dev/null
+  SERVICE_IAM=$(gcloud run services get-iam-policy "$service" \
+    --project="$PROJECT_ID" \
+    --region="$REGION" \
+    --format=json)
+  printf '%s' "$SERVICE_IAM" | jq -e '
+    all(.bindings[]?.members[]?; . != "allUsers" and . != "allAuthenticatedUsers")
+  ' >/dev/null
+  DIRECT_URL=$(printf '%s' "$SERVICE_DESCRIPTION" | jq -r '.status.url // empty')
+  if [[ -n "$DIRECT_URL" ]]; then
+    DIRECT_PATH="/api/health/live"
+    [[ "$service" == "$FRONTEND_SERVICE" ]] && DIRECT_PATH="/finance_assistant/healthz"
+    if curl --silent --show-error --fail --max-time 15 "$DIRECT_URL$DIRECT_PATH" \
+      >/dev/null 2>&1; then
+      warn "$service accepted anonymous direct-origin traffic"
+      exit 1
+    fi
+  fi
+done
+BACKEND_DEPLOYED_IMAGE=$(gcloud run services describe "$BACKEND_SERVICE" \
+  --project="$PROJECT_ID" --region="$REGION" --format=json | jq -er \
+  '.spec.template.spec.containers[] | select(.name == "backend") | .image')
+FRONTEND_DEPLOYED_IMAGE=$(gcloud run services describe "$FRONTEND_SERVICE" \
+  --project="$PROJECT_ID" --region="$REGION" --format=json | jq -er \
+  '.spec.template.spec.containers[] | select(.name == "frontend") | .image')
+[[ "$BACKEND_DEPLOYED_IMAGE" == "$BACKEND_IMAGE" ]] || { warn "backend image digest mismatch"; exit 1; }
+[[ "$FRONTEND_DEPLOYED_IMAGE" == "$FRONTEND_IMAGE" ]] || { warn "frontend image digest mismatch"; exit 1; }
+say "Both services are Ready, digest pinned, private to the load-balancer ingress, and have no default URI or anonymous invoker."
+
+# ── Stage 8: protected GitHub environments and non-secret variables ───────
+stage "Update protected GitHub deployment variables"
+say "GitHub receives only project, identity, image-digest, and numeric secret-version identifiers."
 ENVIRONMENT_PAYLOAD=$(mktemp)
+TEMP_FILES+=("$ENVIRONMENT_PAYLOAD")
 printf '%s\n' '{"wait_timer":0,"prevent_self_review":false,"reviewers":[{"type":"User","id":2118128}],"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}' > "$ENVIRONMENT_PAYLOAD"
 for environment in staging production; do
   gh api --method PUT "repos/$REPOSITORY/environments/$environment" --input "$ENVIRONMENT_PAYLOAD" >/dev/null
@@ -439,7 +652,6 @@ for environment in staging production; do
       -f name=main >/dev/null
   fi
 done
-rm -f "$ENVIRONMENT_PAYLOAD"
 
 STAGING_PROVIDER=$(terraform -chdir="$SHARED_ROOT" output -raw staging_workload_identity_provider)
 STAGING_SERVICE_ACCOUNT=$(terraform -chdir="$SHARED_ROOT" output -raw staging_deploy_service_account)
@@ -453,17 +665,10 @@ gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER --repo "$REPOSITORY" --env stagin
 gh variable set GCP_DEPLOY_SERVICE_ACCOUNT --repo "$REPOSITORY" --env staging --body "$STAGING_SERVICE_ACCOUNT"
 gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER --repo "$REPOSITORY" --env production --body "$PRODUCTION_PROVIDER"
 gh variable set GCP_DEPLOY_SERVICE_ACCOUNT --repo "$REPOSITORY" --env production --body "$PRODUCTION_SERVICE_ACCOUNT"
-say "Protected environments and non-secret identity variables are configured."
-
-# ── Stage 6: short-lived identity smoke ───────────────────────────────────
-stage "Run short-lived cloud identity smoke"
-say "Both environments execute only gcloud projects describe through GitHub OIDC."
-confirm "Dispatch the staging and production identity-smoke workflows from main?" || exit 1
-gh workflow run cloud-identity-smoke.yml --repo "$REPOSITORY" --ref main -f environment=staging
-gh workflow run cloud-identity-smoke.yml --repo "$REPOSITORY" --ref main -f environment=production
-open_url "https://github.com/$REPOSITORY/actions/workflows/cloud-identity-smoke.yml"
-step "Wait for both protected-environment runs to complete successfully."
-pause "Press Enter after both runs pass, or Ctrl-C to stop and investigate."
+gh variable set GCP_BACKEND_IMAGE --repo "$REPOSITORY" --env staging --body "$BACKEND_IMAGE"
+gh variable set GCP_FRONTEND_IMAGE --repo "$REPOSITORY" --env staging --body "$FRONTEND_IMAGE"
+gh variable set GCP_QDRANT_SECRET_VERSION --repo "$REPOSITORY" --env staging --body "$QDRANT_SECRET_VERSION"
+say "Protected environments and non-secret deployment variables are configured."
 
 finish
 }

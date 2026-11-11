@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 3.3 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 private-demo MVP scope corrected, application access, managed-state adapter, delivery controls, and staging foundation implemented; the billable demo runtime is absent, its approved private-networking foundation remains, and exact-residue acceptance is locally qualified, with workload/edge/knowledge deployment pending; M10 planned | 2026-11-11
+Version 3.3 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 private-demo MVP scope corrected, application access, managed-state adapter, delivery controls, staging foundation, and application-workload definitions implemented; the billable demo runtime is absent, its approved private-networking foundation remains, and workload apply plus edge/knowledge deployment remain pending; M10 planned | 2026-11-11
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -55,7 +55,9 @@ records digest-pinned non-root images, deterministic/security workflows, provena
 identity seams. [M11 staging infrastructure report](M11_staging_infrastructure_report.md) records the
 provisioned Terraform state, registry, keyless identities, protected GitHub environments, budget,
 private Cloud SQL foundation, drift evidence, deferred recovery work, and remaining MVP
-workload/edge/knowledge gates.
+workload/edge/knowledge gates. [M11 application workload report](M11_application_workload_report.md)
+records the locally qualified separate-state Cloud Run definitions, migration-first lifecycle,
+approved secret pattern, and live apply/no-bypass evidence still pending.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under

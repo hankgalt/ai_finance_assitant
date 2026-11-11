@@ -102,12 +102,15 @@
     "data_at_rest": "google_managed_encryption",
     "data_in_transit": "tls",
     "cmek_enabled": false,
-    "secret_service": "regional_secret_manager",
-    "secret_region": "us-west1",
+    "secret_service": "standard_secret_manager",
+    "secret_replication": "user_managed",
+    "secret_payload_locations": ["us-west1"],
     "secret_payloads_in_terraform": false,
     "long_lived_gcp_keys_in_github": false,
-    "cloud_run_native_regional_secret_injection": false,
-    "later_provider_secret_access_pattern": "unresolved_stop_gate"
+    "cloud_run_native_secret_injection": true,
+    "runtime_secret_version_reference": "positive_numeric_version_only",
+    "runtime_secret_lifecycle": "destroyed_and_reentered_with_each_clean_runtime",
+    "approved_access_pattern": "native_cloud_run_environment_injection"
   },
   "staging": {
     "project_id": "comfforts-369117",
