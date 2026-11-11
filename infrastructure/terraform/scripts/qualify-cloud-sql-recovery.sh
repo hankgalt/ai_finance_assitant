@@ -236,7 +236,6 @@ cleanup_sensitive() {
     gcloud sql users delete "$OWNER_DATABASE_USER" \
       --project="$PROJECT_ID" \
       --instance="$SOURCE_INSTANCE" \
-      --type=CLOUD_IAM_USER \
       --quiet >/dev/null 2>&1 || true
   fi
   if (( DATA_API_ENABLED )); then
@@ -369,7 +368,6 @@ gcloud sql instances execute-sql "$SOURCE_INSTANCE" \
 gcloud sql users delete "$OWNER_DATABASE_USER" \
   --project="$PROJECT_ID" \
   --instance="$SOURCE_INSTANCE" \
-  --type=CLOUD_IAM_USER \
   --quiet
 OWNER_ELEVATED=0
 gcloud sql instances patch "$SOURCE_INSTANCE" \

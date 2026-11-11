@@ -41,6 +41,10 @@ Qdrant Free `us-central1` topology and sole GitHub approver are explicit private
   runtime DML, and retention SELECT/DELETE. The owner path never receives or creates a password and
   is designed for immediate removal after the base grants are installed. The Data API used for the
   reviewed SQL is likewise temporary and is disabled on success or interruption.
+- The first live privilege-bootstrap run installed the reviewed grants, then failed closed before
+  any operator-job execution because `gcloud sql users delete` rejected a create-only `--type`
+  option. The exit trap disabled Data API access; the exact temporary owner user was removed, and
+  both normal and interrupted cleanup paths now omit the unsupported flag under regression coverage.
 - The synthetic qualification command concurrently writes two isolated Principals, same-ID
   principal-owned resources, Runs/RunEvents, and checkpoints; proves restart durability and cross-
   Principal denial; and leaves a namespaced expired retention probe. Separate recovery and

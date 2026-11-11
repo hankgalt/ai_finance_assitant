@@ -75,6 +75,7 @@ The live qualification record is
 | First operator-job apply | failed closed on mixed GHCR/GCR registries; 0 jobs created; 3 obsolete PostgreSQL secret-access bindings removed as planned |
 | Artifact Registry mirror | backend and Cloud SQL proxy source manifests retained their reviewed sha256 digests |
 | Corrected operator-job apply | 3 jobs added, 0 changed, 0 destroyed; wizard stopped before execution on a post-apply `gcloud` JSON selector defect |
+| First privilege-bootstrap run | reviewed grants installed; unsupported delete flag stopped before job execution; Data API disabled and temporary owner user removed |
 | Cloud SQL live readback | `RUNNABLE`; PostgreSQL 17; private IP only; `ENCRYPTED_ONLY`; IAM auth on |
 | Backup/storage live readback | 10 GiB SSD; auto-grow limit 20 GiB; 7 backups; 3-day transaction logs |
 | Artifact Registry live readback | Docker standard repository with immutable tags |
@@ -121,8 +122,10 @@ qualification.
 ## Stop gate and remaining evidence
 
 - The corrected single-registry plan added the three private operator jobs. A post-apply JSON
-  selector defect stopped the wizard before migration, qualification, retention, owner elevation,
-  backup restore, or PITR; the selector fix must merge before the wizard resumes from a clean `main`.
+  selector defect was corrected. The next run installed the reviewed grants but stopped before
+  migration, qualification, retention, backup restore, or PITR when owner cleanup supplied an
+  unsupported delete flag. Data API access is disabled, the temporary owner user is absent, and the
+  cleanup fix must merge before the wizard resumes from a clean `main`.
 - Slice 3 remains short of its real-service gate: migrations, retention, restart behavior,
   backup/restore, PITR, and recovery must run from an authorized VPC-connected execution path.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls

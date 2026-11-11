@@ -344,6 +344,11 @@ def test_cloud_sql_recovery_wizard_removes_elevation_and_temporary_instances() -
     assert 'gcloud sql users create "$OWNER_DATABASE_USER"' in wizard
     assert 'gcloud sql instances execute-sql "$SOURCE_INSTANCE"' in wizard
     assert 'gcloud sql users delete "$OWNER_DATABASE_USER"' in wizard
+    owner_delete_commands = wizard.split('gcloud sql users delete "$OWNER_DATABASE_USER"')[1:]
+    assert len(owner_delete_commands) == 2
+    assert all(
+        "--type=" not in command.partition("--quiet")[0] for command in owner_delete_commands
+    )
     assert "--data-api-access=ALLOW_DATA_API" in wizard
     assert "--data-api-access=DISALLOW_DATA_API" in wizard
     assert 'gcloud run jobs execute "$MIGRATION_JOB"' in wizard
