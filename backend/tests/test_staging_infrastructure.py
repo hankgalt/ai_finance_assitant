@@ -47,11 +47,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] in {
-        "defined_not_provisioned",
-        "staging_foundation_provisioned",
-        "mvp_lifecycle_defined_not_applied",
-    }
+    assert contract["status"] == "partial_destroy_resume_fix_defined_not_applied"
     assert contract["private_demo_mvp"] == {
         "target_database_tier": "db-g1-small",
         "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -100,7 +96,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
         "mixed_registry_hosts_allowed": False,
         "http_endpoint": False,
-        "status": "migration_prepare_retention_executed_recovery_pending",
+        "status": "removed_after_qualified_execution",
         "execution_status": {
             "migration": "passed",
             "qualification_prepare": "passed",
@@ -113,13 +109,13 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     assert contract["workload_boundary"]["default_uri_disabled"] is True
     assert contract["workload_boundary"]["anonymous_invoker_allowed"] is False
     assert contract["operational_status"] == {
-        "terraform_foundation": "provisioned",
-        "final_drift": "no_changes",
+        "terraform_foundation": "partial_teardown",
+        "final_drift": "create_delete_changes_pending_destroy",
         "github_environments": "configured",
         "oidc_smoke": "staging_and_production_qualified",
         "staging_workload": "not_deployed",
         "no_direct_workload_bypass": "not_yet_testable",
-        "mvp_lifecycle_code": "defined_not_applied",
+        "mvp_lifecycle_code": "partial_destroy_resume_fix_defined_not_applied",
     }
 
 
@@ -161,13 +157,13 @@ def test_staging_evidence_records_live_foundation_without_claiming_workload_depl
     assert evidence["regional_secret_metadata"]["payloads_managed_by_terraform"] is False
 
 
-def test_demo_runtime_lifecycle_evidence_is_defined_without_cloud_mutation() -> None:
+def test_demo_runtime_lifecycle_evidence_records_partial_destroy_and_safe_resume() -> None:
     evidence = json.loads(LIFECYCLE_EVIDENCE.read_text(encoding="utf-8"))
 
     assert evidence["schema_version"] == "1"
-    assert evidence["status"] == "defined_not_applied"
-    assert evidence["scope"]["cloud_resources_mutated"] is False
-    assert evidence["scope"]["terraform_applied"] is False
+    assert evidence["status"] == "partial_destroy_resume_fix_defined_not_applied"
+    assert evidence["scope"]["cloud_resources_mutated"] is True
+    assert evidence["scope"]["terraform_applied"] is True
     assert evidence["target"]["database_tier"] == "db-g1-small"
     assert evidence["target"]["automated_backups_enabled"] is False
     assert evidence["target"]["point_in_time_recovery_enabled"] is False
@@ -177,6 +173,10 @@ def test_demo_runtime_lifecycle_evidence_is_defined_without_cloud_mutation() -> 
         "down": "infrastructure/terraform/scripts/demo-runtime-down.sh",
         "destroy_confirmation": "DESTROY EMPTY-DEMO-RUNTIME",
     }
+    assert evidence["live_attempt"]["result"] == "partial_destroy"
+    assert evidence["live_attempt"]["application_database_present"] is False
+    assert evidence["live_attempt"]["source_instance_present"] is True
+    assert evidence["live_attempt"]["resume_fix_applied"] is False
     assert evidence["deferred"]["cloud_sql_recovery_qualification"] == "post_mvp"
     assert evidence["security"]["secrets_committed"] is False
 
@@ -255,6 +255,18 @@ def test_staging_cloud_sql_is_private_encrypted_and_disposable_on_demand() -> No
     assert "retention_service_account_email" in managed_state
 
 
+def test_cloud_sql_destroy_drops_application_database_before_iam_users() -> None:
+    managed_state = (TERRAFORM_ROOT / "modules/managed_state/main.tf").read_text(encoding="utf-8")
+    database = managed_state.split('resource "google_sql_database" "application"', maxsplit=1)[
+        1
+    ].split('resource "google_sql_user" "runtime"', maxsplit=1)[0]
+
+    assert "depends_on = [" in database
+    assert "google_sql_user.runtime" in database
+    assert "google_sql_user.migration" in database
+    assert "google_sql_user.retention" in database
+
+
 def test_terraform_never_owns_secret_payloads_or_anonymous_workload_access() -> None:
     terraform = _terraform_text()
 
@@ -306,6 +318,7 @@ def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() ->
     assert 'bootstrap-staging.sh" up' in up
     assert 'bootstrap-staging.sh" down' in down
     assert 'ACTION="${1:-}"' in wizard
+    assert "for tool in gcloud terraform git jq" in wizard
     assert "CURRENT_BRANCH=$(git branch --show-current)" in wizard
     assert '[[ "$CURRENT_BRANCH" == "main" ]]' in wizard
     assert '[[ -z "$(git status --porcelain)" ]]' in wizard
@@ -315,6 +328,10 @@ def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() ->
     assert 'CURRENT_DATABASE_TIER=$(gcloud sql instances describe "$SOURCE_INSTANCE"' in wizard
     assert 'export TF_VAR_database_tier="$CURRENT_DATABASE_TIER"' in wizard
     assert 'terraform -chdir="$STAGING_ROOT" apply "$LIFECYCLE_PLAN"' in wizard
+    assert 'HAS_CREATE_OR_DELETE=$(terraform -chdir="$STAGING_ROOT" show -json' in wizard
+    assert "SQL_GUARDS_ACTIVE=$(jq -r" in wizard
+    assert 'if [[ "$HAS_CREATE_OR_DELETE" == "true" ]]' in wizard
+    assert "Skipping the transition apply so deleted resources are not recreated" in wizard
     assert 'terraform -chdir="$STAGING_ROOT" plan -destroy' in wizard
     assert 'terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"' in wizard
     assert "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data" in wizard

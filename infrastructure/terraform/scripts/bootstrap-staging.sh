@@ -226,13 +226,11 @@ STAGING_ROOT="$REPO_ROOT/infrastructure/terraform/environments/staging"
 # ── Stage 1: local identity and tool preflight ─────────────────────────────
 stage "Verify local identity and tools"
 say "This stage performs read-only checks and accepts no credential payload."
-for tool in gcloud terraform git; do
+for tool in gcloud terraform git jq; do
   command -v "$tool" >/dev/null 2>&1 || { warn "$tool is not available on PATH"; exit 1; }
 done
 if [[ "$ACTION" == "up" ]]; then
-  for tool in gh jq; do
-    command -v "$tool" >/dev/null 2>&1 || { warn "$tool is not available on PATH"; exit 1; }
-  done
+  command -v gh >/dev/null 2>&1 || { warn "gh is not available on PATH"; exit 1; }
 fi
 ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format='value(account)')
 ACTIVE_PROJECT=$(gcloud config get-value project 2>/dev/null)
@@ -279,18 +277,46 @@ if [[ "$ACTION" == "down" ]]; then
     finish
     return
   fi
-  CURRENT_DATABASE_TIER=$(gcloud sql instances describe "$SOURCE_INSTANCE" \
+  if CURRENT_DATABASE_TIER=$(gcloud sql instances describe "$SOURCE_INSTANCE" \
     --project="$PROJECT_ID" \
-    --format='value(settings.tier)')
-  [[ -n "$CURRENT_DATABASE_TIER" ]] || { warn "could not resolve the current database tier"; exit 1; }
+    --format='value(settings.tier)' 2>/dev/null); then
+    [[ -n "$CURRENT_DATABASE_TIER" ]] || { warn "could not resolve the current database tier"; exit 1; }
+    SQL_GUARDS_ACTIVE=$(jq -r '
+      [
+        .settings.deletionProtectionEnabled,
+        .settings.backupConfiguration.enabled,
+        .settings.backupConfiguration.pointInTimeRecoveryEnabled,
+        .settings.retainBackupsOnDelete,
+        .settings.finalBackupConfig.enabled
+      ] | any(. == true)
+    ' < <(gcloud sql instances describe "$SOURCE_INSTANCE" \
+      --project="$PROJECT_ID" \
+      --format=json))
+  else
+    CURRENT_DATABASE_TIER="db-g1-small"
+    SQL_GUARDS_ACTIVE="false"
+    warn "the source Cloud SQL instance is already absent; evaluating only the remaining state"
+  fi
   export TF_VAR_database_tier="$CURRENT_DATABASE_TIER"
   LIFECYCLE_PLAN=$(mktemp "${TMPDIR:-/tmp}/aifa-demo-lifecycle.XXXXXX")
   DESTROY_PLAN=$(mktemp "${TMPDIR:-/tmp}/aifa-demo-destroy.XXXXXX")
   trap 'rm -f "$LIFECYCLE_PLAN" "$DESTROY_PLAN"' EXIT
   terraform -chdir="$STAGING_ROOT" plan -lock-timeout=5m -out="$LIFECYCLE_PLAN"
   terraform -chdir="$STAGING_ROOT" show -no-color "$LIFECYCLE_PLAN"
-  confirm "Apply only this reviewed transition plan to remove runtime deletion guards?" || exit 1
-  terraform -chdir="$STAGING_ROOT" apply "$LIFECYCLE_PLAN"
+  HAS_CREATE_OR_DELETE=$(terraform -chdir="$STAGING_ROOT" show -json "$LIFECYCLE_PLAN" |
+    jq -r '[.resource_changes[]?.change.actions[]?] | any(. == "create" or . == "delete")')
+  if [[ "$HAS_CREATE_OR_DELETE" == "true" ]]; then
+    if [[ "$SQL_GUARDS_ACTIVE" == "true" ]]; then
+      warn "the transition plan contains create/delete actions while Cloud SQL deletion guards remain active"
+      warn "stop and reconcile the partial state before destroying the runtime"
+      exit 1
+    fi
+    warn "the transition plan contains create/delete actions from a partial teardown"
+    say "Skipping the transition apply so deleted resources are not recreated."
+  else
+    confirm "Apply only this reviewed transition plan to remove runtime deletion guards?" || exit 1
+    terraform -chdir="$STAGING_ROOT" apply "$LIFECYCLE_PLAN"
+  fi
   terraform -chdir="$STAGING_ROOT" plan -destroy -lock-timeout=5m -out="$DESTROY_PLAN"
   terraform -chdir="$STAGING_ROOT" show -no-color "$DESTROY_PLAN"
   DESTROY_CONFIRMATION="DESTROY EMPTY-DEMO-RUNTIME"

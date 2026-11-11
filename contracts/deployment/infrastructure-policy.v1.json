@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "mvp_lifecycle_defined_not_applied",
+  "status": "partial_destroy_resume_fix_defined_not_applied",
   "private_demo_mvp": {
     "target_database_tier": "db-g1-small",
     "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -65,7 +65,7 @@
     "payloads_managed_by_terraform": false,
     "payloads_allowed_in_repository": false,
     "payloads_allowed_in_github": false,
-    "metadata_status": "provisioned",
+    "metadata_status": "removed_by_partial_teardown",
     "payload_versions_created_by_this_slice": false
   },
   "managed_state": {
@@ -86,7 +86,7 @@
     "retain_backups_on_delete": false,
     "deletion_protection": false,
     "instance": "aifa-staging-postgres",
-    "external_configuration_status": "mvp_replacement_pending"
+    "external_configuration_status": "partial_teardown_resume_fix_pending"
   },
   "managed_state_operator_jobs": {
     "operations": [
@@ -101,7 +101,7 @@
     "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
     "mixed_registry_hosts_allowed": false,
     "http_endpoint": false,
-    "status": "migration_prepare_retention_executed_recovery_pending",
+    "status": "removed_after_qualified_execution",
     "execution_status": {
       "migration": "passed",
       "qualification_prepare": "passed",
@@ -122,12 +122,12 @@
     "external_configuration_status": "provisioned"
   },
   "operational_status": {
-    "terraform_foundation": "provisioned",
-    "final_drift": "no_changes",
+    "terraform_foundation": "partial_teardown",
+    "final_drift": "create_delete_changes_pending_destroy",
     "github_environments": "configured",
     "oidc_smoke": "staging_and_production_qualified",
     "staging_workload": "not_deployed",
     "no_direct_workload_bypass": "not_yet_testable",
-    "mvp_lifecycle_code": "defined_not_applied"
+    "mvp_lifecycle_code": "partial_destroy_resume_fix_defined_not_applied"
   }
 }

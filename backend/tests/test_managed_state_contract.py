@@ -19,7 +19,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     manifest = _manifest()
 
     assert manifest["schema_version"] == "1"
-    assert manifest["status"] == "mvp_lifecycle_defined_not_applied"
+    assert manifest["status"] == "partial_destroy_resume_fix_defined_not_applied"
     assert manifest["private_demo_mvp"] == {
         "scope": "owner_operated_deployed_feature_parity",
         "target_machine_tier": "db-g1-small",
@@ -56,7 +56,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "deployed_store_initialization": "empty",
         "local_development_backend": "sqlite",
         "staging_instance": "aifa-staging-postgres",
-        "external_configuration_status": "mvp_replacement_pending",
+        "external_configuration_status": "partial_teardown_resume_fix_pending",
         "connection": {
             "transport": "direct_vpc_egress_private_ipv4",
             "authentication": "cloud_sql_auth_proxy_automatic_iam",
@@ -64,7 +64,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
             "dsn_secret_required": False,
             "operator_image_registry": ("us-west1-docker.pkg.dev/comfforts-369117/aifa-containers"),
             "mixed_registry_hosts_allowed": False,
-            "operator_jobs": "migration_prepare_retention_executed_recovery_pending",
+            "operator_jobs": "removed_after_qualified_execution",
         },
     }
     assert manifest["response_cache"] == {
@@ -86,7 +86,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "whole_run_atomicity_claimed": False,
     }
     assert manifest["staging"]["separation"] == "same_project"
-    assert manifest["staging"]["foundation_provisioned"] is True
+    assert manifest["staging"]["foundation_provisioned"] is False
     assert manifest["staging"]["recovery_policy"] == (
         "contracts/deployment/recovery-policy.v1.json"
     )
