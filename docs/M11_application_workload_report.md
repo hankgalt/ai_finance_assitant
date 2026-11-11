@@ -29,6 +29,10 @@ record, or IAP policy is deployed.
   then workloads. Destroy order is workloads first and managed state second after the existing
   exact data-loss confirmation. Interrupted privilege bootstrap attempts to remove the temporary
   owner user and disable Data API access.
+- `infrastructure/terraform/scripts/mirror-merged-main-images.sh` idempotently mirrors the exact
+  merged-main backend and frontend manifests into Artifact Registry, while
+  `set-deployment-image-variables.sh` publishes and verifies their non-secret digest references in
+  the selected GitHub environment.
 - Before the edge exists, FastAPI uses the deliberately non-matching IAP audience
   `/projects/730340912967/global/backendServices/0`. It fails closed and must be replaced by the
   exact IAP backend-service audience in the edge slice.
@@ -45,10 +49,11 @@ and no provider access right is added or broadened.
 | `terraform fmt -check -recursive infrastructure/terraform` | Passed |
 | `terraform validate` for modified staging roots | Passed for both roots |
 | `bash -n infrastructure/terraform/scripts/bootstrap-staging.sh` | Passed |
+| `bash -n` for the image mirroring and GitHub-variable scripts | Passed |
 | `shellcheck infrastructure/terraform/scripts/*.sh` | Not run; `shellcheck` is not installed locally |
 | `cd backend && .venv/bin/python -m ruff format --check .` | Passed |
 | `cd backend && .venv/bin/python -m ruff check .` | Passed |
-| `cd backend && .venv/bin/python -m pytest -q` | 403 passed, 8 skipped, 4 deselected |
+| `cd backend && .venv/bin/python -m pytest -q` | 406 passed, 8 skipped, 4 deselected |
 
 The machine-readable record is
 `backend/artifacts/release/deployment/application-workloads.v1.json`.
