@@ -321,7 +321,8 @@ done
 SOURCE_IMAGE=$(gcloud run jobs describe "$QUALIFICATION_JOB" \
   --project="$PROJECT_ID" \
   --region="$REGION" \
-  --format=json | jq -r '.template.template.containers[] | select(.name == "operator") | .image')
+  --format=json | jq -er \
+  '.spec.template.spec.template.spec.containers[] | select(.name == "operator") | .image')
 [[ "$SOURCE_IMAGE" == *@sha256:* ]] || { warn "operator image is not digest pinned"; exit 1; }
 say "Pinned qualification image: $SOURCE_IMAGE"
 

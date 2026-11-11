@@ -46,7 +46,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
             "dsn_secret_required": False,
             "operator_image_registry": ("us-west1-docker.pkg.dev/comfforts-369117/aifa-containers"),
             "mixed_registry_hosts_allowed": False,
-            "operator_jobs": "defined_not_applied",
+            "operator_jobs": "applied_not_executed",
         },
     }
     assert manifest["response_cache"] == {

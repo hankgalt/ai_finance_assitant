@@ -91,7 +91,7 @@
     "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
     "mixed_registry_hosts_allowed": false,
     "http_endpoint": false,
-    "status": "defined_not_applied"
+    "status": "applied_not_executed"
   },
   "workload_boundary": {
     "cloud_run_ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",

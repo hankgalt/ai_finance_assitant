@@ -468,9 +468,9 @@ Proposed ADR-030 and M11 select the GCP/IAP/base-path direction, and the applica
 is implemented. Protected Terraform state, immutable Artifact Registry, environment-specific WIF,
 protected GitHub environments, the budget, and the private staging managed-state foundation are now
 provisioned. The last applied foundation plans were drift-free. Digest-pinned non-HTTP Cloud Run
-jobs for migration, synthetic qualification, and retention are now defined but not applied or
-live-qualified. No application workload, load balancer, IAP edge, DNS record, or direct-workload-
-bypass control is represented as operational. The selected region is
+jobs for migration, synthetic qualification, and retention are provisioned but have not been
+executed or live-qualified. No application workload, load balancer, IAP edge, DNS record, or
+direct-workload-bypass control is represented as operational. The selected region is
 `us-west1`. The selected authoritative managed store is single-zone Cloud SQL PostgreSQL 17
 Enterprise, initially `db-f1-micro` with a 10 GiB SSD, seven daily backups, and three days of PITR.
 It owns separate application, checkpoint, and provider-cache persistence boundaries. Local
