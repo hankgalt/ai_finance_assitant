@@ -410,12 +410,11 @@ for _attempt in $(seq 1 20); do
   sleep 15
 done
 [[ -n "$PITR_TIMESTAMP" ]] || { warn "PITR window did not reach the prepared marker"; exit 1; }
-BACKUP_ID=$(gcloud sql backups create \
+gcloud sql backups create \
   --project="$PROJECT_ID" \
   --instance="$SOURCE_INSTANCE" \
   --description="$BACKUP_DESCRIPTION" \
-  --format='value(id)')
-[[ -n "$BACKUP_ID" ]] || { warn "on-demand backup ID was not returned"; exit 1; }
+  --format='none'
 BACKUP_NAME=""
 for _attempt in $(seq 1 10); do
   BACKUP_NAME=$(gcloud sql backups list \
@@ -427,6 +426,18 @@ for _attempt in $(seq 1 10); do
   sleep 2
 done
 [[ -n "$BACKUP_NAME" ]] || { warn "unique on-demand backup name was not returned"; exit 1; }
+BACKUP_RUN=$(gcloud sql backups describe "$BACKUP_NAME" \
+  --project="$PROJECT_ID" \
+  --format='value(backupRun)')
+BACKUP_STATE=$(gcloud sql backups describe "$BACKUP_NAME" \
+  --project="$PROJECT_ID" \
+  --format='value(state)')
+BACKUP_ID="${BACKUP_RUN##*/}"
+[[ "$BACKUP_RUN" =~ ^projects/${PROJECT_ID}/instances/${SOURCE_INSTANCE}/backupRuns/[0-9]+$ ]] || {
+  warn "on-demand backup run metadata was not returned"
+  exit 1
+}
+[[ "$BACKUP_STATE" == "SUCCESSFUL" ]] || { warn "on-demand backup is not successful"; exit 1; }
 say "Backup $BACKUP_NAME (run ID $BACKUP_ID) and PITR timestamp $PITR_TIMESTAMP are ready."
 
 # ── Stage 5: create both temporary recovery targets ───────────────────────

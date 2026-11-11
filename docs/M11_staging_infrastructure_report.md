@@ -78,6 +78,7 @@ The live qualification record is
 | Corrected operator-job apply | 3 jobs added, 0 changed, 0 destroyed; wizard stopped before execution on a post-apply `gcloud` JSON selector defect |
 | First privilege-bootstrap run | reviewed grants installed; unsupported delete flag stopped before job execution; Data API disabled and temporary owner user removed |
 | First migration/recovery run | migration `aifa-staging-migrate-xrbw9` and prepare `aifa-staging-qualify-gpp85` passed; numeric-ID restore rejected configuration overrides before creating a temporary instance; PITR and retention did not run |
+| Second migration/recovery run | migration `aifa-staging-migrate-cldkf` and prepare `aifa-staging-qualify-nxtgm` passed; backup creation succeeded, but the named-backup response exposed no `id` field and restore was not attempted; no temporary instance was created |
 | Cloud SQL live readback | `RUNNABLE`; PostgreSQL 17; private IP only; `ENCRYPTED_ONLY`; IAM auth on |
 | Backup/storage live readback | 10 GiB SSD; auto-grow limit 20 GiB; 7 backups; 3-day transaction logs |
 | Artifact Registry live readback | Docker standard repository with immutable tags |
@@ -132,6 +133,11 @@ qualification.
   run ID. No temporary instance was created, and the exact on-demand backup was deleted after
   explicit operator confirmation. The corrected wizard resolves and validates the unique backup
   name before restore.
+- The subsequent run passed migration and preparation and created a successful on-demand backup,
+  but stopped before restore because the named-backup create response had no `id` field. The exact
+  backup was deleted after explicit operator confirmation; no temporary instance exists. The
+  corrected wizard now derives the evidence-only numeric run ID from the resolved backup resource's
+  `backupRun` metadata.
 - Slice 3 remains short of its real-service gate: retention, recovered-target validation,
   backup/restore, PITR, restart behavior, cleanup, RPO/RTO, and final drift must all pass.
 - No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls

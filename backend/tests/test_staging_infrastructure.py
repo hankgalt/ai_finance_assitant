@@ -373,8 +373,12 @@ def test_cloud_sql_recovery_wizard_removes_elevation_and_temporary_instances() -
     assert ".template.template.containers[]" not in wizard
     assert "ai_finance_assistant.persistence.qualification" in wizard
     assert '--description="$BACKUP_DESCRIPTION"' in wizard
+    assert "BACKUP_ID=$(gcloud sql backups create" not in wizard
+    assert "--format='none'" in wizard
     assert "--filter=\"description='$BACKUP_DESCRIPTION'\"" in wizard
     assert '--format="value(name)"' in wizard
+    assert 'BACKUP_RUN=$(gcloud sql backups describe "$BACKUP_NAME"' in wizard
+    assert 'BACKUP_ID="${BACKUP_RUN##*/}"' in wizard
     assert 'gcloud sql backups restore "$BACKUP_NAME"' in wizard
     restore_command = wizard.split('gcloud sql backups restore "$BACKUP_NAME"', maxsplit=1)[1]
     restore_command = restore_command.partition("--quiet")[0]
