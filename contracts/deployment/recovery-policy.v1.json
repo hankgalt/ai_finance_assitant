@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "defined_not_executed",
+  "status": "prepare_executed_recovery_pending",
   "source": {
     "project_id": "comfforts-369117",
     "region": "us-west1",
@@ -68,6 +68,7 @@
       "source_image_digest",
       "job_execution_names",
       "backup_id",
+      "backup_name",
       "pitr_timestamp",
       "temporary_instance_names",
       "started_at",

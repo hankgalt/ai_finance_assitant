@@ -431,7 +431,9 @@ contract, and repeatable operator procedure are implemented and locally qualifie
 service Cloud SQL recovery gate remains pending. The slice 5 Terraform state, registry, WIF,
 protected GitHub environments, budget, private network, Cloud SQL, service identities, and empty
 regional secret containers are provisioned; the last applied foundation plans were drift-free. The
-three digest-pinned private Cloud Run operator jobs are provisioned but not yet executed. Their first
+three digest-pinned private Cloud Run operator jobs are provisioned. Migration and synthetic
+qualification preparation have executed successfully; retention and recovered-target verification
+remain pending. Their first
 apply failed closed before creating a job because Cloud Run rejected mixed GHCR/GCR container
 registries; the obsolete PostgreSQL secret-access bindings were removed as planned. Both image
 manifests are now mirrored with unchanged digests into the approved `us-west1` Artifact Registry,
@@ -442,6 +444,12 @@ instead of the `gcloud` Knative JSON path; the selector is corrected and regress
 next run installed the reviewed least-privilege grants, then stopped before job execution because
 the owner-user delete command supplied a create-only `--type` flag. The exit trap disabled Data API
 access, the exact temporary owner user was removed, and both delete paths are corrected and tested.
+The following run completed migration and synthetic preparation, then its backup restore was rejected
+before instance creation because new-instance configuration overrides were paired with the legacy
+numeric backup-run ID. The corrected procedure resolves the unique fully qualified backup name,
+uses that name for restore and cleanup, and regression-tests that `--backup-instance` is absent from
+the name-based restore. No temporary restore instance was created; the failed run's exact on-demand
+backup was deleted after explicit operator confirmation.
 The initial staging WIF smoke failed closed on a legacy name-only subject condition; the immutable-ID
 subject remediation changed only the two providers in place, destroyed nothing, and is drift-free. The staging retry and
 production smoke both passed after required review. Real-service recovery, the staging workload,

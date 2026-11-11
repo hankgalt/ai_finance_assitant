@@ -219,6 +219,7 @@ RETENTION_JOB="aifa-staging-retention"
 ARTIFACT_REGISTRY_PREFIX="us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/"
 PROXY_IMAGE="${ARTIFACT_REGISTRY_PREFIX}cloud-sql-proxy@sha256:7d156a5c466e31596afd6c8ed134f19c207a297418392fdad2686524ca4e7a3c"
 RUN_SUFFIX=$(date -u +%Y%m%d%H%M%S)
+BACKUP_DESCRIPTION="Finance Assistant recovery qualification $RUN_SUFFIX"
 BACKUP_RESTORE_INSTANCE="aifa-stg-backup-${RUN_SUFFIX}"
 PITR_INSTANCE="aifa-stg-pitr-${RUN_SUFFIX}"
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
@@ -412,23 +413,29 @@ done
 BACKUP_ID=$(gcloud sql backups create \
   --project="$PROJECT_ID" \
   --instance="$SOURCE_INSTANCE" \
-  --description="Finance Assistant recovery qualification $RUN_SUFFIX" \
+  --description="$BACKUP_DESCRIPTION" \
   --format='value(id)')
-if [[ -z "$BACKUP_ID" ]]; then
-  BACKUP_ID=$(gcloud sql backups list --project="$PROJECT_ID" --instance="$SOURCE_INSTANCE" \
-    --sort-by='~startTime' --limit=1 --format='value(id)')
-fi
 [[ -n "$BACKUP_ID" ]] || { warn "on-demand backup ID was not returned"; exit 1; }
-say "Backup $BACKUP_ID and PITR timestamp $PITR_TIMESTAMP are ready."
+BACKUP_NAME=""
+for _attempt in $(seq 1 10); do
+  BACKUP_NAME=$(gcloud sql backups list \
+    --project="$PROJECT_ID" \
+    --filter="description='$BACKUP_DESCRIPTION'" \
+    --format="value(name)")
+  [[ "$BACKUP_NAME" =~ ^projects/${PROJECT_ID}/backups/[[:alnum:]-]+$ ]] && break
+  BACKUP_NAME=""
+  sleep 2
+done
+[[ -n "$BACKUP_NAME" ]] || { warn "unique on-demand backup name was not returned"; exit 1; }
+say "Backup $BACKUP_NAME (run ID $BACKUP_ID) and PITR timestamp $PITR_TIMESTAMP are ready."
 
 # ── Stage 5: create both temporary recovery targets ───────────────────────
 stage "Restore the backup and point-in-time targets"
 confirm "Create both reviewed temporary recovery instances now?" || exit 1
 BACKUP_RESTORE_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 BACKUP_RESTORE_STARTED_EPOCH=$(date -u +%s)
-gcloud sql backups restore "$BACKUP_ID" \
+gcloud sql backups restore "$BACKUP_NAME" \
   --project="$PROJECT_ID" \
-  --backup-instance="$SOURCE_INSTANCE" \
   --restore-instance="$BACKUP_RESTORE_INSTANCE" \
   --region="$REGION" \
   --database-version=POSTGRES_17 \
@@ -493,13 +500,12 @@ gcloud run jobs execute "$QUALIFICATION_JOB" \
   --container=operator \
   --args="-m","ai_finance_assistant.persistence.qualification","verify-retention","--qualification-id","$QUALIFICATION_ID"
 RETENTION_VERIFY_EXECUTION=$(latest_execution "$QUALIFICATION_JOB")
-warn "The next action deletes only $BACKUP_RESTORE_INSTANCE, $PITR_INSTANCE, and qualification backup $BACKUP_ID."
+warn "The next action deletes only $BACKUP_RESTORE_INSTANCE, $PITR_INSTANCE, and qualification backup $BACKUP_NAME."
 confirm "Delete these validated temporary recovery resources?" || exit 1
 gcloud sql instances delete "$BACKUP_RESTORE_INSTANCE" --project="$PROJECT_ID" --quiet
 gcloud sql instances delete "$PITR_INSTANCE" --project="$PROJECT_ID" --quiet
-gcloud sql backups delete "$BACKUP_ID" \
+gcloud sql backups delete "$BACKUP_NAME" \
   --project="$PROJECT_ID" \
-  --instance="$SOURCE_INSTANCE" \
   --quiet
 for target in "$BACKUP_RESTORE_INSTANCE" "$PITR_INSTANCE"; do
   if gcloud sql instances describe "$target" --project="$PROJECT_ID" >/dev/null 2>&1; then
@@ -534,6 +540,7 @@ jq -n \
   --arg backup_verify_execution "$BACKUP_VERIFY_EXECUTION" \
   --arg pitr_verify_execution "$PITR_VERIFY_EXECUTION" \
   --arg backup_id "$BACKUP_ID" \
+  --arg backup_name "$BACKUP_NAME" \
   --arg pitr_timestamp "$PITR_TIMESTAMP" \
   --arg backup_instance "$BACKUP_RESTORE_INSTANCE" \
   --arg pitr_instance "$PITR_INSTANCE" \
@@ -551,6 +558,7 @@ jq -n \
     source_image_digest: $source_image_digest,
     job_execution_names: {migration: $migration_execution, prepare: $prepare_execution, retention: $retention_execution, retention_verify: $retention_verify_execution, backup_verify: $backup_verify_execution, pitr_verify: $pitr_verify_execution},
     backup_id: $backup_id,
+    backup_name: $backup_name,
     pitr_timestamp: $pitr_timestamp,
     temporary_instance_names: [$backup_instance, $pitr_instance],
     started_at: $started_at,

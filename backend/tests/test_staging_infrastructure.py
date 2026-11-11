@@ -84,7 +84,12 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
         "mixed_registry_hosts_allowed": False,
         "http_endpoint": False,
-        "status": "applied_not_executed",
+        "status": "migration_and_prepare_executed_recovery_pending",
+        "execution_status": {
+            "migration": "passed",
+            "qualification_prepare": "passed",
+            "retention": "not_executed",
+        },
     }
     assert contract["workload_boundary"]["cloud_run_ingress"] == (
         "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
@@ -121,6 +126,15 @@ def test_staging_evidence_records_live_foundation_without_claiming_workload_depl
     assert evidence["managed_state"]["live_state"] == "RUNNABLE"
     assert evidence["managed_state"]["public_ipv4"] is False
     assert evidence["managed_state"]["ssl_mode"] == "ENCRYPTED_ONLY"
+    operator_jobs = evidence["managed_state_operator_jobs"]
+    assert operator_jobs["status"] == "migration_and_prepare_executed_recovery_pending"
+    assert operator_jobs["migration"]["status"] == "passed"
+    assert operator_jobs["qualification_prepare"]["status"] == "passed"
+    assert operator_jobs["retention"]["status"] == "not_executed"
+    assert operator_jobs["recovery_attempt"]["temporary_instances_created"] is False
+    assert operator_jobs["recovery_attempt"]["qualification_backup_cleanup"] == (
+        "deleted_after_explicit_operator_confirmation"
+    )
     assert evidence["regional_secret_metadata"]["payloads_managed_by_terraform"] is False
 
 
@@ -295,7 +309,7 @@ def test_cloud_sql_recovery_contract_requires_two_temporary_validated_targets() 
     contract = json.loads(RECOVERY_CONTRACT.read_text(encoding="utf-8"))
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "defined_not_executed"
+    assert contract["status"] == "prepare_executed_recovery_pending"
     assert contract["source"] == {
         "project_id": "comfforts-369117",
         "region": "us-west1",
@@ -332,6 +346,7 @@ def test_cloud_sql_recovery_contract_requires_two_temporary_validated_targets() 
     assert contract["evidence"]["artifact"] == (
         "backend/artifacts/release/deployment/cloud-sql-recovery.v1.json"
     )
+    assert "backup_name" in contract["evidence"]["required_fields"]
     assert contract["evidence"]["must_record_secret_values"] is False
 
 
@@ -357,12 +372,19 @@ def test_cloud_sql_recovery_wizard_removes_elevation_and_temporary_instances() -
     assert ".spec.template.spec.template.spec.containers[]" in wizard
     assert ".template.template.containers[]" not in wizard
     assert "ai_finance_assistant.persistence.qualification" in wizard
-    assert 'gcloud sql backups restore "$BACKUP_ID"' in wizard
+    assert '--description="$BACKUP_DESCRIPTION"' in wizard
+    assert "--filter=\"description='$BACKUP_DESCRIPTION'\"" in wizard
+    assert '--format="value(name)"' in wizard
+    assert 'gcloud sql backups restore "$BACKUP_NAME"' in wizard
+    restore_command = wizard.split('gcloud sql backups restore "$BACKUP_NAME"', maxsplit=1)[1]
+    restore_command = restore_command.partition("--quiet")[0]
+    assert "--backup-instance=" not in restore_command
     assert "--database-flags=cloudsql.iam_authentication=on" in wizard
     assert 'gcloud sql instances clone "$SOURCE_INSTANCE" "$PITR_INSTANCE"' in wizard
     assert 'gcloud sql instances delete "$BACKUP_RESTORE_INSTANCE"' in wizard
     assert 'gcloud sql instances delete "$PITR_INSTANCE"' in wizard
-    assert 'gcloud sql backups delete "$BACKUP_ID"' in wizard
+    assert 'gcloud sql backups delete "$BACKUP_NAME"' in wizard
+    assert '--arg backup_name "$BACKUP_NAME"' in wizard
     assert 'status: "qualified"' in wizard
     assert "cloud-sql-recovery.v1.json" in wizard
     assert "ask_secret" not in wizard.split("# STAGES:", maxsplit=1)[1]
