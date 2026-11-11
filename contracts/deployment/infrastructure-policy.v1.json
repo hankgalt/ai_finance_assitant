@@ -91,11 +91,11 @@
     "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
     "mixed_registry_hosts_allowed": false,
     "http_endpoint": false,
-    "status": "migration_and_prepare_executed_recovery_pending",
+    "status": "migration_prepare_retention_executed_recovery_pending",
     "execution_status": {
       "migration": "passed",
       "qualification_prepare": "passed",
-      "retention": "not_executed"
+      "retention": "passed_and_synthetic_state_deleted"
     }
   },
   "workload_boundary": {

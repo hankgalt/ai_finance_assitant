@@ -112,7 +112,8 @@ API key.
 - The later staging-foundation slice has provisioned Terraform state, IAM, private Cloud SQL, and
   empty Secret Manager containers. The private migration and synthetic-prepare jobs have now run
   successfully through the Cloud SQL IAM/private-network path. This report still claims no
-  successful retention, recovered-target verification, backup restore, or PITR rehearsal.
+  successful recovered-target verification, backup restore, or PITR rehearsal. Retention and
+  namespaced synthetic-state cleanup have passed through the private Cloud SQL path.
 - Complete the synthetic Cloud SQL recovery/retention procedure using the fully qualified backup
   name for the configured new-instance restore. The locally passing complete
   two-Principal REST/SSE/History/Inspector matrix remains required at the later assembled staging
