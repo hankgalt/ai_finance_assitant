@@ -14,6 +14,12 @@ amendment to accepted ADRs. The owner's selected outcome is the machine-readable
 recommendation below differs, that contract controls. Managed-adapter implementation still requires
 successful prototypes, and ADR-030 remains Proposed until integrated deployment qualification.
 
+The 2026-11-11 workload decision supersedes this record's regional-secret recommendation for the
+Qdrant runtime key: Cloud Run does not natively inject regional secrets, so the owner approved the
+standard Secret Manager service with one user-managed `us-west1` replica and numeric-version native
+injection. ADR-030 and the managed-state contract are authoritative; the analysis below remains the
+historical input.
+
 Inputs supplied for this research: project `comfforts-369117`, region `us-west1`, approximately
 50 questions/day, few concurrent Runs, reasonable downtime, a single-region posture, Qdrant
 Managed Cloud free tier on GCP, an empty deployed application store, secrets entered directly

@@ -1,0 +1,103 @@
+{
+  "schema_version": "1",
+  "status": "terraform_and_lifecycle_defined_not_applied",
+  "scope": {
+    "milestone": "M11",
+    "requirements": [
+      "PR-017",
+      "QR-003",
+      "QR-005",
+      "QR-006",
+      "QR-007",
+      "QR-010",
+      "QR-011",
+      "QR-014",
+      "QR-015"
+    ],
+    "decisions": ["ADR-019", "ADR-029", "ADR-030-proposed"],
+    "evaluations": ["EVAL-19-partial", "EVAL-20-partial"],
+    "cloud_resources_mutated": false,
+    "terraform_applied": false,
+    "secret_payloads_recorded": false
+  },
+  "terraform": {
+    "foundation_state_prefix": "foundation",
+    "workload_state_prefix": "workloads",
+    "apply_order": [
+      "managed_state_and_operator_jobs",
+      "qdrant_secret_version_operator_entry",
+      "postgresql_grants_and_schema_migration",
+      "application_workloads"
+    ],
+    "destroy_order": ["application_workloads", "managed_state_and_operator_jobs"],
+    "services": ["aifa-staging-backend", "aifa-staging-frontend"]
+  },
+  "workload_policy": {
+    "ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    "default_uri_disabled": true,
+    "anonymous_invoker_allowed": false,
+    "minimum_instances": 0,
+    "maximum_instances_per_service": 1,
+    "images": "artifact_registry_digest_pinned",
+    "backend_database_authentication": "cloud_sql_auth_proxy_automatic_iam",
+    "backend_network": "direct_vpc_private_ranges_only",
+    "provider_mode": "credential_free",
+    "model_mode": "credential_free",
+    "response_cache": "disabled",
+    "pre_edge_iap_audience": "intentional_non_matching_sentinel"
+  },
+  "secret_policy": {
+    "service": "standard_secret_manager",
+    "replication": "user_managed_us_west1_only",
+    "payload_owned_by_terraform": false,
+    "payload_allowed_in_github": false,
+    "cloud_run_injection": "environment_numeric_version",
+    "latest_version_allowed": false,
+    "destroyed_with_clean_runtime": true
+  },
+  "qualification": {
+    "local_static_and_contract_tests": "passed_403_backend_tests_8_skipped_4_deselected",
+    "terraform_validation": "passed_staging_and_staging_workloads",
+    "live_workload_apply": "pending_after_merge",
+    "direct_origin_denial": "pending_after_merge",
+    "destroy_recreate": "pending_after_merge"
+  },
+  "limitations": [
+    "No GCP workload, secret version, database, or edge resource was created by this implementation change.",
+    "Disabling the default Cloud Run URL is currently represented by the provider as a BETA launch-stage setting and must be confirmed by live readback.",
+    "The fail-closed IAP audience sentinel must be replaced by the exact load-balancer backend-service audience during the edge slice.",
+    "Qdrant collections are not transferred or activated by this slice, so authenticated application readiness remains pending.",
+    "HTTPS, load balancing, IAP allow-list admission, DNS, and deployed browser journeys remain later MVP gates.",
+    "Backup/PITR, HA, disaster recovery, capacity, SLO, alerting, and full rollback remain deferred post-MVP hardening."
+  ],
+  "verification": [
+    {
+      "command": "terraform fmt -check -recursive infrastructure/terraform",
+      "result": "passed"
+    },
+    {
+      "command": "terraform validate for environments/staging and environments/staging-workloads",
+      "result": "passed for both modified roots"
+    },
+    {
+      "command": "bash -n infrastructure/terraform/scripts/bootstrap-staging.sh",
+      "result": "passed"
+    },
+    {
+      "command": "shellcheck infrastructure/terraform/scripts/*.sh",
+      "result": "not run: shellcheck is not installed locally"
+    },
+    {
+      "command": "cd backend && .venv/bin/python -m ruff format --check .",
+      "result": "passed"
+    },
+    {
+      "command": "cd backend && .venv/bin/python -m ruff check .",
+      "result": "passed"
+    },
+    {
+      "command": "cd backend && .venv/bin/python -m pytest -q",
+      "result": "403 passed, 8 skipped, 4 deselected"
+    }
+  ]
+}

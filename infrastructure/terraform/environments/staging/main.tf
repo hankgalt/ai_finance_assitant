@@ -1,16 +1,10 @@
 locals {
   service_accounts = {
+    frontend  = "aifa-stg-frontend"
     runtime   = "aifa-stg-runtime"
     migration = "aifa-stg-migration"
     retention = "aifa-stg-retention"
   }
-
-  secret_ids = toset([
-    "postgres-runtime-dsn",
-    "postgres-migration-dsn",
-    "postgres-retention-dsn",
-    "qdrant-runtime-api-key",
-  ])
 
   identity_roles = {
     runtime_cloudsql_client = {
@@ -36,13 +30,6 @@ locals {
     retention_cloudsql_instance_user = {
       identity = "retention"
       role     = "roles/cloudsql.instanceUser"
-    }
-  }
-
-  secret_access = {
-    runtime_qdrant = {
-      secret   = "qdrant-runtime-api-key"
-      identity = "runtime"
     }
   }
 }
@@ -102,29 +89,30 @@ module "managed_state_jobs" {
   }
 }
 
-resource "google_secret_manager_regional_secret" "staging" {
-  for_each = local.secret_ids
-
+resource "google_secret_manager_secret" "qdrant_runtime" {
   project             = var.project_id
-  location            = "us-west1"
-  secret_id           = "aifa-staging-${each.value}"
+  secret_id           = "aifa-staging-qdrant-runtime-api-key"
   deletion_protection = false
-  deletion_policy     = "DELETE"
+
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
 
   labels = {
     application = "finance-assistant"
+    capability  = "application-workload"
     environment = "staging"
     managed-by  = "terraform"
   }
-
 }
 
-resource "google_secret_manager_regional_secret_iam_member" "access" {
-  for_each = local.secret_access
-
+resource "google_secret_manager_secret_iam_member" "runtime_qdrant" {
   project   = var.project_id
-  location  = "us-west1"
-  secret_id = google_secret_manager_regional_secret.staging[each.value.secret].secret_id
+  secret_id = google_secret_manager_secret.qdrant_runtime.secret_id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.workload[each.value.identity].email}"
+  member    = "serviceAccount:${google_service_account.workload["runtime"].email}"
 }

@@ -126,7 +126,10 @@ def test_managed_state_contract_contains_no_secret_payloads() -> None:
     assert manifest["qdrant"]["api_key_committed"] is False
     assert manifest["encryption_and_secrets"]["secret_payloads_in_terraform"] is False
     assert manifest["encryption_and_secrets"]["long_lived_gcp_keys_in_github"] is False
-    assert manifest["encryption_and_secrets"]["cloud_run_native_regional_secret_injection"] is False
-    assert manifest["encryption_and_secrets"]["later_provider_secret_access_pattern"] == (
-        "unresolved_stop_gate"
-    )
+    secret_policy = manifest["encryption_and_secrets"]
+    assert secret_policy["secret_service"] == "standard_secret_manager"
+    assert secret_policy["secret_replication"] == "user_managed"
+    assert secret_policy["secret_payload_locations"] == ["us-west1"]
+    assert secret_policy["cloud_run_native_secret_injection"] is True
+    assert secret_policy["runtime_secret_version_reference"] == ("positive_numeric_version_only")
+    assert secret_policy["approved_access_pattern"] == ("native_cloud_run_environment_injection")

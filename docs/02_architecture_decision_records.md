@@ -1,6 +1,6 @@
 # AI Finance Assistant — Architecture decision records
 
-Version 1.10 | Status: Product architecture baseline plus corrected proposed private-demo deployment | 2026-11-10
+Version 1.11 | Status: Product architecture baseline plus corrected proposed private-demo workload and secret decisions | 2026-11-11
 
 The existing single-file register is retained to avoid unnecessary file churn. “Accepted” records are architectural constraints; “Proposed” records require validation during the named milestone. Proof references are future completion evidence, not claims of implementation.
 
@@ -214,7 +214,13 @@ discards its Principal-owned application data; no local data migration, backup, 
 guarantee is part of the MVP. Session/Run/checkpoint and RunEvent retention remains 30 days while an
 instance exists, saved Portfolio and Snapshot retention remains 365 days while an instance exists,
 and provider observations require provider-specific approved rights and TTLs. Google-managed
-encryption and regional Secret Manager are selected initially; CMEK is not selected.
+encryption and standard Secret Manager with user-managed replication restricted to `us-west1` are
+selected initially; CMEK is not selected. Cloud Run receives the Qdrant runtime key through native
+environment injection pinned to a positive numeric secret version, never `latest`. Terraform owns
+only secret metadata and IAM. A clean runtime destroy removes the secret and its versions, so the
+owner enters the value directly in Secret Manager again on recreation. This replaces the earlier
+regional-secret proposal because Cloud Run cannot natively inject regional secrets; adding an
+application-side secret client was rejected as unnecessary private-demo complexity.
 
 The demo runtime is created and destroyed on demand through reviewed Terraform workflows rather
 than kept live continuously. The reproducibility foundation needed to recreate it—protected
