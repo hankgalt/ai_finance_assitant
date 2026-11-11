@@ -392,7 +392,9 @@ def test_cloud_sql_recovery_wizard_removes_elevation_and_temporary_instances() -
     assert "wait_for_sql_operation()" in wizard
     assert "SQL_OPERATION_TIMEOUT_SECONDS=$((4 * 60 * 60))" in wizard
     assert 'BACKUP_RESTORE_OPERATION=$(gcloud sql backups restore "$BACKUP_NAME"' in wizard
-    assert 'PITR_OPERATION=$(gcloud sql instances clone "$SOURCE_INSTANCE" "$PITR_INSTANCE"' in wizard
+    assert (
+        'PITR_OPERATION=$(gcloud sql instances clone "$SOURCE_INSTANCE" "$PITR_INSTANCE"' in wizard
+    )
     assert 'wait_for_sql_operation "$BACKUP_RESTORE_OPERATION" "Backup restore"' in wizard
     assert 'wait_for_sql_operation "$PITR_OPERATION" "Point-in-time clone"' in wizard
     assert "is $status; continuing to wait" in wizard
