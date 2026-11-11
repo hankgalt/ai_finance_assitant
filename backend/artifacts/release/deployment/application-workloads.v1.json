@@ -56,7 +56,7 @@
     "destroyed_with_clean_runtime": true
   },
   "qualification": {
-    "local_static_and_contract_tests": "passed_403_backend_tests_8_skipped_4_deselected",
+    "local_static_and_contract_tests": "passed_406_backend_tests_8_skipped_4_deselected",
     "terraform_validation": "passed_staging_and_staging_workloads",
     "live_workload_apply": "pending_after_merge",
     "direct_origin_denial": "pending_after_merge",
@@ -84,6 +84,10 @@
       "result": "passed"
     },
     {
+      "command": "bash -n infrastructure/terraform/scripts/mirror-merged-main-images.sh infrastructure/terraform/scripts/set-deployment-image-variables.sh",
+      "result": "passed"
+    },
+    {
       "command": "shellcheck infrastructure/terraform/scripts/*.sh",
       "result": "not run: shellcheck is not installed locally"
     },
@@ -97,7 +101,7 @@
     },
     {
       "command": "cd backend && .venv/bin/python -m pytest -q",
-      "result": "403 passed, 8 skipped, 4 deselected"
+      "result": "406 passed, 8 skipped, 4 deselected"
     }
   ]
 }

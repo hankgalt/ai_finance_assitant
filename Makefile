@@ -1,4 +1,5 @@
 QDRANT_URL ?= http://127.0.0.1:6333
+DEPLOYMENT_ENVIRONMENT ?= staging
 
 .PHONY: backend-sync backend-dev backend-check frontend-install frontend-dev frontend-check \
 	qdrant-up qdrant-status qdrant-stop qdrant-check knowledge-finance knowledge-tax \
@@ -10,7 +11,8 @@ QDRANT_URL ?= http://127.0.0.1:6333
 	response-cache-check response-cache-calibrate response-cache-benchmark m6-1-check m8-check \
 	mcp-stdio m9-check managed-state-migrate managed-state-status managed-state-retention \
 	managed-state-postgres-up managed-state-postgres-status managed-state-postgres-stop \
-	managed-state-postgres-check delivery-check infrastructure-check container-build
+	managed-state-postgres-check delivery-check infrastructure-check container-build \
+	mirror-merged-main-images set-deployment-image-variables
 
 backend-sync:
 	cd backend && uv sync
@@ -58,6 +60,12 @@ infrastructure-check:
 container-build:
 	docker build --file infrastructure/container/backend/Dockerfile --tag ai-finance-assistant-backend:local .
 	docker build --file infrastructure/container/frontend/Dockerfile --tag ai-finance-assistant-frontend:local .
+
+mirror-merged-main-images:
+	./infrastructure/terraform/scripts/mirror-merged-main-images.sh
+
+set-deployment-image-variables:
+	./infrastructure/terraform/scripts/set-deployment-image-variables.sh "$(DEPLOYMENT_ENVIRONMENT)"
 
 frontend-install:
 	cd frontend && pnpm install

@@ -38,6 +38,15 @@ def _terraform_text() -> str:
     )
 
 
+def _write_fake_command(directory: Path, name: str, body: str) -> None:
+    executable = directory / name
+    executable.write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\n" + textwrap.dedent(body),
+        encoding="utf-8",
+    )
+    executable.chmod(0o755)
+
+
 def test_every_terraform_root_bills_api_quota_to_the_target_project() -> None:
     for versions_file in (
         TERRAFORM_ROOT / "bootstrap/versions.tf",
@@ -748,6 +757,365 @@ def test_demo_runtime_up_migrates_before_applying_private_workloads(tmp_path: Pa
     assert "Both services are Ready, digest pinned" in result.stdout
     assert "GCP_FRONTEND_IMAGE" in command_log
     assert "GCP_QDRANT_SECRET_VERSION" in command_log
+
+
+def test_image_operator_scripts_are_digest_pinned_and_executable() -> None:
+    mirror_path = TERRAFORM_ROOT / "scripts/mirror-merged-main-images.sh"
+    variables_path = TERRAFORM_ROOT / "scripts/set-deployment-image-variables.sh"
+    mirror = mirror_path.read_text(encoding="utf-8")
+    variables = variables_path.read_text(encoding="utf-8")
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+
+    assert mirror_path.stat().st_mode & 0o111
+    assert variables_path.stat().st_mode & 0o111
+    assert "switch main" in mirror
+    assert "status --porcelain" in mirror
+    assert "pull --ff-only origin main" in mirror
+    assert "gh auth status" in mirror
+    assert 'gcloud auth configure-docker "$AR_HOST"' in mirror
+    assert mirror.count("docker buildx imagetools create --prefer-index=false") == 1
+    assert "already mirrored at $target_tag; skipping copy" in mirror
+    assert "refusing to replace it" in mirror
+    assert mirror.count("verify_gcloud_digest") == 3
+    assert 'ENVIRONMENT="${1:-staging}"' in variables
+    assert "staging | production" in variables
+    assert "gh variable list" in variables
+    assert 'gh variable set "$name"' in variables
+    assert 'gh variable get "$name"' in variables
+    assert "is already correct" in variables
+    assert 'set_and_verify_variable "GCP_BACKEND_IMAGE"' in variables
+    assert 'set_and_verify_variable "GCP_FRONTEND_IMAGE"' in variables
+    assert "DEPLOYMENT_ENVIRONMENT ?= staging" in makefile
+    assert "mirror-merged-main-images:" in makefile
+    assert "./infrastructure/terraform/scripts/mirror-merged-main-images.sh" in makefile
+    assert "set-deployment-image-variables:" in makefile
+    assert (
+        "./infrastructure/terraform/scripts/set-deployment-image-variables.sh "
+        '"$(DEPLOYMENT_ENVIRONMENT)"' in makefile
+    )
+    assert "ask_secret" not in mirror
+    assert "ask_secret" not in variables
+
+
+def test_image_mirror_script_is_clean_idempotent_and_verifies_both_images(
+    tmp_path: Path,
+) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    command_log = tmp_path / "commands.log"
+    frontend_copied = tmp_path / "frontend-copied"
+    docker_config = tmp_path / "docker"
+    main_sha = "a" * 40
+    backend_digest = f"sha256:{'0' * 64}"
+    frontend_digest = f"sha256:{'1' * 64}"
+
+    _write_fake_command(
+        fake_bin,
+        "git",
+        """
+        printf 'git %s\n' "$*" >> "$FAKE_COMMAND_LOG"
+        case "$*" in
+          *" branch --show-current") printf 'main\n' ;;
+          *" switch main") ;;
+          *" status --porcelain")
+            [[ "${FAKE_DIRTY:-0}" == "1" ]] && printf ' M local-change\n'
+            ;;
+          *" pull --ff-only origin main") ;;
+          *" rev-parse HEAD") printf '%s\n' "$FAKE_MAIN_SHA" ;;
+          *) exit 1 ;;
+        esac
+        """,
+    )
+    _write_fake_command(
+        fake_bin,
+        "gh",
+        """
+        printf 'gh %s\n' "$*" >> "$FAKE_COMMAND_LOG"
+        case "$*" in
+          "auth status") ;;
+          "api repos/hankgalt/ai_finance_assitant/commits/main --jq .sha")
+            printf '%s\n' "$FAKE_MAIN_SHA"
+            ;;
+          *) exit 1 ;;
+        esac
+        """,
+    )
+    _write_fake_command(
+        fake_bin,
+        "gcloud",
+        """
+        printf 'gcloud %s\n' "$*" >> "$FAKE_COMMAND_LOG"
+        case "$*" in
+          "auth list --filter=status:ACTIVE --format=value(account)")
+            printf 'vtalwar.w@comfforts.com\n'
+            ;;
+          "auth configure-docker us-west1-docker.pkg.dev --quiet")
+            mkdir -p "$DOCKER_CONFIG"
+            printf '%s\n' \
+              '{"credHelpers":{"us-west1-docker.pkg.dev":"gcloud"}}' \
+              > "$DOCKER_CONFIG/config.json"
+            ;;
+          "artifacts docker images describe "*)
+            reference="$5"
+            printf '%s\n' "${reference##*@}"
+            ;;
+          *) exit 1 ;;
+        esac
+        """,
+    )
+    _write_fake_command(
+        fake_bin,
+        "docker",
+        """
+        printf 'docker %s\n' "$*" >> "$FAKE_COMMAND_LOG"
+        if [[ "$1 $2" == "buildx version" ]]; then
+          printf 'buildx fake\n'
+        elif [[ "$1 $2 $3" == "buildx imagetools inspect" ]]; then
+          reference="$4"
+          case "$reference" in
+            ghcr.io/*backend*) digest="$BACKEND_DIGEST" ;;
+            ghcr.io/*frontend*) digest="$FRONTEND_DIGEST" ;;
+            us-west1-docker.pkg.dev/*backend*) digest="$BACKEND_DIGEST" ;;
+            us-west1-docker.pkg.dev/*frontend*)
+              [[ -f "$FRONTEND_COPIED" ]] || exit 1
+              digest="$FRONTEND_DIGEST"
+              ;;
+            *) exit 1 ;;
+          esac
+          printf '{"digest":"%s"}\n' "$digest"
+        elif [[ "$1 $2 $3" == "buildx imagetools create" ]]; then
+          [[ "$*" == *"finance-assistant-frontend"* ]] || exit 1
+          : > "$FRONTEND_COPIED"
+        else
+          exit 1
+        fi
+        """,
+    )
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "PATH": f"{fake_bin}:{environment['PATH']}",
+            "FAKE_COMMAND_LOG": str(command_log),
+            "FRONTEND_COPIED": str(frontend_copied),
+            "DOCKER_CONFIG": str(docker_config),
+            "FAKE_MAIN_SHA": main_sha,
+            "BACKEND_DIGEST": backend_digest,
+            "FRONTEND_DIGEST": frontend_digest,
+        }
+    )
+    script = TERRAFORM_ROOT / "scripts/mirror-merged-main-images.sh"
+
+    dirty_environment = environment | {"FAKE_DIRTY": "1"}
+    dirty = subprocess.run(
+        [str(script)],
+        cwd=REPO_ROOT,
+        env=dirty_environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert dirty.returncode == 1
+    assert "main working tree is not clean" in dirty.stderr
+
+    result = subprocess.run(
+        [str(script)],
+        cwd=REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Backend GHCR digest" in result.stdout
+    assert "Frontend GHCR digest" in result.stdout
+    assert "backend manifest is already mirrored" in result.stdout
+    assert "Copying frontend manifest" in result.stdout
+    assert "Artifact Registry preserved both source manifest digests" in result.stdout
+    assert "gcloud resolved the backend image" in result.stdout
+    assert "gcloud resolved the frontend image" in result.stdout
+    assert f"finance-assistant-backend@{backend_digest}" in result.stdout
+    assert f"finance-assistant-frontend@{frontend_digest}" in result.stdout
+    assert command_log.read_text(encoding="utf-8").count("imagetools create") == 1
+
+    command_log.write_text("", encoding="utf-8")
+    repeated = subprocess.run(
+        [str(script)],
+        cwd=REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert repeated.returncode == 0, repeated.stdout + repeated.stderr
+    assert "skipping branch switch" in repeated.stdout
+    assert "skipping pull" in repeated.stdout
+    assert "already configured; skipping update" in repeated.stdout
+    assert "backend manifest is already mirrored" in repeated.stdout
+    assert "frontend manifest is already mirrored" in repeated.stdout
+    repeated_commands = command_log.read_text(encoding="utf-8")
+    assert " switch main" not in repeated_commands
+    assert " pull --ff-only" not in repeated_commands
+    assert "auth configure-docker" not in repeated_commands
+    assert "imagetools create" not in repeated_commands
+
+
+def test_deployment_image_variable_script_defaults_and_accepts_environment(
+    tmp_path: Path,
+) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    command_log = tmp_path / "commands.log"
+    variable_store = tmp_path / "variables"
+    variable_store.mkdir()
+    main_sha = "b" * 40
+    backend_digest = f"sha256:{'2' * 64}"
+    frontend_digest = f"sha256:{'3' * 64}"
+
+    _write_fake_command(
+        fake_bin,
+        "gcloud",
+        """
+        printf 'gcloud %s\n' "$*" >> "$FAKE_COMMAND_LOG"
+        case "$*" in
+          "auth list --filter=status:ACTIVE --format=value(account)")
+            printf 'vtalwar.w@comfforts.com\n'
+            ;;
+          "artifacts docker images describe "*"finance-assistant-backend:"*)
+            printf '%s\n' "$BACKEND_DIGEST"
+            ;;
+          "artifacts docker images describe "*"finance-assistant-frontend:"*)
+            printf '%s\n' "$FRONTEND_DIGEST"
+            ;;
+          *) exit 1 ;;
+        esac
+        """,
+    )
+    _write_fake_command(
+        fake_bin,
+        "gh",
+        """
+        printf 'gh %s\n' "$*" >> "$FAKE_COMMAND_LOG"
+        parse_options() {
+          environment=""
+          body=""
+          query=""
+          while (( $# )); do
+            case "$1" in
+              --env) environment="$2"; shift 2 ;;
+              --body) body="$2"; shift 2 ;;
+              --jq) query="$2"; shift 2 ;;
+              *) shift ;;
+            esac
+          done
+        }
+        case "$1 $2" in
+          "auth status") ;;
+          "api repos/hankgalt/ai_finance_assitant/commits/main")
+            printf '%s\n' "$FAKE_MAIN_SHA"
+            ;;
+          "variable list")
+            parse_options "$@"
+            if [[ "$query" == *"GCP_BACKEND_IMAGE"* ]]; then
+              name="GCP_BACKEND_IMAGE"
+            elif [[ "$query" == *"GCP_FRONTEND_IMAGE"* ]]; then
+              name="GCP_FRONTEND_IMAGE"
+            else
+              exit 1
+            fi
+            if [[ -f "$FAKE_VARIABLE_STORE/$environment-$name" ]]; then
+              cat "$FAKE_VARIABLE_STORE/$environment-$name"
+            fi
+            ;;
+          "variable set")
+            name="$3"
+            parse_options "$@"
+            [[ -n "$environment" && -n "$body" ]] || exit 1
+            printf '%s' "$body" > "$FAKE_VARIABLE_STORE/$environment-$name"
+            ;;
+          "variable get")
+            name="$3"
+            parse_options "$@"
+            cat "$FAKE_VARIABLE_STORE/$environment-$name"
+            ;;
+          *) exit 1 ;;
+        esac
+        """,
+    )
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "PATH": f"{fake_bin}:{environment['PATH']}",
+            "FAKE_COMMAND_LOG": str(command_log),
+            "FAKE_VARIABLE_STORE": str(variable_store),
+            "FAKE_MAIN_SHA": main_sha,
+            "BACKEND_DIGEST": backend_digest,
+            "FRONTEND_DIGEST": frontend_digest,
+        }
+    )
+    script = TERRAFORM_ROOT / "scripts/set-deployment-image-variables.sh"
+
+    staging = subprocess.run(
+        [str(script)],
+        cwd=REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert staging.returncode == 0, staging.stdout + staging.stderr
+    assert "staging GitHub environment" in staging.stdout
+    assert "--env staging" in command_log.read_text(encoding="utf-8")
+
+    command_log.write_text("", encoding="utf-8")
+    repeated = subprocess.run(
+        [str(script)],
+        cwd=REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert repeated.returncode == 0, repeated.stdout + repeated.stderr
+    assert repeated.stdout.count("is already correct") == 2
+    assert "gh variable set" not in command_log.read_text(encoding="utf-8")
+
+    command_log.write_text("", encoding="utf-8")
+    production = subprocess.run(
+        [str(script), "production"],
+        cwd=REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert production.returncode == 0, production.stdout + production.stderr
+    assert "production GitHub environment" in production.stdout
+    assert "--env production" in command_log.read_text(encoding="utf-8")
+    assert (
+        (variable_store / "production-GCP_BACKEND_IMAGE")
+        .read_text(encoding="utf-8")
+        .endswith(backend_digest)
+    )
+    assert (
+        (variable_store / "production-GCP_FRONTEND_IMAGE")
+        .read_text(encoding="utf-8")
+        .endswith(frontend_digest)
+    )
+
+    command_log.write_text("", encoding="utf-8")
+    invalid = subprocess.run(
+        [str(script), "preview"],
+        cwd=REPO_ROOT,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert invalid.returncode == 1
+    assert "either staging or production" in invalid.stderr
+    assert command_log.read_text(encoding="utf-8") == ""
 
 
 def test_cloud_sql_operator_jobs_are_iam_only_digest_pinned_and_vpc_scoped() -> None:

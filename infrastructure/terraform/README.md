@@ -31,11 +31,28 @@ Apply the roots in this order:
 Use the reviewed lifecycle entry points from a clean merged `main` checkout:
 
 ```bash
-export GCP_BACKEND_IMAGE='us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-backend@sha256:<digest>'
-export GCP_FRONTEND_IMAGE='us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-frontend@sha256:<digest>'
+make mirror-merged-main-images
+make set-deployment-image-variables
+export GCP_BACKEND_IMAGE="$(gh variable get GCP_BACKEND_IMAGE --repo hankgalt/ai_finance_assitant --env staging)"
+export GCP_FRONTEND_IMAGE="$(gh variable get GCP_FRONTEND_IMAGE --repo hankgalt/ai_finance_assitant --env staging)"
 infrastructure/terraform/scripts/demo-runtime-up.sh
 infrastructure/terraform/scripts/demo-runtime-down.sh
 ```
+
+Use `make set-deployment-image-variables DEPLOYMENT_ENVIRONMENT=production` for the only other
+accepted GitHub environment.
+
+`mirror-merged-main-images.sh` refuses a dirty checkout, fast-forwards `main`, verifies GitHub and
+GCP authentication, and mirrors both merged-main GHCR manifests into Artifact Registry without
+changing their digests. An already-correct SHA tag is reported and skipped; a conflicting tag is
+rejected rather than overwritten. `set-deployment-image-variables.sh [environment]` accepts only
+`staging` or `production` and defaults to `staging`; it resolves those mirrored manifests, writes
+both non-secret digest references to that GitHub environment, and requires exact readback.
+Repeating either script against identical state
+performs no branch switch, pull, Docker-authentication update, manifest copy, or GitHub-variable
+write. GitHub environment variables do not enter the calling shell automatically, so the explicit
+exports remain required before the lifecycle entry point unless the operator chooses to paste both
+references at its prompts.
 
 The up wizard checks the exact owner identity and both pinned Artifact Registry images, refreshes the
 persistent bootstrap/shared foundation, and applies only displayed saved plans. It creates an empty
@@ -61,21 +78,11 @@ created WIF and the protected GitHub environment. No workflow in this slice perf
 Registry, plus non-secret numeric `GCP_QDRANT_SECRET_VERSION`, before the expanded staging plans run.
 
 Cloud Run rejected the first operator-job apply because the multi-container jobs combined a GHCR
-backend with a GCR proxy. Both reviewed manifests are now mirrored without digest changes into the
-existing immutable `aifa-containers` Artifact Registry, and Terraform rejects another mixed-registry
-input before apply. For a later backend revision, preserve the reviewed manifest with:
-
-```bash
-gcloud auth configure-docker us-west1-docker.pkg.dev --quiet
-docker buildx imagetools create --prefer-index=false \
-  --tag us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-backend:<git-sha> \
-  ghcr.io/hankgalt/ai-finance-assitant-backend@sha256:<reviewed-digest>
-docker buildx imagetools inspect \
-  us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-backend:<git-sha>
-```
-
-Use the inspected Artifact Registry `name@sha256:digest` as `GCP_BACKEND_IMAGE`. The pinned proxy
-mirror is managed separately and must retain the digest recorded in the staging Terraform root.
+backend with a GCR proxy. Backend and frontend merged-main manifests are now mirrored through the
+repeatable script above without digest changes into the existing immutable `aifa-containers`
+Artifact Registry, and Terraform rejects another mixed-registry input before apply. The pinned
+proxy mirror is managed separately and must retain the digest recorded in the staging Terraform
+root.
 
 The Cloud SQL jobs and backend workload use Direct VPC egress, private IP, and Cloud SQL Auth Proxy automatic IAM
 authentication. Their passwordless DSN is configuration, not a credential, and is not stored in
