@@ -1,6 +1,6 @@
 # AI Finance Assistant — Architecture decision records
 
-Version 1.11 | Status: Product architecture baseline plus corrected proposed private-demo workload and secret decisions | 2026-11-11
+Version 1.12 | Status: Product architecture baseline plus repository-implemented proposed private-demo edge and corrected workload/secret decisions | 2026-11-12
 
 The existing single-file register is retained to avoid unnecessary file churn. “Accepted” records are architectural constraints; “Proposed” records require validation during the named milestone. Proof references are future completion evidence, not claims of implementation.
 
@@ -199,11 +199,25 @@ ADRs 024–026 and must be entitlement-aware for each Application Principal; thi
 does not create display, caching, or redistribution rights.
 
 The load balancer maps the exact `/finance_assistant` path and its descendants to a dedicated
-IAP-protected backend policy; unmatched paths fail closed. A future application on another path must
+IAP-protected backend policy. API requests remove only that public base-path prefix before reaching
+FastAPI's `/api` origin contract; frontend paths are not rewritten. Unmatched paths fail closed. A
+future application on another path must
 use its own backend and authentication decision and cannot infer or reuse the Finance Assistant
 Principal. Because paths on one hostname share a browser origin, such an application also shares a
 browser trust boundary unless it moves to a separate hostname; that future application is outside
 M11.
+
+The repository implementation uses separate IAP-enabled frontend and backend backend services so
+the API routes can derive the signed-assertion audience from the backend service's immutable
+generated identifier. Before that identifier exists, workloads retain a deliberately invalid
+fail-closed audience. Only the Google-managed IAP service agent receives Cloud Run invocation; the
+workloads retain internal-and-load-balancer ingress with their default URLs disabled. The OAuth
+client secret is entered directly into the dedicated regional Secret Manager secret and consumed by
+Terraform through an ephemeral/write-only value. It must not appear in repository files, ordinary
+Terraform variables, saved plans, state, workflow configuration, evidence, or operator logs. The
+external address and edge are applied before the owner creates the registrar record. This
+repository implementation does not change ADR-030 from Proposed: live IAP, origin-denial, identity,
+isolation, and deployed-journey evidence remain acceptance gates.
 
 The corrected owner-approved MVP managed-state target uses single-zone Cloud SQL for PostgreSQL 17
 Enterprise in `us-west1` on `db-g1-small` with the service-minimum 10 GiB SSD. It holds distinct

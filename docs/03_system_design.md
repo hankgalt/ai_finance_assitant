@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.20 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, active private staging workload, qualified live shared knowledge, and qualified focused runtime-key rotation; the IAP edge and integrated deployed journeys remain incomplete | 2026-11-12
+Version 1.21 | Status: Product baseline plus implemented M11 access/adapter/delivery/private-edge boundaries, active private staging workload, qualified live shared knowledge, and qualified focused runtime-key rotation; live edge cutover and integrated deployed journeys remain incomplete | 2026-11-12
 
 ## 1. Architecture principles
 
@@ -474,8 +474,9 @@ pending as deferred post-MVP hardening, not as a private-demo cutover gate.
 The separate-state frontend/backend workload and migration-first lifecycle were applied and
 verified before a reviewed teardown, then recreated for shared-knowledge qualification. Read-only
 reconciliation on 2026-11-12 found the `db-g1-small` Cloud SQL instance `RUNNABLE`, both services
-`Ready`, internal/load-balancer ingress, disabled default Cloud Run URLs, and no anonymous IAM. No
-load balancer, IAP edge, or DNS record is represented as operational. The selected region is
+`Ready`, internal/load-balancer ingress, disabled default Cloud Run URLs, and no anonymous IAM. The
+repository now defines the load balancer/IAP edge and its reviewed cutover procedure, but no load
+balancer, IAP policy, OAuth client, certificate, or DNS record is represented as operational. The selected region is
 `us-west1`. The current billable staging runtime is active and disposable. Its VPC,
 private-service allocated range, and Service Networking connection remain the approved
 reproducibility foundation; a reviewed teardown intentionally discards application state. The
@@ -491,7 +492,16 @@ live shared-knowledge release are qualified. The focused runtime-key rotation pr
 qualifies a replacement read-only credential, restricts Terraform to a secret-version-only backend
 update, preserves the old version for reviewed rollback, and retires it only after private-origin
 and provider-boundary readback. Its live staging run passed those controls and removed the revoked
-old credential. The edge and integrated security qualification remain incomplete. The deployed
+old credential. The private edge uses separate frontend and backend IAP-enabled backend services,
+an external managed HTTPS load balancer, a Google-managed certificate, exact base-path routes, an
+API-only rewrite from `/finance_assistant/api` to FastAPI's `/api` origin contract, an
+HTTP-to-HTTPS redirect, and an owner-only IAP binding. Only the IAP service agent may invoke the
+Cloud Run services. The backend service's generated numeric ID becomes the signed-JWT audience;
+the pre-edge sentinel stays fail-closed until that value is propagated through a reviewed workload
+plan. The OAuth client secret is entered directly into the regional Secret Manager secret and is
+consumed through Terraform's ephemeral/write-only path; it is never a repository, workflow, state,
+plan, or ordinary variable payload. Live edge and integrated security qualification remain
+incomplete. The deployed
 design keeps knowledge ingestion and
 activation separate from runtime, denies direct workload bypass, and retains explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside

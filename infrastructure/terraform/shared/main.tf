@@ -70,6 +70,7 @@ module "staging_identity" {
   repository_owner_id = "2118128"
   ref                 = "refs/heads/main"
   roles = [
+    "roles/iap.viewer",
     "roles/viewer",
     "roles/serviceusage.serviceUsageConsumer",
   ]
@@ -116,6 +117,43 @@ resource "google_storage_bucket_iam_member" "delivery_state" {
   bucket = each.value.bucket
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${each.value.member}"
+}
+
+# OAuth client creation remains a reviewed console action. Terraform owns only
+# this persistent secret container and least-privilege read access for the
+# protected staging plan identity; it never creates a payload version.
+resource "google_secret_manager_secret" "staging_iap_oauth" {
+  project             = var.project_id
+  secret_id           = "aifa-staging-iap-oauth-client-secret"
+  deletion_protection = true
+
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+
+  labels = {
+    application = "finance-assistant"
+    capability  = "private-edge"
+    environment = "staging"
+    managed-by  = "terraform"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [module.project_services]
+}
+
+resource "google_secret_manager_secret_iam_member" "staging_edge_plan" {
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.staging_iap_oauth.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${module.staging_identity.service_account_email}"
 }
 
 resource "google_billing_budget" "private_demo" {

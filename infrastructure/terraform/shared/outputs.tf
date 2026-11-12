@@ -17,3 +17,7 @@ output "production_workload_identity_provider" {
 output "production_deploy_service_account" {
   value = module.production_identity.service_account_email
 }
+
+output "staging_iap_oauth_secret" {
+  value = google_secret_manager_secret.staging_iap_oauth.id
+}

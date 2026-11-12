@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.5 | Status: Product baseline plus corrected M11 private-demo MVP qualification | 2026-11-10
+Version 1.6 | Status: Product baseline plus repository-qualified M11 private-edge controls and corrected private-demo MVP qualification | 2026-11-12
 
 ## 1. Evaluation principles
 
@@ -38,6 +38,11 @@ Maintain reviewable datasets with stable case IDs:
   staging smoke, and critical local-feature-parity journeys. Backup/restore, workload/collection
   rollback depth, capacity/soak, formal quota/cost/SLO alerts, and incident-response rehearsals are
   maintained as post-MVP production-hardening cases.
+- private edge: static contract tests require exact base-path routing, TLS-only public service,
+  owner-only IAP access, IAP-service-agent-only workload invocation, a generated signed-JWT
+  audience, secret-manager-only OAuth handling, edge-before-DNS ordering, and an edge-only reviewed
+  teardown. Live evidence must additionally show certificate readiness, anonymous and direct-origin
+  denial, owner authentication, unmatched-path denial, and a drift-free applied configuration.
 
 Dataset size targets can grow after difficulty and independence review. Do not inflate corpus or test counts with paraphrases that exercise the same behavior.
 

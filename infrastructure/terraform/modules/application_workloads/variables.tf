@@ -90,6 +90,11 @@ variable "qdrant_secret_version" {
 variable "iap_audience" {
   type        = string
   description = "Expected signed IAP audience. The pre-edge value must be an explicitly fail-closed sentinel."
+
+  validation {
+    condition     = can(regex("^/projects/[0-9]+/global/backendServices/[0-9]+$", var.iap_audience))
+    error_message = "iap_audience must identify one numeric global backend service."
+  }
 }
 
 variable "iap_owner_email" {
