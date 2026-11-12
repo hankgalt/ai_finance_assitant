@@ -1,14 +1,15 @@
 # M11 private-edge implementation report
 
-Status: repository qualified; reviewed live cutover pending | 2026-11-12
+Status: repository qualified; live edge provisioned; final browser qualification pending | 2026-11-12
 
 ## Scope and authority
 
 This report records the private-edge implementation slice for M11 under PR-017; QR-003, QR-005,
 QR-007, QR-010, QR-014, and QR-015; EVAL-19 and EVAL-20; accepted ADR-019 and ADR-029; and proposed
-ADR-030. It does not claim that a live load balancer, certificate, OAuth client, IAP policy, or DNS
-record exists. Provider mode remains `credential_free`; this slice grants no provider usage,
-display, caching, or redistribution rights.
+ADR-030. The load balancer, certificate, OAuth client, IAP policy, and DNS record have been created,
+but final browser acceptance remains pending until the corrected frontend image is deployed and the
+reviewed qualification is rerun. Provider mode remains `credential_free`; this slice grants no
+provider usage, display, caching, or redistribution rights.
 
 ## Implemented boundary
 
@@ -57,14 +58,19 @@ qualification evidence.
 
 The first reviewed live apply created only the dependency-safe subset of edge resources before
 Google rejected both backend services because the configuration set `timeoutSec` on serverless NEG
-backends. It stopped before the workload audience or DNS changed. The correction removes only that
-unsupported backend-service field; Google supplies the non-configurable serverless timeout. The
-existing OAuth client, enabled Secret Manager version, partial Terraform state, private workloads,
-and fail-closed application audience are retained so a corrected rerun can reconcile in place.
+backends. The corrected rerun reconciled that partial state, propagated the generated audience,
+created the remaining edge, and reached owner browser verification. Google reported the managed
+certificate `ACTIVE` before HTTPS serving had converged, causing a transient TLS handshake failure;
+the operator procedure now retries the TLS/IAP challenge every 15 seconds for at most 30 minutes.
 
-The owner must run the reviewed up procedure from clean merged `main`, create the external OAuth
-client, enter its secret directly in Google Secret Manager, approve the displayed Terraform plans,
-and add the exact A record only after the address exists. Acceptance then requires:
+Owner login then exposed a frontend redirect defect: Nginx converted the canonical trailing-slash
+redirect into an absolute URL using its internal `http://...:8080` listener. The frontend now emits
+that redirect as a relative location, preserving the browser's public HTTPS origin and port. A new
+digest-pinned frontend image must be deployed before rerunning the reviewed edge qualification.
+
+The owner must rerun the reviewed up procedure from clean merged `main` after deploying the new
+frontend image. The existing OAuth client, enabled Secret Manager version, edge address, and A
+record are reused. Acceptance then requires:
 
 1. the Google-managed certificate to become active and HTTP to redirect to HTTPS;
 2. anonymous access, unsigned identity, wrong audience, and direct Cloud Run origin access to fail;

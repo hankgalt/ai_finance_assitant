@@ -271,6 +271,7 @@ def test_container_builds_are_non_root_pinned_and_base_path_scoped() -> None:
     nginx = (REPO_ROOT / "infrastructure/container/frontend/nginx.conf").read_text(encoding="utf-8")
 
     _assert_container_image_policy(backend, frontend)
+    assert "absolute_redirect off;" in nginx
     assert "location = /finance_assistant/api" in nginx
     assert "location /finance_assistant/api/" in nginx
     assert "location /finance_assistant/" in nginx

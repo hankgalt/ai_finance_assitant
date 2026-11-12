@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any, cast
@@ -212,6 +213,11 @@ def test_private_edge_wizard_never_accepts_secret_and_reviews_cutover_teardown()
     )
     assert "allUsers" in stages
     assert "allAuthenticatedUsers" in stages
+    assert "TLS_SERVING_TIMEOUT_SECONDS=1800" in stages
+    assert "TLS_RETRY_SECONDS=15" in stages
+    assert "wait_for_https_iap_challenge" in stages
+    assert 'sleep "$TLS_RETRY_SECONDS"' in stages
+    assert "HTTPS/IAP readiness did not converge" in stages
     assert "these prove the API prefix rewrite" in stages
     assert 'DIRECT_PATH="/api/health/live"' in stages
     assert 'DIRECT_PATH="/finance_assistant/healthz"' in stages
@@ -229,3 +235,87 @@ def test_private_edge_wizard_never_accepts_secret_and_reviews_cutover_teardown()
             check=False,
         )
         assert result.returncode == 0, result.stderr
+
+
+def test_https_readiness_retries_transient_tls_failures_and_is_bounded(
+    tmp_path: Path,
+) -> None:
+    wizard = EDGE_WIZARD.read_text(encoding="utf-8")
+    function_start = wizard.index("wait_for_https_iap_challenge()")
+    function_end = wizard.index("\n}\n\n# ── Stage 1", function_start) + len("\n}")
+    readiness_function = wizard[function_start:function_end]
+
+    counter = tmp_path / "curl-attempts"
+    fake_curl = tmp_path / "curl"
+    fake_curl.write_text(
+        """#!/usr/bin/env bash
+attempt=0
+if [[ -f "$AIFA_CURL_COUNTER" ]]; then
+  attempt=$(<"$AIFA_CURL_COUNTER")
+fi
+attempt=$((attempt + 1))
+printf '%s' "$attempt" >"$AIFA_CURL_COUNTER"
+if (( attempt < 3 )); then
+  exit 35
+fi
+printf '302'
+""",
+        encoding="utf-8",
+    )
+    fake_curl.chmod(0o755)
+
+    harness = f"""set -euo pipefail
+say() {{ :; }}
+warn() {{ :; }}
+TLS_SERVING_TIMEOUT_SECONDS=5
+TLS_RETRY_SECONDS=0
+{readiness_function}
+wait_for_https_iap_challenge 'https://apps.comfforts.com/finance_assistant'
+"""
+    result = subprocess.run(
+        ["bash", "-c", harness],
+        text=True,
+        capture_output=True,
+        check=False,
+        env={
+            **os.environ,
+            "AIFA_CURL_COUNTER": str(counter),
+            "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        },
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert counter.read_text(encoding="utf-8") == "3"
+
+    counter.unlink()
+    fake_curl.write_text(
+        """#!/usr/bin/env bash
+printf '1' >"$AIFA_CURL_COUNTER"
+exit 35
+""",
+        encoding="utf-8",
+    )
+    bounded_harness = f"""set -euo pipefail
+say() {{ :; }}
+warn() {{ :; }}
+TLS_SERVING_TIMEOUT_SECONDS=0
+TLS_RETRY_SECONDS=0
+{readiness_function}
+if wait_for_https_iap_challenge 'https://apps.comfforts.com/finance_assistant'; then
+  exit 9
+fi
+"""
+    bounded_result = subprocess.run(
+        ["bash", "-c", bounded_harness],
+        text=True,
+        capture_output=True,
+        check=False,
+        env={
+            **os.environ,
+            "AIFA_CURL_COUNTER": str(counter),
+            "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        },
+    )
+
+    assert bounded_result.returncode == 0, bounded_result.stderr
+    assert counter.read_text(encoding="utf-8") == "1"

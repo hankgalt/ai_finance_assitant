@@ -6,15 +6,16 @@ defines an on-demand, disposable `db-g1-small` demo runtime, three private non-H
 operator jobs, and separate-state private frontend/backend workload definitions. The workloads are
 qualified through a reviewed create/deploy/no-direct-origin/destroy cycle and a later recreation;
 the current disposable runtime is active for the remaining MVP gates. The repository also defines a
-separate-state owner-only HTTPS/IAP edge with an API-only public-base-path rewrite; live OAuth,
-edge, and DNS cutover remain operator-reviewed
+separate-state owner-only HTTPS/IAP edge with an API-only public-base-path rewrite. Its live OAuth,
+edge, and DNS resources are provisioned, while final browser qualification remains operator-reviewed
 work. The authoritative machine policy is
 `contracts/deployment/infrastructure-policy.v1.json`.
 
 The bootstrap, shared, and historical `db-f1-micro` staging roots were provisioned on 2026-11-10.
 The corrected `db-g1-small` lifecycle and application workloads were applied, verified, destroyed,
-and recreated for the qualified shared-knowledge release; the repository edge is defined but its
-live resources remain unprovisioned. See
+and recreated for the qualified shared-knowledge release. The live edge resources are provisioned,
+but final browser qualification remains pending until the corrected frontend redirect is deployed
+and verified. See
 `docs/M11_staging_infrastructure_report.md` for live
 evidence and `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json` for the
 qualified lifecycle record.
@@ -59,7 +60,11 @@ secret version, applies a displayed saved edge plan before DNS, derives the back
 generated IAP audience, and restricts the workload update plan to the backend service. It then sets
 the non-secret GitHub client-ID, secret-version, and audience variables, asks the owner to add the
 single Squarespace A record, and qualifies TLS, redirects, IAP, owner admission, unmatched-path
-denial, direct-origin denial, and drift. It writes only secret-free revision-scoped evidence.
+denial, direct-origin denial, and drift. After Google reports the managed certificate `ACTIVE`, the
+procedure allows a bounded 30-minute serving-propagation window and requires an anonymous IAP
+challenge before browser verification. The frontend's canonical trailing-slash redirect remains
+relative so the public HTTPS origin is preserved behind the load balancer. The procedure writes
+only secret-free revision-scoped evidence.
 
 `make private-edge-down` first requires the owner to remove the Squarespace record, restores the
 workload's fail-closed audience, verifies the non-secret GitHub audience variable, and destroys only
