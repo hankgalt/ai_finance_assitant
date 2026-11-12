@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 3.3 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access, managed state, delivery controls, private workload lifecycle, live shared-knowledge release, and focused runtime-key rotation are qualified; the IAP edge and deployed product journeys remain pending; M10 planned | 2026-11-12
+Version 3.4 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access, managed state, delivery controls, private workload lifecycle, live shared-knowledge release, and focused runtime-key rotation are qualified; the private-edge implementation is ready for reviewed live cutover and deployed product journeys remain pending; M10 planned | 2026-11-12
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -62,7 +62,10 @@ knowledge release report](M11_knowledge_release_report.md) records the snapshot-
 qualification, alias rollback, least-privilege key, provider-boundary implementation, and qualified
 live staging evidence. [M11 Qdrant runtime-key rotation report](M11_runtime_key_rotation_report.md)
 records the focused replacement-key qualification, backend-only cutover/rollback, old-key
-retirement, and qualified secret-free live staging evidence.
+retirement, and qualified secret-free live staging evidence. [M11 private-edge implementation
+report](M11_private_edge_report.md) records the repository-controlled HTTPS/IAP edge, generated
+audience handoff, owner-only policy, reviewed DNS/OAuth procedure, and live gates that remain
+unexecuted.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under
@@ -80,7 +83,7 @@ If documents conflict, use this precedence: product requirements, accepted ADRs,
   an explicit allow-list, and per-Principal authorization; it is not anonymous public access. M11
   now implements the application-access boundary. Its first cloud objective is a revocable,
   owner-operated private-demo MVP at the documented URL, not a production-ready service. The MVP is
-  not operational until the remaining IAP edge and feature-parity/identity-isolation gates pass;
+  not operational until the reviewed IAP edge cutover and feature-parity/identity-isolation gates pass;
   the workload, shared knowledge, runtime-key rotation, and direct-origin controls now have staging
   evidence.
 - **Production hardening:** controls beyond the private-demo MVP that are required before claiming

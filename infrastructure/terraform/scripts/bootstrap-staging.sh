@@ -226,6 +226,8 @@ RETENTION_ROLE="aifa-stg-retention@comfforts-369117.iam"
 MIGRATION_JOB="aifa-staging-migrate"
 BACKEND_SERVICE="aifa-staging-backend"
 FRONTEND_SERVICE="aifa-staging-frontend"
+EDGE_BACKEND_SERVICE="aifa-staging-backend-edge"
+FAIL_CLOSED_IAP_AUDIENCE="/projects/730340912967/global/backendServices/0"
 QDRANT_SECRET_ID="aifa-staging-qdrant-runtime-api-key"
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 BOOTSTRAP_ROOT="$REPO_ROOT/infrastructure/terraform/bootstrap"
@@ -343,6 +345,23 @@ fi
 export TF_VAR_frontend_image="$FRONTEND_IMAGE"
 export TF_VAR_qdrant_secret_version="${TF_VAR_qdrant_secret_version:-${GCP_QDRANT_SECRET_VERSION:-1}}"
 if [[ "$ACTION" == "up" ]]; then
+  # Recreated workloads must use the current edge backend's immutable numeric
+  # ID. When no edge exists, retain the explicit audience-zero sentinel.
+  CONFIGURED_IAP_AUDIENCE="${TF_VAR_iap_audience:-${GCP_IAP_AUDIENCE:-}}"
+  if EDGE_BACKEND_ID=$(gcloud compute backend-services describe "$EDGE_BACKEND_SERVICE" \
+    --project="$PROJECT_ID" --global --format='value(id)' 2>/dev/null) && \
+    [[ "$EDGE_BACKEND_ID" =~ ^[0-9]+$ ]]; then
+    RESOLVED_IAP_AUDIENCE="/projects/730340912967/global/backendServices/$EDGE_BACKEND_ID"
+    if [[ -n "$CONFIGURED_IAP_AUDIENCE" && "$CONFIGURED_IAP_AUDIENCE" != "$RESOLVED_IAP_AUDIENCE" ]]; then
+      warn "configured IAP audience does not match the live edge backend"
+      exit 1
+    fi
+    export TF_VAR_iap_audience="$RESOLVED_IAP_AUDIENCE"
+    say "Resolved the live IAP backend audience from Google Cloud."
+  else
+    export TF_VAR_iap_audience="$FAIL_CLOSED_IAP_AUDIENCE"
+    warn "no private edge exists; deploying with the intentional fail-closed IAP audience"
+  fi
   gcloud artifacts docker images describe "$BACKEND_IMAGE" \
     --project="$PROJECT_ID" --format='value(image_summary.digest)' >/dev/null
   gcloud artifacts docker images describe "$FRONTEND_IMAGE" \
@@ -672,6 +691,7 @@ gh variable set GCP_DEPLOY_SERVICE_ACCOUNT --repo "$REPOSITORY" --env production
 gh variable set GCP_BACKEND_IMAGE --repo "$REPOSITORY" --env staging --body "$BACKEND_IMAGE"
 gh variable set GCP_FRONTEND_IMAGE --repo "$REPOSITORY" --env staging --body "$FRONTEND_IMAGE"
 gh variable set GCP_QDRANT_SECRET_VERSION --repo "$REPOSITORY" --env staging --body "$QDRANT_SECRET_VERSION"
+gh variable set GCP_IAP_AUDIENCE --repo "$REPOSITORY" --env staging --body "$TF_VAR_iap_audience"
 say "Protected environments and non-secret deployment variables are configured."
 
 finish

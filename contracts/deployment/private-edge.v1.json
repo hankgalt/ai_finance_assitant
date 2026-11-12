@@ -1,0 +1,121 @@
+{
+  "schema_version": "1",
+  "status": "repository_implemented_live_cutover_pending",
+  "target": {
+    "origin": "https://apps.comfforts.com",
+    "base_path": "/finance_assistant",
+    "region": "us-west1",
+    "project_id": "comfforts-369117",
+    "project_number": "730340912967"
+  },
+  "routing": {
+    "load_balancer": "global_external_application_load_balancer",
+    "https_port": 443,
+    "http_port": 80,
+    "http_behavior": "permanent_redirect_to_https",
+    "host": "apps.comfforts.com",
+    "routes": [
+      {
+        "paths": [
+          "/finance_assistant/api",
+          "/finance_assistant/api/*"
+        ],
+        "backend": "aifa-staging-backend-edge",
+        "cloud_run_service": "aifa-staging-backend"
+      },
+      {
+        "paths": [
+          "/finance_assistant",
+          "/finance_assistant/*"
+        ],
+        "backend": "aifa-staging-frontend-edge",
+        "cloud_run_service": "aifa-staging-frontend"
+      }
+    ],
+    "unmatched_path_behavior": "iap_protected_frontend_404",
+    "path_rewrite": {
+      "backend_exact": "/finance_assistant/api -> /api",
+      "backend_descendants": "/finance_assistant/api/* -> /api/*",
+      "frontend": false
+    },
+    "cloud_cdn_enabled": false
+  },
+  "tls": {
+    "certificate": "google_managed",
+    "domains": [
+      "apps.comfforts.com"
+    ],
+    "activation_gate": "ACTIVE_after_operator_dns_record"
+  },
+  "iap": {
+    "placement": "both_load_balancer_backend_services",
+    "oauth_audience": "External",
+    "oauth_publishing_status": "Testing",
+    "oauth_client_shared_by_backends": true,
+    "initial_members": [
+      "user:vtalwar.w@comfforts.com"
+    ],
+    "viewer_admission": "disabled_until_separately_approved",
+    "broad_members_allowed": false,
+    "role": "roles/iap.httpsResourceAccessor",
+    "service_agent": "service-730340912967@gcp-sa-iap.iam.gserviceaccount.com",
+    "cloud_run_invocation": "iap_service_agent_only",
+    "backend_jwt_audience": "/projects/730340912967/global/backendServices/<generated-backend-service-id>"
+  },
+  "oauth_secret": {
+    "secret_id": "aifa-staging-iap-oauth-client-secret",
+    "replication_locations": [
+      "us-west1"
+    ],
+    "payload_entry": "direct_gcp_secret_manager_console",
+    "payload_allowed_in_repository": false,
+    "payload_allowed_in_github": false,
+    "payload_allowed_in_terraform_variables": false,
+    "terraform_read": "ephemeral_numeric_version",
+    "terraform_write": "write_only_backend_service_fields",
+    "payload_persisted_in_plan_or_state": false,
+    "metadata_lifecycle": "persistent_shared_foundation"
+  },
+  "origin_boundary": {
+    "cloud_run_ingress": "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    "default_cloud_run_url_disabled": true,
+    "anonymous_invoker_allowed": false,
+    "iap_service_agent_invoker_required": true,
+    "signed_iap_assertion_required_by_fastapi": true,
+    "unsigned_identity_headers_trusted": false
+  },
+  "terraform": {
+    "module": "infrastructure/terraform/modules/private_edge",
+    "root": "infrastructure/terraform/environments/staging-edge",
+    "state_bucket": "comfforts-369117-aifa-tf-staging",
+    "state_prefix": "edge",
+    "automatic_apply": false,
+    "operator_entry_point": "infrastructure/terraform/scripts/private-edge-up.sh",
+    "teardown_entry_point": "infrastructure/terraform/scripts/private-edge-down.sh"
+  },
+  "lifecycle": {
+    "demo_runtime_down_destroys_edge": false,
+    "explicit_edge_teardown_required": true,
+    "dns_record_removed_before_ip_release": true,
+    "backend_audience_reset_before_destroy": "/projects/730340912967/global/backendServices/0",
+    "recreation_requires_dns_review": true,
+    "recreation_requires_certificate_activation": true
+  },
+  "operator_actions": {
+    "oauth_branding_and_client": "google_cloud_console",
+    "oauth_secret_version": "google_cloud_secret_manager",
+    "dns_record": "squarespace_apps_A_record",
+    "owner_browser_smoke": true
+  },
+  "provider_boundary": {
+    "provider_mode": "credential_free",
+    "model_mode": "credential_free",
+    "provider_rights_broadened": false
+  },
+  "qualification": {
+    "repository_contract_tests": "required",
+    "terraform_fmt_validate_plan": "required",
+    "live_iap_tls_dns_no_bypass": "pending_operator_run",
+    "integrated_product_journeys": "next_slice"
+  }
+}

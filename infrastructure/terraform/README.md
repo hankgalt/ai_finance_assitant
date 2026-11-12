@@ -5,12 +5,16 @@ ADR-030. It contains no secret payloads, service-account keys, or committed Terr
 defines an on-demand, disposable `db-g1-small` demo runtime, three private non-HTTP Cloud Run
 operator jobs, and separate-state private frontend/backend workload definitions. The workloads are
 qualified through a reviewed create/deploy/no-direct-origin/destroy cycle and a later recreation;
-the current disposable runtime is active for the remaining MVP gates. The authoritative machine policy is
+the current disposable runtime is active for the remaining MVP gates. The repository also defines a
+separate-state owner-only HTTPS/IAP edge with an API-only public-base-path rewrite; live OAuth,
+edge, and DNS cutover remain operator-reviewed
+work. The authoritative machine policy is
 `contracts/deployment/infrastructure-policy.v1.json`.
 
 The bootstrap, shared, and historical `db-f1-micro` staging roots were provisioned on 2026-11-10.
 The corrected `db-g1-small` lifecycle and application workloads were applied, verified, destroyed,
-and recreated for the qualified shared-knowledge release; the external edge remains unprovisioned. See
+and recreated for the qualified shared-knowledge release; the repository edge is defined but its
+live resources remain unprovisioned. See
 `docs/M11_staging_infrastructure_report.md` for live
 evidence and `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json` for the
 qualified lifecycle record.
@@ -28,6 +32,10 @@ Apply the roots in this order:
    replica, and digest-pinned managed-state operator jobs.
 4. `environments/staging-workloads/` — after the grants and migration job pass, create the private,
    digest-pinned frontend and backend Cloud Run services in the separate `workloads` state prefix.
+5. `environments/staging-edge/` — after the workloads are private and ready, create the global
+   external HTTPS load balancer, managed certificate, exact base-path URL map, IAP policies, and
+   IAP-only Cloud Run invoker bindings in the separate `edge` state prefix. Apply this root before
+   changing DNS.
 
 Use the reviewed lifecycle entry points from a clean merged `main` checkout:
 
@@ -39,8 +47,25 @@ export GCP_FRONTEND_IMAGE="$(gh variable get GCP_FRONTEND_IMAGE --repo hankgalt/
 infrastructure/terraform/scripts/demo-runtime-up.sh
 make knowledge-release-staging
 make rotate-qdrant-runtime-key-staging
+make private-edge-up
+make private-edge-down
 infrastructure/terraform/scripts/demo-runtime-down.sh
 ```
+
+`make private-edge-up` requires the disposable runtime to be ready. It refreshes the shared OAuth
+secret metadata without a payload, then pauses for the owner to create the external OAuth client and
+enter its secret directly in Secret Manager. The procedure observes only the positive numeric
+secret version, applies a displayed saved edge plan before DNS, derives the backend service's
+generated IAP audience, and restricts the workload update plan to the backend service. It then sets
+the non-secret GitHub client-ID, secret-version, and audience variables, asks the owner to add the
+single Squarespace A record, and qualifies TLS, redirects, IAP, owner admission, unmatched-path
+denial, direct-origin denial, and drift. It writes only secret-free revision-scoped evidence.
+
+`make private-edge-down` first requires the owner to remove the Squarespace record, restores the
+workload's fail-closed audience, verifies the non-secret GitHub audience variable, and destroys only
+the edge state after the exact confirmation phrase. It deliberately retains the shared OAuth secret
+container and does not destroy the application runtime. Neither procedure reads, prints, exports,
+or stores the OAuth secret payload.
 
 Use `make set-deployment-image-variables DEPLOYMENT_ENVIRONMENT=production` for the only other
 accepted GitHub environment.

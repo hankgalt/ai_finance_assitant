@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "active_disposable_runtime_knowledge_rotation_qualified_edge_pending",
+  "status": "active_disposable_runtime_edge_repository_implemented_live_cutover_pending",
   "private_demo_mvp": {
     "target_database_tier": "db-g1-small",
     "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -80,6 +80,14 @@
       "runtime": "aifa-staging-qdrant-runtime-api-key",
       "release": "aifa-staging-qdrant-release-api-key",
       "release_injected_into_application": false
+    },
+    "iap_oauth": {
+      "secret": "aifa-staging-iap-oauth-client-secret",
+      "lifecycle": "persistent_shared_foundation",
+      "payload_entry": "direct_secret_manager_console",
+      "terraform_read": "ephemeral_numeric_version",
+      "terraform_write": "write_only_backend_service_fields",
+      "payload_in_plan_or_state": false
     }
   },
   "managed_state": {
@@ -131,9 +139,25 @@
     "iap_edge_required": true,
     "pre_edge_iap_audience": "/projects/730340912967/global/backendServices/0",
     "pre_edge_iap_audience_status": "intentional_fail_closed_sentinel",
+    "post_edge_iap_audience_source": "generated_backend_service_numeric_id",
     "minimum_instances": 0,
     "maximum_instances_per_service": 1,
     "status": "active_ready_private_origin_disabled_readback_2026_11_12"
+  },
+  "private_edge": {
+    "contract": "contracts/deployment/private-edge.v1.json",
+    "terraform_state_prefix": "edge",
+    "target": "https://apps.comfforts.com/finance_assistant",
+    "global_external_application_load_balancer": true,
+    "http_redirect_to_https": true,
+    "google_managed_certificate": true,
+    "iap_on_both_backend_services": true,
+    "initial_members": [
+      "user:vtalwar.w@comfforts.com"
+    ],
+    "viewer_admission": "disabled",
+    "direct_origin_allowed": false,
+    "status": "repository_implemented_live_cutover_pending"
   },
   "budget": {
     "combined_monthly_usd": 100,
@@ -155,6 +179,8 @@
     "runtime_key_rotation": "qualified",
     "runtime_key_rotation_contract": "contracts/deployment/runtime-key-rotation.v1.json",
     "runtime_rotation_revision": "86146b6227285015665b84cbfa3f4ce0395cd618",
-    "runtime_key_rotation_evidence": "backend/artifacts/knowledge/deployment/staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json"
+    "runtime_key_rotation_evidence": "backend/artifacts/knowledge/deployment/staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json",
+    "private_edge": "repository_implemented_live_cutover_pending",
+    "private_edge_contract": "contracts/deployment/private-edge.v1.json"
   }
 }

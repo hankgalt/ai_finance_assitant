@@ -47,3 +47,17 @@ variable "qdrant_secret_version" {
     error_message = "qdrant_secret_version must be a positive numeric version, never latest."
   }
 }
+
+variable "iap_audience" {
+  type        = string
+  description = "Exact IAP backend-service JWT audience; backendServices/0 is the pre-edge fail-closed sentinel."
+  default     = "/projects/730340912967/global/backendServices/0"
+
+  validation {
+    condition = can(regex(
+      "^/projects/730340912967/global/backendServices/[0-9]+$",
+      var.iap_audience,
+    ))
+    error_message = "iap_audience must be the exact Finance Assistant global backend-service audience."
+  }
+}

@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/terraform.yml"
       - "backend/tests/test_staging_infrastructure.py"
+      - "backend/tests/test_private_edge.py"
       - "contracts/deployment/**"
       - "infrastructure/terraform/**"
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - ".github/workflows/terraform.yml"
       - "backend/tests/test_staging_infrastructure.py"
+      - "backend/tests/test_private_edge.py"
       - "contracts/deployment/**"
       - "infrastructure/terraform/**"
   workflow_dispatch:
@@ -53,9 +55,15 @@ jobs:
       - name: Validate staging workload root
         working-directory: infrastructure/terraform/environments/staging-workloads
         run: terraform init -backend=false && terraform validate
+      - name: Validate staging private-edge root
+        working-directory: infrastructure/terraform/environments/staging-edge
+        run: terraform init -backend=false && terraform validate
       - name: Run infrastructure contract tests
         working-directory: backend
-        run: uv run python -m pytest -q tests/test_staging_infrastructure.py
+        run: >-
+          uv run python -m pytest -q
+          tests/test_staging_infrastructure.py
+          tests/test_private_edge.py
 
   staging-plan:
     if: github.event_name == 'workflow_dispatch'
@@ -101,13 +109,33 @@ jobs:
           TF_VAR_backend_image: ${{ vars.GCP_BACKEND_IMAGE }}
           TF_VAR_frontend_image: ${{ vars.GCP_FRONTEND_IMAGE }}
           TF_VAR_qdrant_secret_version: ${{ vars.GCP_QDRANT_SECRET_VERSION }}
+          TF_VAR_iap_audience: ${{ vars.GCP_IAP_AUDIENCE || '/projects/730340912967/global/backendServices/0' }}
         run: terraform plan -lock-timeout=5m -out=staging-workloads.tfplan
+      - name: Initialize staging private-edge state
+        if: vars.GCP_IAP_OAUTH_CLIENT_ID != '' && vars.GCP_IAP_OAUTH_SECRET_VERSION != ''
+        working-directory: infrastructure/terraform/environments/staging-edge
+        run: >-
+          terraform init
+          -backend-config=bucket=comfforts-369117-aifa-tf-staging
+          -backend-config=prefix=edge
+      - name: Create reviewed staging private-edge plan
+        if: vars.GCP_IAP_OAUTH_CLIENT_ID != '' && vars.GCP_IAP_OAUTH_SECRET_VERSION != ''
+        working-directory: infrastructure/terraform/environments/staging-edge
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_iap_oauth_client_id: ${{ vars.GCP_IAP_OAUTH_CLIENT_ID }}
+          TF_VAR_iap_oauth_secret_version: ${{ vars.GCP_IAP_OAUTH_SECRET_VERSION }}
+        run: terraform plan -lock-timeout=5m -out=staging-edge.tfplan
       - name: Render machine-readable plan evidence
         working-directory: infrastructure/terraform/environments/staging
         run: terraform show -json staging.tfplan > staging.tfplan.json
       - name: Render machine-readable workload plan evidence
         working-directory: infrastructure/terraform/environments/staging-workloads
         run: terraform show -json staging-workloads.tfplan > staging-workloads.tfplan.json
+      - name: Render machine-readable private-edge plan evidence
+        if: vars.GCP_IAP_OAUTH_CLIENT_ID != '' && vars.GCP_IAP_OAUTH_SECRET_VERSION != ''
+        working-directory: infrastructure/terraform/environments/staging-edge
+        run: terraform show -json staging-edge.tfplan > staging-edge.tfplan.json
       - name: Retain staging plan evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -115,5 +143,13 @@ jobs:
           path: |
             infrastructure/terraform/environments/staging/staging.tfplan.json
             infrastructure/terraform/environments/staging-workloads/staging-workloads.tfplan.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain staging private-edge plan evidence
+        if: vars.GCP_IAP_OAUTH_CLIENT_ID != '' && vars.GCP_IAP_OAUTH_SECRET_VERSION != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: staging-private-edge-plan-${{ github.sha }}
+          path: infrastructure/terraform/environments/staging-edge/staging-edge.tfplan.json
           if-no-files-found: error
           retention-days: 14

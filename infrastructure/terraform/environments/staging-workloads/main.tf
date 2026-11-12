@@ -24,6 +24,6 @@ module "application_workloads" {
   qdrant_url                     = "https://57c4d676-360a-4f1a-aad3-92d775292673.us-central1-0.gcp.cloud.qdrant.io"
   qdrant_secret_id               = "aifa-staging-qdrant-runtime-api-key"
   qdrant_secret_version          = var.qdrant_secret_version
-  iap_audience                   = "/projects/730340912967/global/backendServices/0"
+  iap_audience                   = var.iap_audience
   iap_owner_email                = "vtalwar.w@comfforts.com"
 }

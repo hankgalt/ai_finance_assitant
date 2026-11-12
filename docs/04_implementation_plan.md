@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, live shared knowledge, and focused runtime-key rotation are qualified; edge/IAP and integrated product journeys remain pending | 2026-11-12
+Version 3.4 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, live shared knowledge, and focused runtime-key rotation are qualified; the edge/IAP implementation is ready for reviewed live cutover and integrated product journeys remain pending | 2026-11-12
 
 ## 1. Delivery rules
 
@@ -511,12 +511,23 @@ read-only replacement, changed only the backend's numeric secret version, preser
 provider controls, updated the staging version selector, and removed the revoked old credential.
 Real-service recovery is deferred post-MVP hardening.
 
+The repository-controlled private-edge slice now defines the global external Application Load
+Balancer, Google-managed certificate, HTTP-to-HTTPS redirect, exact frontend/backend base-path
+routing with public-to-origin API prefix translation, IAP on both backends, owner-only IAP policy,
+IAP-only Cloud Run invocation, and the
+generated backend-service audience handoff to the application workloads. Its operator procedure
+creates the OAuth secret payload only through Secret Manager, applies the edge before DNS, updates
+the workload audience only after the backend service has its immutable generated identifier, and
+requires direct-origin, TLS, owner-login, unmatched-path, and drift checks. This is repository
+qualification only: no live load balancer, IAP policy, OAuth client, certificate, or DNS record is
+claimed until that reviewed procedure succeeds.
+
 **Remaining private-demo MVP sequence**
 
-1. Run the Terraform plan/readiness check, then configure the exact `/finance_assistant`
-   load-balancer route, HTTPS, IAP owner allow-list, stable
-   DNS target, and registrar record. Keep viewer admission and viewer live-provider use disabled
-   until separately approved.
+1. Run the reviewed private-edge procedure to create the exact `/finance_assistant` load-balancer
+   routes, HTTPS certificate, owner-only IAP policy, generated workload audience, stable address,
+   and registrar record. Qualify direct-origin denial and the owner login before accepting the
+   live edge. Keep viewer admission and viewer live-provider use disabled until separately approved.
 2. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
    journeys; record identity/isolation and direct-origin evidence; then prove reviewed teardown and
    clean recreation from the persistent foundation. This evidence is the private-demo MVP release

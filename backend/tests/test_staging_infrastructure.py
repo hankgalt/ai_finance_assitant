@@ -53,6 +53,7 @@ def test_every_terraform_root_bills_api_quota_to_the_target_project() -> None:
         TERRAFORM_ROOT / "shared/versions.tf",
         TERRAFORM_ROOT / "environments/staging/versions.tf",
         TERRAFORM_ROOT / "environments/staging-workloads/versions.tf",
+        TERRAFORM_ROOT / "environments/staging-edge/versions.tf",
     ):
         versions = versions_file.read_text(encoding="utf-8")
         assert "billing_project       = var.project_id" in versions
@@ -64,7 +65,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
 
     assert contract["schema_version"] == "1"
     assert contract["status"] == (
-        "active_disposable_runtime_knowledge_rotation_qualified_edge_pending"
+        "active_disposable_runtime_edge_repository_implemented_live_cutover_pending"
     )
     assert contract["private_demo_mvp"] == {
         "target_database_tier": "db-g1-small",
@@ -172,6 +173,8 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
             "staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-"
             "v1-to-v2.json"
         ),
+        "private_edge": "repository_implemented_live_cutover_pending",
+        "private_edge_contract": "contracts/deployment/private-edge.v1.json",
     }
 
 
@@ -360,10 +363,13 @@ def test_terraform_never_owns_secret_payloads_or_anonymous_workload_access() -> 
     terraform = _terraform_text()
 
     assert "google_secret_manager_regional_secret_version" not in terraform
-    assert "google_secret_manager_secret_version" not in terraform
-    assert "secret_data" not in terraform
+    assert 'resource "google_secret_manager_secret_version"' not in terraform
+    assert 'ephemeral "google_secret_manager_secret_version"' in terraform
+    assert "oauth2_client_secret_wo" in terraform
+    assert "oauth2_client_secret =" not in terraform
     assert "password =" not in terraform
-    assert "roles/run.invoker" not in terraform
+    assert terraform.count('role     = "roles/run.invoker"') == 1
+    assert "local.iap_service_agent" in terraform
     assert "allUsers" not in terraform
     assert "INGRESS_TRAFFIC_ALL" not in terraform
 
@@ -443,9 +449,8 @@ def test_application_workloads_are_private_pinned_bounded_and_separate_state() -
     assert 'strcontains(var.frontend_image, "@sha256:")' in variables
     assert 'regex("^[1-9][0-9]*$", var.qdrant_secret_version)' in variables
     assert 'module "application_workloads"' in root
-    assert (
-        'iap_audience                   = "/projects/730340912967/global/backendServices/0"' in root
-    )
+    assert "iap_audience                   = var.iap_audience" in root
+    assert 'default     = "/projects/730340912967/global/backendServices/0"' in root_variables
     assert 'qdrant_secret_id               = "aifa-staging-qdrant-runtime-api-key"' in root
     assert "terraform_remote_state" not in root
     assert 'strcontains(var.backend_image, "@sha256:")' in root_variables
@@ -483,6 +488,7 @@ def test_lifecycle_migrates_before_workloads_and_verifies_no_direct_origin() -> 
     assert "allAuthenticatedUsers" in wizard
     assert "gh variable set GCP_FRONTEND_IMAGE" in wizard
     assert "gh variable set GCP_QDRANT_SECRET_VERSION" in wizard
+    assert "gh variable set GCP_IAP_AUDIENCE" in wizard
 
 
 def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() -> None:
@@ -1338,8 +1344,11 @@ def test_terraform_workflow_is_manual_keyless_and_staging_only_for_apply() -> No
     assert "vars.GCP_DEPLOY_SERVICE_ACCOUNT" in workflow
     assert "terraform plan" in workflow
     assert "Validate staging workload root" in workflow
+    assert "Validate staging private-edge root" in workflow
     assert "Create reviewed staging workload plan" in workflow
+    assert "Create reviewed staging private-edge plan" in workflow
     assert "staging-workloads.tfplan.json" in workflow
+    assert "staging-edge.tfplan.json" in workflow
     assert "terraform apply" not in workflow
     assert "credentials_json" not in workflow
     assert "secrets." not in workflow
