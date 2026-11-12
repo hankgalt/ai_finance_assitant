@@ -105,6 +105,12 @@ def test_qdrant_exception_and_single_operator_boundary_are_explicit() -> None:
     assert qdrant["production_sla_claimed"] is False
     assert qdrant["release_status"] == "qualified"
     assert qdrant["release_revision"] == "a737f8e9e935f8afc05e16fc7148e3a185b32086"
+    assert qdrant["runtime_key_rotation_contract"] == (
+        "contracts/deployment/runtime-key-rotation.v1.json"
+    )
+    assert qdrant["runtime_key_rotation_status"] == (
+        "procedure_implemented_live_qualification_pending"
+    )
     assert approval["repository"] == "hankgalt/ai_finance_assitant"
     assert approval["repository_visibility"] == "public"
     assert approval["github_plan"] == "pro"

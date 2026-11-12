@@ -1,0 +1,80 @@
+{
+  "schema_version": "1",
+  "status": "defined_not_executed",
+  "target": {
+    "cluster_name": "finance-assistant-demo",
+    "cluster_id": "57c4d676-360a-4f1a-aad3-92d775292673",
+    "endpoint": "https://57c4d676-360a-4f1a-aad3-92d775292673.us-central1-0.gcp.cloud.qdrant.io",
+    "qdrant_version": "1.20.0",
+    "shared_knowledge_only": true,
+    "application_principal_data_allowed": false
+  },
+  "credential": {
+    "secret_id": "aifa-staging-qdrant-runtime-api-key",
+    "qdrant_access": "cluster_wide_read_only",
+    "recommended_expiration_days": 90,
+    "old_key_retained_until_verified_cutover": true,
+    "payloads_allowed_in_repository": false,
+    "payloads_allowed_in_github": false,
+    "payloads_managed_by_terraform": false
+  },
+  "deployment": {
+    "project_id": "comfforts-369117",
+    "region": "us-west1",
+    "backend_service": "aifa-staging-backend",
+    "terraform_root": "infrastructure/terraform/environments/staging-workloads",
+    "terraform_state_bucket": "comfforts-369117-aifa-tf-staging",
+    "terraform_state_prefix": "workloads",
+    "terraform_resource": "module.application_workloads.google_cloud_run_v2_service.backend",
+    "allowed_plan_actions": [
+      "update"
+    ],
+    "github_repository": "hankgalt/ai_finance_assitant",
+    "github_environment": "staging",
+    "github_secret_version_variable": "GCP_QDRANT_SECRET_VERSION",
+    "ingress": "internal-and-cloud-load-balancing",
+    "default_url_disabled": true,
+    "anonymous_invoker_allowed": false
+  },
+  "collections": [
+    {
+      "logical_kb": "finance_education",
+      "alias": "finance_education_active",
+      "current_collection": "finance_education_v1_755be30b6a2d",
+      "current_manifest": "backend/artifacts/knowledge/finance-education/finance_education_v1_755be30b6a2d.manifest.json",
+      "expected_current_points": 106
+    },
+    {
+      "logical_kb": "tax_education",
+      "alias": "tax_education_active",
+      "current_collection": "tax_education_v1_9b31ab2354ea",
+      "current_manifest": "backend/artifacts/knowledge/tax-education/tax_education_v1_9b31ab2354ea.manifest.json",
+      "expected_current_points": 6295
+    }
+  ],
+  "provider_boundary": {
+    "provider_mode": "credential_free",
+    "model_mode": "credential_free",
+    "live_provider_secrets_allowed": false,
+    "live_provider_activation": "separate_owner_approval_required",
+    "viewer_live_provider_access": "denied"
+  },
+  "qualification": {
+    "new_key_read_required": true,
+    "new_key_write_must_be_forbidden": true,
+    "write_probe": "delete_unique_confirmed_absent_collection",
+    "saved_terraform_plan_required": true,
+    "plan_must_update_only_backend_resource": true,
+    "deployed_secret_version_readback_required": true,
+    "deployed_provider_environment_readback_required": true,
+    "private_origin_readback_required": true,
+    "github_variable_readback_required": true,
+    "old_key_revocation_required": true,
+    "old_secret_version_destruction_required": true
+  },
+  "evidence": {
+    "directory": "backend/artifacts/knowledge/deployment",
+    "filename_pattern": "staging-runtime-key-rotation-<revision>-v<old>-to-v<new>.json",
+    "secret_payloads_recorded": false
+  }
+}

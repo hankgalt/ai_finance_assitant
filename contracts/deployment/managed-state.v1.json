@@ -149,7 +149,9 @@
     "release_contract": "contracts/deployment/knowledge-release.v1.json",
     "release_status": "qualified",
     "release_revision": "a737f8e9e935f8afc05e16fc7148e3a185b32086",
-    "release_evidence": "backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json"
+    "release_evidence": "backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json",
+    "runtime_key_rotation_contract": "contracts/deployment/runtime-key-rotation.v1.json",
+    "runtime_key_rotation_status": "procedure_implemented_live_qualification_pending"
   },
   "delivery_approval": {
     "repository": "hankgalt/ai_finance_assitant",

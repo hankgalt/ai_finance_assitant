@@ -38,6 +38,7 @@ export GCP_BACKEND_IMAGE="$(gh variable get GCP_BACKEND_IMAGE --repo hankgalt/ai
 export GCP_FRONTEND_IMAGE="$(gh variable get GCP_FRONTEND_IMAGE --repo hankgalt/ai_finance_assitant --env staging)"
 infrastructure/terraform/scripts/demo-runtime-up.sh
 make knowledge-release-staging
+make rotate-qdrant-runtime-key-staging
 infrastructure/terraform/scripts/demo-runtime-down.sh
 ```
 
@@ -71,6 +72,16 @@ aliases, proves rollback/restoration, and requires the runtime key's write attem
 The temporary manage/write release key is entered only in its separate Secret Manager resource,
 revoked in Qdrant after qualification, and then destroyed in Secret Manager. The generated
 revision-scoped evidence contains no key payload.
+
+After a qualified knowledge release, `make rotate-qdrant-runtime-key-staging` performs only the
+focused runtime-key change. It creates no Cloud SQL, networking, job, frontend, or knowledge
+resource. The wizard qualifies a new read-only key from Secret Manager, requires a saved plan whose
+only managed difference is the backend's numeric Qdrant secret version, verifies the private
+backend and credential-free provider boundary, then updates the non-secret GitHub version variable.
+The old key/version remain available for rollback until cutover passes; only then does the operator
+revoke the old Qdrant key and separately confirm destruction of the old Secret Manager version.
+The live run writes a unique secret-free evidence record under
+`backend/artifacts/knowledge/deployment/`.
 
 The down wizard first applies a displayed non-destructive transition plan that removes any live
 deletion guards while preserving the observed database tier. It then displays separate workload and

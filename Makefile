@@ -12,7 +12,8 @@ DEPLOYMENT_ENVIRONMENT ?= staging
 	mcp-stdio m9-check managed-state-migrate managed-state-status managed-state-retention \
 	managed-state-postgres-up managed-state-postgres-status managed-state-postgres-stop \
 	managed-state-postgres-check delivery-check infrastructure-check container-build \
-	mirror-merged-main-images set-deployment-image-variables knowledge-release-staging
+	mirror-merged-main-images set-deployment-image-variables knowledge-release-staging \
+	rotate-qdrant-runtime-key-staging
 
 backend-sync:
 	cd backend && uv sync
@@ -69,6 +70,9 @@ set-deployment-image-variables:
 
 knowledge-release-staging:
 	./infrastructure/terraform/scripts/release-shared-knowledge.sh
+
+rotate-qdrant-runtime-key-staging:
+	./infrastructure/terraform/scripts/rotate-qdrant-runtime-key.sh
 
 frontend-install:
 	cd frontend && pnpm install
