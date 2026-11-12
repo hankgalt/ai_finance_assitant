@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.20 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, exercised private workload lifecycle, and shared-knowledge release workflow; the billable demo runtime is absent and live knowledge/edge deployment remains incomplete | 2026-11-11
+Version 1.20 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, active private staging workload, and qualified live shared knowledge; runtime-key rotation, the IAP edge, and integrated deployed journeys remain incomplete | 2026-11-12
 
 ## 1. Architecture principles
 
@@ -472,24 +472,24 @@ successfully executed migration, synthetic preparation, and retention/cleanup be
 teardown removed them. Recovered-target verification and complete backup/PITR qualification remain
 pending as deferred post-MVP hardening, not as a private-demo cutover gate.
 The separate-state frontend/backend workload and migration-first lifecycle were applied and
-verified before the reviewed teardown removed the runtime. That run confirmed the exact image
-digests, internal/load-balancer ingress, disabled default Cloud Run URLs, absent anonymous IAM, and
-failed direct-origin requests. No load balancer, IAP edge, or DNS record is represented as
-operational. The selected region is `us-west1`. The billable staging runtime, including Cloud SQL,
-its database users, jobs, application services, service identities, and secret containers, is
-absent. The staging VPC, private-service allocated range, and Service Networking connection remain
-as the approved reproducibility foundation. The next demo-runtime creation reuses that network,
-targets `db-g1-small`, starts with an empty store, and carries no MVP backup/PITR/RPO/RTO guarantee.
+verified before a reviewed teardown, then recreated for shared-knowledge qualification. Read-only
+reconciliation on 2026-11-12 found the `db-g1-small` Cloud SQL instance `RUNNABLE`, both services
+`Ready`, internal/load-balancer ingress, disabled default Cloud Run URLs, and no anonymous IAM. No
+load balancer, IAP edge, or DNS record is represented as operational. The selected region is
+`us-west1`. The current billable staging runtime is active and disposable. Its VPC,
+private-service allocated range, and Service Networking connection remain the approved
+reproducibility foundation; a reviewed teardown intentionally discards application state. The
+runtime carries no MVP backup/PITR/RPO/RTO guarantee.
 It owns separate application, checkpoint, and provider-cache persistence boundaries. Local
 development remains SQLite, deployed response caching is disabled, and managed Redis is not part of
 the initial topology. Same-project staging uses separate state, identities, secrets, database roles,
 and synthetic data, with ephemeral restore infrastructure. The selected Qdrant Managed Cloud Free
 cluster is a documented private-demo exception in `us-central1`; it contains shared knowledge only
 and provides no production SLA. The owner-approved values are versioned in
-`contracts/deployment/managed-state.v1.json`. The adapter and workload destroy/recreate lifecycle
-exist, while the edge, live knowledge transfer, and integrated security qualification remain
-incomplete. The deployed design keeps knowledge ingestion and
-activation separate from runtime, deny direct workload bypass, and retain explicitly selected
+`contracts/deployment/managed-state.v1.json`. The adapter, workload destroy/recreate lifecycle, and
+live shared-knowledge release are qualified, while runtime-key rotation, the edge, and integrated
+security qualification remain incomplete. The deployed design keeps knowledge ingestion and
+activation separate from runtime, denies direct workload bypass, and retains explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the proposal.
 
@@ -505,13 +505,15 @@ deletion guards disabled. The down entry point first reviews a non-destructive t
 removes any historical live guards without changing the observed database tier, then reviews a
 staging-only destroy plan and requires the exact `DESTROY EMPTY-DEMO-RUNTIME` phrase. The first down
 run removed the `aifa` database before its IAM users after the corrected dependency was merged, and
-the billable runtime is now absent. Google retains the deleted Cloud SQL producer networking for up
-to four days, so the Service Networking connection cannot be removed immediately. The down entry
+the billable runtime was absent after that run. Google can retain deleted Cloud SQL producer
+networking for up to four days, so the Service Networking connection may not be removable
+immediately. The down entry
 point now recognizes success only when Terraform state contains exactly the VPC, allocated internal
 range, and Service Networking connection and an independent Cloud SQL inventory is empty; any other
-residue fails closed. That acceptance path has now executed against the live staging teardown; its
+residue fails closed. That acceptance path executed against the live staging teardown; its
 invalid empty-inventory filter and confusing expected-residue messaging are corrected. Schema/grant
-initialization and the browser-facing workload were also exercised before teardown.
+initialization and the browser-facing workload were also exercised before teardown and again during
+the current recreation.
 
 Repository-side delivery controls are versioned in
 `contracts/deployment/delivery-policy.v1.json`. Pull requests and main-branch changes are configured
@@ -556,12 +558,14 @@ secret and injects a positive numeric version; `latest` is rejected. The release
 injected into an application workload. Terraform owns only metadata and least-privilege runtime
 accessor IAM, never a payload or version. The secrets are part of the disposable runtime and must be
 re-entered directly in Secret Manager after clean recreation. The versioned knowledge-release
-contract transfers the exact current and rollback Finance/Tax collections by temporary snapshots,
+contract transfers the current and rollback Finance/Tax collections by temporary snapshots,
 revalidates manifests, point counts, indexes, models, and fixed qrels, proves alias rollback and
-restoration, requires runtime writes to fail, and requires release-key revocation. The implementation
-is locally qualified but the live Qdrant release remains pending. The Cloud SQL jobs continue to use
-passwordless IAM authentication and no DSN secrets. Neither secret pattern authorizes a live
-provider or broadens provider rights.
+restoration, requires runtime writes to fail, and requires release-key revocation. Revision
+`a737f8e9e935f8afc05e16fc7148e3a185b32086` passed that live release: four snapshots and both fixed
+qrel suites qualified, runtime mutation returned HTTP 403, current aliases were restored after
+rollback, and the revoked release key plus Secret Manager version were removed. The Cloud SQL jobs
+continue to use passwordless IAM authentication and no DSN secrets. Neither secret pattern
+authorizes a live provider or broadens provider rights.
 
 Web-process startup verifies the application and checkpoint schemas without applying DDL. It also
 reconciles a persisted `running` Run only when its last update is older than the configured API Run

@@ -19,7 +19,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     manifest = _manifest()
 
     assert manifest["schema_version"] == "1"
-    assert manifest["status"] == "runtime_absent_networking_foundation_retained"
+    assert manifest["status"] == "active_disposable_runtime_knowledge_qualified_edge_pending"
     assert manifest["private_demo_mvp"] == {
         "scope": "owner_operated_deployed_feature_parity",
         "target_machine_tier": "db-g1-small",
@@ -29,7 +29,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "backup_pitr_required": False,
         "recovery_qualification": "deferred_post_mvp",
         "production_readiness_claimed": False,
-        "current_provisioned_foundation_matches_target": False,
+        "current_provisioned_foundation_matches_target": True,
         "reproducibility_foundation_may_persist": [
             "terraform_state",
             "artifact_registry_images",
@@ -46,7 +46,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "region": "us-west1",
         "availability": "single_zone",
         "machine_tier": "db-g1-small",
-        "provisioned_machine_tier": None,
+        "provisioned_machine_tier": "db-g1-small",
         "storage": {"type": "ssd", "capacity_gib": 10, "service_minimum": True},
         "connection_pools": {
             "application_max": 2,
@@ -57,7 +57,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "deployed_store_initialization": "empty",
         "local_development_backend": "sqlite",
         "staging_instance": "aifa-staging-postgres",
-        "external_configuration_status": "runtime_absent",
+        "external_configuration_status": "active_runnable_readback_2026_11_12",
         "connection": {
             "transport": "direct_vpc_egress_private_ipv4",
             "authentication": "cloud_sql_auth_proxy_automatic_iam",
@@ -65,7 +65,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
             "dsn_secret_required": False,
             "operator_image_registry": ("us-west1-docker.pkg.dev/comfforts-369117/aifa-containers"),
             "mixed_registry_hosts_allowed": False,
-            "operator_jobs": "removed_after_qualified_execution",
+            "operator_jobs": "active_after_qualified_recreate",
         },
     }
     assert manifest["response_cache"] == {
@@ -87,7 +87,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "whole_run_atomicity_claimed": False,
     }
     assert manifest["staging"]["separation"] == "same_project"
-    assert manifest["staging"]["foundation_provisioned"] is False
+    assert manifest["staging"]["foundation_provisioned"] is True
     assert manifest["staging"]["networking_foundation_retained"] is True
     assert manifest["staging"]["recovery_policy"] == (
         "contracts/deployment/recovery-policy.v1.json"
@@ -103,6 +103,8 @@ def test_qdrant_exception_and_single_operator_boundary_are_explicit() -> None:
     assert qdrant["private_demo_cross_region_exception"] is True
     assert qdrant["principal_owned_data_allowed"] is False
     assert qdrant["production_sla_claimed"] is False
+    assert qdrant["release_status"] == "qualified"
+    assert qdrant["release_revision"] == "a737f8e9e935f8afc05e16fc7148e3a185b32086"
     assert approval["repository"] == "hankgalt/ai_finance_assitant"
     assert approval["repository_visibility"] == "public"
     assert approval["github_plan"] == "pro"

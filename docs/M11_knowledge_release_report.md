@@ -1,13 +1,13 @@
 # M11 shared-knowledge release implementation report
 
-Status: repository implementation qualified; live collection transfer pending | 2026-11-11
+Status: live staging shared-knowledge release qualified; edge integration pending | 2026-11-12
 
 ## Scope and traceability
 
-This slice advances M11 and PR-008/PR-017 under ADR-019, ADR-029, and proposed ADR-030. It adds
-partial EVAL-07, EVAL-08, and EVAL-20 evidence for transferring the already-qualified Finance and
-Tax collections to the selected Qdrant Cloud cluster. It does not activate a live provider, change
-an Application Principal entitlement, or claim that the remote collections have been transferred.
+This slice advances M11 and PR-008/PR-017 under ADR-019, ADR-029, and proposed ADR-030. It records
+EVAL-07/EVAL-08 deployed-retrieval evidence and the shared-knowledge portion of EVAL-20 for the
+selected Qdrant Cloud cluster. It does not activate a live provider, change an Application Principal
+entitlement, or claim that the load-balancer/IAP edge and deployed product journeys are qualified.
 
 ## Implemented interfaces
 
@@ -60,17 +60,16 @@ qualification, and an existing collection with nonmatching metadata blocks relea
 being deleted or overwritten. The workflow requires a clean merged `main`, the approved owner GCP
 identity, the exact project, and the already-qualified persistent local Qdrant collections.
 
-## Verification and remaining live gate
+## Verification and live qualification
 
 The deterministic suite covers missing and existing target collections, the single approved
 evaluation-artifact relocation, refusal of arbitrary paths or substantive conflicts, snapshot
 cleanup, fixed-qrels qualification, activation/rollback/restoration, runtime write denial, separate
-secret wiring, provider-boundary enforcement, and secret-free operator behavior. Live execution
-remains pending because the demo runtime is intentionally absent.
+secret wiring, provider-boundary enforcement, and secret-free operator behavior.
 
 Repository verification completed with these exact results:
 
-- `cd backend && .venv/bin/python -m pytest -q` — 430 passed, 8 skipped, 4 deselected.
+- `cd backend && .venv/bin/python -m pytest -q` — 431 passed, 8 skipped, 4 deselected.
 - `cd backend && .venv/bin/python -m ruff format --check .` — 175 files already formatted.
 - `cd backend && .venv/bin/python -m ruff check .` — passed.
 - `cd backend && .venv/bin/python -m mypy src tests` — no issues in 163 source files.
@@ -82,18 +81,24 @@ Repository verification completed with these exact results:
 - `shellcheck` — skipped because it is not installed locally; Bash syntax and deterministic script
   contract tests passed.
 
-No cloud resource, Qdrant collection, secret value, DNS record, or provider setting was mutated by
-this repository implementation and verification run.
+The live operator completed on revision `a737f8e9e935f8afc05e16fc7148e3a185b32086` and wrote
+`backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json`.
+Its contract checksum matches the committed release contract and its status is `qualified`:
 
-After merge, the owner must:
+- all four current/rollback snapshots uploaded and revalidated at 106, 30, 6,295, and 4,735 points;
+- 17 Finance and 32 Tax fixed qrels passed through the read-only runtime credential;
+- both current aliases activated, switched to the immediate rollback collection, and restored;
+- runtime collection reads succeeded and the mutation probe returned HTTP 403;
+- deployed provider and model modes were `credential_free`, with no forbidden live-provider
+  credential or approval environment;
+- the temporary release key was rejected by Qdrant with HTTP 403 after revocation, and its Secret
+  Manager version was destroyed; and
+- the evidence records no secret payload.
 
-1. recreate the demo runtime with a new Qdrant read-only runtime key;
-2. ensure the local Qdrant volume contains all four contracted collections;
-3. run `make knowledge-release-staging` and create the prompted seven-day manage/write release key;
-4. commit the resulting revision-scoped qualified JSON evidence under
-   `backend/artifacts/knowledge/deployment/`; and
-5. run the Terraform plan/readiness checks before the IAP edge slice.
+Read-only GCP reconciliation on 2026-11-12 found the `db-g1-small` Cloud SQL instance `RUNNABLE`,
+both application services `Ready`, disabled default URLs, internal/load-balancer-only ingress, and
+no anonymous invoker. This current runtime remains disposable and has no external IAP edge.
 
-Until that live record has `status: qualified`, remote collection readiness and authenticated
-application readiness remain pending. The focused reusable runtime-key rotation procedure is a
-separate approved change immediately after this slice and before the edge/IAP slice.
+Remaining gates are the separately reviewable runtime-key rotation procedure, Terraform
+plan/readiness confirmation, load balancing/HTTPS/IAP/DNS, and the critical deployed product and
+identity-isolation journeys. Backup/PITR and production hardening remain deferred.

@@ -82,6 +82,14 @@
     "pitr": "post_mvp",
     "rpo_rto": "post_mvp"
   },
+  "current_follow_up": {
+    "observed_at": "2026-11-12",
+    "runtime": "recreated_active_db_g1_small",
+    "cloud_sql_state": "RUNNABLE",
+    "services": "backend_and_frontend_ready_private_origins_disabled",
+    "terraform_final_drift": "not_rechecked_after_current_runtime_create",
+    "knowledge_release_evidence": "backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json"
+  },
   "verification": [
     {
       "command": "terraform fmt -check -recursive infrastructure/terraform",
@@ -109,7 +117,7 @@
     }
   ],
   "limitations": [
-    "The billable demo runtime is absent. The staging VPC, private-service allocated range, and Service Networking connection remain as the approved reproducibility foundation.",
+    "This lifecycle record ended with the billable runtime absent; the current disposable runtime was later recreated for shared-knowledge qualification and remains active until reviewed teardown.",
     "Google can retain deleted Cloud SQL producer networking for up to four days; the down entry point accepts only the exact three-resource networking residue after independently confirming Cloud SQL is absent.",
     "The expected producer-networking reservation still appears as a Terraform provider error before the wrapper verifies the exact accepted residue and reports success.",
     "Destroy intentionally removes standard staging secret containers and versions; payloads must be re-entered for a later create.",

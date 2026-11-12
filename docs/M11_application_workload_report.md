@@ -1,13 +1,14 @@
 # M11 application workload implementation report
 
-Status: staging create/deploy/no-direct-origin/destroy lifecycle exercised; runtime currently absent | 2026-11-11
+Status: staging create/deploy/no-direct-origin/destroy lifecycle exercised; current private runtime active and shared knowledge qualified | 2026-11-12
 
 ## Scope and traceability
 
 This slice advances M11 and PR-017 under ADR-019, ADR-029, and proposed ADR-030. It implements the
 repository-controlled portion of QR-003, QR-005–QR-007, QR-010–QR-011, and QR-014–QR-015 and adds
-partial EVAL-19/EVAL-20 evidence. The staging workload was deployed and verified, then removed by
-the reviewed on-demand teardown. It does not claim that an edge, DNS record, or IAP policy exists.
+partial EVAL-19/EVAL-20 evidence. The staging workload was deployed and verified, removed by a
+reviewed on-demand teardown, and subsequently recreated for shared-knowledge qualification. It does
+not claim that an edge, DNS record, or IAP policy exists.
 
 ## Implemented interfaces
 
@@ -65,7 +66,9 @@ The machine-readable record is
 No credential or secret payload is committed, accepted by the wizard, placed in Terraform input,
 or stored in GitHub. The backend alone can read the exact numeric Qdrant version. Cloud SQL remains
 private and passwordless. Direct Cloud Run origins were disabled in live readback, had no public
-invoker, and rejected the wizard's direct-origin request before the runtime was destroyed. Google
+invoker, and rejected the wizard's direct-origin request before the earlier runtime was destroyed.
+Read-only reconciliation on the current 2026-11-12 recreation again found both services `Ready`,
+their default URLs disabled, internal/load-balancer ingress, and no anonymous IAM. Google
 reports the service launch stage as `GA` after accepting the `BETA`-gated disabled-default-URL
 field; Terraform therefore ignores only that normalized metadata while continuing to manage and
 verify the disabled URL and ingress fields. The workload preserves the
@@ -74,8 +77,8 @@ deployed store.
 
 ## Remaining MVP gates
 
-The workload and reviewed down path have executed successfully and the runtime is absent. The next
-creation must use a read-only Qdrant runtime key and run the separate shared-knowledge release.
-Collection transfer/readiness, the load balancer, the real IAP audience and owner allow-list, HTTPS,
-DNS, and deployed product journeys remain later MVP gates. Backup/PITR, HA, capacity, SLO/alerting,
-incident, and full rollback qualification remain post-MVP hardening.
+The workload and reviewed down/recreate paths have executed successfully; the disposable runtime is
+currently active. The separate shared-knowledge release is qualified and the runtime key proved
+read-only. Focused runtime-key rotation, the load balancer, the real IAP audience and owner
+allow-list, HTTPS, DNS, and deployed product journeys remain later MVP gates. Backup/PITR, HA,
+capacity, SLO/alerting, incident, and full rollback qualification remain post-MVP hardening.

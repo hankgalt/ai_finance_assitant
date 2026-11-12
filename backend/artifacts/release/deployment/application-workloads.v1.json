@@ -65,11 +65,22 @@
     "destroy_recreate": "passed",
     "launch_stage_normalization": "ignored_metadata_only_security_fields_still_managed"
   },
+  "current_follow_up": {
+    "observed_at": "2026-11-12",
+    "runtime": "recreated_active_db_g1_small",
+    "cloud_sql_state": "RUNNABLE",
+    "services": "backend_and_frontend_ready",
+    "ingress": "internal_and_cloud_load_balancing",
+    "default_urls_disabled": true,
+    "anonymous_invoker_members": [],
+    "terraform_final_drift": "not_rechecked_after_current_runtime_create",
+    "knowledge_release_evidence": "backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json"
+  },
   "limitations": [
-    "The qualified staging runtime was intentionally destroyed after the create/deploy/no-bypass lifecycle; only the approved networking foundation remains.",
+    "The original qualified runtime was intentionally destroyed; the current disposable runtime was recreated for shared-knowledge qualification and remains active until reviewed teardown.",
     "Google reports launch_stage as GA after accepting the BETA-gated disabled-default-URL field; Terraform ignores only launch_stage and continues to verify the live security annotation.",
     "The fail-closed IAP audience sentinel must be replaced by the exact load-balancer backend-service audience during the edge slice.",
-    "The Qdrant release workflow is implemented separately but has not transferred or activated the remote collections, so authenticated application readiness remains pending.",
+    "The Qdrant release is qualified separately; authenticated end-user application readiness remains pending until the IAP edge and deployed product journeys pass.",
     "HTTPS, load balancing, IAP allow-list admission, DNS, and deployed browser journeys remain later MVP gates.",
     "Backup/PITR, HA, disaster recovery, capacity, SLO, alerting, and full rollback remain deferred post-MVP hardening."
   ],

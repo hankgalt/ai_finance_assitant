@@ -9,5 +9,8 @@ remain credential-free and that no live-provider credential or approval environm
 
 Snapshot files and API-key payloads are execution-scoped and must never be committed. A complete
 record has `status: qualified`, reports no secret payloads, and confirms that the temporary Qdrant
-release key was revoked and its Secret Manager version was destroyed. Until such a record exists,
-the deployed knowledge release remains implemented but not executed.
+release key was revoked and its Secret Manager version was destroyed.
+
+The current qualified staging record is
+`staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json`. Later releases must create a new
+revision-scoped record rather than overwrite this evidence.
