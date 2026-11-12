@@ -44,6 +44,9 @@ def test_release_contract_pins_exact_collections_credentials_and_provider_bounda
     assert contract["credentials"]["release"]["revoke_after_qualification"] is True
     assert contract["credentials"]["payloads_allowed_in_repository"] is False
     assert contract["credentials"]["payloads_allowed_in_github"] is False
+    assert contract["qualification"]["manifest_match"] == (
+        "exact_except_approved_evaluation_artifact_path_relocation"
+    )
     assert contract["qualification"]["deployed_provider_environment_readback_required"] is True
     assert contract["provider_boundary"] == {
         "provider_mode": "credential_free",

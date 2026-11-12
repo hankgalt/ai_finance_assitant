@@ -71,7 +71,7 @@
     "viewer_live_provider_access": "denied"
   },
   "qualification": {
-    "manifest_match": "exact",
+    "manifest_match": "exact_except_approved_evaluation_artifact_path_relocation",
     "point_count_match": "exact",
     "payload_indexes_required": true,
     "fixed_qrels_required": true,

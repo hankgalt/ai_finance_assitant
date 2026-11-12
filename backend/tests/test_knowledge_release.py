@@ -196,7 +196,9 @@ def _manifest(name: str, logical_kb: LogicalKnowledgeBase) -> CollectionManifest
         created_at=NOW,
         state=CollectionState.READY,
         ready=True,
-        evaluation_artifact="synthetic:passing",
+        evaluation_artifact=(
+            f"artifacts/knowledge/{logical_kb.value.replace('_', '-')}/{name}.evaluation.json"
+        ),
     )
 
 
@@ -364,6 +366,69 @@ def test_release_reuses_exact_remote_collections_without_snapshot_writes(tmp_pat
     assert {item["action"] for item in evidence["transfers"]} == {"validated_existing"}
     assert source_snapshots.created == []
     assert source_snapshots.deleted == []
+
+
+def test_release_accepts_only_the_approved_milestone_artifact_path_relocation(
+    tmp_path: Path,
+) -> None:
+    contract, manifests = _contract(tmp_path)
+    source = FakeReleaseStore()
+    source.manifests.update(
+        {
+            name: manifest.model_copy(
+                update={
+                    "evaluation_artifact": f"artifacts/m1/{name}.evaluation.json",
+                }
+            )
+            for name, manifest in manifests.items()
+        }
+    )
+    target = FakeReleaseStore()
+    release = KnowledgeRelease(
+        contract=contract,
+        repo_root=tmp_path,
+        source_store=source,
+        target_release_store=target,
+        target_runtime_store=target,
+        source_snapshots=FakeSourceSnapshots(),
+        target_snapshots=FakeTargetSnapshots(source, target),
+        permission_probe=PassingPermissionProbe(),
+        encoder=DeterministicTestEncoder(),
+        clock=lambda: NOW,
+    )
+
+    evidence = release.execute(revision="e" * 40, contract_sha256="f" * 64)
+
+    assert all(
+        "approved_evaluation_artifact_path_relocation" in transfer["source_validation"]
+        and "approved_evaluation_artifact_path_relocation" in transfer["target_validation"]
+        for transfer in evidence["transfers"]
+    )
+
+
+def test_release_rejects_an_unapproved_evaluation_artifact_path(tmp_path: Path) -> None:
+    contract, manifests = _contract(tmp_path)
+    source = FakeReleaseStore()
+    source.manifests.update(manifests)
+    first = contract.collections[0].current_collection
+    source.manifests[first] = manifests[first].model_copy(
+        update={"evaluation_artifact": f"artifacts/other/{first}.evaluation.json"}
+    )
+    target = FakeReleaseStore()
+    release = KnowledgeRelease(
+        contract=contract,
+        repo_root=tmp_path,
+        source_store=source,
+        target_release_store=target,
+        target_runtime_store=target,
+        source_snapshots=FakeSourceSnapshots(),
+        target_snapshots=FakeTargetSnapshots(source, target),
+        permission_probe=PassingPermissionProbe(),
+        encoder=DeterministicTestEncoder(),
+    )
+
+    with pytest.raises(ValueError, match="manifest conflicts"):
+        release.execute(revision="e" * 40, contract_sha256="f" * 64)
 
 
 def test_release_fails_closed_on_conflicting_remote_collection(tmp_path: Path) -> None:
