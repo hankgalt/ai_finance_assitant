@@ -65,7 +65,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
 
     assert contract["schema_version"] == "1"
     assert contract["status"] == (
-        "active_disposable_runtime_edge_repository_implemented_live_cutover_pending"
+        "active_disposable_runtime_live_edge_qualified_integrated_journeys_pending"
     )
     assert contract["private_demo_mvp"] == {
         "target_database_tier": "db-g1-small",
@@ -173,8 +173,14 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
             "staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-"
             "v1-to-v2.json"
         ),
-        "private_edge": "repository_implemented_live_cutover_pending",
+        "private_edge": "qualified",
         "private_edge_contract": "contracts/deployment/private-edge.v1.json",
+        "private_edge_revision": "3327a231fcc197d4a8032de7b8a30523fecc1eda",
+        "private_edge_evidence": (
+            "backend/artifacts/release/deployment/"
+            "private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json"
+        ),
+        "integrated_product_journeys": "pending_next_slice",
     }
 
 

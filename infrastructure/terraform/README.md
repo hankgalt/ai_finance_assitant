@@ -7,15 +7,14 @@ operator jobs, and separate-state private frontend/backend workload definitions.
 qualified through a reviewed create/deploy/no-direct-origin/destroy cycle and a later recreation;
 the current disposable runtime is active for the remaining MVP gates. The repository also defines a
 separate-state owner-only HTTPS/IAP edge with an API-only public-base-path rewrite. Its live OAuth,
-edge, and DNS resources are provisioned, while final browser qualification remains operator-reviewed
-work. The authoritative machine policy is
+edge, DNS, owner browser, and no-bypass controls are qualified; integrated product journeys remain
+the next release gate. The authoritative machine policy is
 `contracts/deployment/infrastructure-policy.v1.json`.
 
 The bootstrap, shared, and historical `db-f1-micro` staging roots were provisioned on 2026-11-10.
 The corrected `db-g1-small` lifecycle and application workloads were applied, verified, destroyed,
-and recreated for the qualified shared-knowledge release. The live edge resources are provisioned,
-but final browser qualification remains pending until the corrected frontend redirect is deployed
-and verified. See
+and recreated for the qualified shared-knowledge release. The corrected frontend redirect and live
+edge were qualified for revision `3327a231fcc197d4a8032de7b8a30523fecc1eda`. See
 `docs/M11_staging_infrastructure_report.md` for live
 evidence and `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json` for the
 qualified lifecycle record.

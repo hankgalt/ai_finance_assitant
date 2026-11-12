@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "active_disposable_runtime_edge_repository_implemented_live_cutover_pending",
+  "status": "active_disposable_runtime_live_edge_qualified_integrated_journeys_pending",
   "private_demo_mvp": {
     "target_database_tier": "db-g1-small",
     "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -157,7 +157,7 @@
     ],
     "viewer_admission": "disabled",
     "direct_origin_allowed": false,
-    "status": "repository_implemented_live_cutover_pending"
+    "status": "live_edge_qualified_integrated_journeys_pending"
   },
   "budget": {
     "combined_monthly_usd": 100,
@@ -180,7 +180,10 @@
     "runtime_key_rotation_contract": "contracts/deployment/runtime-key-rotation.v1.json",
     "runtime_rotation_revision": "86146b6227285015665b84cbfa3f4ce0395cd618",
     "runtime_key_rotation_evidence": "backend/artifacts/knowledge/deployment/staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json",
-    "private_edge": "repository_implemented_live_cutover_pending",
-    "private_edge_contract": "contracts/deployment/private-edge.v1.json"
+    "private_edge": "qualified",
+    "private_edge_contract": "contracts/deployment/private-edge.v1.json",
+    "private_edge_revision": "3327a231fcc197d4a8032de7b8a30523fecc1eda",
+    "private_edge_evidence": "backend/artifacts/release/deployment/private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json",
+    "integrated_product_journeys": "pending_next_slice"
   }
 }

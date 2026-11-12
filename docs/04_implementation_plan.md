@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.4 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, live shared knowledge, and focused runtime-key rotation are qualified; the edge/IAP implementation is ready for reviewed live cutover and integrated product journeys remain pending | 2026-11-12
+Version 3.5 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, live shared knowledge, focused runtime-key rotation, and the live edge/IAP boundary are qualified; integrated product journeys remain pending | 2026-11-12
 
 ## 1. Delivery rules
 
@@ -444,7 +444,7 @@ M11 managed persistence for the cash-flow capability.
    assembled system rather than adding security after deployment. Recovery, load/soak, SLO/alert,
    incident, and full rollback rehearsals remain post-MVP hardening.
 
-Implementation status on 2026-11-10: slices 2 and 4 are implemented. Slice 3's PostgreSQL adapter,
+Implementation status on 2026-11-12: slices 2 and 4 are implemented. Slice 3's PostgreSQL adapter,
 operator configuration, role policy, synthetic migration/recovery/retention harness, recovery
 contract, and repeatable operator procedure are implemented and locally qualified. Real-service
 Cloud SQL recovery remains pending but is now explicitly deferred from the private-demo MVP. The
@@ -511,27 +511,25 @@ read-only replacement, changed only the backend's numeric secret version, preser
 provider controls, updated the staging version selector, and removed the revoked old credential.
 Real-service recovery is deferred post-MVP hardening.
 
-The repository-controlled private-edge slice now defines the global external Application Load
+The repository-controlled private-edge slice defines the global external Application Load
 Balancer, Google-managed certificate, HTTP-to-HTTPS redirect, exact frontend/backend base-path
 routing with public-to-origin API prefix translation, IAP on both backends, owner-only IAP policy,
 IAP-only Cloud Run invocation, and the
 generated backend-service audience handoff to the application workloads. Its operator procedure
 creates the OAuth secret payload only through Secret Manager, applies the edge before DNS, updates
 the workload audience only after the backend service has its immutable generated identifier, and
-requires direct-origin, TLS, owner-login, unmatched-path, and drift checks. This is repository
-qualification only: no live load balancer, IAP policy, OAuth client, certificate, or DNS record is
-claimed until that reviewed procedure succeeds.
+requires direct-origin, TLS, owner-login, unmatched-path, and drift checks. The reviewed live run
+qualified those controls for revision `3327a231fcc197d4a8032de7b8a30523fecc1eda`; its secret-free
+evidence is under `backend/artifacts/release/deployment/`. Integrated product journeys remain the
+final private-demo MVP gate.
 
 **Remaining private-demo MVP sequence**
 
-1. Run the reviewed private-edge procedure to create the exact `/finance_assistant` load-balancer
-   routes, HTTPS certificate, owner-only IAP policy, generated workload audience, stable address,
-   and registrar record. Qualify direct-origin denial and the owner login before accepting the
-   live edge. Keep viewer admission and viewer live-provider use disabled until separately approved.
-2. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
+1. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
    journeys; record identity/isolation and direct-origin evidence; then prove reviewed teardown and
    clean recreation from the persistent foundation. This evidence is the private-demo MVP release
-   gate. Stop there rather than expanding into deferred production hardening.
+   gate. Keep viewer admission and viewer live-provider use disabled until separately approved, and
+   stop there rather than expanding into deferred production hardening.
 
 **Owner decisions required before implementation slices**
 

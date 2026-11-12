@@ -215,9 +215,10 @@ workloads retain internal-and-load-balancer ingress with their default URLs disa
 client secret is entered directly into the dedicated regional Secret Manager secret and consumed by
 Terraform through an ephemeral/write-only value. It must not appear in repository files, ordinary
 Terraform variables, saved plans, state, workflow configuration, evidence, or operator logs. The
-external address and edge are applied before the owner creates the registrar record. This
-repository implementation does not change ADR-030 from Proposed: live IAP, origin-denial, identity,
-isolation, and deployed-journey evidence remain acceptance gates.
+external address and edge are applied before the owner creates the registrar record. The reviewed
+live edge now qualifies IAP, origin denial, routing, TLS, owner admission, unmatched-path denial,
+and drift. ADR-030 remains Proposed because integrated identity/isolation and deployed product
+journeys are still acceptance gates.
 
 The corrected owner-approved MVP managed-state target uses single-zone Cloud SQL for PostgreSQL 17
 Enterprise in `us-west1` on `db-g1-small` with the service-minimum 10 GiB SSD. It holds distinct
@@ -299,6 +300,6 @@ ADR-023 resolves the initial private demonstration posture; ADRs 024–026 resol
 and private-demo cache policy without granting shared market-data rights; ADR-027 resolves the local
 Session lifecycle without approving indefinite retention; ADR-028 resolves only the bounded
 private-demo response-cache policy; ADR-029 makes capability ownership durable; and proposed ADR-030
-names the deployment and identity direction without representing it as implemented or accepted.
+has a qualified live edge but remains unaccepted pending the assembled M11 product journeys.
 Remaining decisions require measured, operational, or contractual evidence in their owning
 capability and M11 acceptance gate.

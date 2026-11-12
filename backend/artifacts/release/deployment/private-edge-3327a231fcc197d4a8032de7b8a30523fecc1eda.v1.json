@@ -1,0 +1,28 @@
+{
+  "schema_version": "1",
+  "status": "qualified",
+  "revision": "3327a231fcc197d4a8032de7b8a30523fecc1eda",
+  "generated_at": "2026-11-12T23:35:26Z",
+  "target": "https://apps.comfforts.com/finance_assistant",
+  "global_ip": "34.160.54.184",
+  "iap_audience": "/projects/730340912967/global/backendServices/3704396166110903869",
+  "access": {
+    "members": [
+      "user:vtalwar.w@comfforts.com"
+    ],
+    "anonymous": "denied"
+  },
+  "controls": {
+    "tls_certificate": "ACTIVE",
+    "http_redirect": "passed",
+    "exact_path_routing": "passed",
+    "api_prefix_rewrite": "passed",
+    "signed_identity_boundary": "passed",
+    "direct_origin": "denied",
+    "unmatched_path": "authenticated_404",
+    "provider_mode": "credential_free",
+    "terraform_drift": "none"
+  },
+  "secret_payloads_recorded": false,
+  "integrated_product_journeys": "pending_next_slice"
+}

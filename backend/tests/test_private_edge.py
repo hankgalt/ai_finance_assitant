@@ -14,6 +14,10 @@ EDGE_MODULE = TERRAFORM_ROOT / "modules/private_edge"
 EDGE_ROOT = TERRAFORM_ROOT / "environments/staging-edge"
 EDGE_CONTRACT = REPO_ROOT / "contracts/deployment/private-edge.v1.json"
 EDGE_WIZARD = TERRAFORM_ROOT / "scripts/configure-private-edge.sh"
+EDGE_EVIDENCE = (
+    REPO_ROOT / "backend/artifacts/release/deployment/"
+    "private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json"
+)
 
 
 def _contract() -> dict[str, Any]:
@@ -24,7 +28,7 @@ def test_private_edge_contract_is_owner_only_and_fail_closed() -> None:
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "repository_implemented_live_cutover_pending"
+    assert contract["status"] == "live_edge_qualified_integrated_journeys_pending"
     assert contract["target"] == {
         "origin": "https://apps.comfforts.com",
         "base_path": "/finance_assistant",
@@ -63,7 +67,42 @@ def test_private_edge_contract_is_owner_only_and_fail_closed() -> None:
         "model_mode": "credential_free",
         "provider_rights_broadened": False,
     }
-    assert contract["qualification"]["live_iap_tls_dns_no_bypass"] == ("pending_operator_run")
+    assert contract["qualification"] == {
+        "repository_contract_tests": "required",
+        "terraform_fmt_validate_plan": "required",
+        "live_iap_tls_dns_no_bypass": "qualified_evidence_recorded",
+        "live_evidence": (
+            "backend/artifacts/release/deployment/"
+            "private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json"
+        ),
+        "live_revision": "3327a231fcc197d4a8032de7b8a30523fecc1eda",
+        "integrated_product_journeys": "next_slice",
+    }
+
+
+def test_private_edge_live_evidence_is_qualified_and_secret_free() -> None:
+    evidence = cast(dict[str, Any], json.loads(EDGE_EVIDENCE.read_text(encoding="utf-8")))
+
+    assert evidence["status"] == "qualified"
+    assert evidence["revision"] == "3327a231fcc197d4a8032de7b8a30523fecc1eda"
+    assert evidence["target"] == "https://apps.comfforts.com/finance_assistant"
+    assert evidence["access"] == {
+        "members": ["user:vtalwar.w@comfforts.com"],
+        "anonymous": "denied",
+    }
+    assert evidence["controls"] == {
+        "tls_certificate": "ACTIVE",
+        "http_redirect": "passed",
+        "exact_path_routing": "passed",
+        "api_prefix_rewrite": "passed",
+        "signed_identity_boundary": "passed",
+        "direct_origin": "denied",
+        "unmatched_path": "authenticated_404",
+        "provider_mode": "credential_free",
+        "terraform_drift": "none",
+    }
+    assert evidence["secret_payloads_recorded"] is False
+    assert evidence["integrated_product_journeys"] == "pending_next_slice"
 
 
 def test_private_edge_terraform_owns_exact_routes_tls_iap_and_invocation() -> None:
