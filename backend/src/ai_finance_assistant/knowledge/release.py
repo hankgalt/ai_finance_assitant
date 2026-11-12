@@ -366,6 +366,32 @@ def _compatibility(manifest: CollectionManifest) -> CollectionCompatibility:
     )
 
 
+def _manifest_match(actual: CollectionManifest, expected: CollectionManifest) -> tuple[bool, str]:
+    """Match collection identity while recognizing one Git-confirmed artifact relocation."""
+
+    if actual == expected:
+        return True, "exact"
+
+    evaluation_name = f"{expected.collection_name}.evaluation.json"
+    expected_capability_path = (
+        f"artifacts/knowledge/{expected.logical_kb.value.replace('_', '-')}/{evaluation_name}"
+    )
+    approved_legacy_path = f"artifacts/m1/{evaluation_name}"
+    if (
+        expected.evaluation_artifact != expected_capability_path
+        or actual.evaluation_artifact != approved_legacy_path
+    ):
+        return False, "conflict"
+    relocated = actual.model_copy(update={"evaluation_artifact": expected.evaluation_artifact})
+    if relocated != expected:
+        return False, "conflict"
+    return (
+        True,
+        "approved_evaluation_artifact_path_relocation"
+        f"({approved_legacy_path}->{expected_capability_path})",
+    )
+
+
 def _git_revision(repo_root: Path) -> str:
     return subprocess.run(
         ["git", "rev-parse", "HEAD"],
@@ -468,7 +494,8 @@ class KnowledgeRelease:
         actual = store.get_manifest(collection_name)
         if actual is None:
             raise ValueError(f"collection is missing: {collection_name}")
-        if actual != expected:
+        manifest_matches, manifest_detail = _manifest_match(actual, expected)
+        if not manifest_matches:
             raise ValueError(f"collection manifest conflicts with artifact: {collection_name}")
         actual_points = store.count_points(collection_name)
         if actual_points != expected.point_count:
@@ -479,7 +506,7 @@ class KnowledgeRelease:
         compatible, detail = store.validate_collection(collection_name, _compatibility(expected))
         if not compatible:
             raise ValueError(detail)
-        return detail
+        return f"{detail}; manifest_match={manifest_detail}"
 
     def _transfer_one(
         self, collection_name: str, expected: CollectionManifest, temporary_dir: Path

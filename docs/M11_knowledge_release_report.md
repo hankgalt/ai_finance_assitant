@@ -20,10 +20,12 @@ an Application Principal entitlement, or claim that the remote collections have 
   uploads with `priority=snapshot`, and fails closed instead of overwriting a conflicting remote
   collection. Snapshot files are deleted with their temporary directory and never become release
   artifacts.
-- The release revalidates exact manifests, point counts, and vector/index compatibility. It runs
-  the fixed Finance/Tax qrels through the read-only runtime key before activating either current
-  alias, then points each alias to its immediate rollback collection and restores the current
-  collection.
+- The release revalidates manifests, point counts, and vector/index compatibility. Every manifest
+  field must match except the Git-confirmed `artifacts/m1/<same filename>` to capability-owned
+  evaluation-artifact relocation; accepting that relocation is recorded in the release evidence.
+  It runs the fixed Finance/Tax qrels through the read-only runtime key before activating either
+  current alias, then points each alias to its immediate rollback collection and restores the
+  current collection.
 - A cluster-wide read-only runtime key and a short-lived cluster-wide manage/write release key have
   separate Secret Manager resources. Only the runtime service account can access the runtime
   secret. The release key is never injected into Cloud Run; the operator verifies Qdrant rejects it
@@ -60,14 +62,15 @@ identity, the exact project, and the already-qualified persistent local Qdrant c
 
 ## Verification and remaining live gate
 
-The deterministic suite covers missing and existing target collections, conflict refusal,
-snapshot cleanup, fixed-qrels qualification, activation/rollback/restoration, runtime write denial,
-separate secret wiring, provider-boundary enforcement, and secret-free operator behavior. Live
-execution remains pending because the demo runtime is intentionally absent.
+The deterministic suite covers missing and existing target collections, the single approved
+evaluation-artifact relocation, refusal of arbitrary paths or substantive conflicts, snapshot
+cleanup, fixed-qrels qualification, activation/rollback/restoration, runtime write denial, separate
+secret wiring, provider-boundary enforcement, and secret-free operator behavior. Live execution
+remains pending because the demo runtime is intentionally absent.
 
 Repository verification completed with these exact results:
 
-- `cd backend && .venv/bin/python -m pytest -q` — 428 passed, 8 skipped, 4 deselected.
+- `cd backend && .venv/bin/python -m pytest -q` — 430 passed, 8 skipped, 4 deselected.
 - `cd backend && .venv/bin/python -m ruff format --check .` — 175 files already formatted.
 - `cd backend && .venv/bin/python -m ruff check .` — passed.
 - `cd backend && .venv/bin/python -m mypy src tests` — no issues in 163 source files.
