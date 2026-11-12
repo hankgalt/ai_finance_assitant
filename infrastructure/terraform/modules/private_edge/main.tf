@@ -49,12 +49,10 @@ resource "google_cloud_run_v2_service_iam_member" "iap_invoker" {
 resource "google_compute_backend_service" "application" {
   for_each = {
     backend = {
-      neg_id      = google_compute_region_network_endpoint_group.serverless["backend"].id
-      timeout_sec = 300
+      neg_id = google_compute_region_network_endpoint_group.serverless["backend"].id
     }
     frontend = {
-      neg_id      = google_compute_region_network_endpoint_group.serverless["frontend"].id
-      timeout_sec = 60
+      neg_id = google_compute_region_network_endpoint_group.serverless["frontend"].id
     }
   }
 
@@ -62,7 +60,6 @@ resource "google_compute_backend_service" "application" {
   name                  = "${local.prefix}-${each.key}-edge"
   protocol              = "HTTP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
-  timeout_sec           = each.value.timeout_sec
   enable_cdn            = false
 
   backend {
