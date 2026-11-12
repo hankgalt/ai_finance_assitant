@@ -99,6 +99,7 @@ Read-only GCP reconciliation on 2026-11-12 found the `db-g1-small` Cloud SQL ins
 both application services `Ready`, disabled default URLs, internal/load-balancer-only ingress, and
 no anonymous invoker. This current runtime remains disposable and has no external IAP edge.
 
-Remaining gates are the separately reviewable runtime-key rotation procedure, Terraform
-plan/readiness confirmation, load balancing/HTTPS/IAP/DNS, and the critical deployed product and
-identity-isolation journeys. Backup/PITR and production hardening remain deferred.
+The separately reviewable runtime-key rotation procedure is now implemented and locally qualified;
+its live run and secret-free evidence remain pending. Later gates are Terraform plan/readiness
+confirmation, load balancing/HTTPS/IAP/DNS, and the critical deployed product and identity-
+isolation journeys. Backup/PITR and production hardening remain deferred.

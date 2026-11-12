@@ -162,6 +162,8 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
             "backend/artifacts/knowledge/deployment/"
             "staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json"
         ),
+        "runtime_key_rotation": "procedure_implemented_live_qualification_pending",
+        "runtime_key_rotation_contract": ("contracts/deployment/runtime-key-rotation.v1.json"),
     }
 
 

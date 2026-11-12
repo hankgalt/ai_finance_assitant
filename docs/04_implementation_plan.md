@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, and live shared knowledge are qualified; the current disposable staging runtime is active while runtime-key rotation, edge/IAP, and integrated product journeys remain pending | 2026-11-12
+Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, and live shared knowledge are qualified; the focused runtime-key rotation procedure is locally qualified while its live run, edge/IAP, and integrated product journeys remain pending | 2026-11-12
 
 ## 1. Delivery rules
 
@@ -510,8 +510,9 @@ credential. Its qualified evidence is revision-scoped under
 
 **Remaining private-demo MVP sequence**
 
-1. Add and qualify the separately reviewable focused runtime-key rotation procedure before edge
-   work, without replaying Cloud SQL provisioning or the complete demo-runtime-up path.
+1. Run and commit evidence from the locally qualified focused runtime-key rotation procedure before
+   edge work. Its saved Terraform plan may update only the backend's numeric Qdrant secret version;
+   it must not replay Cloud SQL provisioning or the complete demo-runtime-up path.
 2. Run the Terraform plan/readiness check, then configure the exact `/finance_assistant`
    load-balancer route, HTTPS, IAP owner allow-list, stable
    DNS target, and registrar record. Keep viewer admission and viewer live-provider use disabled
