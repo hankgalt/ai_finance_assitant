@@ -573,8 +573,6 @@ def _validate_plan(args: argparse.Namespace) -> int:
             {
                 "resource": scope.resource,
                 "actions": list(scope.actions),
-                "old_secret_version": scope.old_secret_version,
-                "new_secret_version": scope.new_secret_version,
                 "passed": True,
             },
             sort_keys=True,

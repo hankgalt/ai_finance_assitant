@@ -64,7 +64,7 @@ over-privileged-key rejection, secret-version-only Terraform plans, deployed pri
 provider readback, anonymous-IAM rejection, contract/script ordering, resume-safe evidence states,
 and the capability-owned Make entry point. Local qualification completed with these exact results:
 
-- `cd backend && .venv/bin/python -m pytest -q` — 445 passed, 8 skipped, 4 deselected.
+- `cd backend && .venv/bin/python -m pytest -q` — 446 passed, 8 skipped, 4 deselected.
 - `cd backend && .venv/bin/python -m ruff format --check .` — 178 files already formatted.
 - `cd backend && .venv/bin/python -m ruff check .` — passed.
 - `cd backend && .venv/bin/python -m mypy src tests` — no issues in 166 source files.

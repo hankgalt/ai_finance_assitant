@@ -21,6 +21,7 @@ from ai_finance_assistant.knowledge.runtime_key_rotation import (
     _record_cutover,
     _record_old_secret_destroyed,
     _record_plan,
+    _validate_plan,
     validate_terraform_plan,
 )
 
@@ -293,6 +294,30 @@ def test_terraform_plan_rejects_an_unrelated_backend_change(tmp_path: Path) -> N
 
     with pytest.raises(ValueError, match="fields other than"):
         validate_terraform_plan(plan_path, _contract(), old_version="1", new_version="2")
+
+
+def test_plan_cli_output_does_not_log_secret_version_identifiers(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps(_plan()), encoding="utf-8")
+
+    assert (
+        _validate_plan(
+            argparse.Namespace(
+                plan_json=plan_path,
+                contract=CONTRACT_PATH,
+                old_version="1",
+                new_version="2",
+            )
+        )
+        == 0
+    )
+
+    output = capsys.readouterr().out
+    assert "secret_version" not in output
+    assert '"resource"' in output
+    assert '"passed": true' in output
 
 
 def test_deployed_backend_requires_private_ready_exact_version_and_no_anonymous_iam(
