@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.20 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, active private staging workload, qualified live shared knowledge, and a locally qualified focused runtime-key rotation procedure; the live rotation run, IAP edge, and integrated deployed journeys remain incomplete | 2026-11-12
+Version 1.20 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, active private staging workload, qualified live shared knowledge, and qualified focused runtime-key rotation; the IAP edge and integrated deployed journeys remain incomplete | 2026-11-12
 
 ## 1. Architecture principles
 
@@ -490,8 +490,9 @@ and provides no production SLA. The owner-approved values are versioned in
 live shared-knowledge release are qualified. The focused runtime-key rotation procedure now
 qualifies a replacement read-only credential, restricts Terraform to a secret-version-only backend
 update, preserves the old version for reviewed rollback, and retires it only after private-origin
-and provider-boundary readback. Its live run, the edge, and integrated security qualification
-remain incomplete. The deployed design keeps knowledge ingestion and
+and provider-boundary readback. Its live staging run passed those controls and removed the revoked
+old credential. The edge and integrated security qualification remain incomplete. The deployed
+design keeps knowledge ingestion and
 activation separate from runtime, denies direct workload bypass, and retains explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the proposal.

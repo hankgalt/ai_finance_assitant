@@ -63,7 +63,9 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "active_disposable_runtime_knowledge_qualified_edge_pending"
+    assert contract["status"] == (
+        "active_disposable_runtime_knowledge_rotation_qualified_edge_pending"
+    )
     assert contract["private_demo_mvp"] == {
         "target_database_tier": "db-g1-small",
         "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -162,8 +164,14 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
             "backend/artifacts/knowledge/deployment/"
             "staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json"
         ),
-        "runtime_key_rotation": "procedure_implemented_live_qualification_pending",
+        "runtime_key_rotation": "qualified",
         "runtime_key_rotation_contract": ("contracts/deployment/runtime-key-rotation.v1.json"),
+        "runtime_rotation_revision": "86146b6227285015665b84cbfa3f4ce0395cd618",
+        "runtime_key_rotation_evidence": (
+            "backend/artifacts/knowledge/deployment/"
+            "staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-"
+            "v1-to-v2.json"
+        ),
     }
 
 

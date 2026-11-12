@@ -1,0 +1,84 @@
+{
+  "collections": [
+    {
+      "alias": "finance_education_active",
+      "collection": "finance_education_v1_755be30b6a2d",
+      "compatibility": "compatible collection finance_education_v1_755be30b6a2d",
+      "manifest": "approved_evaluation_artifact_path_relocation(artifacts/m1/finance_education_v1_755be30b6a2d.evaluation.json->artifacts/knowledge/finance-education/finance_education_v1_755be30b6a2d.evaluation.json)",
+      "passed": true,
+      "point_count": 106
+    },
+    {
+      "alias": "tax_education_active",
+      "collection": "tax_education_v1_9b31ab2354ea",
+      "compatibility": "compatible collection tax_education_v1_9b31ab2354ea",
+      "manifest": "approved_evaluation_artifact_path_relocation(artifacts/m1/tax_education_v1_9b31ab2354ea.evaluation.json->artifacts/knowledge/tax-education/tax_education_v1_9b31ab2354ea.evaluation.json)",
+      "passed": true,
+      "point_count": 6295
+    }
+  ],
+  "contract_sha256": "ebfc97a428dc12b975f723e8d42fe131a5e10e511740d810e5e86c6c6509959e",
+  "deployed_backend": {
+    "anonymous_invoker_absent": true,
+    "default_url_disabled": true,
+    "image": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-backend@sha256:ba9aed75548c17a1a3a0f6efe5b30ffc023d49a9fb44fe1eafb364f773bfaab1",
+    "ingress": "internal-and-cloud-load-balancing",
+    "passed": true,
+    "provider_boundary": {
+      "forbidden_provider_environment_names_present": false,
+      "model_mode": "credential_free",
+      "passed": true,
+      "provider_mode": "credential_free",
+      "service": "aifa-staging-backend"
+    },
+    "ready": true,
+    "secret_id": "aifa-staging-qdrant-runtime-api-key",
+    "secret_version": "2",
+    "service": "aifa-staging-backend"
+  },
+  "github_variable": {
+    "name": "GCP_QDRANT_SECRET_VERSION",
+    "readback_matches": true,
+    "value": "2"
+  },
+  "new_runtime_permission": {
+    "absence_status": 404,
+    "passed": true,
+    "probe": "delete_unique_confirmed_absent_collection",
+    "read_status": 200,
+    "write_status": 403
+  },
+  "old_runtime_key": {
+    "qdrant_rejection_status": 403,
+    "qdrant_revoked": true,
+    "secret_version_destroyed": true
+  },
+  "provider_boundary": {
+    "live_provider_activation": "separate_owner_approval_required",
+    "live_provider_secrets_allowed": false,
+    "model_mode": "credential_free",
+    "provider_mode": "credential_free",
+    "viewer_live_provider_access": "denied"
+  },
+  "recorded_at": "2026-11-12T17:42:53.679493+00:00",
+  "revision": "86146b6227285015665b84cbfa3f4ce0395cd618",
+  "rotation": {
+    "new_secret_version": "2",
+    "old_secret_version": "1"
+  },
+  "schema_version": "1",
+  "secret_payloads_recorded": false,
+  "status": "qualified",
+  "target": {
+    "endpoint": "https://57c4d676-360a-4f1a-aad3-92d775292673.us-central1-0.gcp.cloud.qdrant.io",
+    "qdrant_version": "1.20.0"
+  },
+  "terraform_plan": {
+    "actions": [
+      "update"
+    ],
+    "only_qdrant_secret_version_changed": true,
+    "passed": true,
+    "resource": "module.application_workloads.google_cloud_run_v2_service.backend"
+  }
+}

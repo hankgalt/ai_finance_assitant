@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, and live shared knowledge are qualified; the focused runtime-key rotation procedure is locally qualified while its live run, edge/IAP, and integrated product journeys remain pending | 2026-11-12
+Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, live shared knowledge, and focused runtime-key rotation are qualified; edge/IAP and integrated product journeys remain pending | 2026-11-12
 
 ## 1. Delivery rules
 
@@ -506,18 +506,18 @@ services. Slice 6 then uploaded all four contracted snapshots to Qdrant Cloud, p
 32 Tax qrels through the read-only runtime key, exercised and restored both aliases, proved runtime
 mutation denial, verified the credential-free provider boundary, and removed the revoked release
 credential. Its qualified evidence is revision-scoped under
-`backend/artifacts/knowledge/deployment/`. Real-service recovery is deferred post-MVP hardening.
+`backend/artifacts/knowledge/deployment/`. The focused live runtime-key rotation then qualified a
+read-only replacement, changed only the backend's numeric secret version, preserved all private and
+provider controls, updated the staging version selector, and removed the revoked old credential.
+Real-service recovery is deferred post-MVP hardening.
 
 **Remaining private-demo MVP sequence**
 
-1. Run and commit evidence from the locally qualified focused runtime-key rotation procedure before
-   edge work. Its saved Terraform plan may update only the backend's numeric Qdrant secret version;
-   it must not replay Cloud SQL provisioning or the complete demo-runtime-up path.
-2. Run the Terraform plan/readiness check, then configure the exact `/finance_assistant`
+1. Run the Terraform plan/readiness check, then configure the exact `/finance_assistant`
    load-balancer route, HTTPS, IAP owner allow-list, stable
    DNS target, and registrar record. Keep viewer admission and viewer live-provider use disabled
    until separately approved.
-3. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
+2. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
    journeys; record identity/isolation and direct-origin evidence; then prove reviewed teardown and
    clean recreation from the persistent foundation. This evidence is the private-demo MVP release
    gate. Stop there rather than expanding into deferred production hardening.

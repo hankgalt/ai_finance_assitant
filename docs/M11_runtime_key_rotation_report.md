@@ -1,14 +1,14 @@
-# M11 Qdrant runtime-key rotation implementation report
+# M11 Qdrant runtime-key rotation implementation and qualification report
 
-Status: procedure implemented and locally qualified; live staging rotation pending | 2026-11-12
+Status: live staging rotation qualified | 2026-11-12
 
 ## Scope and traceability
 
 This bounded M11 slice advances PR-008/PR-017 and QR-005/QR-010/QR-015 under ADR-019,
 ADR-029, and proposed ADR-030. It implements the separately reviewable runtime-key rotation
-procedure required before edge work and adds deterministic EVAL-20 seams. It does not rotate the
-live credential by itself, enable a provider, modify shared knowledge, replay Cloud SQL
-provisioning, or claim that the IAP edge and deployed product journeys are qualified.
+procedure required before edge work and adds deterministic EVAL-20 seams. The live run rotated the
+staging credential without enabling a provider, modifying shared knowledge, replaying Cloud SQL
+provisioning, or claiming that the IAP edge and deployed product journeys are qualified.
 
 ## Implemented procedure
 
@@ -57,14 +57,14 @@ revoked before its stored version is destroyed. The procedure does not widen pro
 OpenAI, market, and news secrets or approval flags fail deployed readback, and both provider and
 model modes must remain `credential_free`.
 
-## Qualification and remaining gate
+## Qualification
 
 Deterministic qualification covers collection/alias checks, the non-mutating HTTP 403 probe,
 over-privileged-key rejection, secret-version-only Terraform plans, deployed private-origin and
 provider readback, anonymous-IAM rejection, contract/script ordering, resume-safe evidence states,
 and the capability-owned Make entry point. Local qualification completed with these exact results:
 
-- `cd backend && .venv/bin/python -m pytest -q` — 446 passed, 8 skipped, 4 deselected.
+- `cd backend && .venv/bin/python -m pytest -q` — 447 passed, 8 skipped, 4 deselected.
 - `cd backend && .venv/bin/python -m ruff format --check .` — 178 files already formatted.
 - `cd backend && .venv/bin/python -m ruff check .` — passed.
 - `cd backend && .venv/bin/python -m mypy src tests` — no issues in 166 source files.
@@ -81,9 +81,23 @@ first direct `validate` could not start the local provider process. Re-running t
 `validate` with the local provider outside that restriction succeeded as recorded above. No plan or
 cloud resource was created or changed by these checks.
 
-Live qualification remains intentionally pending because it requires a newly created Qdrant key,
-the owner's Secret Manager entry, review of the real saved plan, and explicit revocation/destruction
-confirmations. After this change is merged, run `make rotate-qdrant-runtime-key-staging` from clean,
-current `main`, complete all seven stages, verify the resulting evidence status is `qualified`, and
-commit that secret-free evidence on a separate evidence branch. Only then is the live rotation gate
-complete.
+The live operator completed on revision `86146b6227285015665b84cbfa3f4ce0395cd618` and wrote
+`backend/artifacts/knowledge/deployment/staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json`.
+Its contract checksum matches the committed procedure and its status is `qualified`:
+
+- replacement secret version 2 read both active collections and the confirmed-absent mutation
+  probe returned HTTP 403;
+- the saved Terraform plan contained one in-place update to the backend service and changed only
+  the numeric Qdrant secret reference from version 1 to version 2;
+- deployed readback found the backend `Ready`, digest-pinned, internal/load-balancer-only, with its
+  default URL disabled and no anonymous invoker;
+- provider and model modes remained `credential_free`, with no forbidden live-provider environment;
+- staging `GCP_QDRANT_SECRET_VERSION` read back as version 2;
+- Qdrant rejected the revoked old key with HTTP 403 before old Secret Manager version 1 was
+  destroyed; and
+- the evidence records no credential payload.
+
+The focused live rotation gate is complete. Remaining M11 MVP gates are the load-balancer/HTTPS/IAP
+edge and the integrated deployed product and identity-isolation journeys. Later rotations reuse the
+same procedure and must write a new version-transition evidence record rather than overwrite this
+one.

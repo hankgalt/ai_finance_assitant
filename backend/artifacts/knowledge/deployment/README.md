@@ -21,3 +21,8 @@ has `status: qualified`, proves the new credential reads the exact active collec
 HTTP 403 on a non-mutating write probe, limits Terraform to the backend secret-version update,
 records private/provider/GitHub readback, and confirms the old Qdrant key was rejected before its
 old Secret Manager version was destroyed. It contains numeric version identifiers but no payload.
+
+The current qualified rotation record is
+`staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json`.
+Its contract checksum matches the committed rotation procedure, and later rotations must create a
+new revision/version-transition record rather than overwrite it.

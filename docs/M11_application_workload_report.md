@@ -79,6 +79,6 @@ deployed store.
 
 The workload and reviewed down/recreate paths have executed successfully; the disposable runtime is
 currently active. The separate shared-knowledge release is qualified and the runtime key proved
-read-only. Focused runtime-key rotation, the load balancer, the real IAP audience and owner
-allow-list, HTTPS, DNS, and deployed product journeys remain later MVP gates. Backup/PITR, HA,
+read-only. Focused runtime-key rotation is also qualified. The load balancer, the real IAP audience
+and owner allow-list, HTTPS, DNS, and deployed product journeys remain later MVP gates. Backup/PITR, HA,
 capacity, SLO/alerting, incident, and full rollback qualification remain post-MVP hardening.

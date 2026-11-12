@@ -82,6 +82,12 @@ The old key/version remain available for rollback until cutover passes; only the
 revoke the old Qdrant key and separately confirm destruction of the old Secret Manager version.
 The live run writes a unique secret-free evidence record under
 `backend/artifacts/knowledge/deployment/`.
+Revision `86146b6227285015665b84cbfa3f4ce0395cd618` qualified that live path from secret version 1
+to version 2: the new key read the active collections and received HTTP 403 on the non-mutating
+write probe, Terraform changed only the backend version reference, private/provider controls
+remained intact, the GitHub version selector matched, and the revoked old key plus old stored
+version were removed. The evidence is
+`backend/artifacts/knowledge/deployment/staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json`.
 
 The down wizard first applies a displayed non-destructive transition plan that removes any live
 deletion guards while preserving the observed database tier. It then displays separate workload and
