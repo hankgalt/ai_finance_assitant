@@ -229,6 +229,8 @@ EDGE_BACKEND_SERVICE="aifa-staging-backend-edge"
 EDGE_FRONTEND_SERVICE="aifa-staging-frontend-edge"
 FAIL_CLOSED_IAP_AUDIENCE="/projects/${PROJECT_NUMBER}/global/backendServices/0"
 IAP_SERVICE_AGENT="service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com"
+TLS_SERVING_TIMEOUT_SECONDS=1800
+TLS_RETRY_SECONDS=15
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 SHARED_ROOT="$REPO_ROOT/infrastructure/terraform/shared"
 EDGE_ROOT="$REPO_ROOT/infrastructure/terraform/environments/staging-edge"
@@ -342,6 +344,33 @@ verify_backend_audience() {
     warn "the deployed backend does not contain the expected IAP audience"
     exit 1
   }
+}
+
+# Google can report a managed certificate ACTIVE before every serving frontend
+# has converged. Retry both the TLS handshake and the expected anonymous IAP
+# challenge for a bounded 30 minutes; never accept an anonymous 2xx response.
+wait_for_https_iap_challenge() {
+  local url="$1" deadline https_status curl_exit
+  deadline=$(( $(date +%s) + TLS_SERVING_TIMEOUT_SECONDS ))
+  while true; do
+    curl_exit=0
+    if https_status=$(curl --silent --output /dev/null --max-time 30 \
+      --write-out '%{http_code}' "$url"); then
+      if [[ "$https_status" == "302" || "$https_status" == "401" || "$https_status" == "403" ]]; then
+        say "HTTPS/IAP readiness status: $https_status"
+        return 0
+      fi
+    else
+      curl_exit=$?
+      https_status="curl_exit_$curl_exit"
+    fi
+    (( $(date +%s) < deadline )) || {
+      warn "HTTPS/IAP readiness did not converge within 30 minutes; last result: $https_status"
+      return 1
+    }
+    say "HTTPS/IAP readiness is $https_status; retrying in $TLS_RETRY_SECONDS seconds."
+    sleep "$TLS_RETRY_SECONDS"
+  done
 }
 
 # ── Stage 1: local identity, repository, and workload preflight ───────────
@@ -625,6 +654,8 @@ while true; do
   }
   sleep 30
 done
+say "The certificate is ACTIVE; waiting for HTTPS/IAP serving propagation."
+wait_for_https_iap_challenge "$TARGET_URL"
 
 # ── Stage 8: live IAP, TLS, route, IAM, and no-origin qualification ───────
 stage "Qualify the assembled private edge"
@@ -696,12 +727,6 @@ HTTP_STATUS=$(curl --silent --show-error --output /dev/null --max-time 30 \
   --write-out '%{http_code}' "http://$DOMAIN/finance_assistant")
 [[ "$HTTP_STATUS" == "308" || "$HTTP_STATUS" == "301" ]] || {
   warn "plain HTTP did not permanently redirect to HTTPS"
-  exit 1
-}
-HTTPS_STATUS=$(curl --silent --show-error --output /dev/null --max-time 30 \
-  --write-out '%{http_code}' "$TARGET_URL")
-[[ "$HTTPS_STATUS" == "302" || "$HTTPS_STATUS" == "401" || "$HTTPS_STATUS" == "403" ]] || {
-  warn "an anonymous HTTPS request was not challenged by IAP"
   exit 1
 }
 open_url "$TARGET_URL"
