@@ -1,0 +1,84 @@
+{
+  "schema_version": "1",
+  "status": "defined_not_executed",
+  "source": {
+    "endpoint": "http://127.0.0.1:6333",
+    "qdrant_version": "1.20.0",
+    "authentication": "none_loopback_only"
+  },
+  "target": {
+    "cluster_name": "finance-assistant-demo",
+    "cluster_id": "57c4d676-360a-4f1a-aad3-92d775292673",
+    "endpoint": "https://57c4d676-360a-4f1a-aad3-92d775292673.us-central1-0.gcp.cloud.qdrant.io",
+    "qdrant_version": "1.20.0",
+    "shared_knowledge_only": true,
+    "application_principal_data_allowed": false
+  },
+  "credentials": {
+    "runtime": {
+      "secret_id": "aifa-staging-qdrant-runtime-api-key",
+      "qdrant_access": "cluster_wide_read_only",
+      "recommended_expiration_days": 90,
+      "cloud_run_version_reference": "positive_numeric_only"
+    },
+    "release": {
+      "secret_id": "aifa-staging-qdrant-release-api-key",
+      "qdrant_access": "cluster_wide_manage_write",
+      "recommended_expiration_days": 7,
+      "injected_into_application": false,
+      "revoke_after_qualification": true
+    },
+    "payloads_allowed_in_repository": false,
+    "payloads_allowed_in_github": false,
+    "payloads_managed_by_terraform": false
+  },
+  "transfer": {
+    "method": "collection_snapshot_upload",
+    "snapshot_priority": "snapshot",
+    "temporary_snapshot_retention": "execution_scoped",
+    "overwrite_conflicting_collection": false,
+    "matching_collection_action": "validate_and_skip"
+  },
+  "collections": [
+    {
+      "logical_kb": "finance_education",
+      "alias": "finance_education_active",
+      "current_collection": "finance_education_v1_755be30b6a2d",
+      "rollback_collection": "finance_education_v1_fcecb8c15493",
+      "current_manifest": "backend/artifacts/knowledge/finance-education/finance_education_v1_755be30b6a2d.manifest.json",
+      "rollback_manifest": "backend/artifacts/knowledge/finance-education/finance_education_v1_fcecb8c15493.manifest.json",
+      "qrels": "backend/data/knowledge/finance-education/retrieval-cases.v1.json",
+      "baseline_evaluation": "backend/artifacts/knowledge/finance-education/finance_education_v1_755be30b6a2d.evaluation.json",
+      "expected_current_points": 106
+    },
+    {
+      "logical_kb": "tax_education",
+      "alias": "tax_education_active",
+      "current_collection": "tax_education_v1_9b31ab2354ea",
+      "rollback_collection": "tax_education_v1_f2fef46b0f88",
+      "current_manifest": "backend/artifacts/knowledge/tax-education/tax_education_v1_9b31ab2354ea.manifest.json",
+      "rollback_manifest": "backend/artifacts/knowledge/tax-education/tax_education_v1_f2fef46b0f88.manifest.json",
+      "qrels": "backend/data/knowledge/tax-education/retrieval-cases.v1.json",
+      "baseline_evaluation": "backend/artifacts/knowledge/tax-education/tax_education_v1_9b31ab2354ea.evaluation.json",
+      "expected_current_points": 6295
+    }
+  ],
+  "provider_boundary": {
+    "provider_mode": "credential_free",
+    "model_mode": "credential_free",
+    "live_provider_secrets_allowed": false,
+    "live_provider_activation": "separate_owner_approval_required",
+    "viewer_live_provider_access": "denied"
+  },
+  "qualification": {
+    "manifest_match": "exact",
+    "point_count_match": "exact",
+    "payload_indexes_required": true,
+    "fixed_qrels_required": true,
+    "alias_rollback_and_restore_required": true,
+    "runtime_read_required": true,
+    "runtime_write_must_be_forbidden": true,
+    "deployed_provider_environment_readback_required": true,
+    "release_key_revocation_required": true
+  }
+}

@@ -110,6 +110,27 @@ resource "google_secret_manager_secret" "qdrant_runtime" {
   }
 }
 
+resource "google_secret_manager_secret" "qdrant_release" {
+  project             = var.project_id
+  secret_id           = "aifa-staging-qdrant-release-api-key"
+  deletion_protection = false
+
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+
+  labels = {
+    application = "finance-assistant"
+    capability  = "knowledge-release"
+    environment = "staging"
+    managed-by  = "terraform"
+  }
+}
+
 resource "google_secret_manager_secret_iam_member" "runtime_qdrant" {
   project   = var.project_id
   secret_id = google_secret_manager_secret.qdrant_runtime.secret_id

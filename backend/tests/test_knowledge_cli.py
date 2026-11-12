@@ -70,8 +70,9 @@ def store(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> InMemoryKnowledgeS
     shared = InMemoryKnowledgeStore()
     urls: list[str] = []
 
-    def store_factory(url: str) -> InMemoryKnowledgeStore:
+    def store_factory(url: str, **kwargs: object) -> InMemoryKnowledgeStore:
         urls.append(url)
+        shared.api_key = kwargs.get("api_key")  # type: ignore[attr-defined]
         return shared
 
     monkeypatch.setattr(knowledge_cli, "QdrantKnowledgeStore", store_factory)
@@ -251,3 +252,40 @@ def test_artifact_reference_is_backend_relative_when_possible(tmp_path: Path) ->
 
     assert reference(knowledge_cli._DEFAULT_ARTIFACTS / "x.json") == "artifacts/knowledge/x.json"
     assert reference(tmp_path / "x.json") == str((tmp_path / "x.json").resolve())
+
+
+def test_api_key_is_read_from_file_and_passed_without_cli_payload(
+    store: InMemoryKnowledgeStore, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    api_key_file = tmp_path / "api-key"
+    api_key_file.write_text("secret-token", encoding="utf-8")
+
+    exit_code = knowledge_cli.main(
+        [
+            "--qdrant-api-key-file",
+            str(api_key_file),
+            "validate",
+            "--kb",
+            "finance_education",
+        ]
+    )
+
+    assert exit_code == 2
+    assert store.api_key == "secret-token"  # type: ignore[attr-defined]
+    assert "secret-token" not in capsys.readouterr().out
+
+
+def test_api_key_file_rejects_empty_or_multiline_values(tmp_path: Path) -> None:
+    api_key_file = tmp_path / "api-key"
+    api_key_file.write_text("first\nsecond", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="one non-empty token"):
+        knowledge_cli.main(
+            [
+                "--qdrant-api-key-file",
+                str(api_key_file),
+                "validate",
+                "--kb",
+                "finance_education",
+            ]
+        )

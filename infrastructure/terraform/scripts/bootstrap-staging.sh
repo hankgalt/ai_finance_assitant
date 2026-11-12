@@ -256,9 +256,9 @@ source_cloud_sql_is_absent() {
   local source_instances
   source_instances=$(gcloud sql instances list \
     --project="$PROJECT_ID" \
-    --filter="name=$SOURCE_INSTANCE" \
-    --format='value(name)') || return 1
-  [[ -z "$source_instances" ]]
+    --format=json) || return 1
+  jq -e --arg instance "$SOURCE_INSTANCE" \
+    'all(.[]; .name != $instance)' <<<"$source_instances" >/dev/null
 }
 
 runtime_is_absent_with_networking_foundation() {
@@ -435,13 +435,17 @@ if [[ "$ACTION" == "down" ]]; then
   if ! workload_state_is_empty; then
     terraform -chdir="$WORKLOAD_ROOT" apply "$WORKLOAD_DESTROY_PLAN"
   fi
+  say "Google may temporarily reject deletion of the private Service Networking connection."
+  say "If that happens, this wizard accepts success only after independently proving that"
+  say "Cloud SQL and every workload are absent and exactly the approved networking state remains."
   if terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"; then
     say "The demo runtime is absent; the reproducibility foundation remains."
     finish
     return
   fi
   if runtime_is_absent_with_networking_foundation; then
-    warn "Google still reserves the deleted Cloud SQL producer networking, so Terraform could not delete the connection."
+    say "Terraform reached the expected temporary Cloud SQL producer-networking reservation."
+    say "The exact accepted networking residue was verified; teardown succeeded."
     finish_with_networking_foundation
     return
   fi
@@ -515,7 +519,7 @@ if [[ "$QDRANT_SECRET_VERSION" =~ ^[1-9][0-9]*$ ]] && \
 else
   open_url "https://console.cloud.google.com/security/secret-manager/secret/$QDRANT_SECRET_ID/versions?project=$PROJECT_ID"
   step "Choose New version, paste the Qdrant runtime API key, and enable the version."
-  pause "Return here after the enabled version exists."
+  pause "Return here after the enabled version exists. Press Enter to continue."
   QDRANT_SECRET_VERSION=$(gcloud secrets versions list "$QDRANT_SECRET_ID" \
     --project="$PROJECT_ID" \
     --filter='state=enabled' \

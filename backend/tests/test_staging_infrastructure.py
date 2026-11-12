@@ -141,15 +141,16 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     assert contract["workload_boundary"]["pre_edge_iap_audience_status"] == (
         "intentional_fail_closed_sentinel"
     )
-    assert contract["workload_boundary"]["status"] == "terraform_defined_not_applied"
+    assert contract["workload_boundary"]["status"] == "qualified_then_destroyed"
     assert contract["operational_status"] == {
         "terraform_foundation": "networking_only",
         "final_drift": "runtime_absent_expected_networking_residue",
         "github_environments": "configured",
         "oidc_smoke": "staging_and_production_qualified",
-        "staging_workload": "terraform_defined_not_deployed",
-        "no_direct_workload_bypass": "controls_defined_not_qualified",
-        "mvp_lifecycle_code": "foundation_migration_workload_order_defined_not_applied",
+        "staging_workload": "qualified_then_destroyed",
+        "no_direct_workload_bypass": "qualified_before_destroy",
+        "mvp_lifecycle_code": "create_migrate_deploy_verify_destroy_qualified",
+        "knowledge_release": "defined_locally_not_executed",
     }
 
 
@@ -195,7 +196,7 @@ def test_demo_runtime_lifecycle_evidence_records_runtime_absence_and_networking(
     evidence = json.loads(LIFECYCLE_EVIDENCE.read_text(encoding="utf-8"))
 
     assert evidence["schema_version"] == "1"
-    assert evidence["status"] == "runtime_absent_networking_acceptance_defined_not_applied"
+    assert evidence["status"] == "runtime_create_deploy_destroy_qualified"
     assert evidence["scope"]["cloud_resources_mutated"] is True
     assert evidence["scope"]["terraform_applied"] is True
     assert evidence["target"]["database_tier"] == "db-g1-small"
@@ -212,20 +213,26 @@ def test_demo_runtime_lifecycle_evidence_records_runtime_absence_and_networking(
     assert evidence["live_attempt"]["source_instance_present"] is False
     assert evidence["live_attempt"]["iam_database_users_present"] == []
     assert evidence["live_attempt"]["networking_foundation_retained"] is True
-    assert evidence["live_attempt"]["networking_acceptance_fix_applied"] is False
+    assert evidence["live_attempt"]["networking_acceptance_fix_applied"] is True
+    assert evidence["live_attempt"]["application_workloads"] == (
+        "backend_and_frontend_ready_with_pinned_digests"
+    )
+    assert evidence["live_attempt"]["direct_origin"] == (
+        "default_urls_disabled_anonymous_iam_absent_requests_rejected"
+    )
     assert "private_networking" in evidence["persistent_foundation"]
     assert "private_networking" not in evidence["destroyed_staging_scope"]
     assert evidence["deferred"]["cloud_sql_recovery_qualification"] == "post_mvp"
     assert evidence["security"]["secrets_committed"] is False
 
 
-def test_application_workload_evidence_is_truthful_about_unapplied_controls() -> None:
+def test_application_workload_evidence_records_qualified_then_destroyed_controls() -> None:
     evidence = json.loads(WORKLOAD_EVIDENCE.read_text(encoding="utf-8"))
 
     assert evidence["schema_version"] == "1"
-    assert evidence["status"] == "terraform_and_lifecycle_defined_not_applied"
-    assert evidence["scope"]["cloud_resources_mutated"] is False
-    assert evidence["scope"]["terraform_applied"] is False
+    assert evidence["status"] == "staging_qualified_then_destroyed"
+    assert evidence["scope"]["cloud_resources_mutated"] is True
+    assert evidence["scope"]["terraform_applied"] is True
     assert evidence["scope"]["secret_payloads_recorded"] is False
     assert evidence["terraform"]["foundation_state_prefix"] == "foundation"
     assert evidence["terraform"]["workload_state_prefix"] == "workloads"
@@ -237,7 +244,9 @@ def test_application_workload_evidence_is_truthful_about_unapplied_controls() ->
     assert evidence["workload_policy"]["anonymous_invoker_allowed"] is False
     assert evidence["secret_policy"]["payload_owned_by_terraform"] is False
     assert evidence["secret_policy"]["latest_version_allowed"] is False
-    assert evidence["qualification"]["live_workload_apply"] == "pending_after_merge"
+    assert evidence["qualification"]["live_workload_apply"] == "passed_then_destroyed"
+    assert evidence["qualification"]["direct_origin_denial"] == "passed_before_destroy"
+    assert evidence["qualification"]["destroy_recreate"] == "passed"
 
 
 def test_remote_state_bootstrap_is_environment_separated_and_fail_closed() -> None:
@@ -338,20 +347,22 @@ def test_terraform_never_owns_secret_payloads_or_anonymous_workload_access() -> 
     assert "INGRESS_TRAFFIC_ALL" not in terraform
 
 
-def test_standard_qdrant_secret_has_us_west1_replication_and_runtime_only_access() -> None:
+def test_standard_qdrant_secrets_have_us_west1_replication_and_runtime_only_access() -> None:
     staging = (TERRAFORM_ROOT / "environments/staging/main.tf").read_text(encoding="utf-8")
 
     assert 'resource "google_secret_manager_secret" "qdrant_runtime"' in staging
+    assert 'resource "google_secret_manager_secret" "qdrant_release"' in staging
     assert "google_secret_manager_regional_secret" not in staging
     assert "user_managed" in staging
     assert "location = var.region" in staging
     assert 'secret_id           = "aifa-staging-qdrant-runtime-api-key"' in staging
+    assert 'secret_id           = "aifa-staging-qdrant-release-api-key"' in staging
     assert "postgres-runtime-dsn" not in staging
     assert "postgres-migration-dsn" not in staging
     assert "postgres-retention-dsn" not in staging
     assert staging.count('role      = "roles/secretmanager.secretAccessor"') == 1
     assert 'workload["runtime"].email' in staging
-    assert "deletion_protection = false" in staging
+    assert staging.count("deletion_protection = false") == 2
     assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 1
     assert "prevent_destroy" not in staging
 
@@ -362,7 +373,7 @@ def test_private_demo_runtime_resources_are_deleted_instead_of_abandoned() -> No
 
     assert "prevent_destroy" not in staging
     assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 1
-    assert staging.count("deletion_protection = false") == 1
+    assert staging.count("deletion_protection = false") == 2
     assert 'deletion_policy = "ABANDON"' not in staging
     assert "deletion_protection = false" in jobs
     assert "prevent_destroy" not in jobs
@@ -549,7 +560,9 @@ def test_demo_runtime_down_accepts_only_networking_residue_after_provider_delay(
                 ;;
               *"sql instances list"*)
                 if [[ ! -f "$DESTROY_ATTEMPTED" ]]; then
-                  printf 'aifa-staging-postgres\\n'
+                  printf '[{"name":"aifa-staging-postgres"}]\\n'
+                else
+                  printf '[]\\n'
                 fi
                 ;;
               *) exit 1 ;;

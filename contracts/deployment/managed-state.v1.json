@@ -141,7 +141,12 @@
     "private_demo_cross_region_exception": true,
     "principal_owned_data_allowed": false,
     "api_key_committed": false,
-    "production_sla_claimed": false
+    "production_sla_claimed": false,
+    "runtime_key_access": "cluster_wide_read_only",
+    "release_key_access": "temporary_cluster_wide_manage_write",
+    "release_key_injected_into_application": false,
+    "release_key_revocation_required": true,
+    "release_contract": "contracts/deployment/knowledge-release.v1.json"
   },
   "delivery_approval": {
     "repository": "hankgalt/ai_finance_assitant",

@@ -73,9 +73,14 @@
     "payloads_managed_by_terraform": false,
     "payloads_allowed_in_repository": false,
     "payloads_allowed_in_github": false,
-    "metadata_status": "defined_not_applied",
+    "metadata_status": "qualified_then_destroyed_with_runtime",
     "payload_versions_created_by_terraform": false,
-    "runtime_lifecycle": "destroyed_and_reentered_with_each_clean_runtime"
+    "runtime_lifecycle": "destroyed_and_reentered_with_each_clean_runtime",
+    "qdrant_secrets": {
+      "runtime": "aifa-staging-qdrant-runtime-api-key",
+      "release": "aifa-staging-qdrant-release-api-key",
+      "release_injected_into_application": false
+    }
   },
   "managed_state": {
     "service": "cloud_sql_postgresql",
@@ -128,7 +133,7 @@
     "pre_edge_iap_audience_status": "intentional_fail_closed_sentinel",
     "minimum_instances": 0,
     "maximum_instances_per_service": 1,
-    "status": "terraform_defined_not_applied"
+    "status": "qualified_then_destroyed"
   },
   "budget": {
     "combined_monthly_usd": 100,
@@ -141,8 +146,9 @@
     "final_drift": "runtime_absent_expected_networking_residue",
     "github_environments": "configured",
     "oidc_smoke": "staging_and_production_qualified",
-    "staging_workload": "terraform_defined_not_deployed",
-    "no_direct_workload_bypass": "controls_defined_not_qualified",
-    "mvp_lifecycle_code": "foundation_migration_workload_order_defined_not_applied"
+    "staging_workload": "qualified_then_destroyed",
+    "no_direct_workload_bypass": "qualified_before_destroy",
+    "mvp_lifecycle_code": "create_migrate_deploy_verify_destroy_qualified",
+    "knowledge_release": "defined_locally_not_executed"
   }
 }

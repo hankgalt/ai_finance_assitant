@@ -4,15 +4,16 @@ This capability-owned Terraform implements the M11 staging foundation selected b
 ADR-030. It contains no secret payloads, service-account keys, or committed Terraform state. It
 defines an on-demand, disposable `db-g1-small` demo runtime, three private non-HTTP Cloud Run
 operator jobs, and separate-state private frontend/backend workload definitions. The workloads are
-defined but not yet applied or qualified. The authoritative machine policy is
+qualified through one reviewed create/deploy/no-direct-origin/destroy cycle and are currently
+absent. The authoritative machine policy is
 `contracts/deployment/infrastructure-policy.v1.json`.
 
 The bootstrap, shared, and historical `db-f1-micro` staging roots were provisioned on 2026-11-10.
-The corrected `db-g1-small` lifecycle and application workloads are defined but have not been
-applied. The application workload and external edge remain unprovisioned. See
+The corrected `db-g1-small` lifecycle and application workloads were applied, verified, and
+destroyed; the external edge remains unprovisioned. See
 `docs/M11_staging_infrastructure_report.md` for live
 evidence and `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json` for the
-defined-not-applied lifecycle record.
+qualified lifecycle record.
 
 Apply the roots in this order:
 
@@ -23,8 +24,8 @@ Apply the roots in this order:
    immutable `OWNER@OWNER-ID/REPO@REPO-ID` subject plus independent numeric repository, owner,
    branch, and protected-environment checks.
 3. `environments/staging/` — create the disposable isolated staging VPC, private Cloud SQL instance,
-   workload identities, standard Qdrant secret metadata with a single `us-west1` replica, and
-   digest-pinned managed-state operator jobs.
+   workload identities, separate runtime/release Qdrant secret metadata with a single `us-west1`
+   replica, and digest-pinned managed-state operator jobs.
 4. `environments/staging-workloads/` — after the grants and migration job pass, create the private,
    digest-pinned frontend and backend Cloud Run services in the separate `workloads` state prefix.
 
@@ -36,6 +37,7 @@ make set-deployment-image-variables
 export GCP_BACKEND_IMAGE="$(gh variable get GCP_BACKEND_IMAGE --repo hankgalt/ai_finance_assitant --env staging)"
 export GCP_FRONTEND_IMAGE="$(gh variable get GCP_FRONTEND_IMAGE --repo hankgalt/ai_finance_assitant --env staging)"
 infrastructure/terraform/scripts/demo-runtime-up.sh
+make knowledge-release-staging
 infrastructure/terraform/scripts/demo-runtime-down.sh
 ```
 
@@ -63,13 +65,23 @@ Data API path, removes the owner elevation, executes the migration job, deploys 
 workloads, and verifies their digest, readiness, ingress, disabled default URL, and absence of an
 anonymous invoker.
 
+After the runtime is ready, `make knowledge-release-staging` transfers only missing approved
+Finance/Tax current and rollback snapshots, reruns the fixed qrels remotely, activates the current
+aliases, proves rollback/restoration, and requires the runtime key's write attempt to return 403.
+The temporary manage/write release key is entered only in its separate Secret Manager resource,
+revoked in Qdrant after qualification, and then destroyed in Secret Manager. The generated
+revision-scoped evidence contains no key payload.
+
 The down wizard first applies a displayed non-destructive transition plan that removes any live
 deletion guards while preserving the observed database tier. It then displays separate workload and
 staging destroy plans and requires the exact phrase `DESTROY EMPTY-DEMO-RUNTIME`. It destroys the
-workload state before the managed-state plan. The staging VPC, Cloud SQL data, operator jobs,
-service identities, and Qdrant secret/versions are deleted. Protected Terraform state, Artifact Registry, WIF, the
-budget, shared non-secret configuration, and the separately managed Qdrant cluster remain. The
-script never accepts a service-account key or secret payload.
+workload state before the managed-state plan. Cloud SQL data, operator jobs, service identities,
+and both Qdrant secrets/versions are deleted. Google may temporarily retain the VPC, allocated
+private-service range, and Service Networking connection; the wizard treats this as success only
+when those are the exact remaining Terraform resources and Cloud SQL/workload inventories are
+empty. Protected Terraform state, Artifact Registry, WIF, the budget, shared non-secret
+configuration, and the separately managed Qdrant cluster remain. The script never accepts a
+service-account key or secret payload.
 
 `terraform plan` is credentialed through short-lived GitHub OIDC only after the local bootstrap has
 created WIF and the protected GitHub environment. No workflow in this slice performs
@@ -86,9 +98,10 @@ root.
 
 The Cloud SQL jobs and backend workload use Direct VPC egress, private IP, and Cloud SQL Auth Proxy automatic IAM
 authentication. Their passwordless DSN is configuration, not a credential, and is not stored in
-Secret Manager. The Qdrant runtime key instead uses standard Secret Manager with user-managed
-replication restricted to `us-west1`; Cloud Run injects only a pinned numeric version. Terraform,
-GitHub, plans, logs, and repository artifacts never receive the payload.
+Secret Manager. The Qdrant runtime and offline release keys instead use separate standard Secret
+Manager resources with user-managed replication restricted to `us-west1`; Cloud Run can access
+only the pinned numeric runtime version. Terraform, GitHub, plans, logs, and repository artifacts
+never receive either payload.
 
 `scripts/qualify-cloud-sql-recovery.sh` is retained as deferred post-MVP hardening evidence. Do not
 run it as part of the private-demo create/destroy lifecycle. It does not replace the explicit

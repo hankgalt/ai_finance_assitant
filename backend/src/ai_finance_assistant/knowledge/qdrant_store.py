@@ -321,10 +321,11 @@ class QdrantKnowledgeStore:
         match = next((entry for entry in aliases if entry.alias_name == alias), None)
         return None if match is None else match.collection_name
 
-    def validate_active(self, alias: str, expected: CollectionCompatibility) -> tuple[bool, str]:
-        collection_name = self.resolve_alias(alias)
-        if collection_name is None:
-            return False, "active alias is missing"
+    def validate_collection(
+        self, collection_name: str, expected: CollectionCompatibility
+    ) -> tuple[bool, str]:
+        """Validate one immutable collection without requiring an active alias."""
+
         info = self._client.get_collection(collection_name)
         if info.status in {models.CollectionStatus.RED, models.CollectionStatus.GREY}:
             return False, f"Qdrant collection status is {info.status.value}"
@@ -377,4 +378,13 @@ class QdrantKnowledgeStore:
             )
         if not info.points_count:
             return False, "active collection contains no points"
+        return True, f"compatible collection {collection_name}"
+
+    def validate_active(self, alias: str, expected: CollectionCompatibility) -> tuple[bool, str]:
+        collection_name = self.resolve_alias(alias)
+        if collection_name is None:
+            return False, "active alias is missing"
+        compatible, detail = self.validate_collection(collection_name, expected)
+        if not compatible:
+            return False, detail
         return True, f"{alias} resolves to compatible collection {collection_name}"

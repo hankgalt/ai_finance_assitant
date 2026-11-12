@@ -43,6 +43,13 @@ resource "google_cloud_run_v2_service" "backend" {
   launch_stage         = "BETA"
   deletion_protection  = false
 
+  lifecycle {
+    # The API reports the GA service stage after accepting the BETA-only
+    # default_uri_disabled field. Keep managing that security field while
+    # ignoring only the normalized launch-stage metadata on later refreshes.
+    ignore_changes = [launch_stage]
+  }
+
   labels = {
     application = "finance-assistant"
     capability  = "application-workload"
@@ -175,6 +182,12 @@ resource "google_cloud_run_v2_service" "frontend" {
   default_uri_disabled = true
   launch_stage         = "BETA"
   deletion_protection  = false
+
+  lifecycle {
+    # See the backend service: Google normalizes this metadata to GA after
+    # accepting default_uri_disabled, otherwise every plan repeats GA -> BETA.
+    ignore_changes = [launch_stage]
+  }
 
   labels = {
     application = "finance-assistant"
