@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -11,6 +12,7 @@ STAGING = REPO_ROOT / "infrastructure/terraform/environments/staging/main.tf"
 WORKLOADS = REPO_ROOT / "infrastructure/terraform/modules/application_workloads/main.tf"
 RELEASE_SCRIPT = REPO_ROOT / "infrastructure/terraform/scripts/release-shared-knowledge.sh"
 LIFECYCLE_SCRIPT = REPO_ROOT / "infrastructure/terraform/scripts/bootstrap-staging.sh"
+INFRASTRUCTURE_POLICY = REPO_ROOT / "contracts/deployment/infrastructure-policy.v1.json"
 
 
 def test_release_contract_pins_exact_collections_credentials_and_provider_boundary() -> None:
@@ -55,6 +57,48 @@ def test_release_contract_pins_exact_collections_credentials_and_provider_bounda
         "live_provider_activation": "separate_owner_approval_required",
         "viewer_live_provider_access": "denied",
     }
+
+
+def test_qualified_staging_release_evidence_matches_policy_and_contract() -> None:
+    policy = json.loads(INFRASTRUCTURE_POLICY.read_text(encoding="utf-8"))
+    evidence_path = REPO_ROOT / policy["operational_status"]["knowledge_release_evidence"]
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+
+    assert policy["operational_status"]["knowledge_release"] == "qualified"
+    assert evidence["schema_version"] == "1"
+    assert evidence["status"] == "qualified"
+    assert evidence["revision"] == policy["operational_status"]["knowledge_release_revision"]
+    assert evidence["contract_sha256"] == hashlib.sha256(CONTRACT.read_bytes()).hexdigest()
+    assert [
+        (item["collection"], item["action"], item["point_count"]) for item in evidence["transfers"]
+    ] == [
+        ("finance_education_v1_755be30b6a2d", "uploaded_snapshot", 106),
+        ("finance_education_v1_fcecb8c15493", "uploaded_snapshot", 30),
+        ("tax_education_v1_9b31ab2354ea", "uploaded_snapshot", 6295),
+        ("tax_education_v1_f2fef46b0f88", "uploaded_snapshot", 4735),
+    ]
+    assert [
+        (item["logical_kb"], item["qrels_case_count"], item["passed"])
+        for item in evidence["evaluations"]
+    ] == [
+        ("finance_education", 17, True),
+        ("tax_education", 32, True),
+    ]
+    assert all(item["passed"] for item in evidence["rollback_proofs"])
+    assert evidence["runtime_permission"] == {
+        "passed": True,
+        "read_status": 200,
+        "write_status": 403,
+    }
+    assert evidence["deployed_provider_boundary"]["passed"] is True
+    assert evidence["deployed_provider_boundary"]["provider_mode"] == "credential_free"
+    assert evidence["deployed_provider_boundary"]["model_mode"] == "credential_free"
+    assert evidence["release_key"] == {
+        "qdrant_rejection_status": 403,
+        "qdrant_revoked": True,
+        "secret_version_destroyed": True,
+    }
+    assert evidence["secret_payloads_recorded"] is False
 
 
 def test_release_secret_is_separate_and_never_available_to_the_runtime_service() -> None:

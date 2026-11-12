@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "runtime_absent_networking_foundation_retained",
+  "status": "active_disposable_runtime_knowledge_qualified_edge_pending",
   "private_demo_mvp": {
     "scope": "owner_operated_deployed_feature_parity",
     "target_machine_tier": "db-g1-small",
@@ -10,7 +10,7 @@
     "backup_pitr_required": false,
     "recovery_qualification": "deferred_post_mvp",
     "production_readiness_claimed": false,
-    "current_provisioned_foundation_matches_target": false,
+    "current_provisioned_foundation_matches_target": true,
     "reproducibility_foundation_may_persist": [
       "terraform_state",
       "artifact_registry_images",
@@ -27,7 +27,7 @@
     "region": "us-west1",
     "availability": "single_zone",
     "machine_tier": "db-g1-small",
-    "provisioned_machine_tier": null,
+    "provisioned_machine_tier": "db-g1-small",
     "storage": {
       "type": "ssd",
       "capacity_gib": 10,
@@ -42,7 +42,7 @@
     "deployed_store_initialization": "empty",
     "local_development_backend": "sqlite",
     "staging_instance": "aifa-staging-postgres",
-    "external_configuration_status": "runtime_absent",
+    "external_configuration_status": "active_runnable_readback_2026_11_12",
     "connection": {
       "transport": "direct_vpc_egress_private_ipv4",
       "authentication": "cloud_sql_auth_proxy_automatic_iam",
@@ -50,7 +50,7 @@
       "dsn_secret_required": false,
       "operator_image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
       "mixed_registry_hosts_allowed": false,
-      "operator_jobs": "removed_after_qualified_execution"
+      "operator_jobs": "active_after_qualified_recreate"
     }
   },
   "checkpoint_state": {
@@ -109,7 +109,7 @@
     "long_lived_gcp_keys_in_github": false,
     "cloud_run_native_secret_injection": true,
     "runtime_secret_version_reference": "positive_numeric_version_only",
-    "runtime_secret_lifecycle": "destroyed_and_reentered_with_each_clean_runtime",
+    "runtime_secret_lifecycle": "runtime_version_active_release_version_destroyed_after_qualification",
     "approved_access_pattern": "native_cloud_run_environment_injection"
   },
   "staging": {
@@ -122,7 +122,7 @@
     "separate_database_role": true,
     "separate_secrets": true,
     "ephemeral_restore_instance": true,
-    "foundation_provisioned": false,
+    "foundation_provisioned": true,
     "networking_foundation_retained": true,
     "recovery_policy": "contracts/deployment/recovery-policy.v1.json"
   },
@@ -146,7 +146,10 @@
     "release_key_access": "temporary_cluster_wide_manage_write",
     "release_key_injected_into_application": false,
     "release_key_revocation_required": true,
-    "release_contract": "contracts/deployment/knowledge-release.v1.json"
+    "release_contract": "contracts/deployment/knowledge-release.v1.json",
+    "release_status": "qualified",
+    "release_revision": "a737f8e9e935f8afc05e16fc7148e3a185b32086",
+    "release_evidence": "backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json"
   },
   "delivery_approval": {
     "repository": "hankgalt/ai_finance_assitant",

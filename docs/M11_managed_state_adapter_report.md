@@ -1,8 +1,8 @@
 # M11 delivery report — Managed-state adapter and operating contract
 
-Status: PostgreSQL adapter and recovery procedure qualified locally; the billable private-demo
-runtime is absent, the approved private-networking foundation remains, and exact-residue acceptance
-is locally qualified but not yet applied; Cloud SQL live recovery deferred | 2026-11-11
+Status: PostgreSQL adapter, migration, retention, and disposable-runtime lifecycle qualified; the
+current `db-g1-small` private-demo runtime is active and Cloud SQL recovery remains deferred |
+2026-11-12
 
 ## Scope and decisions
 
@@ -15,9 +15,9 @@ deployment is qualified or operational.
 
 The owner-approved topology is recorded in
 [`contracts/deployment/managed-state.v1.json`](../contracts/deployment/managed-state.v1.json).
-The contract truthfully records the provisioned single-zone Cloud SQL PostgreSQL 17 Enterprise
-`db-f1-micro` foundation with its earlier backup/PITR configuration and separately records the
-corrected MVP target: on-demand `db-g1-small`, an empty store on every creation, explicit data loss
+The contract records the historical single-zone Cloud SQL PostgreSQL 17 Enterprise `db-f1-micro`
+foundation and the corrected/current MVP target: on-demand `db-g1-small`, an empty store on every
+creation, explicit data loss
 on destroy, and no backup/PITR MVP gate. Deployed response caching remains disabled. Same-project
 staging, Google-managed encryption, regional Secret Manager, the Qdrant Free `us-central1`
 topology, and the sole GitHub approver remain explicit private-demo limitations.
@@ -118,18 +118,18 @@ API key.
   successful recovered-target verification, backup restore, or PITR rehearsal. Retention and
   namespaced synthetic-state cleanup have passed through the private Cloud SQL path.
 - The locally passing complete two-Principal REST/SSE/History/Inspector matrix remains required at
-  the assembled staging workload gate. The reviewed teardown removed Cloud SQL and all billable
-  managed-state resources. The approved VPC, allocated internal range, and Service Networking
-  connection remain for reuse. Merge the exact-residue acceptance, then prove clean `db-g1-small`
-  recreation and the migration/runtime/retention role boundary. These are MVP gates.
+  the assembled staging workload gate. The reviewed teardown removed the earlier Cloud SQL and
+  billable managed-state resources while retaining the approved networking foundation. Clean
+  `db-g1-small` recreation and the migration/runtime role boundary subsequently passed; the current
+  instance is `RUNNABLE` for the remaining MVP gates.
 - Completing the synthetic recovery procedure, seven-backup/three-day-PITR restore, deletion
   reconciliation, timed RPO/RTO, capacity/overlap qualification, and schema/image rollback is
   deferred post-MVP hardening. The targets in the recovery contract are not operational claims.
 - The application and checkpoint saver use separate transactions. No whole-Run atomic-commit claim
   is made; deadline-expired interrupted Runs are now reconciled, but more granular crash-point tests
   remain part of Cloud SQL staging recovery.
-- Exercise Qdrant authenticated readiness and collection activation separately. No Qdrant key or
-  collection was created, accessed, or migrated in this slice.
+- Qdrant authenticated readiness, collection transfer, activation, rollback/restoration, runtime
+  write denial, and release-key cleanup subsequently passed as a separate shared-knowledge slice.
 
 ## Artifact paths
 

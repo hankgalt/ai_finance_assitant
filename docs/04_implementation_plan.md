@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 private-demo MVP scope corrected, slices 2 and 4 implemented, managed-state migration/retention qualified, and the historical slice 5 billable runtime removed with its approved private-networking foundation retained; application-workload definitions are locally qualified while live workload, edge, and knowledge gates remain pending | 2026-11-11
+Version 3.3 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, and live shared knowledge are qualified; the current disposable staging runtime is active while runtime-key rotation, edge/IAP, and integrated product journeys remain pending | 2026-11-12
 
 ## 1. Delivery rules
 
@@ -501,24 +501,22 @@ direct-origin requests; the reviewed down run then removed the runtime again. Go
 configured Cloud Run launch-stage metadata from `BETA` to `GA`, so Terraform now ignores only that
 metadata while continuing to manage and verify the security-relevant disabled-URL and ingress
 fields. Slice 5's workload/lifecycle boundary is exercised; no internet-facing edge is claimed
-operational. Slice 6's snapshot-transfer, least-privilege key, fixed-qrels, activation, rollback,
-and credential-free provider-boundary workflow is implemented and locally qualified but has not
-yet run against Qdrant Cloud. Real-service recovery is deferred post-MVP hardening.
+operational. A current reviewed create restored the disposable `db-g1-small` runtime and private
+services. Slice 6 then uploaded all four contracted snapshots to Qdrant Cloud, passed 17 Finance and
+32 Tax qrels through the read-only runtime key, exercised and restored both aliases, proved runtime
+mutation denial, verified the credential-free provider boundary, and removed the revoked release
+credential. Its qualified evidence is revision-scoped under
+`backend/artifacts/knowledge/deployment/`. Real-service recovery is deferred post-MVP hardening.
 
 **Remaining private-demo MVP sequence**
 
-1. Merge the shared-knowledge release implementation and recreate the demo runtime with a
-   cluster-wide read-only Qdrant runtime key entered directly in Secret Manager. Do not run the
-   deferred recovery wizard.
-2. Run the revision-scoped shared-knowledge operator to transfer the exact current and rollback
-   Finance/Tax snapshots, pass fixed qrels, prove alias rollback/restoration and runtime write
-   denial, revoke the temporary manage/write release key, and record secret-free evidence.
-3. Add and qualify the separately reviewable focused runtime-key rotation procedure before edge
+1. Add and qualify the separately reviewable focused runtime-key rotation procedure before edge
    work, without replaying Cloud SQL provisioning or the complete demo-runtime-up path.
-4. Configure the exact `/finance_assistant` load-balancer route, HTTPS, IAP owner allow-list, stable
+2. Run the Terraform plan/readiness check, then configure the exact `/finance_assistant`
+   load-balancer route, HTTPS, IAP owner allow-list, stable
    DNS target, and registrar record. Keep viewer admission and viewer live-provider use disabled
    until separately approved.
-5. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
+3. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
    journeys; record identity/isolation and direct-origin evidence; then prove reviewed teardown and
    clean recreation from the persistent foundation. This evidence is the private-demo MVP release
    gate. Stop there rather than expanding into deferred production hardening.

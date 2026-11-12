@@ -63,7 +63,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "runtime_absent_networking_foundation_retained"
+    assert contract["status"] == "active_disposable_runtime_knowledge_qualified_edge_pending"
     assert contract["private_demo_mvp"] == {
         "target_database_tier": "db-g1-small",
         "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -111,7 +111,9 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     assert contract["managed_state"]["transaction_log_retention_days"] == 0
     assert contract["managed_state"]["retain_backups_on_delete"] is False
     assert contract["managed_state"]["deletion_protection"] is False
-    assert contract["managed_state"]["external_configuration_status"] == "runtime_absent"
+    assert contract["managed_state"]["external_configuration_status"] == (
+        "active_runnable_readback_2026_11_12"
+    )
     assert contract["managed_state_operator_jobs"] == {
         "operations": ["migration", "qualification", "retention"],
         "execution": "cloud_run_v2_jobs",
@@ -121,7 +123,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
         "image_registry": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers",
         "mixed_registry_hosts_allowed": False,
         "http_endpoint": False,
-        "status": "removed_after_qualified_execution",
+        "status": "active_after_qualified_recreate",
         "execution_status": {
             "migration": "passed",
             "qualification_prepare": "passed",
@@ -141,16 +143,25 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     assert contract["workload_boundary"]["pre_edge_iap_audience_status"] == (
         "intentional_fail_closed_sentinel"
     )
-    assert contract["workload_boundary"]["status"] == "qualified_then_destroyed"
+    assert contract["workload_boundary"]["status"] == (
+        "active_ready_private_origin_disabled_readback_2026_11_12"
+    )
     assert contract["operational_status"] == {
-        "terraform_foundation": "networking_only",
-        "final_drift": "runtime_absent_expected_networking_residue",
+        "terraform_foundation": "active_disposable_demo_runtime",
+        "final_drift": "not_rechecked_after_current_runtime_create",
         "github_environments": "configured",
         "oidc_smoke": "staging_and_production_qualified",
-        "staging_workload": "qualified_then_destroyed",
-        "no_direct_workload_bypass": "qualified_before_destroy",
+        "staging_workload": "active_backend_and_frontend_ready",
+        "no_direct_workload_bypass": (
+            "current_readback_default_urls_disabled_anonymous_iam_absent"
+        ),
         "mvp_lifecycle_code": "create_migrate_deploy_verify_destroy_qualified",
-        "knowledge_release": "defined_locally_not_executed",
+        "knowledge_release": "qualified",
+        "knowledge_release_revision": "a737f8e9e935f8afc05e16fc7148e3a185b32086",
+        "knowledge_release_evidence": (
+            "backend/artifacts/knowledge/deployment/"
+            "staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json"
+        ),
     }
 
 

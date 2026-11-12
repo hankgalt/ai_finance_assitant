@@ -4,13 +4,13 @@ This capability-owned Terraform implements the M11 staging foundation selected b
 ADR-030. It contains no secret payloads, service-account keys, or committed Terraform state. It
 defines an on-demand, disposable `db-g1-small` demo runtime, three private non-HTTP Cloud Run
 operator jobs, and separate-state private frontend/backend workload definitions. The workloads are
-qualified through one reviewed create/deploy/no-direct-origin/destroy cycle and are currently
-absent. The authoritative machine policy is
+qualified through a reviewed create/deploy/no-direct-origin/destroy cycle and a later recreation;
+the current disposable runtime is active for the remaining MVP gates. The authoritative machine policy is
 `contracts/deployment/infrastructure-policy.v1.json`.
 
 The bootstrap, shared, and historical `db-f1-micro` staging roots were provisioned on 2026-11-10.
-The corrected `db-g1-small` lifecycle and application workloads were applied, verified, and
-destroyed; the external edge remains unprovisioned. See
+The corrected `db-g1-small` lifecycle and application workloads were applied, verified, destroyed,
+and recreated for the qualified shared-knowledge release; the external edge remains unprovisioned. See
 `docs/M11_staging_infrastructure_report.md` for live
 evidence and `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json` for the
 qualified lifecycle record.

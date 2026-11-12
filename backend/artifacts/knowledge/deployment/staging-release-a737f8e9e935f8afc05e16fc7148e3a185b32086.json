@@ -1,0 +1,183 @@
+{
+  "activations": [
+    {
+      "active_collection": "finance_education_v1_755be30b6a2d",
+      "alias": "finance_education_active",
+      "previous_collection": null
+    },
+    {
+      "active_collection": "tax_education_v1_9b31ab2354ea",
+      "alias": "tax_education_active",
+      "previous_collection": null
+    }
+  ],
+  "contract_sha256": "a24d81988eb99ddf25c7431c3042fa0e7e1b2888f982413f427cdd54e1ec3290",
+  "deployed_provider_boundary": {
+    "forbidden_provider_environment_names_present": false,
+    "model_mode": "credential_free",
+    "passed": true,
+    "provider_mode": "credential_free",
+    "service": "aifa-staging-backend"
+  },
+  "evaluations": [
+    {
+      "citation_integrity": true,
+      "collection_name": "finance_education_v1_755be30b6a2d",
+      "critical_filters_exact": true,
+      "evaluated_at": "2026-11-12T16:03:01.883578Z",
+      "failures": [],
+      "logical_kb": "finance_education",
+      "metrics": [
+        {
+          "mean_reciprocal_rank": 0.9313725490196079,
+          "precision_at_5": 0.5294117647058824,
+          "recall_at_5": 1.0,
+          "strategy": "dense"
+        },
+        {
+          "mean_reciprocal_rank": 0.8235294117647058,
+          "precision_at_5": 0.4235294117647059,
+          "recall_at_5": 1.0,
+          "strategy": "sparse"
+        },
+        {
+          "mean_reciprocal_rank": 0.9705882352941176,
+          "precision_at_5": 0.49411764705882355,
+          "recall_at_5": 1.0,
+          "strategy": "hybrid"
+        }
+      ],
+      "minimum_hybrid_recall_at_5": 0.85,
+      "passed": true,
+      "qrels_case_count": 17,
+      "qrels_checksum": "a776246faebcc1000fdb46fb5105a464e79b633411d6450dde12b994fba2d271",
+      "schema_version": "1",
+      "top_k": 5
+    },
+    {
+      "citation_integrity": true,
+      "collection_name": "tax_education_v1_9b31ab2354ea",
+      "critical_filters_exact": true,
+      "evaluated_at": "2026-11-12T16:03:12.045503Z",
+      "failures": [],
+      "logical_kb": "tax_education",
+      "metrics": [
+        {
+          "mean_reciprocal_rank": 0.6703125,
+          "precision_at_5": 0.54375,
+          "recall_at_5": 0.90625,
+          "strategy": "dense"
+        },
+        {
+          "mean_reciprocal_rank": 0.8395833333333333,
+          "precision_at_5": 0.6125,
+          "recall_at_5": 1.0,
+          "strategy": "sparse"
+        },
+        {
+          "mean_reciprocal_rank": 0.7208333333333333,
+          "precision_at_5": 0.63125,
+          "recall_at_5": 1.0,
+          "strategy": "hybrid"
+        }
+      ],
+      "minimum_hybrid_recall_at_5": 0.85,
+      "passed": true,
+      "qrels_case_count": 32,
+      "qrels_checksum": "68da68c4f7b30df7fff024a3b950ccdc5795547d1e68b2cde515aee21ba39067",
+      "schema_version": "1",
+      "top_k": 5
+    }
+  ],
+  "provider_boundary": {
+    "live_provider_activation": "separate_owner_approval_required",
+    "live_provider_secrets_allowed": false,
+    "model_mode": "credential_free",
+    "provider_mode": "credential_free",
+    "viewer_live_provider_access": "denied"
+  },
+  "recorded_at": "2026-11-12T16:03:15.284444+00:00",
+  "release_key": {
+    "qdrant_rejection_status": 403,
+    "qdrant_revoked": true,
+    "secret_version_destroyed": true
+  },
+  "revision": "a737f8e9e935f8afc05e16fc7148e3a185b32086",
+  "rollback_proofs": [
+    {
+      "alias": "finance_education_active",
+      "passed": true,
+      "restored_collection": "finance_education_v1_755be30b6a2d",
+      "rollback_collection": "finance_education_v1_fcecb8c15493"
+    },
+    {
+      "alias": "tax_education_active",
+      "passed": true,
+      "restored_collection": "tax_education_v1_9b31ab2354ea",
+      "rollback_collection": "tax_education_v1_f2fef46b0f88"
+    }
+  ],
+  "runtime_permission": {
+    "passed": true,
+    "read_status": 200,
+    "write_status": 403
+  },
+  "runtime_validation": [
+    {
+      "alias": "finance_education_active",
+      "collection": "finance_education_v1_755be30b6a2d",
+      "detail": "compatible collection finance_education_v1_755be30b6a2d"
+    },
+    {
+      "alias": "tax_education_active",
+      "collection": "tax_education_v1_9b31ab2354ea",
+      "detail": "compatible collection tax_education_v1_9b31ab2354ea"
+    }
+  ],
+  "schema_version": "1",
+  "secret_payloads_recorded": false,
+  "source_qdrant_version": "1.20.0",
+  "status": "qualified",
+  "target": {
+    "endpoint": "https://57c4d676-360a-4f1a-aad3-92d775292673.us-central1-0.gcp.cloud.qdrant.io/",
+    "qdrant_version": "1.20.0"
+  },
+  "transfers": [
+    {
+      "action": "uploaded_snapshot",
+      "collection": "finance_education_v1_755be30b6a2d",
+      "point_count": 106,
+      "snapshot_sha256": "c3adb453b30bb1b0cafb89a1f7ad0b393dd78b297d3f9da57e8b2fa1f913a792",
+      "snapshot_size_bytes": 2797568,
+      "source_validation": "compatible collection finance_education_v1_755be30b6a2d; manifest_match=approved_evaluation_artifact_path_relocation(artifacts/m1/finance_education_v1_755be30b6a2d.evaluation.json->artifacts/knowledge/finance-education/finance_education_v1_755be30b6a2d.evaluation.json)",
+      "target_validation": "compatible collection finance_education_v1_755be30b6a2d; manifest_match=approved_evaluation_artifact_path_relocation(artifacts/m1/finance_education_v1_755be30b6a2d.evaluation.json->artifacts/knowledge/finance-education/finance_education_v1_755be30b6a2d.evaluation.json)"
+    },
+    {
+      "action": "uploaded_snapshot",
+      "collection": "finance_education_v1_fcecb8c15493",
+      "point_count": 30,
+      "snapshot_sha256": "f879ca680739ca5b5feacc91dc5f32a409fab33fd2b1ac765e15ece8df8928c8",
+      "snapshot_size_bytes": 1549824,
+      "source_validation": "compatible collection finance_education_v1_fcecb8c15493; manifest_match=approved_evaluation_artifact_path_relocation(artifacts/m1/finance_education_v1_fcecb8c15493.evaluation.json->artifacts/knowledge/finance-education/finance_education_v1_fcecb8c15493.evaluation.json)",
+      "target_validation": "compatible collection finance_education_v1_fcecb8c15493; manifest_match=approved_evaluation_artifact_path_relocation(artifacts/m1/finance_education_v1_fcecb8c15493.evaluation.json->artifacts/knowledge/finance-education/finance_education_v1_fcecb8c15493.evaluation.json)"
+    },
+    {
+      "action": "uploaded_snapshot",
+      "collection": "tax_education_v1_9b31ab2354ea",
+      "point_count": 6295,
+      "snapshot_sha256": "aadf0076cc02f139966e9078c4c8a1a0c92a44f4f9f035bfe9af7acff0a0caea",
+      "snapshot_size_bytes": 62911488,
+      "source_validation": "compatible collection tax_education_v1_9b31ab2354ea; manifest_match=approved_evaluation_artifact_path_relocation(artifacts/m1/tax_education_v1_9b31ab2354ea.evaluation.json->artifacts/knowledge/tax-education/tax_education_v1_9b31ab2354ea.evaluation.json)",
+      "target_validation": "compatible collection tax_education_v1_9b31ab2354ea; manifest_match=approved_evaluation_artifact_path_relocation(artifacts/m1/tax_education_v1_9b31ab2354ea.evaluation.json->artifacts/knowledge/tax-education/tax_education_v1_9b31ab2354ea.evaluation.json)"
+    },
+    {
+      "action": "uploaded_snapshot",
+      "collection": "tax_education_v1_f2fef46b0f88",
+      "point_count": 4735,
+      "snapshot_sha256": "b93048dbb3d0f6f547c4b5b5a1b1fa50d4fd23c7805f6afeb6d5168f03305f86",
+      "snapshot_size_bytes": 47367168,
+      "source_validation": "compatible collection tax_education_v1_f2fef46b0f88; manifest_match=approved_evaluation_artifact_path_relocation(artifacts/m1/tax_education_v1_f2fef46b0f88.evaluation.json->artifacts/knowledge/tax-education/tax_education_v1_f2fef46b0f88.evaluation.json)",
+      "target_validation": "compatible collection tax_education_v1_f2fef46b0f88; manifest_match=approved_evaluation_artifact_path_relocation(artifacts/m1/tax_education_v1_f2fef46b0f88.evaluation.json->artifacts/knowledge/tax-education/tax_education_v1_f2fef46b0f88.evaluation.json)"
+    }
+  ]
+}

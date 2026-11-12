@@ -1,10 +1,8 @@
 # M11 delivery report — Staging infrastructure foundation
 
-Status: Staging and production keyless identity qualified; managed-state migration, synthetic
-preparation, and retention cleanup passed; the billable on-demand runtime is absent, the approved
-private-networking foundation remains, and the workload create/no-bypass/destroy lifecycle has been
-exercised; live knowledge and edge qualification remain pending and real-service recovery deferred |
-2026-11-11
+Status: Staging and production keyless identity qualified; managed-state migration, retention, and
+workload lifecycle passed; the disposable `db-g1-small` runtime is active and live shared knowledge
+is qualified; edge qualification remains pending and real-service recovery is deferred | 2026-11-12
 
 ## Scope and decisions
 
@@ -13,6 +11,10 @@ under accepted ADR-019/ADR-029 and proposed ADR-030. It implements the approved 
 staging foundation in GCP project `comfforts-369117`, region `us-west1`. It does not deploy a Cloud
 Run workload, configure load balancing/IAP/DNS, transfer Qdrant collections, enter secret payloads,
 or broaden any provider entitlement.
+
+Later M11 slices deployed and exercised the workload, destroyed it, recreated the current
+disposable runtime, and qualified the shared-knowledge release. Those later outcomes are reconciled
+below without changing the historical scope of this foundation slice.
 
 The corrected MVP target is an on-demand `db-g1-small` demo runtime with an empty store on every
 creation and explicit data loss on destroy. The provisioned `db-f1-micro`, seven-backup, and
@@ -54,12 +56,10 @@ The historical foundation qualification record is
 - GitHub `staging` and `production` environments require reviewer `hankgalt`, permit the approved
   single-operator self-review model, and accept deployments only from `main`. Each environment
   stores only the project ID, WIF provider identifier, and deploy-service-account identifier.
-- The billable staging runtime is absent. Cloud SQL inventory is empty, and its application
-  database, IAM users, Cloud Run jobs, service accounts/bindings, subnetwork, and regional Secret
-  Manager containers/versions have been removed. Terraform owns no secret payload.
-- Terraform state retains exactly the `aifa-staging` VPC, its allocated private-service internal
-  range, and Service Networking connection. They have [no hourly connection or internal-address
-  charge](https://cloud.google.com/vpc/network-pricing) and are reused by the next demo runtime.
+- The reviewed teardown removed the earlier billable staging runtime and retained exactly the
+  `aifa-staging` VPC, allocated private-service internal range, and Service Networking connection.
+  The current `db-g1-small` runtime was subsequently recreated from that foundation for shared-
+  knowledge qualification. Terraform owns no secret payload.
 - Capability-oriented Terraform modules, a non-secret operator wizard, a plan-only GitHub workflow,
   policy tests, and release evidence are committed under their infrastructure, delivery, contract,
   test, and release owners.
@@ -142,8 +142,9 @@ it did not capture credentials.
 
 This work does not change application authorization or provider rights. Viewer live-provider access
 remains denied by the existing identity/provider policy, deployed response caching remains disabled,
-and the Qdrant Free cluster remains a separate shared-knowledge exception pending slice 6 transfer
-qualification.
+and the Qdrant Free cluster remains a separate shared-knowledge exception. Slice 6 transfer,
+fixed-qrels, rollback/restoration, read-only runtime-key, and release-key cleanup qualification now
+passes without broadening provider rights.
 
 ## Remaining MVP gates and deferred hardening
 
@@ -173,16 +174,18 @@ qualification.
   backups.
 - Recovered-target validation, backup/restore, PITR, measured RPO/RTO, and recovery final-drift
   evidence remain incomplete and are explicitly deferred post-MVP hardening.
-- The staging workload and external-origin denial were exercised before the reviewed teardown; no
-  external edge exists yet, so IAP, TLS, and URL-map controls remain unqualified.
-- The billable runtime is absent after the reviewed `db-g1-small` create/deploy/destroy lifecycle;
-  only the approved three-resource networking foundation remains.
-- Collection transfer/readiness, DNS/TLS/IAP cutover, critical feature-parity smoke, and the
-  private-demo portion of EVAL-20 remain pending MVP gates. The repository now defines the exact
-  snapshot transfer, fixed-qrels, alias rollback, runtime read-only, and release-key cleanup path,
-  but live Qdrant execution remains pending. Collection rollback depth beyond that immediate proof,
-  integrated capacity/soak/SLO/alerting, incident rehearsal, and application/infrastructure rollback
-  remain post-MVP hardening.
+- The current on-demand runtime was recreated for shared-knowledge qualification. Read-only
+  2026-11-12 inventory found Cloud SQL `RUNNABLE`, all three operator jobs present, and both Cloud
+  Run services `Ready`, with internal/load-balancer ingress, disabled default URLs, and no anonymous
+  IAM. No external edge exists yet, so IAP, TLS, and URL-map controls remain unqualified.
+- Live collection transfer/readiness is qualified by the revision-scoped evidence for
+  `a737f8e9e935f8afc05e16fc7148e3a185b32086`: four snapshots, both qrel suites, alias
+  rollback/restoration, runtime write denial, credential-free provider readback, and release-key
+  cleanup passed.
+- Runtime-key rotation, DNS/TLS/IAP cutover, critical feature-parity smoke, and the remaining
+  private-demo portion of EVAL-20 are pending MVP gates. Collection rollback depth beyond the
+  immediate proof, integrated capacity/soak/SLO/alerting, incident rehearsal, and
+  application/infrastructure rollback remain post-MVP hardening.
 - Proposed ADR-030 remains Proposed until the corrected private-demo M11 threat and release
   qualification passes; that acceptance will not imply production readiness.
 
@@ -200,3 +203,4 @@ qualification.
 - `backend/artifacts/release/deployment/staging-foundation.v1.json`
 - `backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json`
 - `backend/artifacts/release/deployment/delivery-controls.v1.json`
+- `backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json`
