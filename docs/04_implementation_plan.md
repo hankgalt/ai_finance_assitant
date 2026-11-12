@@ -493,24 +493,28 @@ production smoke both passed after required review. The reviewed retry applied d
 ordering and removed the remaining Cloud SQL instance, IAM users, and other billable staging
 runtime resources. Only the VPC, allocated private-service range, and Service Networking connection
 remain because Google retains deleted Cloud SQL producer networking for up to four days. The
-approved exact-residue acceptance is locally qualified but not yet applied. The staging workload, knowledge transfer,
-lifecycle completion/recreation evidence, edge, and no-direct-
-workload-bypass qualification remain MVP stop gates, so slice 5 is not complete and no internet-
-facing workload is claimed operational. The separate-state frontend/backend Terraform, migration-
-first lifecycle ordering, standard Secret Manager access pattern, and direct-origin verification
-procedure are now defined locally but remain unapplied and unqualified. Real-service recovery is
-deferred post-MVP hardening.
+approved exact-residue acceptance subsequently ran against staging and confirmed that the billable
+runtime was absent with only the exact networking foundation retained. A later reviewed up run
+recreated the empty `db-g1-small` runtime, migrated it, deployed both pinned application services,
+and verified internal/load-balancer ingress, disabled default URLs, absent anonymous IAM, and failed
+direct-origin requests; the reviewed down run then removed the runtime again. Google normalizes the
+configured Cloud Run launch-stage metadata from `BETA` to `GA`, so Terraform now ignores only that
+metadata while continuing to manage and verify the security-relevant disabled-URL and ingress
+fields. Slice 5's workload/lifecycle boundary is exercised; no internet-facing edge is claimed
+operational. Slice 6's snapshot-transfer, least-privilege key, fixed-qrels, activation, rollback,
+and credential-free provider-boundary workflow is implemented and locally qualified but has not
+yet run against Qdrant Cloud. Real-service recovery is deferred post-MVP hardening.
 
 **Remaining private-demo MVP sequence**
 
-1. Merge the exact-residue acceptance and rerun the staging-only down entry point. It must confirm
-   that Cloud SQL is absent and that Terraform contains only the approved private-networking
-   foundation, then exit successfully without recreating or deleting it. Use the up entry point
-   only when a demo environment is needed. Do not run the recovery wizard.
-2. Deploy the pinned backend and frontend revisions to staging, execute migration/retention setup,
-   and prove the Cloud Run default URL, anonymous invocation, and every non-IAP origin fail closed.
-3. Transfer and activate the existing qualified Finance and Tax collections in the selected Qdrant
-   cluster, supply secret values only through Secret Manager, and pass authenticated readiness.
+1. Merge the shared-knowledge release implementation and recreate the demo runtime with a
+   cluster-wide read-only Qdrant runtime key entered directly in Secret Manager. Do not run the
+   deferred recovery wizard.
+2. Run the revision-scoped shared-knowledge operator to transfer the exact current and rollback
+   Finance/Tax snapshots, pass fixed qrels, prove alias rollback/restoration and runtime write
+   denial, revoke the temporary manage/write release key, and record secret-free evidence.
+3. Add and qualify the separately reviewable focused runtime-key rotation procedure before edge
+   work, without replaying Cloud SQL provisioning or the complete demo-runtime-up path.
 4. Configure the exact `/finance_assistant` load-balancer route, HTTPS, IAP owner allow-list, stable
    DNS target, and registrar record. Keep viewer admission and viewer live-provider use disabled
    until separately approved.

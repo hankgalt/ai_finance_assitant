@@ -2,8 +2,8 @@
 
 Status: Staging and production keyless identity qualified; managed-state migration, synthetic
 preparation, and retention cleanup passed; the billable on-demand runtime is absent, the approved
-private-networking foundation remains, and exact-residue acceptance is locally qualified but not
-applied; workload/edge/knowledge/no-bypass qualification pending and real-service recovery deferred |
+private-networking foundation remains, and the workload create/no-bypass/destroy lifecycle has been
+exercised; live knowledge and edge qualification remain pending and real-service recovery deferred |
 2026-11-11
 
 ## Scope and decisions
@@ -30,7 +30,9 @@ remaining Cloud SQL instance, users, jobs, service identities, subnetwork, and s
 Google retains deleted Cloud SQL producer networking for up to four days, so the VPC, allocated
 internal range, and Service Networking connection remain as the approved foundation. The down entry
 point now accepts only that exact residue after an independent empty Cloud SQL inventory; any other
-remainder fails closed. That acceptance correction is locally qualified but not yet applied.
+remainder fails closed. The corrected path subsequently executed against staging, verified the
+exact residue, and exited successfully; its empty-inventory filter and expected-residue messaging
+are now also corrected.
 
 The machine-readable desired-state boundary is
 [`contracts/deployment/infrastructure-policy.v1.json`](../contracts/deployment/infrastructure-policy.v1.json).
@@ -171,17 +173,16 @@ qualification.
   backups.
 - Recovered-target validation, backup/restore, PITR, measured RPO/RTO, and recovery final-drift
   evidence remain incomplete and are explicitly deferred post-MVP hardening.
-- No workload or external edge exists yet, so direct-workload bypass, IAP, TLS, and URL-map controls
-  are not yet testable and are not claimed operational.
-- The billable runtime is absent. Merge the exact-residue acceptance, then rerun the down entry
-  point; it must confirm empty Cloud SQL inventory and only the approved three-resource networking
-  foundation without recreating or deleting it. Clean `db-g1-small` recreation evidence remains an
-  MVP gate.
-- Collection transfer/readiness, staging workload deployment, on-demand `db-g1-small`
-  destroy/recreate, DNS/TLS/IAP cutover, direct-origin denial, critical feature-parity smoke, and the
-  private-demo portion of EVAL-20 remain pending MVP gates. Collection rollback depth, integrated
-  capacity/soak/SLO/alerting, incident rehearsal, and application/infrastructure rollback remain
-  post-MVP hardening.
+- The staging workload and external-origin denial were exercised before the reviewed teardown; no
+  external edge exists yet, so IAP, TLS, and URL-map controls remain unqualified.
+- The billable runtime is absent after the reviewed `db-g1-small` create/deploy/destroy lifecycle;
+  only the approved three-resource networking foundation remains.
+- Collection transfer/readiness, DNS/TLS/IAP cutover, critical feature-parity smoke, and the
+  private-demo portion of EVAL-20 remain pending MVP gates. The repository now defines the exact
+  snapshot transfer, fixed-qrels, alias rollback, runtime read-only, and release-key cleanup path,
+  but live Qdrant execution remains pending. Collection rollback depth beyond that immediate proof,
+  integrated capacity/soak/SLO/alerting, incident rehearsal, and application/infrastructure rollback
+  remain post-MVP hardening.
 - Proposed ADR-030 remains Proposed until the corrected private-demo M11 threat and release
   qualification passes; that acceptance will not imply production readiness.
 

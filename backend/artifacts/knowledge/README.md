@@ -8,3 +8,9 @@ Current active collections after the 2026-10-31 governed corpus-breadth, direct-
 For each collection, `.manifest.json` records source/document versions and the ready collection contract, `.evaluation.json` records the dense/sparse/hybrid comparison, and `.run.json` records initial candidate creation. Timestamped `.run-*.json` files record unchanged evaluations and activation; unchanged runs must show `created: false` and `points_written: 0`.
 
 The timestamped activation records for the current collections preserve `finance_education_v1_fcecb8c15493` and `tax_education_v1_f2fef46b0f88` as their immediate rollback targets. The `rollback-tax_education-20261027T224905Z.json` and `rollback-tax_education-20261027T224906Z.json` files remain the retained exercised rollback-and-restore transcript. Earlier collection generations and rollback files are retained as development and recovery evidence; they are not active release candidates. Milestone delivery history remains in `docs/M1_delivery_report.md`.
+
+The deployed release contract is `contracts/deployment/knowledge-release.v1.json`. After a live
+run, `deployment/` contains revision-scoped, secret-free snapshot transfer, fixed-qrels,
+activation/rollback, runtime read-only, and temporary release-key cleanup evidence. The presence of
+the workflow alone does not mean Qdrant Cloud has been populated; only a `qualified` live record
+supports that claim.

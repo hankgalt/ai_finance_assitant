@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "terraform_and_lifecycle_defined_not_applied",
+  "status": "staging_qualified_then_destroyed",
   "scope": {
     "milestone": "M11",
     "requirements": [
@@ -16,8 +16,8 @@
     ],
     "decisions": ["ADR-019", "ADR-029", "ADR-030-proposed"],
     "evaluations": ["EVAL-19-partial", "EVAL-20-partial"],
-    "cloud_resources_mutated": false,
-    "terraform_applied": false,
+    "cloud_resources_mutated": true,
+    "terraform_applied": true,
     "secret_payloads_recorded": false
   },
   "terraform": {
@@ -53,20 +53,23 @@
     "payload_allowed_in_github": false,
     "cloud_run_injection": "environment_numeric_version",
     "latest_version_allowed": false,
-    "destroyed_with_clean_runtime": true
+    "destroyed_with_clean_runtime": true,
+    "release_secret_separate": true,
+    "release_secret_injected_into_application": false
   },
   "qualification": {
     "local_static_and_contract_tests": "passed_406_backend_tests_8_skipped_4_deselected",
     "terraform_validation": "passed_staging_and_staging_workloads",
-    "live_workload_apply": "pending_after_merge",
-    "direct_origin_denial": "pending_after_merge",
-    "destroy_recreate": "pending_after_merge"
+    "live_workload_apply": "passed_then_destroyed",
+    "direct_origin_denial": "passed_before_destroy",
+    "destroy_recreate": "passed",
+    "launch_stage_normalization": "ignored_metadata_only_security_fields_still_managed"
   },
   "limitations": [
-    "No GCP workload, secret version, database, or edge resource was created by this implementation change.",
-    "Disabling the default Cloud Run URL is currently represented by the provider as a BETA launch-stage setting and must be confirmed by live readback.",
+    "The qualified staging runtime was intentionally destroyed after the create/deploy/no-bypass lifecycle; only the approved networking foundation remains.",
+    "Google reports launch_stage as GA after accepting the BETA-gated disabled-default-URL field; Terraform ignores only launch_stage and continues to verify the live security annotation.",
     "The fail-closed IAP audience sentinel must be replaced by the exact load-balancer backend-service audience during the edge slice.",
-    "Qdrant collections are not transferred or activated by this slice, so authenticated application readiness remains pending.",
+    "The Qdrant release workflow is implemented separately but has not transferred or activated the remote collections, so authenticated application readiness remains pending.",
     "HTTPS, load balancing, IAP allow-list admission, DNS, and deployed browser journeys remain later MVP gates.",
     "Backup/PITR, HA, disaster recovery, capacity, SLO, alerting, and full rollback remain deferred post-MVP hardening."
   ],

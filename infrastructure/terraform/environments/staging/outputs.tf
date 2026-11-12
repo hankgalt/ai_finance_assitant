@@ -30,6 +30,10 @@ output "qdrant_runtime_secret_id" {
   value = google_secret_manager_secret.qdrant_runtime.secret_id
 }
 
+output "qdrant_release_secret_id" {
+  value = google_secret_manager_secret.qdrant_release.secret_id
+}
+
 output "managed_state_job_names" {
   value = module.managed_state_jobs.job_names
 }

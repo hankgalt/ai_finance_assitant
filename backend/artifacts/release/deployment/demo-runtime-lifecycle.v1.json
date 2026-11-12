@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "runtime_absent_networking_acceptance_defined_not_applied",
+  "status": "runtime_create_deploy_destroy_qualified",
   "scope": {
     "milestone": "M11",
     "requirements": ["PR-017", "QR-005", "QR-010", "QR-014", "QR-015"],
@@ -49,7 +49,11 @@
       "service_networking_connection"
     ],
     "service_producer_release_window": "up_to_four_days",
-    "networking_acceptance_fix_applied": false
+    "networking_acceptance_fix_applied": true,
+    "subsequent_create": "empty_db_g1_small_created_and_migrated",
+    "application_workloads": "backend_and_frontend_ready_with_pinned_digests",
+    "direct_origin": "default_urls_disabled_anonymous_iam_absent_requests_rejected",
+    "subsequent_destroy": "runtime_absent_exact_networking_foundation_retained"
   },
   "persistent_foundation": [
     "protected_terraform_state",
@@ -62,7 +66,7 @@
     "cloud_sql_instance_and_database_users",
     "managed_state_operator_jobs",
     "staging_service_accounts_and_bindings",
-    "regional_secret_containers_and_versions"
+    "standard_secret_containers_and_versions"
   ],
   "security": {
     "clean_merged_main_required": true,
@@ -107,8 +111,8 @@
   "limitations": [
     "The billable demo runtime is absent. The staging VPC, private-service allocated range, and Service Networking connection remain as the approved reproducibility foundation.",
     "Google can retain deleted Cloud SQL producer networking for up to four days; the down entry point accepts only the exact three-resource networking residue after independently confirming Cloud SQL is absent.",
-    "The networking-foundation acceptance fix is locally defined but must be merged before the down entry point is run again.",
-    "Destroy intentionally removes regional staging secret containers and versions; payloads must be re-entered for a later create.",
+    "The expected producer-networking reservation still appears as a Terraform provider error before the wrapper verifies the exact accepted residue and reports success.",
+    "Destroy intentionally removes standard staging secret containers and versions; payloads must be re-entered for a later create.",
     "No backup, PITR, RPO, RTO, availability, or production-readiness claim is made."
   ]
 }

@@ -325,6 +325,15 @@ def test_validate_active_accepts_a_compatible_ready_collection(
     assert detail == "finance_active resolves to compatible collection finance_v1"
 
 
+def test_validate_collection_does_not_require_an_alias(store: QdrantKnowledgeStore) -> None:
+    _ready(store)
+
+    compatible, detail = store.validate_collection("finance_v1", _compatibility())
+
+    assert compatible is True
+    assert detail == "compatible collection finance_v1"
+
+
 def test_validate_active_reports_missing_alias(store: QdrantKnowledgeStore) -> None:
     assert store.validate_active("finance_active", _compatibility()) == (
         False,

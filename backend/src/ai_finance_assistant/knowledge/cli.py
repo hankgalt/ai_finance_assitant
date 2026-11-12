@@ -70,6 +70,15 @@ def _alias(logical_kb: LogicalKnowledgeBase) -> str:
     return f"{logical_kb.value}_active"
 
 
+def _store(args: argparse.Namespace) -> QdrantKnowledgeStore:
+    api_key: str | None = None
+    if args.qdrant_api_key_file is not None:
+        api_key = args.qdrant_api_key_file.read_text(encoding="utf-8").strip()
+        if not api_key or any(character.isspace() for character in api_key):
+            raise ValueError("Qdrant API key input must contain one non-empty token")
+    return QdrantKnowledgeStore(args.qdrant_url, api_key=api_key)
+
+
 def _run(args: argparse.Namespace) -> int:
     logical_kb = _logical_kb(args.kb)
     artifacts_dir = args.artifacts_dir / logical_kb.value.replace("_", "-")
@@ -78,7 +87,7 @@ def _run(args: argparse.Namespace) -> int:
     if any(case.filters.logical_kb != logical_kb for case in qrels):
         raise ValueError("qrels logical knowledge base does not match --kb")
 
-    store = QdrantKnowledgeStore(args.qdrant_url)
+    store = _store(args)
     encoder = FastEmbedEncoder()
     service = OfflineIngestionService(
         fetcher=CachedSourceFetcher(
@@ -155,7 +164,7 @@ def _run(args: argparse.Namespace) -> int:
 def _rollback(args: argparse.Namespace) -> int:
     logical_kb = _logical_kb(args.kb)
     artifacts_dir = args.artifacts_dir / logical_kb.value.replace("_", "-") / "rollback"
-    store = QdrantKnowledgeStore(args.qdrant_url)
+    store = _store(args)
     result = store.activate(_alias(logical_kb), args.collection)
     record: dict[str, Any] = {
         "schema_version": "1",
@@ -176,7 +185,7 @@ def _rollback(args: argparse.Namespace) -> int:
 
 def _validate(args: argparse.Namespace) -> int:
     logical_kb = _logical_kb(args.kb)
-    compatible, detail = QdrantKnowledgeStore(args.qdrant_url).validate_active(
+    compatible, detail = _store(args).validate_active(
         _alias(logical_kb),
         CollectionCompatibility(
             logical_kb=logical_kb,
@@ -198,6 +207,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--qdrant-url",
         default=os.getenv("AIFA_QDRANT_URL", "http://127.0.0.1:6333"),
+    )
+    parser.add_argument(
+        "--qdrant-api-key-file",
+        type=Path,
+        help="read the Qdrant API key from a file or process-substitution descriptor",
     )
     parser.add_argument("--artifacts-dir", type=Path, default=_DEFAULT_ARTIFACTS)
     subparsers = parser.add_subparsers(dest="command", required=True)

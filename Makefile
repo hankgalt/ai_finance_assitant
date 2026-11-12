@@ -12,7 +12,7 @@ DEPLOYMENT_ENVIRONMENT ?= staging
 	mcp-stdio m9-check managed-state-migrate managed-state-status managed-state-retention \
 	managed-state-postgres-up managed-state-postgres-status managed-state-postgres-stop \
 	managed-state-postgres-check delivery-check infrastructure-check container-build \
-	mirror-merged-main-images set-deployment-image-variables
+	mirror-merged-main-images set-deployment-image-variables knowledge-release-staging
 
 backend-sync:
 	cd backend && uv sync
@@ -66,6 +66,9 @@ mirror-merged-main-images:
 
 set-deployment-image-variables:
 	./infrastructure/terraform/scripts/set-deployment-image-variables.sh "$(DEPLOYMENT_ENVIRONMENT)"
+
+knowledge-release-staging:
+	./infrastructure/terraform/scripts/release-shared-knowledge.sh
 
 frontend-install:
 	cd frontend && pnpm install
