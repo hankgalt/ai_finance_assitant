@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -10,6 +11,12 @@ CONTRACT = REPO_ROOT / "contracts/deployment/runtime-key-rotation.v1.json"
 SCRIPT = REPO_ROOT / "infrastructure/terraform/scripts/rotate-qdrant-runtime-key.sh"
 RELEASE_SCRIPT = REPO_ROOT / "infrastructure/terraform/scripts/release-shared-knowledge.sh"
 MAKEFILE = REPO_ROOT / "Makefile"
+INFRASTRUCTURE_POLICY = REPO_ROOT / "contracts/deployment/infrastructure-policy.v1.json"
+MANAGED_STATE = REPO_ROOT / "contracts/deployment/managed-state.v1.json"
+QUALIFIED_EVIDENCE = (
+    REPO_ROOT / "backend/artifacts/knowledge/deployment/"
+    "staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json"
+)
 
 
 def test_rotation_contract_pins_scope_order_and_provider_boundary() -> None:
@@ -42,6 +49,50 @@ def test_rotation_contract_pins_scope_order_and_provider_boundary() -> None:
         "live_provider_activation": "separate_owner_approval_required",
         "viewer_live_provider_access": "denied",
     }
+
+
+def test_qualified_rotation_evidence_matches_operational_contracts() -> None:
+    evidence = json.loads(QUALIFIED_EVIDENCE.read_text(encoding="utf-8"))
+    policy = json.loads(INFRASTRUCTURE_POLICY.read_text(encoding="utf-8"))
+    managed_state = json.loads(MANAGED_STATE.read_text(encoding="utf-8"))
+    relative_evidence = str(QUALIFIED_EVIDENCE.relative_to(REPO_ROOT))
+
+    assert evidence["schema_version"] == "1"
+    assert evidence["status"] == "qualified"
+    assert evidence["revision"] == "86146b6227285015665b84cbfa3f4ce0395cd618"
+    assert evidence["contract_sha256"] == hashlib.sha256(CONTRACT.read_bytes()).hexdigest()
+    assert evidence["rotation"] == {"old_secret_version": "1", "new_secret_version": "2"}
+    assert evidence["new_runtime_permission"] == {
+        "absence_status": 404,
+        "passed": True,
+        "probe": "delete_unique_confirmed_absent_collection",
+        "read_status": 200,
+        "write_status": 403,
+    }
+    assert evidence["terraform_plan"]["resource"] == (
+        "module.application_workloads.google_cloud_run_v2_service.backend"
+    )
+    assert evidence["terraform_plan"]["only_qdrant_secret_version_changed"] is True
+    assert evidence["deployed_backend"]["passed"] is True
+    assert evidence["deployed_backend"]["anonymous_invoker_absent"] is True
+    assert evidence["deployed_backend"]["default_url_disabled"] is True
+    assert evidence["deployed_backend"]["provider_boundary"]["passed"] is True
+    assert evidence["github_variable"]["readback_matches"] is True
+    assert evidence["old_runtime_key"] == {
+        "qdrant_rejection_status": 403,
+        "qdrant_revoked": True,
+        "secret_version_destroyed": True,
+    }
+    assert evidence["secret_payloads_recorded"] is False
+
+    operational = policy["operational_status"]
+    assert operational["runtime_key_rotation"] == "qualified"
+    assert operational["runtime_rotation_revision"] == evidence["revision"]
+    assert operational["runtime_key_rotation_evidence"] == relative_evidence
+    qdrant = managed_state["qdrant"]
+    assert qdrant["runtime_key_rotation_status"] == "qualified"
+    assert qdrant["runtime_rotation_revision"] == evidence["revision"]
+    assert qdrant["runtime_key_rotation_evidence"] == relative_evidence
 
 
 def test_rotation_wizard_uses_the_shared_library_and_seven_reviewed_stages() -> None:

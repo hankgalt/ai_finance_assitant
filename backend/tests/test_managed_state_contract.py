@@ -19,7 +19,9 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
     manifest = _manifest()
 
     assert manifest["schema_version"] == "1"
-    assert manifest["status"] == "active_disposable_runtime_knowledge_qualified_edge_pending"
+    assert manifest["status"] == (
+        "active_disposable_runtime_knowledge_rotation_qualified_edge_pending"
+    )
     assert manifest["private_demo_mvp"] == {
         "scope": "owner_operated_deployed_feature_parity",
         "target_machine_tier": "db-g1-small",
@@ -108,8 +110,12 @@ def test_qdrant_exception_and_single_operator_boundary_are_explicit() -> None:
     assert qdrant["runtime_key_rotation_contract"] == (
         "contracts/deployment/runtime-key-rotation.v1.json"
     )
-    assert qdrant["runtime_key_rotation_status"] == (
-        "procedure_implemented_live_qualification_pending"
+    assert qdrant["runtime_key_rotation_status"] == "qualified"
+    assert qdrant["runtime_rotation_revision"] == "86146b6227285015665b84cbfa3f4ce0395cd618"
+    assert qdrant["runtime_key_rotation_evidence"] == (
+        "backend/artifacts/knowledge/deployment/"
+        "staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-"
+        "v1-to-v2.json"
     )
     assert approval["repository"] == "hankgalt/ai_finance_assitant"
     assert approval["repository_visibility"] == "public"
