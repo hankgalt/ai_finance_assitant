@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.6 | Status: Product baseline plus repository-qualified M11 private-edge controls and corrected private-demo MVP qualification | 2026-11-12
+Version 1.7 | Status: Product baseline plus qualified M11 live private-edge controls; integrated private-demo MVP qualification remains pending | 2026-11-12
 
 ## 1. Evaluation principles
 

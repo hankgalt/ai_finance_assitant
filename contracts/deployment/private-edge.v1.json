@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "repository_implemented_live_cutover_pending",
+  "status": "live_edge_qualified_integrated_journeys_pending",
   "target": {
     "origin": "https://apps.comfforts.com",
     "base_path": "/finance_assistant",
@@ -115,7 +115,9 @@
   "qualification": {
     "repository_contract_tests": "required",
     "terraform_fmt_validate_plan": "required",
-    "live_iap_tls_dns_no_bypass": "pending_operator_run",
+    "live_iap_tls_dns_no_bypass": "qualified_evidence_recorded",
+    "live_evidence": "backend/artifacts/release/deployment/private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json",
+    "live_revision": "3327a231fcc197d4a8032de7b8a30523fecc1eda",
     "integrated_product_journeys": "next_slice"
   }
 }

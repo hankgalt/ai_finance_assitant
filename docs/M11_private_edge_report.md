@@ -1,15 +1,15 @@
 # M11 private-edge implementation report
 
-Status: repository qualified; live edge provisioned; final browser qualification pending | 2026-11-12
+Status: live edge qualified; integrated product journeys pending | 2026-11-12
 
 ## Scope and authority
 
 This report records the private-edge implementation slice for M11 under PR-017; QR-003, QR-005,
 QR-007, QR-010, QR-014, and QR-015; EVAL-19 and EVAL-20; accepted ADR-019 and ADR-029; and proposed
-ADR-030. The load balancer, certificate, OAuth client, IAP policy, and DNS record have been created,
-but final browser acceptance remains pending until the corrected frontend image is deployed and the
-reviewed qualification is rerun. Provider mode remains `credential_free`; this slice grants no
-provider usage, display, caching, or redistribution rights.
+ADR-030. The load balancer, certificate, OAuth client, IAP policy, DNS record, corrected frontend
+redirect, and owner browser acceptance are live-qualified. Provider mode remains `credential_free`;
+this slice grants no provider usage, display, caching, or redistribution rights. The assembled
+product journeys remain the next M11 slice and are not implied by this edge result.
 
 ## Implemented boundary
 
@@ -54,7 +54,7 @@ only initial IAP member is `vtalwar.w@comfforts.com`; viewer admission stays dis
 secret and all credentials are excluded from repository files, saved plans, state, workflows, and
 qualification evidence.
 
-## Live acceptance still required
+## Live acceptance result and remaining gate
 
 The first reviewed live apply created only the dependency-safe subset of edge resources before
 Google rejected both backend services because the configuration set `timeoutSec` on serverless NEG
@@ -65,23 +65,18 @@ the operator procedure now retries the TLS/IAP challenge every 15 seconds for at
 
 Owner login then exposed a frontend redirect defect: Nginx converted the canonical trailing-slash
 redirect into an absolute URL using its internal `http://...:8080` listener. The frontend now emits
-that redirect as a relative location, preserving the browser's public HTTPS origin and port. A new
-digest-pinned frontend image must be deployed before rerunning the reviewed edge qualification.
+that redirect as a relative location, preserving the browser's public HTTPS origin and port.
 
-The owner must rerun the reviewed up procedure from clean merged `main` after deploying the new
-frontend image. The existing OAuth client, enabled Secret Manager version, edge address, and A
-record are reused. Acceptance then requires:
+The reviewed rerun for revision `3327a231fcc197d4a8032de7b8a30523fecc1eda` qualified the corrected
+edge. Its secret-free evidence records an active certificate, HTTP-to-HTTPS redirect, exact frontend
+and API routing, signed-identity boundary, denied anonymous and direct-origin access, successful
+owner IAP access, authenticated unmatched-path 404, `credential_free` provider mode, and no
+Terraform drift. This closes the private-edge operator gate.
 
-1. the Google-managed certificate to become active and HTTP to redirect to HTTPS;
-2. anonymous access, unsigned identity, wrong audience, and direct Cloud Run origin access to fail;
-3. the owner to complete IAP login and the application to report the expected Principal and role;
-4. unmatched paths to fail closed and exact frontend/API base paths to route correctly;
-5. applied edge and workload plans to be drift-free; and
-6. EVAL-19/EVAL-20 deployed identity-isolation and feature-parity journeys to pass.
-
-Only after those checks may ADR-030 be considered for acceptance and the protected URL be described
-as an operational private-demo MVP. Viewer enablement, live providers, backup/recovery, HA,
-capacity/soak, formal SLOs, incident response, and production readiness remain outside this slice.
+EVAL-19/EVAL-20 integrated identity/isolation and deployed feature-parity journeys remain pending.
+ADR-030 therefore remains Proposed and the assembled deployment is not yet described as the
+qualified private-demo MVP. Viewer enablement, live providers, backup/recovery, HA, capacity/soak,
+formal SLOs, incident response, and production readiness remain outside this slice.
 
 ## Artifact paths
 
@@ -94,4 +89,5 @@ capacity/soak, formal SLOs, incident response, and production readiness remain o
   `infrastructure/terraform/scripts/configure-private-edge.sh`
 - Tests: `backend/tests/test_private_edge.py` and
   `backend/tests/test_staging_infrastructure.py`
-- Future live evidence: `backend/artifacts/release/deployment/private-edge-<revision>.v1.json`
+- Qualified live evidence:
+  `backend/artifacts/release/deployment/private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json`

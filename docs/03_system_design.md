@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.21 | Status: Product baseline plus implemented M11 access/adapter/delivery/private-edge boundaries, active private staging workload, qualified live shared knowledge, and qualified focused runtime-key rotation; live edge cutover and integrated deployed journeys remain incomplete | 2026-11-12
+Version 1.22 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, active private staging workload, qualified live shared knowledge and runtime-key rotation, and a qualified live private edge; integrated deployed journeys remain incomplete | 2026-11-12
 
 ## 1. Architecture principles
 

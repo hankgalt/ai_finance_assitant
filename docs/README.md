@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 3.4 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access, managed state, delivery controls, private workload lifecycle, live shared-knowledge release, and focused runtime-key rotation are qualified; the private-edge implementation is ready for reviewed live cutover and deployed product journeys remain pending; M10 planned | 2026-11-12
+Version 3.5 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access, managed state, delivery controls, private workload lifecycle, live shared-knowledge release, focused runtime-key rotation, and the live private edge are qualified; integrated deployed product journeys remain pending; M10 planned | 2026-11-12
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
