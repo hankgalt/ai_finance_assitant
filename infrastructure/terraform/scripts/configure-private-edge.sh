@@ -519,7 +519,7 @@ else
   step "Do not add provider scopes, a logo, viewers, or provider credentials."
   pause "Return here after the branding and External audience exist. Press Enter to continue."
   open_url "https://console.cloud.google.com/auth/clients?project=$PROJECT_ID"
-  step "Create a Web application client named Finance Assistant IAP."
+  step "Create or select the Web application client named Finance Assistant IAP."
   step "Copy its non-secret Client ID. Keep the Client secret in the Google console."
   ask IAP_OAUTH_CLIENT_ID "Paste only the OAuth Client ID:"
   [[ "$IAP_OAUTH_CLIENT_ID" =~ ^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$ ]] || {
@@ -529,17 +529,30 @@ else
   say "Add this exact Authorized redirect URI to that client:"
   say "https://iap.googleapis.com/v1/oauth/clientIds/${IAP_OAUTH_CLIENT_ID}:handleRedirect"
   pause "Return here after saving the redirect URI. Press Enter to continue."
-  open_url "https://console.cloud.google.com/security/secret-manager/secret/$OAUTH_SECRET_ID/versions?project=$PROJECT_ID"
-  step "Choose New version, paste the OAuth Client secret directly, and enable the version."
-  warn "Do not paste the secret into this terminal, GitHub, a Terraform variable, or chat."
-  pause "Return here after the enabled version exists. Press Enter to continue."
-  IAP_OAUTH_SECRET_VERSION=$(gcloud secrets versions list "$OAUTH_SECRET_ID" \
+  LATEST_ENABLED_SECRET_VERSION=$(gcloud secrets versions list "$OAUTH_SECRET_ID" \
     --project="$PROJECT_ID" \
     --filter='state=enabled' \
     --sort-by='~createTime' \
     --limit=1 \
     --format='value(name)')
-  IAP_OAUTH_SECRET_VERSION="${IAP_OAUTH_SECRET_VERSION##*/}"
+  LATEST_ENABLED_SECRET_VERSION="${LATEST_ENABLED_SECRET_VERSION##*/}"
+  if [[ "$LATEST_ENABLED_SECRET_VERSION" =~ ^[1-9][0-9]*$ ]] && \
+    confirm "Reuse enabled Secret Manager version $LATEST_ENABLED_SECRET_VERSION for this OAuth client?"; then
+    IAP_OAUTH_SECRET_VERSION="$LATEST_ENABLED_SECRET_VERSION"
+    say "Reusing the existing enabled secret version without reading its payload."
+  else
+    open_url "https://console.cloud.google.com/security/secret-manager/secret/$OAUTH_SECRET_ID/versions?project=$PROJECT_ID"
+    step "Choose New version, paste the OAuth Client secret directly, and enable the version."
+    warn "Do not paste the secret into this terminal, GitHub, a Terraform variable, or chat."
+    pause "Return here after the enabled version exists. Press Enter to continue."
+    IAP_OAUTH_SECRET_VERSION=$(gcloud secrets versions list "$OAUTH_SECRET_ID" \
+      --project="$PROJECT_ID" \
+      --filter='state=enabled' \
+      --sort-by='~createTime' \
+      --limit=1 \
+      --format='value(name)')
+    IAP_OAUTH_SECRET_VERSION="${IAP_OAUTH_SECRET_VERSION##*/}"
+  fi
 fi
 [[ "$IAP_OAUTH_SECRET_VERSION" =~ ^[1-9][0-9]*$ ]] || {
   warn "no enabled numeric OAuth secret version exists"

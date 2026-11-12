@@ -75,6 +75,7 @@ def test_private_edge_terraform_owns_exact_routes_tls_iap_and_invocation() -> No
     assert 'network_endpoint_type = "SERVERLESS"' in module
     assert 'resource "google_compute_backend_service" "application"' in module
     assert 'load_balancing_scheme = "EXTERNAL_MANAGED"' in module
+    assert "timeout_sec" not in module
     assert "enable_cdn            = false" in module
     assert "oauth2_client_id_wo" in module
     assert "oauth2_client_secret_wo" in module
@@ -188,6 +189,9 @@ def test_private_edge_wizard_never_accepts_secret_and_reviews_cutover_teardown()
     assert "Do not paste the secret into this terminal" in stages
     assert "add $OWNER_ACCOUNT as the only test user" in stages
     assert "aifa-staging-iap-oauth-client-secret" in stages
+    assert "Create or select the Web application client" in stages
+    assert "Reuse enabled Secret Manager version" in stages
+    assert "Reusing the existing enabled secret version without reading its payload" in stages
     assert "the shared plan contains changes outside the private-edge metadata boundary" in stages
     assert 'read_only_roles[\\"roles/iap.viewer\\"]' in stages
     assert 'terraform -chdir="$EDGE_ROOT" plan' in stages

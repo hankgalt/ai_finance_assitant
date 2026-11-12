@@ -55,6 +55,13 @@ qualification evidence.
 
 ## Live acceptance still required
 
+The first reviewed live apply created only the dependency-safe subset of edge resources before
+Google rejected both backend services because the configuration set `timeoutSec` on serverless NEG
+backends. It stopped before the workload audience or DNS changed. The correction removes only that
+unsupported backend-service field; Google supplies the non-configurable serverless timeout. The
+existing OAuth client, enabled Secret Manager version, partial Terraform state, private workloads,
+and fail-closed application audience are retained so a corrected rerun can reconcile in place.
+
 The owner must run the reviewed up procedure from clean merged `main`, create the external OAuth
 client, enter its secret directly in Google Secret Manager, approve the displayed Terraform plans,
 and add the exact A record only after the address exists. Acceptance then requires:
