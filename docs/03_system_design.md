@@ -237,6 +237,17 @@ News preserves publisher and publication time and distinguishes source text from
 
 M3 implements the application ports with deterministic credential-free adapters, conditional Alpha Vantage and Massive market adapters, and a conditional Tavily news adapter under ADR-024/025. `AIFA_PROVIDER_MODE` selects one bundle and `AIFA_MARKET_DATA_PROVIDER` selects one live market adapter before workflow execution. Each bundle uses one mode and one market adapter; missing credentials, insufficient budget, quota failure, or failed readiness returns an explicit unavailable state and never switches a running workflow to fake data or another live provider. The initial bounded in-memory cache is scoped to the provider process/workflow and is not a durable user record.
 
+The M11 deployed live-mode contract selects the existing `openai_live` ModelAdapter, Massive, and
+Tavily together only for the owner Principal. It adds no application setting name and does not
+change model routing, specialist generation, synthesis, or measured RunEvent token usage. Cloud Run
+receives each credential from an enabled numeric Secret Manager version; Terraform owns metadata and
+IAM but never a payload. The live workload uses ten model requests per Run, five market requests per
+operation and minute, five news requests per Run, ten news requests per minute, and a 180-second Run
+deadline. The durable provider cache is disabled because Massive Basic retention/display rights do
+not permit a shared deployment posture; existing bounded process-local caches remain. Readiness now
+fails closed when the selected live model lacks a key, terms approval, or request budget. The
+credential-free workload remains the default and is restored before live secrets are removed.
+
 M5 implements ADR-026 as a two-tier durable provider cache. The memory tier serves hot exact requests; the database tier stores normalized daily bars independently by provider, canonical instrument, interval, trading date, currency, adjustment basis, and schema/policy version. A range read reports complete, partial, stale, or missing coverage, fetches only provider-specific gaps plus a configurable recent refresh window, and upserts without combining providers. Every returned series retains the source provider, original market and retrieval timestamps, freshness, cache state, and applicable entitlement/retention label. Raw provider payloads, credentials, user portfolio context, and news article bodies are not stored in this cache. Current quotes and news keep short endpoint-specific retention unless a later decision approves a different lifecycle.
 
 Owner-only local mode may explicitly opt into long-term historical-bar retention under the ADR-026 risk exception when cache permission has not been confirmed. The setting and resulting records must state that permission is unverified, support administrative purge, and cannot satisfy readiness for a shared demonstration or public deployment. This local product-owner risk acceptance does not amend provider terms or establish redistribution rights.
@@ -480,7 +491,10 @@ the owner-only IAP policy, OAuth client, managed certificate, DNS record, exact 
 and direct-origin denial have revision-scoped evidence. The assembled owner browser/API/SSE product
 journey passed for merged revision `e66751dc36ed1cd342b0480248ce772c64896834`, including the
 critical deployed experiences, final identity/boundary readback, accessibility checks, and cleanup.
-That evidence qualifies only the owner-only `credential_free` private-demo MVP.
+That evidence qualifies only the owner-only `credential_free` private-demo MVP. The separate
+owner-approved live-provider contract is repository-implemented with reversible Terraform and
+Secret Manager operator paths; it remains unqualified until its merged-main live run records
+OpenAI measured usage, Massive provenance, Tavily attribution, readiness, and direct-origin denial.
 The selected region is `us-west1`. The current billable staging runtime is active and disposable. Its VPC,
 private-service allocated range, and Service Networking connection remain the approved
 reproducibility foundation; a reviewed teardown intentionally discards application state. The

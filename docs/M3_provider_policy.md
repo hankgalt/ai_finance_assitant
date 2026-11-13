@@ -1,8 +1,8 @@
 # M3 provider policy and activation gate
 
-Version: `provider-policy-v3`
+Version: `provider-policy-v4`
 
-Status: Implemented for credential-free use; live activation remains entitlement-gated
+Status: Credential-free qualified; owner-only Massive/Tavily deployment activation implemented with live run pending
 
 Decision: ADR-024, ADR-025
 
@@ -34,6 +34,14 @@ Alpha Vantage supplies symbol search, `GLOBAL_QUOTE`, and compact `TIME_SERIES_D
 
 Default private-demo workflow budgets are five selected-market requests and three Tavily requests. The application builds one provider bundle per backend process. Its rolling rate window (`AIFA_MARKET_PROVIDER_REQUESTS_PER_MINUTE`, default 5; `AIFA_NEWS_PROVIDER_REQUESTS_PER_MINUTE`, default 10), quote cache, and circuit are shared by every chat Run, Market page request, and MCP tool call. A request beyond the window fails fast with a retry time rather than waiting. The request budget applies per operation: each chat Run, Market page request, and MCP call opens its own budget scope. Neither control is a daily quota guard. Default local rate bounds are five Alpha Vantage or Massive requests/minute and ten Tavily requests/minute, with at most two concurrent calls per adapter and 128 in-memory cache entries. These conservative application bounds do not override a lower provider/account limit. A demo owner must configure lower values when the account entitlement is lower.
 
+The approved deployed owner-only profile raises the Tavily per-Run budget to five while retaining
+ten requests per minute; Massive remains five requests per operation and five requests per minute.
+The profile is fixed in the workload contract rather than selected by the browser. Massive uses the
+owner's Stocks Basic personal account and cannot be displayed to viewers or redistributed. Tavily
+uses the Researcher plan for minimized public finance-news discovery with pay-as-you-go disabled.
+The deployed durable provider cache is disabled; the existing bounded process-local quote/news
+caches remain part of adapter behavior and are not a retained shared provider-data store.
+
 Timeouts and 5xx failures may receive one bounded retry using exponential full jitter. Alpha Vantage HTTP 429 may use a bounded provider `Retry-After`; Massive HTTP 429 is not immediately retried because its public documentation does not establish a dependable reset header. Authentication, authorization, invalid request/symbol, malformed payload, local budget exhaustion, and plan exhaustion are not retried as transient failures. Alpha Vantage HTTP-200 `Note`/`Information` limit responses are likewise non-retryable because they can represent daily or plan exhaustion. A Massive aggregate body status of `DELAYED` is not an error when its bars pass the normal schema and range validation; other non-`OK` statuses remain safe typed failures. Three consecutive retryable failures open the default circuit for 30 seconds. A stale cache result is returned only within the stated stale-on-error window and retains its original retrieval/data timestamp, cache age, failure cause, and stale warning. Otherwise the result is unavailable.
 
 There is no automatic cross-provider fallback. Alpha Vantage and Massive are separately selected and separately entitlement-gated; a failure never combines their quote sets within one Run. Credential-free mode is also an explicit pre-Run selection, not a mid-Run fallback.
@@ -54,6 +62,12 @@ Before live mode may be called, record for each exact provider account:
 The Tavily query must contain public topics/security symbols only. An authorized `NewsAgentContext` supplies an explicit public query and bounded window. For a context-free Assistant request containing an uppercase ticker, News Synthesis constructs a minimized `<TICKER> company financial news` query. A routed request that explicitly asks for broad finance, financial, market, business, economic, or investing news uses the fixed minimized query `latest financial news`; it never forwards the raw user message. Both context-free shapes label a seven-day default window. Without an approved safe shape the agent clarifies before calling Tavily. Portfolio rows, positions, account identifiers, transactions, payment-card data, tax data, user prompts containing financial context, and credentials must not be sent. Returned links/snippets remain untrusted third-party data and require source attribution; Tavily discovery does not confer republication rights. Massive credentials are sent only in the authorization header, and no captured market payload is committed.
 
 No live call was made for M3 qualification because account-specific credentials and approvals were not available. The live-mode transcript therefore proves safe preflight refusal and zero external calls. This is within budget but is not evidence that live access, latency, data quality, or public-production rights are operational.
+
+M11 later records the exact owner approval and implements the staging activation at
+`contracts/providers/live-mode.v1.json`. That repository state does not supersede the historical M3
+result and does not itself prove a provider call. The live posture becomes qualified only when the
+merged-main activation operator records Massive provenance and Tavily attribution without retaining
+their payloads. Credential-free remains the default and rollback target.
 
 ## Opt-in live account qualification
 

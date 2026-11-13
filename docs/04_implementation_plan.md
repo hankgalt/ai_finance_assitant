@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.7 | Status: M0–M9.1 complete; M10 planned; M11 owner-only credential-free private-demo MVP qualified | 2026-11-12
+Version 3.8 | Status: M0–M9.1 complete; M10 planned; M11 credential-free MVP qualified and owner-only live-provider activation implemented with live run pending | 2026-11-12
 
 ## 1. Delivery rules
 
@@ -542,6 +542,19 @@ remains the isolation evidence because viewer admission was disabled during the 
    live-provider use, authenticated public-member access, and deferred production hardening disabled
    until separately approved.
 
+**Owner-only live-provider activation slice**
+
+The owner has now approved OpenAI `gpt-6.1-sol`, Massive Stocks Basic personal use, and Tavily
+Researcher for the owner Principal only. The repository implements an atomic live cutover and
+credential-free rollback, Terraform-owned Secret Manager metadata and runtime-only access, numeric
+version injection, provider/model readiness, fixed application budgets, provider-account spend
+attestation, boundary readback, and secret-free revision evidence. It deliberately adds no new
+`AIFA_*` setting name and preserves the existing `openai_live` route/generate/synthesize behavior.
+The current deployed qualification remains `credential_free`; `make live-providers-staging-up`
+must pass from clean merged `main` before the live posture may be called operational. Viewer
+admission, viewer live-provider use, Massive Business/redistribution rights, and application-level
+currency cost calculation remain deferred.
+
 **Owner decisions required before implementation slices**
 
 - Application access/isolation decisions resolved for slice 2: initial owner
@@ -557,7 +570,8 @@ remains the isolation evidence because viewer admission was disabled during the 
   every creation; explicit data loss on destroy; no MVP backup/PITR/RPO/RTO claim; deployed response
   cache disabled; the documented `us-central1` Qdrant Free exception; standard Secret Manager with
   user-managed replication restricted to `us-west1`, native numeric-version Cloud Run injection,
-  and Google-managed encryption; credential-free deployed providers; USD 100 soft monthly budget; and
+  and Google-managed encryption; credential-free deployed providers as the safe default; USD 100
+  soft monthly GCP budget; and
   sole public-repository approver `hankgalt` without independent review. The existing provisioned
   `db-f1-micro` plus backup/PITR settings are historical staging state to replace through Terraform,
   not the target or an MVP acceptance gate.

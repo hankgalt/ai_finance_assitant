@@ -38,6 +38,7 @@ def test_aggregate_health_is_live_but_truthfully_not_ready(client: TestClient) -
     assert {check["name"] for check in body["readiness"]["checks"]} == {
         "storage.sqlite",
         "security.local_bind",
+        "provider.model",
         "provider.market",
         "provider.news",
         "provider_cache.rights",
@@ -141,3 +142,47 @@ def test_unverified_live_cache_rights_fail_non_owner_readiness(
 
     assert cache.status == CheckStatus.FAILED
     assert "block" in cache.detail.casefold()
+
+
+def test_live_model_readiness_requires_key_terms_and_budget(tmp_path: Path) -> None:
+    settings = Settings(
+        mode="test",
+        storage_path=tmp_path / "application.sqlite3",
+        qdrant_url=None,
+        model_mode="openai_live",
+        openai_terms_approved=True,
+    )
+    database = SQLiteDatabase(settings.storage_path)
+    database.migrate()
+    database.close()
+
+    readiness = build_readiness(settings)
+    model = next(check for check in readiness.checks if check.name == "provider.model")
+
+    assert model.status == CheckStatus.FAILED
+    assert model.expected == {
+        "provider": "openai",
+        "mode": "openai_live",
+        "model": "gpt-6.1-sol",
+    }
+
+
+def test_live_model_readiness_reports_configuration_without_exposing_key(tmp_path: Path) -> None:
+    settings = Settings(
+        mode="test",
+        storage_path=tmp_path / "application.sqlite3",
+        qdrant_url=None,
+        model_mode="openai_live",
+        openai_api_key=SecretStr("qualification-key"),
+        openai_terms_approved=True,
+        model_request_budget=10,
+    )
+    database = SQLiteDatabase(settings.storage_path)
+    database.migrate()
+    database.close()
+
+    readiness = build_readiness(settings)
+    model = next(check for check in readiness.checks if check.name == "provider.model")
+
+    assert model.status == CheckStatus.READY
+    assert "qualification-key" not in model.model_dump_json()

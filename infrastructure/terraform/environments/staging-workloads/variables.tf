@@ -48,6 +48,59 @@ variable "qdrant_secret_version" {
   }
 }
 
+variable "provider_mode" {
+  type        = string
+  default     = "credential_free"
+  description = "Approved deployment provider mode."
+
+  validation {
+    condition     = contains(["credential_free", "live"], var.provider_mode)
+    error_message = "provider_mode must be credential_free or live."
+  }
+}
+
+variable "openai_secret_version" {
+  type        = string
+  default     = "0"
+  description = "Enabled numeric OpenAI secret version; required only in live mode."
+
+  validation {
+    condition = var.provider_mode == "credential_free" || can(regex(
+      "^[1-9][0-9]*$",
+      var.openai_secret_version,
+    ))
+    error_message = "openai_secret_version must be positive and numeric in live mode."
+  }
+}
+
+variable "massive_secret_version" {
+  type        = string
+  default     = "0"
+  description = "Enabled numeric Massive secret version; required only in live mode."
+
+  validation {
+    condition = var.provider_mode == "credential_free" || can(regex(
+      "^[1-9][0-9]*$",
+      var.massive_secret_version,
+    ))
+    error_message = "massive_secret_version must be positive and numeric in live mode."
+  }
+}
+
+variable "tavily_secret_version" {
+  type        = string
+  default     = "0"
+  description = "Enabled numeric Tavily secret version; required only in live mode."
+
+  validation {
+    condition = var.provider_mode == "credential_free" || can(regex(
+      "^[1-9][0-9]*$",
+      var.tavily_secret_version,
+    ))
+    error_message = "tavily_secret_version must be positive and numeric in live mode."
+  }
+}
+
 variable "iap_audience" {
   type        = string
   description = "Exact IAP backend-service JWT audience; backendServices/0 is the pre-edge fail-closed sentinel."

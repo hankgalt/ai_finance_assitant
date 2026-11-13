@@ -13,7 +13,8 @@ DEPLOYMENT_ENVIRONMENT ?= staging
 	managed-state-postgres-up managed-state-postgres-status managed-state-postgres-stop \
 	managed-state-postgres-check delivery-check infrastructure-check container-build \
 	mirror-merged-main-images set-deployment-image-variables knowledge-release-staging \
-	rotate-qdrant-runtime-key-staging private-edge-up private-edge-down qualify-private-demo
+	rotate-qdrant-runtime-key-staging private-edge-up private-edge-down qualify-private-demo \
+	live-providers-staging-up live-providers-staging-down
 
 backend-sync:
 	cd backend && uv sync
@@ -58,7 +59,7 @@ infrastructure-check:
 	cd infrastructure/terraform/environments/staging && terraform init -backend=false && terraform validate
 	cd infrastructure/terraform/environments/staging-workloads && terraform init -backend=false && terraform validate
 	cd infrastructure/terraform/environments/staging-edge && terraform init -backend=false && terraform validate
-	cd backend && uv run pytest -q tests/test_staging_infrastructure.py tests/test_private_edge.py tests/test_delivery_workflows.py
+	cd backend && uv run pytest -q tests/test_staging_infrastructure.py tests/test_private_edge.py tests/test_live_provider_deployment.py tests/test_delivery_workflows.py
 
 container-build:
 	docker build --file infrastructure/container/backend/Dockerfile --tag ai-finance-assistant-backend:local .
@@ -84,6 +85,12 @@ private-edge-down:
 
 qualify-private-demo:
 	./infrastructure/terraform/scripts/qualify-private-demo.sh
+
+live-providers-staging-up:
+	./infrastructure/terraform/scripts/live-providers-staging-up.sh
+
+live-providers-staging-down:
+	./infrastructure/terraform/scripts/live-providers-staging-down.sh
 
 frontend-install:
 	cd frontend && pnpm install

@@ -33,3 +33,9 @@ variable "backend_image" {
     error_message = "backend_image must use the approved us-west1 Artifact Registry and be pinned by sha256 digest."
   }
 }
+
+variable "live_provider_secrets_enabled" {
+  type        = bool
+  default     = false
+  description = "Create owner-only live-provider secret metadata and runtime access grants."
+}

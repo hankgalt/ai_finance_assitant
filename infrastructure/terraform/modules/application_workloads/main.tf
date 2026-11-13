@@ -5,7 +5,7 @@ locals {
     "@",
     "%40",
   )
-  backend_environment = {
+  credential_free_environment = {
     AIFA_MODE                            = "production"
     AIFA_HOST                            = "0.0.0.0"
     AIFA_PORT                            = "8080"
@@ -32,6 +32,51 @@ locals {
     AIFA_LANGSMITH_TRACING_ENABLED       = "false"
     AIFA_LANGSMITH_PROJECT               = "finance-assistant-${var.environment}"
   }
+  live_provider_environment = {
+    AIFA_PROVIDER_MODE                       = "live"
+    AIFA_MARKET_DATA_PROVIDER                = "massive"
+    AIFA_MASSIVE_TERMS_APPROVED              = "true"
+    AIFA_MASSIVE_ENTITLEMENT                 = "owner-only Massive Stocks Basic personal use; no viewer display or redistribution"
+    AIFA_MARKET_PROVIDER_REQUEST_BUDGET      = "5"
+    AIFA_MARKET_PROVIDER_REQUESTS_PER_MINUTE = "5"
+    AIFA_TAVILY_TERMS_APPROVED               = "true"
+    AIFA_TAVILY_ENTITLEMENT                  = "owner-only Tavily Researcher public-finance-news discovery; no personal financial context"
+    AIFA_NEWS_PROVIDER_REQUEST_BUDGET        = "5"
+    AIFA_NEWS_PROVIDER_REQUESTS_PER_MINUTE   = "10"
+    AIFA_MODEL_MODE                          = "openai_live"
+    AIFA_OPENAI_MODEL                        = "gpt-6.1-sol"
+    AIFA_OPENAI_TERMS_APPROVED               = "true"
+    AIFA_MODEL_REQUEST_BUDGET                = "10"
+    AIFA_API_RUN_DEADLINE_SECONDS            = "180"
+    AIFA_LOCAL_DEPLOYMENT_AUDIENCE           = "owner_only"
+    AIFA_PROVIDER_CACHE_ENABLED              = "false"
+  }
+  backend_environment = merge(
+    local.credential_free_environment,
+    var.provider_mode == "live" ? local.live_provider_environment : {},
+  )
+  backend_secret_environment = merge(
+    {
+      AIFA_QDRANT_API_KEY = {
+        secret  = var.qdrant_secret_id
+        version = var.qdrant_secret_version
+      }
+    },
+    var.provider_mode == "live" ? {
+      AIFA_OPENAI_API_KEY = {
+        secret  = var.openai_secret_id
+        version = var.openai_secret_version
+      }
+      AIFA_MASSIVE_API_KEY = {
+        secret  = var.massive_secret_id
+        version = var.massive_secret_version
+      }
+      AIFA_TAVILY_API_KEY = {
+        secret  = var.tavily_secret_id
+        version = var.tavily_secret_version
+      }
+    } : {},
+  )
 }
 
 resource "google_cloud_run_v2_service" "backend" {
@@ -87,12 +132,15 @@ resource "google_cloud_run_v2_service" "backend" {
         }
       }
 
-      env {
-        name = "AIFA_QDRANT_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = var.qdrant_secret_id
-            version = var.qdrant_secret_version
+      dynamic "env" {
+        for_each = local.backend_secret_environment
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = env.value.secret
+              version = env.value.version
+            }
           }
         }
       }

@@ -6,7 +6,9 @@ on:
       - ".github/workflows/terraform.yml"
       - "backend/tests/test_staging_infrastructure.py"
       - "backend/tests/test_private_edge.py"
+      - "backend/tests/test_live_provider_deployment.py"
       - "contracts/deployment/**"
+      - "contracts/providers/**"
       - "infrastructure/terraform/**"
   push:
     branches: [main]
@@ -14,7 +16,9 @@ on:
       - ".github/workflows/terraform.yml"
       - "backend/tests/test_staging_infrastructure.py"
       - "backend/tests/test_private_edge.py"
+      - "backend/tests/test_live_provider_deployment.py"
       - "contracts/deployment/**"
+      - "contracts/providers/**"
       - "infrastructure/terraform/**"
   workflow_dispatch:
 
@@ -64,6 +68,7 @@ jobs:
           uv run python -m pytest -q
           tests/test_staging_infrastructure.py
           tests/test_private_edge.py
+          tests/test_live_provider_deployment.py
 
   staging-plan:
     if: github.event_name == 'workflow_dispatch'
@@ -95,6 +100,7 @@ jobs:
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_backend_image: ${{ vars.GCP_BACKEND_IMAGE }}
+          TF_VAR_live_provider_secrets_enabled: ${{ vars.GCP_LIVE_PROVIDER_MODE == 'live' }}
         run: terraform plan -lock-timeout=5m -out=staging.tfplan
       - name: Initialize staging workload state
         working-directory: infrastructure/terraform/environments/staging-workloads
@@ -110,6 +116,10 @@ jobs:
           TF_VAR_frontend_image: ${{ vars.GCP_FRONTEND_IMAGE }}
           TF_VAR_qdrant_secret_version: ${{ vars.GCP_QDRANT_SECRET_VERSION }}
           TF_VAR_iap_audience: ${{ vars.GCP_IAP_AUDIENCE || '/projects/730340912967/global/backendServices/0' }}
+          TF_VAR_provider_mode: ${{ vars.GCP_LIVE_PROVIDER_MODE || 'credential_free' }}
+          TF_VAR_openai_secret_version: ${{ vars.GCP_OPENAI_SECRET_VERSION || '0' }}
+          TF_VAR_massive_secret_version: ${{ vars.GCP_MASSIVE_SECRET_VERSION || '0' }}
+          TF_VAR_tavily_secret_version: ${{ vars.GCP_TAVILY_SECRET_VERSION || '0' }}
         run: terraform plan -lock-timeout=5m -out=staging-workloads.tfplan
       - name: Initialize staging private-edge state
         if: vars.GCP_IAP_OAUTH_CLIENT_ID != '' && vars.GCP_IAP_OAUTH_SECRET_VERSION != ''

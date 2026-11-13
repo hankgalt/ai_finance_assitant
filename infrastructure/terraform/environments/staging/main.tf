@@ -32,6 +32,11 @@ locals {
       role     = "roles/cloudsql.instanceUser"
     }
   }
+  live_provider_secrets = {
+    openai  = "aifa-staging-openai-api-key"
+    massive = "aifa-staging-massive-api-key"
+    tavily  = "aifa-staging-tavily-api-key"
+  }
 }
 
 resource "google_service_account" "workload" {
@@ -134,6 +139,38 @@ resource "google_secret_manager_secret" "qdrant_release" {
 resource "google_secret_manager_secret_iam_member" "runtime_qdrant" {
   project   = var.project_id
   secret_id = google_secret_manager_secret.qdrant_runtime.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.workload["runtime"].email}"
+}
+
+resource "google_secret_manager_secret" "live_provider" {
+  for_each = var.live_provider_secrets_enabled ? local.live_provider_secrets : {}
+
+  project             = var.project_id
+  secret_id           = each.value
+  deletion_protection = false
+
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+
+  labels = {
+    application = "finance-assistant"
+    capability  = "live-provider"
+    environment = "staging"
+    managed-by  = "terraform"
+  }
+}
+
+resource "google_secret_manager_secret_iam_member" "runtime_live_provider" {
+  for_each = google_secret_manager_secret.live_provider
+
+  project   = var.project_id
+  secret_id = each.value.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.workload["runtime"].email}"
 }

@@ -396,9 +396,11 @@ def test_standard_qdrant_secrets_have_us_west1_replication_and_runtime_only_acce
     assert "postgres-runtime-dsn" not in staging
     assert "postgres-migration-dsn" not in staging
     assert "postgres-retention-dsn" not in staging
-    assert staging.count('role      = "roles/secretmanager.secretAccessor"') == 1
+    assert staging.count('role      = "roles/secretmanager.secretAccessor"') == 2
+    assert 'resource "google_secret_manager_secret" "live_provider"' in staging
+    assert 'resource "google_secret_manager_secret_iam_member" "runtime_live_provider"' in staging
     assert 'workload["runtime"].email' in staging
-    assert staging.count("deletion_protection = false") == 2
+    assert staging.count("deletion_protection = false") == 3
     assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 1
     assert "prevent_destroy" not in staging
 
@@ -409,7 +411,7 @@ def test_private_demo_runtime_resources_are_deleted_instead_of_abandoned() -> No
 
     assert "prevent_destroy" not in staging
     assert len(re.findall(r'deletion_policy\s*=\s*"DELETE"', staging)) == 1
-    assert staging.count("deletion_protection = false") == 2
+    assert staging.count("deletion_protection = false") == 3
     assert 'deletion_policy = "ABANDON"' not in staging
     assert "deletion_protection = false" in jobs
     assert "prevent_destroy" not in jobs
@@ -529,7 +531,8 @@ def test_demo_runtime_entry_points_review_exact_staging_plans_and_data_loss() ->
     assert 'terraform -chdir="$STAGING_ROOT" plan -destroy' in wizard
     assert 'terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"' in wizard
     assert "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data" in wizard
-    assert "Qdrant Secret Manager payload" in wizard
+    assert "Qdrant/live-provider Secret Manager payload" in wizard
+    assert "reset_live_provider_github_variables" in wizard
     assert 'terraform -chdir="$WORKLOAD_ROOT" plan -destroy' in wizard
     assert 'terraform -chdir="$WORKLOAD_ROOT" apply "$WORKLOAD_DESTROY_PLAN"' in wizard
     assert wizard.index('terraform -chdir="$WORKLOAD_ROOT" apply "$WORKLOAD_DESTROY_PLAN"') < (
@@ -604,6 +607,12 @@ def test_demo_runtime_down_accepts_only_networking_residue_after_provider_delay(
               *) exit 1 ;;
             esac
         """,
+        "gh": """
+                case "$*" in
+                  "auth status"|"variable set "*) exit 0 ;;
+                  *) exit 1 ;;
+                esac
+            """,
         "terraform": """
             printf '%s\\n' "$*" >> "$FAKE_COMMAND_LOG"
             case "$*" in

@@ -224,6 +224,20 @@ Session cleanup. Its secret-free evidence is
 `backend/artifacts/release/deployment/private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json`.
 ADR-030 is therefore Accepted only for the owner-only `credential_free` private-demo MVP.
 
+The owner has separately approved a reversible live-provider posture for the same owner-only edge:
+OpenAI `gpt-6.1-sol`, Massive Stocks Basic personal use, and Tavily Researcher. Viewer admission and
+viewer provider use remain disabled; Massive output must not be shown to another person under the
+selected individual plan. The deployed durable provider cache stays disabled, while the existing
+bounded process-local adapter caches remain unchanged. OpenAI may receive real application prompts,
+retrieved Finance/Tax context, and authorized Portfolio/Goal facts under the accepted account data
+posture; Responses storage remains disabled. Per-Run/request limits are ten model calls, five market
+calls, five news calls, a five-per-minute Massive limit, and a 180-second Run deadline. A USD 20
+monthly OpenAI hard limit is an owner-attested provider-account control, not an application
+currency-cost calculator or GCP budget. The repository now implements numeric-version Secret
+Manager injection, activation, readback, evidence, and credential-free rollback, but this live
+posture is not operational or qualified until the merged-main operator run passes and its
+revision-scoped evidence is committed.
+
 The corrected owner-approved MVP managed-state target uses single-zone Cloud SQL for PostgreSQL 17
 Enterprise in `us-west1` on `db-g1-small` with the service-minimum 10 GiB SSD. It holds distinct
 application, LangGraph checkpoint, and purgeable provider-cache boundaries; local development

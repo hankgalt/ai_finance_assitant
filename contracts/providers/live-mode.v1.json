@@ -1,0 +1,150 @@
+{
+  "schema_version": "1",
+  "status": "repository_implemented_live_run_pending",
+  "target": {
+    "environment": "staging",
+    "url": "https://apps.comfforts.com/finance_assistant",
+    "application_owner": "vtalwar.w@comfforts.com",
+    "audience": "owner_only",
+    "viewer_admission": "disabled"
+  },
+  "selection": {
+    "provider_mode": "live",
+    "model_mode": "openai_live",
+    "model": "gpt-6.1-sol",
+    "market_provider": "massive",
+    "news_provider": "tavily",
+    "credential_free_remains_default": true,
+    "automatic_fallback_allowed": false,
+    "openai_behavior_change": false
+  },
+  "rights": {
+    "openai": {
+      "account": "owner-selected API project",
+      "usage_tier": "record_at_activation_from_account",
+      "intended_use": "owner-only private demonstration",
+      "real_application_prompts_allowed": true,
+      "retrieved_finance_tax_context_allowed": true,
+      "portfolio_goal_facts_allowed": true,
+      "store": false,
+      "api_training_opt_in_approved": false,
+      "default_abuse_monitoring_retention_accepted": true,
+      "terms_approved": true
+    },
+    "massive": {
+      "plan": "Stocks Basic",
+      "account_use": "personal",
+      "intended_use": "subscribing owner only",
+      "viewer_display_allowed": false,
+      "redistribution_allowed": false,
+      "durable_provider_cache_allowed": false,
+      "process_local_cache_allowed": true,
+      "data_character": "end_of_day_two_year_history",
+      "requests_per_minute": 5,
+      "daily_limit": "not_published",
+      "terms_approved": true
+    },
+    "tavily": {
+      "plan": "Researcher",
+      "intended_use": "owner-only public finance-news discovery",
+      "personal_financial_context_allowed": false,
+      "generated_answers_enabled": false,
+      "raw_content_enabled": false,
+      "durable_cache_allowed": false,
+      "display": "owner_only_attributed_links_and_bounded_snippets",
+      "pay_as_you_go_enabled": false,
+      "monthly_credits": 1000,
+      "daily_limit": "not_published",
+      "source_rights_remain_separate": true,
+      "terms_approved": true
+    }
+  },
+  "operational_limits": {
+    "model_requests_per_run": 10,
+    "market_requests_per_operation": 5,
+    "market_requests_per_minute": 5,
+    "news_requests_per_run": 5,
+    "news_requests_per_minute": 10,
+    "run_deadline_seconds": 180,
+    "openai_monthly_usd_hard_limit": 20,
+    "openai_monthly_usd_hard_limit_enforcement": "provider_account_control_owner_attestation",
+    "application_monetary_cost_calculator": "not_implemented",
+    "gcp_budget_is_separate": true
+  },
+  "secrets": {
+    "metadata_owner": "terraform",
+    "payload_owner": "gcp_secret_manager_console_operator",
+    "replication_region": "us-west1",
+    "cloud_run_reference": "enabled_positive_numeric_version",
+    "github_payloads_allowed": false,
+    "repository_payloads_allowed": false,
+    "terraform_payloads_allowed": false,
+    "destroyed_with_demo_runtime": true,
+    "ids": {
+      "openai": "aifa-staging-openai-api-key",
+      "massive": "aifa-staging-massive-api-key",
+      "tavily": "aifa-staging-tavily-api-key"
+    }
+  },
+  "runtime_configuration": {
+    "new_application_environment_names": [],
+    "provider_cache_enabled": false,
+    "response_cache_adapter": "disabled",
+    "local_deployment_audience": "owner_only",
+    "iap_viewer_emails": [],
+    "settings": {
+      "AIFA_PROVIDER_MODE": "live",
+      "AIFA_MARKET_DATA_PROVIDER": "massive",
+      "AIFA_MASSIVE_TERMS_APPROVED": "true",
+      "AIFA_MARKET_PROVIDER_REQUEST_BUDGET": "5",
+      "AIFA_MARKET_PROVIDER_REQUESTS_PER_MINUTE": "5",
+      "AIFA_TAVILY_TERMS_APPROVED": "true",
+      "AIFA_NEWS_PROVIDER_REQUEST_BUDGET": "5",
+      "AIFA_NEWS_PROVIDER_REQUESTS_PER_MINUTE": "10",
+      "AIFA_MODEL_MODE": "openai_live",
+      "AIFA_OPENAI_MODEL": "gpt-6.1-sol",
+      "AIFA_OPENAI_TERMS_APPROVED": "true",
+      "AIFA_MODEL_REQUEST_BUDGET": "10",
+      "AIFA_API_RUN_DEADLINE_SECONDS": "180",
+      "AIFA_LOCAL_DEPLOYMENT_AUDIENCE": "owner_only",
+      "AIFA_PROVIDER_CACHE_ENABLED": "false"
+    }
+  },
+  "operator": {
+    "activate": "infrastructure/terraform/scripts/live-providers-staging-up.sh",
+    "rollback": "infrastructure/terraform/scripts/live-providers-staging-down.sh",
+    "activate_make_target": "live-providers-staging-up",
+    "rollback_make_target": "live-providers-staging-down",
+    "evidence_pattern": "backend/artifacts/providers/deployment/live-mode-<revision>.v1.json"
+  },
+  "qualification": {
+    "clean_merged_main_required": true,
+    "owner_iap_required": true,
+    "direct_origin_denial_rechecked": true,
+    "readiness_rechecked": true,
+    "model_usage_measurement_required": true,
+    "massive_provenance_required": true,
+    "tavily_attribution_required": true,
+    "raw_provider_output_committed": false,
+    "secret_payload_readback_allowed": false
+  },
+  "deferred": [
+    "viewer_live_provider_access",
+    "massive_business_or_redistribution_rights",
+    "application_currency_cost_calculator",
+    "provider_account_automated_spend_readback",
+    "public_or_general_authenticated_access"
+  ],
+  "rights_review": {
+    "reviewed_on": "2026-11-12",
+    "sources": [
+      "https://developers.openai.com/api/docs/guides/your-data",
+      "https://developers.openai.com/api/docs/guides/spend-limits",
+      "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "https://massive.com/pricing",
+      "https://massive.com/terms/market_data_terms.pdf",
+      "https://docs.tavily.com/documentation/api-credits",
+      "https://docs.tavily.com/documentation/rate-limits"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 # M4.1 OpenAI model selection record
 
-Status: Approved for private-demo qualification | Reviewed: 2026-10-28
+Status: Approved for owner-only deployed live activation; live run pending | Reviewed: 2026-11-12
 
 ## Decision
 
@@ -16,6 +16,16 @@ budget. Model-backed routing raises the current six-agent aggregate ceiling to s
 post-change live rerun is implied by the earlier approval. This is not approval to send real
 portfolio records or other sensitive user data during qualification.
 
+For the later M11 owner-only deployed activation, the owner approved sending real application
+prompts, retrieved Finance/Tax context, and authorized Portfolio/Goal facts to the selected OpenAI
+API project under its current data-control and retention posture. The deployed per-Run ceiling is
+ten model requests and the Run deadline is 180 seconds. The account must have a USD 20 monthly hard
+spend limit; its visible usage tier and that control are recorded as owner attestations during
+activation. The application continues to report provider token usage but has no approved monetary-
+cost calculator, so it must not represent the USD limit as an application-enforced currency budget.
+The existing `openai_live` route, specialist generation, and multi-agent synthesis behavior is
+unchanged.
+
 ## Fit against M4.1 criteria
 
 | Criterion | Finding and implementation consequence |
@@ -23,7 +33,7 @@ portfolio records or other sensitive user data during qualification.
 | Structured output | The model supports Structured Outputs and the Python SDK supports Pydantic parsing through `responses.parse`. The adapter accepts only `ModelOutput` v1 and fails closed on refusal, incomplete, or malformed output. |
 | Capability | The model supports low through max reasoning effort. Finance and Tax use `medium`; Portfolio, Market, Goal, and News use `low`. No vendor tools are enabled. |
 | Context limits | The published API context is much larger than this product needs. The application still caps serialized input at 40,000 characters and output at 1,200 tokens because provider capacity is not a privacy or cost budget. |
-| Privacy and training | OpenAI states that API data is not used for model training unless the account explicitly opts in. Responses requests set `store=False`; default abuse-monitoring retention can still be up to 30 days and was accepted only for the synthetic qualification. |
+| Privacy and training | OpenAI states that API data is not used for model training unless the account explicitly opts in. Responses requests set `store=False`; default abuse-monitoring retention can still be up to 30 days and is accepted for the owner-only real-application deployment. |
 | Retention | `store=False` disables ordinary Responses application-state storage. It does not claim Zero Data Retention or remove default abuse-monitoring retention. |
 | Region | Standard API processing is used. Regional processing is not configured or qualified; the model page notes a premium where regional processing is available. This remains a public-deployment decision. |
 | Latency and availability | Each call is bounded by the smaller of the Run deadline and a 30-second request timeout. Retryable failures receive bounded backoff, but every attempt consumes the per-Run request budget. Account-tier availability and rate limits remain external dependencies. |

@@ -126,6 +126,7 @@ def _local_checks(settings: Settings) -> tuple[DependencyCheck, ...]:
     return (
         _storage_check(settings),
         _bind_check(settings),
+        _model_provider_check(settings),
         _market_provider_check(settings),
         _news_provider_check(settings),
         _provider_cache_rights_check(settings),
@@ -287,6 +288,30 @@ def _market_provider_check(settings: Settings) -> DependencyCheck:
         status=CheckStatus.READY if ready else CheckStatus.FAILED,
         detail=detail,
         expected={"provider": provider, "mode": settings.provider_mode},
+    )
+
+
+def _model_provider_check(settings: Settings) -> DependencyCheck:
+    ready = settings.model_mode == "credential_free" or (
+        settings.openai_api_key is not None
+        and settings.openai_terms_approved
+        and settings.model_request_budget > 0
+    )
+    return DependencyCheck(
+        name="provider.model",
+        status=CheckStatus.READY if ready else CheckStatus.FAILED,
+        detail=(
+            "The selected model provider is configured."
+            if ready
+            else "The selected model provider lacks credentials, approval, or budget."
+        ),
+        expected={
+            "provider": (
+                "deterministic-model-v1" if settings.model_mode == "credential_free" else "openai"
+            ),
+            "mode": settings.model_mode,
+            "model": settings.openai_model if settings.model_mode == "openai_live" else None,
+        },
     )
 
 
