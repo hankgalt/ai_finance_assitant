@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.8 | Status: Product baseline plus qualified M11 live private-edge controls and an implemented assembled private-demo procedure; its live MVP qualification remains pending | 2026-11-12
+Version 1.9 | Status: Product baseline plus qualified M11 owner-only credential-free private-demo MVP; production-hardening horizon remains deferred | 2026-11-12
 
 ## 1. Evaluation principles
 
@@ -84,7 +84,10 @@ merged `main`, verifies the already-qualified infrastructure and provider bounda
 changing them, opens a temporary headed browser for owner IAP authentication, exercises the critical
 deployed product journeys, cleans only qualification-created Sessions, and emits a secret-free
 revision-scoped record only after the final boundary readback passes. Repository implementation is
-not a passing EVAL-20 result; the reviewed live record remains required.
+not by itself a passing EVAL-20 result. The reviewed record for merged revision
+`e66751dc36ed1cd342b0480248ce772c64896834` passed the private-demo horizon. EVAL-19's deterministic
+two-Principal matrix remains the isolation evidence because viewer admission was intentionally
+disabled during the owner-only live run. The separate production-hardening horizon remains pending.
 
 ## 4. Retrieval evaluation and collection activation
 

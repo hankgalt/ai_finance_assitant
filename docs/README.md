@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 3.6 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 application access, managed state, delivery controls, private workload lifecycle, live shared-knowledge release, focused runtime-key rotation, and the live private edge are qualified; assembled private-demo qualification is implemented with its live run pending; M10 planned | 2026-11-12
+Version 3.7 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 owner-only credential-free private-demo MVP qualified; M10 planned | 2026-11-12
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -67,7 +67,8 @@ report](M11_private_edge_report.md) records the repository-controlled HTTPS/IAP 
 audience handoff, owner-only policy, reviewed DNS/OAuth procedure, and qualified live boundary.
 [M11 private-demo qualification report](M11_private_demo_qualification_report.md) records the exact
 assembled `credential_free` journeys, read-only operator preflight, synthetic cleanup, evidence
-contract, and live run that remains pending.
+contract, and qualified live run for merged revision
+`e66751dc36ed1cd342b0480248ce772c64896834`.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under
@@ -85,9 +86,9 @@ If documents conflict, use this precedence: product requirements, accepted ADRs,
   an explicit allow-list, and per-Principal authorization; it is not anonymous public access. M11
   now implements the application-access boundary. Its first cloud objective is a revocable,
   owner-operated private-demo MVP at the documented URL, not a production-ready service. The MVP is
-  not operational until the feature-parity/identity-isolation qualification passes; the workload,
-  shared knowledge, runtime-key rotation, private edge, and direct-origin controls now have staging
-  evidence, and the final operator procedure is repository-implemented.
+  is qualified only for the owner-only `credential_free` posture; the workload, shared knowledge,
+  runtime-key rotation, private edge, direct-origin controls, and final integrated product journeys
+  have revision-scoped evidence.
 - **Production hardening:** controls beyond the private-demo MVP that are required before claiming
   production readiness or broader availability, including tested backup/recovery, availability,
   capacity/SLO, alerting, and incident-response objectives. Proposed or documented controls are not

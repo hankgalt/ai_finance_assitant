@@ -1,8 +1,8 @@
 # Product-oriented repository layout
 
-Status: Authoritative under ADR-029; proposed deployment additions under ADR-030
+Status: Authoritative under accepted ADR-029 and ADR-030
 
-Updated: 2026-11-05
+Updated: 2026-11-12
 
 The repository is organized by durable product capability and interface. Milestones describe
 delivery history in `docs/`; they are not ownership boundaries for current machine-readable assets.
@@ -54,9 +54,9 @@ the delivery report links to its single current location.
 
 ## Private multi-user deployment ownership
 
-Proposed ADR-030 and M11 use the following capability-owned paths as their slices are approved and
-implemented. The table defines ownership; the presence of a path or artifact is not evidence that
-the complete cloud deployment is operational.
+Accepted ADR-030 and M11 use the following capability-owned paths. The table defines ownership; the
+presence of a path or artifact is not evidence of qualification. The bounded owner-only
+`credential_free` deployment is qualified by its revision-scoped release evidence.
 
 | Path | Owner |
 | --- | --- |

@@ -26,13 +26,16 @@ professionals where appropriate.
 
 ## Deployment limitations
 
-There is no public identity provider, public multi-user authorization, managed encryption/backup,
-high availability, disaster recovery, WAF, distributed quota control, or public capacity/SLO claim.
+There is no anonymous or general-public identity path, public multi-user authorization, managed
+backup, high availability, disaster recovery, WAF, distributed quota control, or public
+capacity/SLO claim. The deployed database uses Google-managed encryption, but no CMEK claim is made.
 SQLite, local unauthenticated Qdrant/Redis, Vite, and loopback FastAPI are appropriate only for the
 documented private-demo boundary. External telemetry retention and sampling are operator/vendor
 settings, not enforced after export. Live-provider display/retention rights remain account-specific.
-Proposed ADR-030 and M11 plan a private multi-user GCP deployment but do not change these current
-release limitations until their implementation and qualification evidence passes.
+Accepted ADR-030 and M11 qualify only the owner-only `credential_free` GCP private-demo MVP at the
+documented URL. Viewer admission, authenticated public-member access, live OpenAI/market/news
+providers, backup/PITR, HA, disaster recovery, load/soak, formal SLO/alert rehearsal, and production
+readiness remain unqualified and are not implied by that acceptance.
 
 Portfolio unrealized gain and return (M2.1) are price change against imported cost basis only.
 They exclude dividends, distributions, separately paid fees, taxes, and cash flows, use one basis per

@@ -14,6 +14,8 @@
 - `private-demo-<revision>.v1.json` is created only after the assembled owner-only
   `credential_free` browser/API/SSE qualification passes for that merged revision. Its governing
   interface is `contracts/deployment/private-demo-qualification.v1.json`.
+- `private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json` is the reviewed qualified
+  owner-only `credential_free` private-demo MVP record.
 
 Published image digests, attestations, Terraform plans, staging results, deployment records, and
 rollback evidence belong here when their owning capability runs. Runtime credentials, browser

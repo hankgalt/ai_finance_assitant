@@ -1,6 +1,6 @@
 # AI Finance Assistant — Product requirements specification
 
-Version 1.8 | Status: Product baseline plus independent M10 and private-demo M11 capabilities | 2026-11-10
+Version 1.9 | Status: Product baseline plus independent M10 and qualified owner-only private-demo M11 capability | 2026-11-12
 
 ## 1. Mission and product posture
 
@@ -187,8 +187,8 @@ Brokerage execution, automated financial transactions, custody, bank aggregation
 | PR-014 | ADR-011; docs index | M8–M9 | clean-environment and product release audit |
 | PR-015 | ADR-010; coursework criteria | M9 | MCP protocol/client and coursework evidence |
 | PR-016 | ADR-020/022; design §13 | Interface in M2; provider-independent implementation in M10 | cash-flow import, reconciliation, lifecycle, and summary suites |
-| PR-017 | ADR-019/029 and proposed ADR-030; design §12/14 | M11, independent of M10 | EVAL-13/18–20 plus identity, private-deployment MVP, and deferred hardening suites |
-| QR-001–QR-015 | ADR-011/012/019/028 and proposed ADR-030; design §12 | Every milestone, including M6.1 and M11; consolidated M8 for the initial release and M11 qualification for deployment | security, quality, reliability, response-cache, deployment, and benchmark suites |
+| PR-017 | ADR-019/029/030; design §12/14 | M11, independent of M10 | EVAL-13/18–20 plus identity, private-deployment MVP, and deferred hardening suites |
+| QR-001–QR-015 | ADR-011/012/019/028/030; design §12 | Every milestone, including M6.1 and M11; consolidated M8 for the initial release and M11 qualification for deployment | security, quality, reliability, response-cache, deployment, and benchmark suites |
 
 ## 12. Resolved conflicts and open decisions
 
@@ -202,11 +202,9 @@ Resolved architectural conflicts:
 
 Open decisions that require implementation research or owner approval:
 
-- acceptance of proposed ADR-030 after the private-demo MVP deployment gates pass. The MVP uses
-  owner-only initial access, on-demand create/destroy, an empty `db-g1-small` deployed store,
-  disabled deployed response caching, and the selected Qdrant Free cluster; backup/PITR, HA,
-  disaster recovery, load/soak, SLO/alert rehearsal, and broader-availability configuration remain
-  post-MVP production-hardening decisions;
+- viewer admission, live-provider enablement, authenticated public-member access, and the
+  post-MVP backup/PITR, HA, disaster recovery, load/soak, SLO/alert rehearsal, and
+  broader-availability posture beyond accepted ADR-030's owner-only `credential_free` MVP;
 - authoritative market and news providers, licensing, entitlements, cache terms, and fallback ordering;
 - Qdrant hosting mode, embedding and sparse models, distance metric, chunk policy, and relevance thresholds, chosen through M1 evaluation;
 - production FX-provider/conversion behavior and any future short-position model beyond the conservative ADR-021 initial policy;

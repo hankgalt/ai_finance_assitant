@@ -1,0 +1,62 @@
+{
+  "schema_version": "1",
+  "status": "qualified",
+  "qualification_revision": "e66751dc36ed1cd342b0480248ce772c64896834",
+  "generated_at": "2026-11-13T01:43:33.224Z",
+  "target": "https://apps.comfforts.com/finance_assistant",
+  "access": {
+    "owner": "vtalwar.w@comfforts.com",
+    "identity_mode": "iap",
+    "anonymous": "denied_by_prior_edge_evidence",
+    "direct_origin": "denied_by_prior_edge_evidence"
+  },
+  "deployed_images": {
+    "backend": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-backend@sha256:41dc922b1efe9fedb78b57749702d3388d49e11969b81233f6bc0ae3b614604c",
+    "frontend": "us-west1-docker.pkg.dev/comfforts-369117/aifa-containers/finance-assistant-frontend@sha256:f9f9be196cdd3c87a0af4db81a8b68f047495c1ae8c7bcc98f695031e4a7ad70"
+  },
+  "provider_boundary": {
+    "provider_mode": "credential_free",
+    "model_mode": "credential_free",
+    "live_provider_secrets_present": false
+  },
+  "prior_evidence": [
+    {
+      "path": "backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json",
+      "sha256": "134175475caf3e8b7c74e6c5b66f83ae0f2cd7aca730ef7bfb938bda227701fc"
+    },
+    {
+      "path": "backend/artifacts/release/deployment/application-workloads.v1.json",
+      "sha256": "086a9314237c5bc430bb97a2fe8af634c5ff9a29209b74ed67fc607ec1424d3c"
+    },
+    {
+      "path": "backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json",
+      "sha256": "57b596d1a803ff21fb5f8e7a9b3c0a1e75c27eb06538947c5267ec22515aa980"
+    },
+    {
+      "path": "backend/artifacts/knowledge/deployment/staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json",
+      "sha256": "79bbc490bd1ed22e5104772f236c08c669894ae5a7543cd31a3091dffa584f69"
+    },
+    {
+      "path": "backend/artifacts/release/deployment/private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json",
+      "sha256": "ae0f5db32a93a2a77010140850d38d88cd48648e207abde461ff8292a74ea722"
+    }
+  ],
+  "journeys": {
+    "owner_iap_identity": "passed",
+    "managed_readiness_and_active_knowledge": "passed",
+    "assistant_run_and_sse_replay": "passed",
+    "portfolio_import_snapshot_and_context": "passed",
+    "credential_free_market_provenance": "passed",
+    "goal_projection": "passed",
+    "history_archive_and_delete": "passed",
+    "inspector_run_event_reconciliation": "passed",
+    "accessibility_critical_views": "passed_no_serious_or_critical_axe_findings",
+    "synthetic_state_cleanup": "passed"
+  },
+  "limitations": [
+    "Owner-only private-demo qualification; viewer admission is disabled.",
+    "Live OpenAI, market, and news providers were not enabled or called.",
+    "Backup/PITR, HA, load/soak, SLO/alert, and incident rehearsals remain deferred."
+  ],
+  "secret_payloads_recorded": false
+}

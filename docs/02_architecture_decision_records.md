@@ -1,6 +1,6 @@
 # AI Finance Assistant — Architecture decision records
 
-Version 1.12 | Status: Product architecture baseline plus repository-implemented proposed private-demo edge and corrected workload/secret decisions | 2026-11-12
+Version 1.13 | Status: Product architecture baseline plus accepted owner-only credential-free private-demo deployment and corrected workload/secret decisions | 2026-11-12
 
 The existing single-file register is retained to avoid unnecessary file churn. “Accepted” records are architectural constraints; “Proposed” records require validation during the named milestone. Proof references are future completion evidence, not claims of implementation.
 
@@ -153,7 +153,7 @@ capability then spans several unrelated delivery folders. Duplicating or symlink
 both taxonomies was rejected because it creates competing sources of truth and weakens path and
 checksum validation.
 
-### ADR-030: IAP-protected GCP private multi-user deployment — Proposed
+### ADR-030: IAP-protected GCP private multi-user deployment — Accepted
 
 The first accepted outcome of this decision is a private-demo MVP: the existing locally qualified
 product is usable by the owner at the target URL with equivalent product capabilities. It is not a
@@ -217,8 +217,12 @@ Terraform through an ephemeral/write-only value. It must not appear in repositor
 Terraform variables, saved plans, state, workflow configuration, evidence, or operator logs. The
 external address and edge are applied before the owner creates the registrar record. The reviewed
 live edge now qualifies IAP, origin denial, routing, TLS, owner admission, unmatched-path denial,
-and drift. ADR-030 remains Proposed because integrated identity/isolation and deployed product
-journeys are still acceptance gates.
+and drift. The assembled owner browser/API/SSE qualification for merged revision
+`e66751dc36ed1cd342b0480248ce772c64896834` subsequently passed the critical deployed product
+journeys, final identity and boundary readback, accessibility checks, and qualification-created
+Session cleanup. Its secret-free evidence is
+`backend/artifacts/release/deployment/private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json`.
+ADR-030 is therefore Accepted only for the owner-only `credential_free` private-demo MVP.
 
 The corrected owner-approved MVP managed-state target uses single-zone Cloud SQL for PostgreSQL 17
 Enterprise in `us-west1` on `db-g1-small` with the service-minimum 10 GiB SSD. It holds distinct
@@ -270,11 +274,12 @@ Federation rather than stored service-account keys for validated plan, build, an
 deployment workflows. DNS changes at the external registrar may remain a documented operator step.
 Implementation assets and evidence are organized under durable identity/access, persistence,
 knowledge, infrastructure, observability, quality, and release ownership in accordance with
-ADR-029; `M11` appears only in planning and historical delivery evidence. Before this proposal may
-become Accepted for the private-demo MVP, M11 must validate cross-Principal denial across every
-product experience, IAP-bypass and direct-origin resistance, clean empty-store creation, schema
-migration, retention/deletion while deployed, active-collection readiness, provider gates,
-destroy/recreate, and local-feature-parity smoke at the protected URL. Backup/restore, PITR,
+ADR-029; `M11` appears only in planning and historical delivery evidence. Acceptance for the
+private-demo MVP required cross-Principal denial across every product experience, IAP-bypass and
+direct-origin resistance, clean empty-store creation, schema migration, retention/deletion while
+deployed, active-collection readiness, provider gates, destroy/recreate, and local-feature-parity
+smoke at the protected URL. The deterministic EVAL-19 matrix and reviewed EVAL-20 live evidence
+satisfy those bounded gates. Backup/restore, PITR,
 application/infrastructure/collection rollback rehearsal, capacity/soak, production monitoring,
 and disaster recovery remain explicit post-MVP hardening gates for any later production-readiness
 claim.
@@ -289,8 +294,7 @@ do not authorize infrastructure provisioning in the application-access slice.
 
 ## Decision register still open
 
-The following are not silently decided by these records: final acceptance of the proposed GCP
-private-demo topology before measured MVP qualification; the exact post-MVP backup/recovery,
+The following are not silently decided by these records: the exact post-MVP backup/recovery,
 availability, capacity, and production-operations posture; commercial market-data rights for approved
 viewers; initial institution-specific Cash-flow import profiles; and authoritative coursework rubric
 interpretations. M1 resolved the initial representation and ranking
@@ -299,7 +303,8 @@ diversification heuristic; ADR-022 resolves that cash-flow import does not depen
 ADR-023 resolves the initial private demonstration posture; ADRs 024–026 resolve provider adapters
 and private-demo cache policy without granting shared market-data rights; ADR-027 resolves the local
 Session lifecycle without approving indefinite retention; ADR-028 resolves only the bounded
-private-demo response-cache policy; ADR-029 makes capability ownership durable; and proposed ADR-030
-has a qualified live edge but remains unaccepted pending the assembled M11 product journeys.
+private-demo response-cache policy; ADR-029 makes capability ownership durable; and ADR-030 accepts
+only the owner-only `credential_free` private-demo MVP. Viewer admission, authenticated
+public-member access, live-provider enablement, and production hardening remain separately gated.
 Remaining decisions require measured, operational, or contractual evidence in their owning
 capability and M11 acceptance gate.

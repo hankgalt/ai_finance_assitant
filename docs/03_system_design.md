@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.23 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, active private staging workload, qualified live shared knowledge, runtime-key rotation, and private edge, plus an implemented assembled qualification whose live run remains pending | 2026-11-12
+Version 1.24 | Status: Product baseline plus qualified M11 owner-only credential-free private-demo deployment | 2026-11-12
 
 ## 1. Architecture principles
 
@@ -464,7 +464,7 @@ appear only in plans and historical delivery records. The current development to
 Vite, FastAPI, Qdrant, Redis, and ingestion commands/processes and remains the qualified local
 private-demo release.
 
-Proposed ADR-030 and M11 select the GCP/IAP/base-path direction, and the application-access boundary
+Accepted ADR-030 and M11 select the GCP/IAP/base-path direction, and the application-access boundary
 is implemented. Protected Terraform state, immutable Artifact Registry, environment-specific WIF,
 protected GitHub environments, and the budget remain provisioned. The earlier private staging
 managed-state foundation was drift-free before teardown. Its digest-pinned non-HTTP Cloud Run jobs
@@ -478,7 +478,9 @@ reconciliation on 2026-11-12 found the `db-g1-small` Cloud SQL instance `RUNNABL
 repository-defined load balancer/IAP edge and its reviewed cutover procedure are live-qualified:
 the owner-only IAP policy, OAuth client, managed certificate, DNS record, exact base-path routing,
 and direct-origin denial have revision-scoped evidence. The assembled owner browser/API/SSE product
-journey is repository-implemented but has not yet run, so the private-demo MVP is not yet qualified.
+journey passed for merged revision `e66751dc36ed1cd342b0480248ce772c64896834`, including the
+critical deployed experiences, final identity/boundary readback, accessibility checks, and cleanup.
+That evidence qualifies only the owner-only `credential_free` private-demo MVP.
 The selected region is `us-west1`. The current billable staging runtime is active and disposable. Its VPC,
 private-service allocated range, and Service Networking connection remain the approved
 reproducibility foundation; a reviewed teardown intentionally discards application state. The
@@ -502,12 +504,12 @@ Cloud Run services. The backend service's generated numeric ID becomes the signe
 the pre-edge sentinel stays fail-closed until that value is propagated through a reviewed workload
 plan. The OAuth client secret is entered directly into the regional Secret Manager secret and is
 consumed through Terraform's ephemeral/write-only path; it is never a repository, workflow, state,
-plan, or ordinary variable payload. Live edge and integrated security qualification remain
-incomplete. The deployed
+plan, or ordinary variable payload. The live edge and integrated owner-only `credential_free`
+security qualification are complete for the bounded private-demo MVP. The deployed
 design keeps knowledge ingestion and
 activation separate from runtime, denies direct workload bypass, and retains explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
-the proposal.
+the accepted decision.
 
 The demo runtime is intentionally on demand. Reviewed Terraform must be able to create the empty
 Cloud SQL store and application/edge resources, run migration and readiness checks, and destroy the

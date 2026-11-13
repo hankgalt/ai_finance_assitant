@@ -28,7 +28,7 @@ def test_private_edge_contract_is_owner_only_and_fail_closed() -> None:
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "live_edge_qualified_integrated_journeys_pending"
+    assert contract["status"] == "live_edge_and_integrated_journeys_qualified"
     assert contract["target"] == {
         "origin": "https://apps.comfforts.com",
         "base_path": "/finance_assistant",
@@ -76,7 +76,12 @@ def test_private_edge_contract_is_owner_only_and_fail_closed() -> None:
             "private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json"
         ),
         "live_revision": "3327a231fcc197d4a8032de7b8a30523fecc1eda",
-        "integrated_product_journeys": "next_slice",
+        "integrated_product_journeys": "qualified_owner_only_credential_free",
+        "integrated_evidence": (
+            "backend/artifacts/release/deployment/"
+            "private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json"
+        ),
+        "integrated_revision": "e66751dc36ed1cd342b0480248ce772c64896834",
     }
 
 

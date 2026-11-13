@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -13,6 +14,12 @@ INFRASTRUCTURE_POLICY = REPO_ROOT / "contracts/deployment/infrastructure-policy.
 WIZARD = REPO_ROOT / "infrastructure/terraform/scripts/qualify-private-demo.sh"
 DEPLOYMENT_CONFIG = REPO_ROOT / "frontend/playwright.deployment.config.ts"
 DEPLOYMENT_JOURNEY = REPO_ROOT / "frontend/e2e/deployment/private-demo.spec.ts"
+QUALIFICATION_REVISION = "e66751dc36ed1cd342b0480248ce772c64896834"
+QUALIFICATION_EVIDENCE = (
+    REPO_ROOT
+    / "backend/artifacts/release/deployment"
+    / f"private-demo-{QUALIFICATION_REVISION}.v1.json"
+)
 
 
 def _contract() -> dict[str, Any]:
@@ -23,7 +30,7 @@ def test_private_demo_contract_qualifies_only_the_credential_free_owner_mvp() ->
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "repository_implemented_live_run_pending"
+    assert contract["status"] == "qualified"
     assert contract["target"] == {
         "origin": "https://apps.comfforts.com",
         "base_path": "/finance_assistant",
@@ -46,7 +53,14 @@ def test_private_demo_contract_qualifies_only_the_credential_free_owner_mvp() ->
     assert contract["browser"]["persistent_auth_state_allowed"] is False
     assert contract["synthetic_state"]["cleanup_required"] is True
     assert contract["synthetic_state"]["preexisting_state_may_be_deleted"] is False
-    assert contract["qualification"]["live_operator_run"] == "pending"
+    assert contract["qualification"]["live_operator_run"] == "qualified"
+    assert contract["qualification"]["qualification_revision"] == QUALIFICATION_REVISION
+    assert contract["qualification"]["evidence"] == str(
+        QUALIFICATION_EVIDENCE.relative_to(REPO_ROOT)
+    )
+    assert contract["qualification"]["adr_030_acceptance"] == (
+        "accepted_for_owner_only_credential_free_private_demo_mvp"
+    )
     assert contract["qualification"]["evidence_pattern"] == (
         "backend/artifacts/release/deployment/private-demo-<revision>.v1.json"
     )
@@ -94,17 +108,47 @@ def test_private_demo_contract_aggregates_prior_gates_and_exact_live_journeys() 
     ]
 
 
-def test_infrastructure_policy_points_to_pending_integrated_qualification() -> None:
+def test_infrastructure_policy_points_to_qualified_integrated_journeys() -> None:
     policy = cast(dict[str, Any], json.loads(INFRASTRUCTURE_POLICY.read_text(encoding="utf-8")))
 
     assert policy["private_demo_qualification"] == {
         "contract": "contracts/deployment/private-demo-qualification.v1.json",
         "operator_entry_point": ("infrastructure/terraform/scripts/qualify-private-demo.sh"),
-        "status": "repository_implemented_live_run_pending",
+        "status": "qualified",
+        "qualification_revision": QUALIFICATION_REVISION,
+        "evidence": str(QUALIFICATION_EVIDENCE.relative_to(REPO_ROOT)),
     }
     assert policy["operational_status"]["integrated_product_journeys"] == (
-        "repository_implemented_live_run_pending"
+        "qualified_owner_only_credential_free"
     )
+    assert policy["operational_status"]["private_demo_qualification_revision"] == (
+        QUALIFICATION_REVISION
+    )
+    assert policy["operational_status"]["private_demo_qualification_evidence"] == str(
+        QUALIFICATION_EVIDENCE.relative_to(REPO_ROOT)
+    )
+
+
+def test_qualified_evidence_is_secret_free_complete_and_hash_bound() -> None:
+    evidence = cast(dict[str, Any], json.loads(QUALIFICATION_EVIDENCE.read_text(encoding="utf-8")))
+
+    assert evidence["status"] == "qualified"
+    assert evidence["qualification_revision"] == QUALIFICATION_REVISION
+    assert evidence["target"] == "https://apps.comfforts.com/finance_assistant"
+    assert evidence["provider_boundary"] == {
+        "provider_mode": "credential_free",
+        "model_mode": "credential_free",
+        "live_provider_secrets_present": False,
+    }
+    assert evidence["secret_payloads_recorded"] is False
+    assert all(result.startswith("passed") for result in evidence["journeys"].values())
+    assert "@sha256:" in evidence["deployed_images"]["backend"]
+    assert "@sha256:" in evidence["deployed_images"]["frontend"]
+
+    for prerequisite in evidence["prior_evidence"]:
+        prerequisite_path = REPO_ROOT / prerequisite["path"]
+        assert prerequisite_path.is_file()
+        assert hashlib.sha256(prerequisite_path.read_bytes()).hexdigest() == prerequisite["sha256"]
 
 
 def test_private_demo_operator_is_interactive_fail_closed_and_secret_free() -> None:
