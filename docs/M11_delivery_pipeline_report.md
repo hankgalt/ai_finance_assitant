@@ -77,6 +77,12 @@ independent backup approver. The machine-readable boundary is
 | `docker compose config --quiet` | passed |
 | `git diff --check` | passed |
 
+The 2026-11-12 advisory refresh subsequently identified GHSA-mmhr-3c5m-f64f in the locked
+`soupsieve 3.0.4` transitive dependency. The project Python floor is now 3.11.5, matching the
+minimum supported by the patched Soup Sieve line, and the lock selects `soupsieve 4.1` for every
+supported runtime. The identical pinned `pip-audit` command then reported no known vulnerabilities;
+the HTML-selection smoke and complete backend suite remained green.
+
 The first Docker frontend build exposed a missing repository-level `contracts/` build input; the
 Dockerfile now copies that shared contract without duplicating it. The first local PostgreSQL test
 attempt was denied by the managed sandbox's loopback boundary; the identical test passed after the

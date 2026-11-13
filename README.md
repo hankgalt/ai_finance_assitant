@@ -81,7 +81,7 @@ IAP-protected GCP private multi-user deployment; either may proceed first.
 
 ## Prerequisites
 
-- Python 3.11 or newer
+- Python 3.11.5 or newer
 - [uv](https://docs.astral.sh/uv/)
 - Docker with Compose v2
 - Node.js 22 or newer
