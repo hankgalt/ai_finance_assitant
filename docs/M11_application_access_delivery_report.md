@@ -116,7 +116,7 @@ loopback host.
 
 ## Artifacts
 
-- [Proposed ADR-030](02_architecture_decision_records.md#adr-030-iap-protected-private-multi-user-gcp-deployment--proposed)
+- [ADR-030](02_architecture_decision_records.md#adr-030-iap-protected-gcp-private-multi-user-deployment--accepted)
 - [M11 implementation plan](04_implementation_plan.md#m11--iap-protected-gcp-private-multi-user-deployment)
 - [`contracts/deployment/application-access.v1.json`](../contracts/deployment/application-access.v1.json)
 - `backend/src/ai_finance_assistant/identity/`

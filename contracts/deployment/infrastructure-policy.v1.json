@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "active_disposable_runtime_live_edge_qualified_integrated_journeys_pending",
+  "status": "active_disposable_runtime_private_demo_qualified",
   "private_demo_mvp": {
     "target_database_tier": "db-g1-small",
     "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -157,12 +157,14 @@
     ],
     "viewer_admission": "disabled",
     "direct_origin_allowed": false,
-    "status": "live_edge_qualified_integrated_journeys_pending"
+    "status": "live_edge_and_integrated_journeys_qualified"
   },
   "private_demo_qualification": {
     "contract": "contracts/deployment/private-demo-qualification.v1.json",
     "operator_entry_point": "infrastructure/terraform/scripts/qualify-private-demo.sh",
-    "status": "repository_implemented_live_run_pending"
+    "status": "qualified",
+    "qualification_revision": "e66751dc36ed1cd342b0480248ce772c64896834",
+    "evidence": "backend/artifacts/release/deployment/private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json"
   },
   "budget": {
     "combined_monthly_usd": 100,
@@ -189,6 +191,8 @@
     "private_edge_contract": "contracts/deployment/private-edge.v1.json",
     "private_edge_revision": "3327a231fcc197d4a8032de7b8a30523fecc1eda",
     "private_edge_evidence": "backend/artifacts/release/deployment/private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json",
-    "integrated_product_journeys": "repository_implemented_live_run_pending"
+    "integrated_product_journeys": "qualified_owner_only_credential_free",
+    "private_demo_qualification_revision": "e66751dc36ed1cd342b0480248ce772c64896834",
+    "private_demo_qualification_evidence": "backend/artifacts/release/deployment/private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json"
   }
 }

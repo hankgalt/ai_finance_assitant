@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.6 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, live shared knowledge, focused runtime-key rotation, and the live edge/IAP boundary are qualified; assembled private-demo qualification is implemented with its live run pending | 2026-11-12
+Version 3.7 | Status: M0–M9.1 complete; M10 planned; M11 owner-only credential-free private-demo MVP qualified | 2026-11-12
 
 ## 1. Delivery rules
 
@@ -520,26 +520,27 @@ creates the OAuth secret payload only through Secret Manager, applies the edge b
 the workload audience only after the backend service has its immutable generated identifier, and
 requires direct-origin, TLS, owner-login, unmatched-path, and drift checks. The reviewed live run
 qualified those controls for revision `3327a231fcc197d4a8032de7b8a30523fecc1eda`; its secret-free
-evidence is under `backend/artifacts/release/deployment/`. Integrated product journeys remain the
-final private-demo MVP gate.
+evidence is under `backend/artifacts/release/deployment/`. The integrated product journeys have now
+passed the final private-demo MVP gate.
 
 The final slice now defines the versioned assembled qualification contract, a read-only operator
 preflight, and a headed Playwright journey for the owner IAP identity, managed readiness, Assistant
 and SSE replay, Portfolio/Snapshot context, credential-free Market provenance, Goal projection,
 History, Inspector, accessibility, and qualification-created Session cleanup. It aggregates the
 five prerequisite evidence records without changing infrastructure, IAM, DNS, secrets, or provider
-mode. Repository implementation is complete; the live run from clean merged `main` and its
-revision-scoped evidence remain pending, so EVAL-20 is not yet closed and ADR-030 remains Proposed.
+mode. The reviewed live run from clean merged `main` passed for revision
+`e66751dc36ed1cd342b0480248ce772c64896834`; EVAL-20's private-demo horizon is qualified and ADR-030
+is Accepted for the owner-only `credential_free` MVP. EVAL-19's deterministic two-Principal matrix
+remains the isolation evidence because viewer admission was disabled during the live owner run.
 
-**Remaining private-demo MVP sequence**
+**Qualified private-demo MVP result**
 
-1. Merge the assembled qualification implementation, run `make qualify-private-demo` from clean
-   merged `main`, review and commit its secret-free revision-scoped evidence, and reconcile the
-   acceptance reports. The operator run covers the critical deployed Assistant, Portfolio,
-   Snapshot, Goal, History, Run/SSE, and Inspector journeys and rechecks the prerequisite lifecycle,
-   identity/isolation, and direct-origin evidence. This is the private-demo MVP release gate. Keep
-   viewer admission and viewer live-provider use disabled until separately approved, and stop there
-   rather than expanding into deferred production hardening.
+1. `make qualify-private-demo` passed from clean merged `main` for revision
+   `e66751dc36ed1cd342b0480248ce772c64896834`. Its secret-free record covers the critical deployed
+   Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector journeys and rechecks the
+   prerequisite lifecycle, identity/isolation, and direct-origin evidence. Keep viewer admission,
+   live-provider use, authenticated public-member access, and deferred production hardening disabled
+   until separately approved.
 
 **Owner decisions required before implementation slices**
 

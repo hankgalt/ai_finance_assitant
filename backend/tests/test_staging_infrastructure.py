@@ -64,9 +64,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == (
-        "active_disposable_runtime_live_edge_qualified_integrated_journeys_pending"
-    )
+    assert contract["status"] == "active_disposable_runtime_private_demo_qualified"
     assert contract["private_demo_mvp"] == {
         "target_database_tier": "db-g1-small",
         "runtime_lifecycle": "on_demand_create_destroy_recreate",
@@ -180,7 +178,12 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
             "backend/artifacts/release/deployment/"
             "private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json"
         ),
-        "integrated_product_journeys": "repository_implemented_live_run_pending",
+        "integrated_product_journeys": "qualified_owner_only_credential_free",
+        "private_demo_qualification_revision": ("e66751dc36ed1cd342b0480248ce772c64896834"),
+        "private_demo_qualification_evidence": (
+            "backend/artifacts/release/deployment/"
+            "private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json"
+        ),
     }
 
 

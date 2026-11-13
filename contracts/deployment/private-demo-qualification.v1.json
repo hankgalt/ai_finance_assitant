@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "repository_implemented_live_run_pending",
+  "status": "qualified",
   "target": {
     "origin": "https://apps.comfforts.com",
     "base_path": "/finance_assistant",
@@ -55,9 +55,11 @@
   "qualification": {
     "operator_entry_point": "infrastructure/terraform/scripts/qualify-private-demo.sh",
     "make_target": "qualify-private-demo",
-    "live_operator_run": "pending",
+    "live_operator_run": "qualified",
+    "qualification_revision": "e66751dc36ed1cd342b0480248ce772c64896834",
+    "evidence": "backend/artifacts/release/deployment/private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json",
     "evidence_pattern": "backend/artifacts/release/deployment/private-demo-<revision>.v1.json",
-    "adr_030_acceptance": "pending_live_operator_run"
+    "adr_030_acceptance": "accepted_for_owner_only_credential_free_private_demo_mvp"
   },
   "deferred": [
     "live_model_and_provider_activation",

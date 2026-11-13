@@ -1,14 +1,14 @@
 # Finance Assistant GCP infrastructure
 
-This capability-owned Terraform implements the M11 staging foundation selected by proposed
+This capability-owned Terraform implements the M11 staging foundation selected by accepted
 ADR-030. It contains no secret payloads, service-account keys, or committed Terraform state. It
 defines an on-demand, disposable `db-g1-small` demo runtime, three private non-HTTP Cloud Run
 operator jobs, and separate-state private frontend/backend workload definitions. The workloads are
 qualified through a reviewed create/deploy/no-direct-origin/destroy cycle and a later recreation;
-the current disposable runtime is active for the remaining MVP gates. The repository also defines a
+the current disposable runtime is active for the qualified private-demo MVP. The repository also defines a
 separate-state owner-only HTTPS/IAP edge with an API-only public-base-path rewrite. Its live OAuth,
-edge, DNS, owner browser, and no-bypass controls are qualified; integrated product journeys remain
-the next release gate. The authoritative machine policy is
+edge, DNS, owner browser, no-bypass controls, and integrated product journeys are qualified for the
+owner-only `credential_free` posture. The authoritative machine policy is
 `contracts/deployment/infrastructure-policy.v1.json`.
 
 The bootstrap, shared, and historical `db-f1-micro` staging roots were provisioned on 2026-11-10.
