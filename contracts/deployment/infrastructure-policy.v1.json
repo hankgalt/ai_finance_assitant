@@ -73,7 +73,7 @@
     "payloads_managed_by_terraform": false,
     "payloads_allowed_in_repository": false,
     "payloads_allowed_in_github": false,
-    "metadata_status": "runtime_active_release_credential_destroyed",
+    "metadata_status": "runtime_and_live_provider_credentials_active_release_credential_destroyed",
     "payload_versions_created_by_terraform": false,
     "runtime_lifecycle": "runtime_version_active_release_version_destroyed_after_qualification",
     "qdrant_secrets": {
@@ -193,6 +193,10 @@
     "private_edge_evidence": "backend/artifacts/release/deployment/private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json",
     "integrated_product_journeys": "qualified_owner_only_credential_free",
     "private_demo_qualification_revision": "e66751dc36ed1cd342b0480248ce772c64896834",
-    "private_demo_qualification_evidence": "backend/artifacts/release/deployment/private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json"
+    "private_demo_qualification_evidence": "backend/artifacts/release/deployment/private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json",
+    "live_provider_posture": "qualified_owner_only",
+    "live_provider_contract": "contracts/providers/live-mode.v1.json",
+    "live_provider_revision": "9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20",
+    "live_provider_evidence": "backend/artifacts/providers/deployment/live-mode-9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20.v1.json"
   }
 }

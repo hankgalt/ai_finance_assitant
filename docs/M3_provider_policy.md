@@ -1,8 +1,8 @@
 # M3 provider policy and activation gate
 
-Version: `provider-policy-v4`
+Version: `provider-policy-v5`
 
-Status: Credential-free qualified; owner-only Massive/Tavily deployment activation implemented with live run pending
+Status: Credential-free and owner-only Massive/Tavily deployment postures qualified
 
 Decision: ADR-024, ADR-025
 
@@ -64,10 +64,11 @@ The Tavily query must contain public topics/security symbols only. An authorized
 No live call was made for M3 qualification because account-specific credentials and approvals were not available. The live-mode transcript therefore proves safe preflight refusal and zero external calls. This is within budget but is not evidence that live access, latency, data quality, or public-production rights are operational.
 
 M11 later records the exact owner approval and implements the staging activation at
-`contracts/providers/live-mode.v1.json`. That repository state does not supersede the historical M3
-result and does not itself prove a provider call. The live posture becomes qualified only when the
-merged-main activation operator records Massive provenance and Tavily attribution without retaining
-their payloads. Credential-free remains the default and rollback target.
+`contracts/providers/live-mode.v1.json`. That later repository and live-deployment state does not
+supersede the historical M3 result. The merged-main M11 activation for revision
+`9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20` subsequently recorded Massive provenance and Tavily
+attribution without retaining their payloads, qualifying only the approved owner-only posture.
+Credential-free remains the default and rollback target.
 
 ## Opt-in live account qualification
 

@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.8 | Status: M0–M9.1 complete; M10 planned; M11 credential-free MVP qualified and owner-only live-provider activation implemented with live run pending | 2026-11-12
+Version 3.9 | Status: M0–M9.1 complete; M10 planned; M11 credential-free MVP and owner-only live-provider posture qualified | 2026-11-13
 
 ## 1. Delivery rules
 
@@ -550,10 +550,13 @@ credential-free rollback, Terraform-owned Secret Manager metadata and runtime-on
 version injection, provider/model readiness, fixed application budgets, provider-account spend
 attestation, boundary readback, and secret-free revision evidence. It deliberately adds no new
 `AIFA_*` setting name and preserves the existing `openai_live` route/generate/synthesize behavior.
-The current deployed qualification remains `credential_free`; `make live-providers-staging-up`
-must pass from clean merged `main` before the live posture may be called operational. Viewer
-admission, viewer live-provider use, Massive Business/redistribution rights, and application-level
-currency cost calculation remain deferred.
+`make live-providers-staging-up` passed from clean merged `main` revision
+`9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20`. Its secret-free evidence records the OpenAI `Build`
+tier and owner-attested USD 20 limit, exact live configuration, readiness, owner-only IAP,
+direct-origin denial, measured OpenAI usage, Massive provenance, and Tavily attribution. The
+credential-free posture remains the Terraform default and explicit rollback target. Viewer
+admission, viewer live-provider use, Massive Business/redistribution rights, application-level
+currency cost calculation, and production hardening remain deferred.
 
 **Owner decisions required before implementation slices**
 

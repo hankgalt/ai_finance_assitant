@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.24 | Status: Product baseline plus qualified M11 owner-only credential-free private-demo deployment | 2026-11-12
+Version 1.25 | Status: Product baseline plus qualified M11 owner-only credential-free and live-provider private-demo deployment | 2026-11-13
 
 ## 1. Architecture principles
 
@@ -491,10 +491,11 @@ the owner-only IAP policy, OAuth client, managed certificate, DNS record, exact 
 and direct-origin denial have revision-scoped evidence. The assembled owner browser/API/SSE product
 journey passed for merged revision `e66751dc36ed1cd342b0480248ce772c64896834`, including the
 critical deployed experiences, final identity/boundary readback, accessibility checks, and cleanup.
-That evidence qualifies only the owner-only `credential_free` private-demo MVP. The separate
-owner-approved live-provider contract is repository-implemented with reversible Terraform and
-Secret Manager operator paths; it remains unqualified until its merged-main live run records
-OpenAI measured usage, Massive provenance, Tavily attribution, readiness, and direct-origin denial.
+That evidence first qualified the owner-only `credential_free` private-demo MVP. The separate
+owner-approved live-provider contract uses reversible Terraform and Secret Manager operator paths.
+Its merged-main run for revision `9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20` subsequently qualified
+OpenAI measured usage, Massive provenance, Tavily attribution, readiness, owner-only IAP, and
+direct-origin denial without retaining provider payloads or prompts.
 The selected region is `us-west1`. The current billable staging runtime is active and disposable. Its VPC,
 private-service allocated range, and Service Networking connection remain the approved
 reproducibility foundation; a reviewed teardown intentionally discards application state. The
@@ -519,8 +520,9 @@ the pre-edge sentinel stays fail-closed until that value is propagated through a
 plan. The OAuth client secret is entered directly into the regional Secret Manager secret and is
 consumed through Terraform's ephemeral/write-only path; it is never a repository, workflow, state,
 plan, or ordinary variable payload. The live edge and integrated owner-only `credential_free`
-security qualification are complete for the bounded private-demo MVP. The deployed
-design keeps knowledge ingestion and
+security qualification are complete for the bounded private-demo MVP. The separately approved
+owner-only live-provider posture is also qualified with viewer admission still disabled. The
+deployed design keeps knowledge ingestion and
 activation separate from runtime, denies direct workload bypass, and retains explicitly selected
 credential-free versus entitlement-approved provider modes. Anonymous public access remains outside
 the accepted decision.

@@ -1,12 +1,15 @@
 # M11 live-provider activation report
 
+Status: qualified owner-only live-provider deployment | 2026-11-13
+
 ## Scope and authority
 
 This report records the owner-only live-provider implementation slice for M11 under PR-004,
 PR-006, PR-014, and PR-017; QR-005, QR-007, QR-010–QR-012, QR-014, and QR-015; EVAL-17 and
 EVAL-20; and accepted ADR-023–ADR-026 and ADR-030. It does not broaden IAP admission, viewer rights,
-Massive redistribution rights, or public availability. The already-qualified deployment remains in
-`credential_free` mode until the merged-main activation operator succeeds.
+Massive redistribution rights, or public availability. The merged-main activation operator has now
+qualified the separately approved owner-only live posture; `credential_free` remains the default
+and explicit rollback target.
 
 ## Approved account and runtime boundary
 
@@ -74,18 +77,40 @@ The implementation verification run completed with:
 `shellcheck` was unavailable locally, so Bash syntax plus repository contract tests are the local
 shell gates; the pinned GitHub workflows remain the authoritative remote security/CI qualification.
 
-The live gate remains pending. A passing merged-main run must confirm the account usage tier and
-provider-side USD 20 control, inject three keys through Secret Manager, pass readiness, observe
-measured OpenAI usage, Massive live provenance, Tavily attribution, and direct-origin denial, and
-write `backend/artifacts/providers/deployment/live-mode-<revision>.v1.json`. That record may contain
-numeric secret versions and result labels, but no key, prompt, provider response, Portfolio value,
-or browser authentication state.
+The owner ran `make live-providers-staging-up` from clean merged `main` revision
+`9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20`. The operator recorded the OpenAI `Build` usage tier and
+owner attestation of the USD 20 provider-side hard limit, selected positive numeric versions for all
+three provider secrets, passed exact Cloud Run and owner-only IAP readback, and rechecked readiness
+and direct-origin denial. The owner-observed journeys recorded measured OpenAI token usage, Massive
+live provenance with end-of-day labeling, and Tavily links/attribution. The resulting evidence is
+`backend/artifacts/providers/deployment/live-mode-9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20.v1.json`.
+It records only numeric secret versions, result labels, and the approved account boundary; it
+contains no key, prompt, provider response, Portfolio value, or browser authentication state.
+
+Repository reconciliation completed with:
+
+- `cd backend && .venv/bin/ruff format --check .` — 181 files already formatted;
+- `cd backend && .venv/bin/ruff check .` — passed;
+- `cd backend && .venv/bin/mypy` — no issues in 169 source files;
+- `cd backend && .venv/bin/pytest -q` — 468 passed, 8 skipped, and 4 deliberately deselected;
+- `jq -e` parsing for the live-mode, managed-state, infrastructure-policy, and generated evidence
+  contracts — passed; and
+- `git diff --check` — passed.
 
 ## Security, privacy, and limitations
 
-The change adds no credential to GitHub, Terraform variables/state, repository files, or ordinary
-operator output. Provider secrets are disposable with the demo runtime and must be entered again
-after clean recreation. The selected Massive plan is not evidence of Business, viewer-display, or
+The qualified posture adds no credential to GitHub, Terraform variables/state, repository files,
+or ordinary operator output. Provider secrets are disposable with the demo runtime and must be
+entered again after clean recreation. The selected Massive plan is not evidence of Business, viewer-display, or
 redistribution rights. OpenAI provider-side spend enforcement may not equal application-observed
-token cost, and monetary cost remains unavailable in RunEvents. Live behavior, latency, quota, data
-quality, and account entitlement are not qualified until the separate live run passes.
+token cost, and monetary cost remains unavailable in RunEvents. This one owner-observed run does
+not establish a latency, availability, quota-exhaustion, provider-data-quality, or production-
+readiness guarantee. Viewer admission and viewer live-provider use remain disabled.
+
+## Artifact paths
+
+- Machine contract: `contracts/providers/live-mode.v1.json`
+- Activation/rollback operator: `infrastructure/terraform/scripts/configure-live-providers.sh`
+- Contract tests: `backend/tests/test_live_provider_deployment.py`
+- Qualified live evidence:
+  `backend/artifacts/providers/deployment/live-mode-9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20.v1.json`

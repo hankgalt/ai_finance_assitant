@@ -1,0 +1,48 @@
+{
+  "schema_version": "1",
+  "status": "qualified",
+  "qualification_revision": "9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20",
+  "generated_at": "2026-11-13T18:12:42Z",
+  "target": "https://apps.comfforts.com/finance_assistant",
+  "audience": {
+    "owner": "vtalwar.w@comfforts.com",
+    "viewer_admission": "disabled",
+    "direct_origin": "denied"
+  },
+  "selection": {
+    "provider_mode": "live",
+    "model_mode": "openai_live",
+    "model": "gpt-6.1-sol",
+    "market_provider": "massive",
+    "news_provider": "tavily"
+  },
+  "account_rights": {
+    "openai_usage_tier": "Build",
+    "openai_monthly_usd_hard_limit": 20,
+    "openai_real_application_data_approved": true,
+    "massive_plan": "Stocks Basic personal owner-only",
+    "massive_viewer_display_allowed": false,
+    "tavily_plan": "Researcher",
+    "tavily_pay_as_you_go_enabled": false
+  },
+  "secret_versions": {
+    "openai": "1",
+    "massive": "1",
+    "tavily": "1"
+  },
+  "qualification": {
+    "deployed_configuration_readback": "passed",
+    "readiness": "passed_owner_observation",
+    "openai_measured_usage": "passed_owner_observation",
+    "massive_live_provenance": "passed_owner_observation",
+    "tavily_attribution": "passed_owner_observation",
+    "direct_origin_denial": "passed"
+  },
+  "limitations": [
+    "Owner-only private demonstration; viewer admission and viewer live-provider access remain disabled.",
+    "The USD 20 OpenAI ceiling is an owner-attested provider-account control, not an application cost calculator.",
+    "No provider payload, prompt, response, or user financial value is committed as evidence."
+  ],
+  "secret_payloads_recorded": false,
+  "raw_provider_outputs_recorded": false
+}

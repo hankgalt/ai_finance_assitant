@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 2.0 | Status: Product baseline plus qualified M11 credential-free MVP; owner-only live-provider qualification pending | 2026-11-12
+Version 2.1 | Status: Product baseline plus qualified M11 credential-free MVP and owner-only live-provider posture | 2026-11-13
 
 ## 1. Evaluation principles
 
@@ -98,6 +98,14 @@ attribution; and continued direct-origin denial. Its evidence must exclude crede
 provider responses, and application values. Repository implementation alone is not a live-provider
 qualification. `make live-providers-staging-down` restores credential-free mode before deleting the
 three disposable provider secrets.
+
+The reviewed live-provider record for clean merged revision
+`9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20` passed this separate gate. It records the OpenAI `Build`
+tier, owner attestation of the provider-side USD 20 limit, positive numeric secret versions, exact
+configuration and readiness readback, owner-only IAP, direct-origin denial, measured OpenAI usage,
+Massive provenance, and Tavily attribution. The evidence contains no credential, prompt, provider
+response, application value, or browser authentication state. This result does not qualify viewer
+access, broader provider rights, or the production-hardening horizon.
 
 ## 4. Retrieval evaluation and collection activation
 

@@ -1,6 +1,6 @@
 # M4.1 OpenAI model selection record
 
-Status: Approved for owner-only deployed live activation; live run pending | Reviewed: 2026-11-12
+Status: Qualified for owner-only deployed live activation | Reviewed: 2026-11-13
 
 ## Decision
 
@@ -25,6 +25,12 @@ activation. The application continues to report provider token usage but has no 
 cost calculator, so it must not represent the USD limit as an application-enforced currency budget.
 The existing `openai_live` route, specialist generation, and multi-agent synthesis behavior is
 unchanged.
+
+The merged-main M11 activation for revision `9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20`
+subsequently qualified this bounded deployment posture. The owner recorded the API account as
+`Build`, attested the USD 20 provider-side hard limit, observed measured token usage in the
+Inspector, and passed readiness and private-boundary checks. The result does not add an application
+currency-cost calculator or qualify broader audiences, latency, availability, or production use.
 
 ## Fit against M4.1 criteria
 
