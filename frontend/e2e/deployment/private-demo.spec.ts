@@ -389,7 +389,6 @@ test("qualifies the assembled credential-free private demo", async ({
     await expect(page.locator(".inspector-timeline li")).toHaveCount(
       eventHistory.events.length,
     );
-    await expect(page.getByText("Synthetic fixture evidence")).toBeVisible();
     await page.getByRole("button", { name: "Resume event stream" }).click();
     await expect(
       page.getByRole("button", { name: "Resume event stream" }),

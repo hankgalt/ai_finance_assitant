@@ -25,7 +25,7 @@ before changing either boundary.
 
 ## Prerequisites
 
-- Python 3.11+ and `uv`
+- Python 3.11.5+ and `uv`
 - Node.js 22+ and pnpm 11
 - Docker with Compose v2
 

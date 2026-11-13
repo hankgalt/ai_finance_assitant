@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 from pathlib import Path
 from typing import Any, cast
 
@@ -226,6 +227,18 @@ def test_security_pipeline_covers_dependencies_secrets_code_and_images() -> None
     assert "packages: write" in images
     assert "attestations: write" in images
     assert "id-token: write" in images
+
+
+def test_backend_python_floor_excludes_vulnerable_soupsieve_resolution() -> None:
+    pyproject = tomllib.loads((REPO_ROOT / "backend/pyproject.toml").read_text(encoding="utf-8"))
+    lock = tomllib.loads((REPO_ROOT / "backend/uv.lock").read_text(encoding="utf-8"))
+    soupsieve_versions = {
+        package["version"] for package in lock["package"] if package["name"] == "soupsieve"
+    }
+
+    assert pyproject["project"]["requires-python"] == ">=3.11.5"
+    assert soupsieve_versions
+    assert all(int(version.split(".", maxsplit=1)[0]) >= 4 for version in soupsieve_versions)
 
 
 def test_gitleaks_receives_only_the_automatic_read_only_pull_request_token() -> None:

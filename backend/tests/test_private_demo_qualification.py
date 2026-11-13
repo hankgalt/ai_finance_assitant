@@ -139,6 +139,8 @@ def test_private_demo_operator_is_interactive_fail_closed_and_secret_free() -> N
     assert "webServer" not in deployment_config
     assert "AIFA_RUN_DEPLOYED_QUALIFICATION" in journey
     assert "Complete Google/IAP sign-in" in journey
+    assert 'getByText("Synthetic fixture evidence")' not in journey
+    assert 'getByText("Synthetic demo data")' in journey
     assert "finally" in journey
     assert "cleanup" in journey.casefold()
     assert "AxeBuilder" in journey
