@@ -48,9 +48,21 @@ infrastructure/terraform/scripts/demo-runtime-up.sh
 make knowledge-release-staging
 make rotate-qdrant-runtime-key-staging
 make private-edge-up
+make qualify-private-demo
 make private-edge-down
 infrastructure/terraform/scripts/demo-runtime-down.sh
 ```
+
+`make qualify-private-demo` is the final assembled MVP gate and does not apply Terraform or mutate
+cloud configuration. From clean merged `main`, it rechecks the exact deployed Artifact Registry
+digests, private Cloud Run origins, IAP-only invocation, owner-only edge policy, active TLS
+certificate, and `credential_free` workload configuration. It then opens a temporary headed Chrome
+context for the owner to complete Google/IAP login and runs the critical Assistant/SSE,
+Portfolio/Snapshot, Market, Goal, History, Inspector, readiness, and accessibility journeys. The
+journey uses only a repository-owned synthetic Portfolio fixture and deletes only the Sessions it
+created. It stores no browser authentication state, disables Playwright screenshots and traces, and
+writes only a secret-free revision-scoped evidence record after every journey and cleanup check
+passes.
 
 `make private-edge-up` requires the disposable runtime to be ready. It refreshes the shared OAuth
 secret metadata without a payload, then pauses for the owner to create the external OAuth client and

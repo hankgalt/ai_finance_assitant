@@ -180,7 +180,7 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
             "backend/artifacts/release/deployment/"
             "private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json"
         ),
-        "integrated_product_journeys": "pending_next_slice",
+        "integrated_product_journeys": "repository_implemented_live_run_pending",
     }
 
 

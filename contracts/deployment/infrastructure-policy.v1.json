@@ -159,6 +159,11 @@
     "direct_origin_allowed": false,
     "status": "live_edge_qualified_integrated_journeys_pending"
   },
+  "private_demo_qualification": {
+    "contract": "contracts/deployment/private-demo-qualification.v1.json",
+    "operator_entry_point": "infrastructure/terraform/scripts/qualify-private-demo.sh",
+    "status": "repository_implemented_live_run_pending"
+  },
   "budget": {
     "combined_monthly_usd": 100,
     "threshold_percent": [50, 80, 100],
@@ -184,6 +189,6 @@
     "private_edge_contract": "contracts/deployment/private-edge.v1.json",
     "private_edge_revision": "3327a231fcc197d4a8032de7b8a30523fecc1eda",
     "private_edge_evidence": "backend/artifacts/release/deployment/private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json",
-    "integrated_product_journeys": "pending_next_slice"
+    "integrated_product_journeys": "repository_implemented_live_run_pending"
   }
 }

@@ -1,0 +1,70 @@
+{
+  "schema_version": "1",
+  "status": "repository_implemented_live_run_pending",
+  "target": {
+    "origin": "https://apps.comfforts.com",
+    "base_path": "/finance_assistant",
+    "owner": "vtalwar.w@comfforts.com"
+  },
+  "provider_boundary": {
+    "provider_mode": "credential_free",
+    "model_mode": "credential_free",
+    "live_provider_secrets_allowed": false,
+    "provider_rights_broadened": false
+  },
+  "admission": {
+    "mode": "owner_only",
+    "viewer_admission": "disabled",
+    "anonymous": "denied",
+    "direct_origin": "denied"
+  },
+  "browser": {
+    "engine": "installed_chrome_via_playwright",
+    "interactive_iap_login": true,
+    "credentials_captured": false,
+    "persistent_auth_state_allowed": false,
+    "screenshots": "disabled_to_avoid_identity_or_application_data_capture",
+    "trace": "disabled_to_avoid_authenticated_request_capture"
+  },
+  "required_evidence": [
+    "backend/artifacts/release/deployment/demo-runtime-lifecycle.v1.json",
+    "backend/artifacts/release/deployment/application-workloads.v1.json",
+    "backend/artifacts/knowledge/deployment/staging-release-a737f8e9e935f8afc05e16fc7148e3a185b32086.json",
+    "backend/artifacts/knowledge/deployment/staging-runtime-key-rotation-86146b6227285015665b84cbfa3f4ce0395cd618-v1-to-v2.json",
+    "backend/artifacts/release/deployment/private-edge-3327a231fcc197d4a8032de7b8a30523fecc1eda.v1.json"
+  ],
+  "journeys": [
+    "owner_iap_identity",
+    "managed_readiness_and_active_knowledge",
+    "assistant_run_and_sse_replay",
+    "portfolio_import_snapshot_and_context",
+    "credential_free_market_provenance",
+    "goal_projection",
+    "history_archive_and_delete",
+    "inspector_run_event_reconciliation",
+    "accessibility_critical_views",
+    "synthetic_state_cleanup"
+  ],
+  "synthetic_state": {
+    "fixture": "backend/data/calculations/portfolio-import.valid.v1.json",
+    "cleanup_required": true,
+    "cleanup_scope": "qualification_created_sessions_only",
+    "preexisting_state_may_be_deleted": false,
+    "raw_values_allowed_in_committed_evidence": false
+  },
+  "qualification": {
+    "operator_entry_point": "infrastructure/terraform/scripts/qualify-private-demo.sh",
+    "make_target": "qualify-private-demo",
+    "live_operator_run": "pending",
+    "evidence_pattern": "backend/artifacts/release/deployment/private-demo-<revision>.v1.json",
+    "adr_030_acceptance": "pending_live_operator_run"
+  },
+  "deferred": [
+    "live_model_and_provider_activation",
+    "viewer_admission",
+    "backup_restore_and_pitr",
+    "ha_and_disaster_recovery",
+    "load_soak_slo_alert_and_incident_rehearsal",
+    "authenticated_public_member_access"
+  ]
+}
