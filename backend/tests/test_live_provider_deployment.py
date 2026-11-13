@@ -8,6 +8,8 @@ from typing import Any, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATH = REPO_ROOT / "contracts/providers/live-mode.v1.json"
+INFRASTRUCTURE_POLICY_PATH = REPO_ROOT / "contracts/deployment/infrastructure-policy.v1.json"
+MANAGED_STATE_PATH = REPO_ROOT / "contracts/deployment/managed-state.v1.json"
 TERRAFORM_ROOT = REPO_ROOT / "infrastructure/terraform"
 OPERATOR = TERRAFORM_ROOT / "scripts/configure-live-providers.sh"
 
@@ -20,7 +22,7 @@ def test_live_mode_contract_records_the_owner_approved_boundary() -> None:
     contract = _contract()
 
     assert contract["schema_version"] == "1"
-    assert contract["status"] == "repository_implemented_live_run_pending"
+    assert contract["status"] == "qualified"
     assert contract["target"]["audience"] == "owner_only"
     assert contract["target"]["viewer_admission"] == "disabled"
     assert contract["selection"] == {
@@ -41,6 +43,7 @@ def test_live_mode_contract_records_the_owner_approved_boundary() -> None:
     assert contract["rights"]["tavily"]["monthly_credits"] == 1000
     assert contract["rights"]["tavily"]["durable_cache_allowed"] is False
     assert contract["rights"]["openai"]["store"] is False
+    assert contract["rights"]["openai"]["usage_tier"] == "Build"
     assert contract["rights"]["openai"]["real_application_prompts_allowed"] is True
     assert contract["rights"]["openai"]["api_training_opt_in_approved"] is False
     assert contract["operational_limits"] == {
@@ -56,6 +59,45 @@ def test_live_mode_contract_records_the_owner_approved_boundary() -> None:
         "gcp_budget_is_separate": True,
     }
     assert contract["runtime_configuration"]["new_application_environment_names"] == []
+
+
+def test_live_mode_qualification_evidence_is_revision_scoped_and_secret_free() -> None:
+    contract = _contract()
+    qualification = contract["qualification"]
+    evidence_path = REPO_ROOT / qualification["evidence"]
+    evidence = cast(dict[str, Any], json.loads(evidence_path.read_text(encoding="utf-8")))
+    infrastructure_policy = json.loads(INFRASTRUCTURE_POLICY_PATH.read_text(encoding="utf-8"))
+    managed_state = json.loads(MANAGED_STATE_PATH.read_text(encoding="utf-8"))
+
+    assert qualification["live_operator_run"] == "qualified"
+    assert evidence["status"] == "qualified"
+    assert evidence["qualification_revision"] == qualification["qualification_revision"]
+    assert evidence["selection"] == {
+        "provider_mode": "live",
+        "model_mode": "openai_live",
+        "model": "gpt-6.1-sol",
+        "market_provider": "massive",
+        "news_provider": "tavily",
+    }
+    assert evidence["account_rights"]["openai_usage_tier"] == "Build"
+    assert evidence["audience"]["viewer_admission"] == "disabled"
+    assert evidence["audience"]["direct_origin"] == "denied"
+    assert all(result.startswith("passed") for result in evidence["qualification"].values())
+    assert evidence["secret_payloads_recorded"] is False
+    assert evidence["raw_provider_outputs_recorded"] is False
+    assert (
+        infrastructure_policy["operational_status"]["live_provider_revision"]
+        == (evidence["qualification_revision"])
+    )
+    assert infrastructure_policy["operational_status"]["live_provider_evidence"] == str(
+        evidence_path.relative_to(REPO_ROOT)
+    )
+    assert managed_state["provider_cache"]["deployed_provider_mode"] == (
+        "live_owner_only_with_credential_free_default_and_rollback"
+    )
+    assert managed_state["provider_cache"]["live_retention"] == (
+        "disabled_by_approved_live_provider_contract"
+    )
 
 
 def test_live_mode_terraform_is_secret_version_pinned_and_credential_free_by_default() -> None:

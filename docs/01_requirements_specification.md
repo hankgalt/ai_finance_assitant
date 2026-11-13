@@ -1,6 +1,6 @@
 # AI Finance Assistant — Product requirements specification
 
-Version 1.9 | Status: Product baseline plus independent M10 and qualified owner-only private-demo M11 capability | 2026-11-12
+Version 1.10 | Status: Product baseline plus independent M10 and qualified owner-only private-demo M11 capability | 2026-11-13
 
 ## 1. Mission and product posture
 
@@ -202,7 +202,7 @@ Resolved architectural conflicts:
 
 Open decisions that require implementation research or owner approval:
 
-- viewer admission, live-provider enablement, authenticated public-member access, and the
+- viewer admission, broader live-provider entitlements, authenticated public-member access, and the
   post-MVP backup/PITR, HA, disaster recovery, load/soak, SLO/alert rehearsal, and
   broader-availability posture beyond accepted ADR-030's owner-only `credential_free` MVP;
 - authoritative market and news providers, licensing, entitlements, cache terms, and fallback ordering;

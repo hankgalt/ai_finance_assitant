@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "repository_implemented_live_run_pending",
+  "status": "qualified",
   "target": {
     "environment": "staging",
     "url": "https://apps.comfforts.com/finance_assistant",
@@ -21,7 +21,7 @@
   "rights": {
     "openai": {
       "account": "owner-selected API project",
-      "usage_tier": "record_at_activation_from_account",
+      "usage_tier": "Build",
       "intended_use": "owner-only private demonstration",
       "real_application_prompts_allowed": true,
       "retrieved_finance_tax_context_allowed": true,
@@ -118,6 +118,10 @@
     "evidence_pattern": "backend/artifacts/providers/deployment/live-mode-<revision>.v1.json"
   },
   "qualification": {
+    "live_operator_run": "qualified",
+    "qualification_revision": "9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20",
+    "qualified_on": "2026-11-13",
+    "evidence": "backend/artifacts/providers/deployment/live-mode-9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20.v1.json",
     "clean_merged_main_required": true,
     "owner_iap_required": true,
     "direct_origin_denial_rechecked": true,

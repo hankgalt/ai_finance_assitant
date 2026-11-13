@@ -20,7 +20,7 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
 
     assert manifest["schema_version"] == "1"
     assert manifest["status"] == (
-        "active_disposable_runtime_knowledge_rotation_qualified_edge_pending"
+        "active_disposable_runtime_private_demo_and_live_providers_qualified"
     )
     assert manifest["private_demo_mvp"] == {
         "scope": "owner_operated_deployed_feature_parity",
@@ -74,6 +74,12 @@ def test_owner_approved_managed_state_selection_is_exact() -> None:
         "deployed_adapter": "disabled",
         "managed_redis_provisioned": False,
         "correctness_requires_cache": False,
+    }
+    assert manifest["provider_cache"] == {
+        "database_service": "cloud_sql_postgresql",
+        "separate_purge_boundary": True,
+        "deployed_provider_mode": ("live_owner_only_with_credential_free_default_and_rollback"),
+        "live_retention": "disabled_by_approved_live_provider_contract",
     }
     assert manifest["backup_and_recovery"]["automated_backups_enabled"] is False
     assert manifest["backup_and_recovery"]["automated_daily_backups"] == 0

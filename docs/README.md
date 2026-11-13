@@ -1,6 +1,6 @@
 # AI Finance Assistant documentation
 
-Version 3.8 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 credential-free MVP qualified and owner-only live-provider activation implemented with live run pending; M10 planned | 2026-11-12
+Version 3.9 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 credential-free MVP and owner-only live-provider posture qualified; M10 planned | 2026-11-13
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
@@ -71,7 +71,8 @@ contract, and qualified live run for merged revision
 `e66751dc36ed1cd342b0480248ce772c64896834`.
 [M11 live-provider activation report](M11_live_provider_activation_report.md) records the approved
 OpenAI/Massive/Tavily account-rights boundary, provider-side spend control, Secret Manager and
-Terraform cutover/rollback seams, and the still-pending merged-main live qualification.
+Terraform cutover/rollback seams, and the qualified merged-main owner-only live run for revision
+`9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20`.
 
 The runnable release documentation is indexed by the [private-demo release
 bundle](release/README.md); M9 evidence is indexed separately under
@@ -89,11 +90,11 @@ If documents conflict, use this precedence: product requirements, accepted ADRs,
   an explicit allow-list, and per-Principal authorization; it is not anonymous public access. M11
   now implements the application-access boundary. Its first cloud objective is a revocable,
   owner-operated private-demo MVP at the documented URL, not a production-ready service. The MVP is
-  is qualified only for the owner-only `credential_free` posture; the workload, shared knowledge,
+  first qualified for the owner-only `credential_free` posture; the workload, shared knowledge,
   runtime-key rotation, private edge, direct-origin controls, and final integrated product journeys
-  have revision-scoped evidence. Owner-only OpenAI/Massive/Tavily activation is repository-
-  implemented but is not operational or qualified until its separate merged-main operator run
-  produces revision-scoped evidence.
+  have revision-scoped evidence. The separately approved owner-only OpenAI/Massive/Tavily posture
+  is also qualified by a merged-main operator run and provider-owned revision-scoped evidence. It
+  does not enable viewers, broaden provider rights, or establish production readiness.
 - **Production hardening:** controls beyond the private-demo MVP that are required before claiming
   production readiness or broader availability, including tested backup/recovery, availability,
   capacity/SLO, alerting, and incident-response objectives. Proposed or documented controls are not

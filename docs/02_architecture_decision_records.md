@@ -1,6 +1,6 @@
 # AI Finance Assistant — Architecture decision records
 
-Version 1.13 | Status: Product architecture baseline plus accepted owner-only credential-free private-demo deployment and corrected workload/secret decisions | 2026-11-12
+Version 1.14 | Status: Product architecture baseline plus accepted owner-only private-demo deployment and qualified owner-only live-provider posture | 2026-11-13
 
 The existing single-file register is retained to avoid unnecessary file churn. “Accepted” records are architectural constraints; “Proposed” records require validation during the named milestone. Proof references are future completion evidence, not claims of implementation.
 
@@ -233,10 +233,12 @@ retrieved Finance/Tax context, and authorized Portfolio/Goal facts under the acc
 posture; Responses storage remains disabled. Per-Run/request limits are ten model calls, five market
 calls, five news calls, a five-per-minute Massive limit, and a 180-second Run deadline. A USD 20
 monthly OpenAI hard limit is an owner-attested provider-account control, not an application
-currency-cost calculator or GCP budget. The repository now implements numeric-version Secret
-Manager injection, activation, readback, evidence, and credential-free rollback, but this live
-posture is not operational or qualified until the merged-main operator run passes and its
-revision-scoped evidence is committed.
+currency-cost calculator or GCP budget. Numeric-version Secret Manager injection, activation,
+readback, evidence, and credential-free rollback are implemented. The merged-main operator run for
+revision `9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20` qualified that bounded owner-only live posture with
+OpenAI measured usage, Massive provenance, Tavily attribution, readiness, and direct-origin denial.
+This result does not broaden viewer admission, Massive display/redistribution rights, ADR-030's
+accepted MVP scope, or production-readiness claims.
 
 The corrected owner-approved MVP managed-state target uses single-zone Cloud SQL for PostgreSQL 17
 Enterprise in `us-west1` on `db-g1-small` with the service-minimum 10 GiB SSD. It holds distinct
@@ -318,7 +320,9 @@ ADR-023 resolves the initial private demonstration posture; ADRs 024–026 resol
 and private-demo cache policy without granting shared market-data rights; ADR-027 resolves the local
 Session lifecycle without approving indefinite retention; ADR-028 resolves only the bounded
 private-demo response-cache policy; ADR-029 makes capability ownership durable; and ADR-030 accepts
-only the owner-only `credential_free` private-demo MVP. Viewer admission, authenticated
-public-member access, live-provider enablement, and production hardening remain separately gated.
+only the owner-only `credential_free` private-demo MVP. The separate owner-only live-provider
+posture is now qualified under ADR-023–ADR-026 without broadening ADR-030. Viewer admission,
+authenticated public-member access, broader provider rights, and production hardening remain
+separately gated.
 Remaining decisions require measured, operational, or contractual evidence in their owning
 capability and M11 acceptance gate.

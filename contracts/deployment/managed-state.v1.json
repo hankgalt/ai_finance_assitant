@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "status": "active_disposable_runtime_knowledge_rotation_qualified_edge_pending",
+  "status": "active_disposable_runtime_private_demo_and_live_providers_qualified",
   "private_demo_mvp": {
     "scope": "owner_operated_deployed_feature_parity",
     "target_machine_tier": "db-g1-small",
@@ -70,8 +70,8 @@
   "provider_cache": {
     "database_service": "cloud_sql_postgresql",
     "separate_purge_boundary": true,
-    "deployed_provider_mode": "credential_free",
-    "live_retention": "denied_until_provider_specific_rights_are_approved"
+    "deployed_provider_mode": "live_owner_only_with_credential_free_default_and_rollback",
+    "live_retention": "disabled_by_approved_live_provider_contract"
   },
   "response_cache": {
     "deployed_adapter": "disabled",

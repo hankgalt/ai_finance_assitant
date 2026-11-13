@@ -184,6 +184,13 @@ def test_infrastructure_contract_matches_owner_approved_staging_boundary() -> No
             "backend/artifacts/release/deployment/"
             "private-demo-e66751dc36ed1cd342b0480248ce772c64896834.v1.json"
         ),
+        "live_provider_posture": "qualified_owner_only",
+        "live_provider_contract": "contracts/providers/live-mode.v1.json",
+        "live_provider_revision": "9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20",
+        "live_provider_evidence": (
+            "backend/artifacts/providers/deployment/"
+            "live-mode-9f9c9c88b15139ebb19ed93dd76f8510ea5f9b20.v1.json"
+        ),
     }
 
 
