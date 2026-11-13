@@ -292,20 +292,34 @@ cleanup_runtime_bootstrap() {
 trap cleanup_runtime_bootstrap EXIT
 
 finish_with_networking_foundation() {
+  reset_live_provider_github_variables
   say "The billable demo runtime is absent."
   say "Retaining the approved private networking foundation."
   note "Cloud SQL producer networking can remain reserved during Google's post-delete recovery window."
   finish
 }
 
+# A full demo teardown destroys every live-provider secret version. Reset the
+# non-secret plan selectors so a later workflow cannot reference deleted state.
+reset_live_provider_github_variables() {
+  gh variable set GCP_LIVE_PROVIDER_MODE \
+    --repo "$REPOSITORY" --env staging --body credential_free
+  gh variable set GCP_OPENAI_SECRET_VERSION \
+    --repo "$REPOSITORY" --env staging --body 0
+  gh variable set GCP_MASSIVE_SECRET_VERSION \
+    --repo "$REPOSITORY" --env staging --body 0
+  gh variable set GCP_TAVILY_SECRET_VERSION \
+    --repo "$REPOSITORY" --env staging --body 0
+  say "Reset the staging live-provider plan selectors to credential-free."
+}
+
 # ── Stage 1: local identity and tool preflight ─────────────────────────────
 stage "Verify local identity and tools"
 say "This stage performs read-only checks and accepts no credential payload."
-for tool in gcloud terraform git jq; do
+for tool in gcloud terraform git jq gh; do
   command -v "$tool" >/dev/null 2>&1 || { warn "$tool is not available on PATH"; exit 1; }
 done
 if [[ "$ACTION" == "up" ]]; then
-  command -v gh >/dev/null 2>&1 || { warn "gh is not available on PATH"; exit 1; }
   command -v curl >/dev/null 2>&1 || { warn "curl is not available on PATH"; exit 1; }
   [[ -x "$BACKEND_PYTHON" ]] || { warn "backend/.venv is not ready"; exit 1; }
 fi
@@ -321,8 +335,8 @@ git rev-parse origin/main >/dev/null 2>&1 || { warn "origin/main is unavailable;
   warn "local main does not match the fetched origin/main"
   exit 1
 }
+gh auth status >/dev/null
 if [[ "$ACTION" == "up" ]]; then
-  gh auth status >/dev/null
   export TF_VAR_database_tier="db-g1-small"
 fi
 BACKEND_IMAGE="${TF_VAR_backend_image:-${GCP_BACKEND_IMAGE:-}}"
@@ -377,7 +391,7 @@ if [[ "$ACTION" == "down" ]]; then
   stage "Review and destroy the demo runtime"
   say "Bootstrap state, shared Artifact Registry, WIF, budget, and the Qdrant cluster are outside this staging state."
   warn "All deployed Sessions, Portfolios, Goals, Runs, History, and Inspector data will be permanently deleted."
-  warn "This also deletes staging workloads, service identities, jobs, and the Qdrant Secret Manager payload."
+  warn "This also deletes staging workloads, service identities, jobs, and every Qdrant/live-provider Secret Manager payload."
   say "The approved private networking foundation remains available for the next demo runtime."
   warn "Backup/PITR recovery is not part of the private-demo MVP."
   terraform -chdir="$STAGING_ROOT" init -reconfigure \
@@ -388,6 +402,7 @@ if [[ "$ACTION" == "down" ]]; then
     -backend-config="prefix=workloads"
   if [[ -z "$(terraform -chdir="$STAGING_ROOT" state list)" ]] && workload_state_is_empty; then
     say "The staging runtime state is already empty; nothing needs to be destroyed."
+    reset_live_provider_github_variables
     finish
     return
   fi
@@ -458,6 +473,7 @@ if [[ "$ACTION" == "down" ]]; then
   say "If that happens, this wizard accepts success only after independently proving that"
   say "Cloud SQL and every workload are absent and exactly the approved networking state remains."
   if terraform -chdir="$STAGING_ROOT" apply "$DESTROY_PLAN"; then
+    reset_live_provider_github_variables
     say "The demo runtime is absent; the reproducibility foundation remains."
     finish
     return
@@ -692,6 +708,10 @@ gh variable set GCP_BACKEND_IMAGE --repo "$REPOSITORY" --env staging --body "$BA
 gh variable set GCP_FRONTEND_IMAGE --repo "$REPOSITORY" --env staging --body "$FRONTEND_IMAGE"
 gh variable set GCP_QDRANT_SECRET_VERSION --repo "$REPOSITORY" --env staging --body "$QDRANT_SECRET_VERSION"
 gh variable set GCP_IAP_AUDIENCE --repo "$REPOSITORY" --env staging --body "$TF_VAR_iap_audience"
+gh variable set GCP_LIVE_PROVIDER_MODE --repo "$REPOSITORY" --env staging --body credential_free
+gh variable set GCP_OPENAI_SECRET_VERSION --repo "$REPOSITORY" --env staging --body 0
+gh variable set GCP_MASSIVE_SECRET_VERSION --repo "$REPOSITORY" --env staging --body 0
+gh variable set GCP_TAVILY_SECRET_VERSION --repo "$REPOSITORY" --env staging --body 0
 say "Protected environments and non-secret deployment variables are configured."
 
 finish

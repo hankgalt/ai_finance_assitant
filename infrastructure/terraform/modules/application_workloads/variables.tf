@@ -87,6 +87,92 @@ variable "qdrant_secret_version" {
   }
 }
 
+variable "provider_mode" {
+  type        = string
+  default     = "credential_free"
+  description = "Credential-free or owner-only approved live provider bundle."
+
+  validation {
+    condition     = contains(["credential_free", "live"], var.provider_mode)
+    error_message = "provider_mode must be credential_free or live."
+  }
+}
+
+variable "openai_secret_id" {
+  type        = string
+  default     = ""
+  description = "Secret Manager ID for the OpenAI API key when live mode is selected."
+
+  validation {
+    condition     = var.provider_mode == "credential_free" || length(trimspace(var.openai_secret_id)) > 0
+    error_message = "openai_secret_id is required in live mode."
+  }
+}
+
+variable "openai_secret_version" {
+  type        = string
+  default     = "0"
+  description = "Enabled numeric Secret Manager version for the OpenAI API key."
+
+  validation {
+    condition = var.provider_mode == "credential_free" || can(regex(
+      "^[1-9][0-9]*$",
+      var.openai_secret_version,
+    ))
+    error_message = "openai_secret_version must be positive and numeric in live mode."
+  }
+}
+
+variable "massive_secret_id" {
+  type        = string
+  default     = ""
+  description = "Secret Manager ID for the Massive API key when live mode is selected."
+
+  validation {
+    condition     = var.provider_mode == "credential_free" || length(trimspace(var.massive_secret_id)) > 0
+    error_message = "massive_secret_id is required in live mode."
+  }
+}
+
+variable "massive_secret_version" {
+  type        = string
+  default     = "0"
+  description = "Enabled numeric Secret Manager version for the Massive API key."
+
+  validation {
+    condition = var.provider_mode == "credential_free" || can(regex(
+      "^[1-9][0-9]*$",
+      var.massive_secret_version,
+    ))
+    error_message = "massive_secret_version must be positive and numeric in live mode."
+  }
+}
+
+variable "tavily_secret_id" {
+  type        = string
+  default     = ""
+  description = "Secret Manager ID for the Tavily API key when live mode is selected."
+
+  validation {
+    condition     = var.provider_mode == "credential_free" || length(trimspace(var.tavily_secret_id)) > 0
+    error_message = "tavily_secret_id is required in live mode."
+  }
+}
+
+variable "tavily_secret_version" {
+  type        = string
+  default     = "0"
+  description = "Enabled numeric Secret Manager version for the Tavily API key."
+
+  validation {
+    condition = var.provider_mode == "credential_free" || can(regex(
+      "^[1-9][0-9]*$",
+      var.tavily_secret_version,
+    ))
+    error_message = "tavily_secret_version must be positive and numeric in live mode."
+  }
+}
+
 variable "iap_audience" {
   type        = string
   description = "Expected signed IAP audience. The pre-edge value must be an explicitly fail-closed sentinel."

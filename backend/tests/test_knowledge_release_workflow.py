@@ -109,8 +109,8 @@ def test_release_secret_is_separate_and_never_available_to_the_runtime_service()
     assert 'resource "google_secret_manager_secret" "qdrant_release"' in staging
     assert 'secret_id           = "aifa-staging-qdrant-runtime-api-key"' in staging
     assert 'secret_id           = "aifa-staging-qdrant-release-api-key"' in staging
-    assert staging.count("deletion_protection = false") == 2
-    assert staging.count('role      = "roles/secretmanager.secretAccessor"') == 1
+    assert staging.count("deletion_protection = false") == 3
+    assert staging.count('role      = "roles/secretmanager.secretAccessor"') == 2
     assert "qdrant_release.secret_id" not in workloads
     assert "aifa-staging-qdrant-release-api-key" not in workloads
     assert 'AIFA_PROVIDER_MODE                   = "credential_free"' in workloads

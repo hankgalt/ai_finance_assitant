@@ -35,7 +35,7 @@ delivery history in `docs/`; they are not ownership boundaries for current machi
 | `backend/data/qualification/` | Cross-product release and security qualification inputs |
 | `backend/artifacts/knowledge/` | Collection manifests, evaluations, activation, and rollback evidence |
 | `backend/artifacts/calculations/` | Deterministic calculation goldens and focused evidence |
-| `backend/artifacts/providers/` | Provider policy, failure, budget, and live-harness evidence |
+| `backend/artifacts/providers/` | Provider policy, failure, budget, live-harness, and deployed live-mode evidence |
 | `backend/artifacts/assistant/` | Workflow graph, routing, and failure evidence |
 | `backend/artifacts/models/` | Model/prompt inventory and adapter qualification evidence |
 | `backend/artifacts/persistence/` | Lifecycle, migrations, streaming, and durable-cache evidence |
@@ -62,6 +62,7 @@ presence of a path or artifact is not evidence of qualification. The bounded own
 | --- | --- |
 | `backend/src/ai_finance_assistant/identity/` | Verified external identity, Application Principal, roles, and per-resource authorization policy |
 | `contracts/deployment/` | Base-path, identity-claim, readiness, migration, and deployment interface contracts |
+| `contracts/providers/` | Provider account-rights, activation, limit, secret, and rollback contracts |
 | `backend/data/qualification/deployment/` | Deterministic identity, isolation, migration, recovery, and deployment qualification inputs |
 | `backend/artifacts/quality/security/` | Cross-product identity, isolation, threat, scan, and penetration evidence |
 | `backend/artifacts/release/deployment/` | Terraform plans, image attestations, migration/rollback, staging, production, and release-decision evidence |

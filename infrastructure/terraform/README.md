@@ -9,7 +9,9 @@ the current disposable runtime is active for the qualified private-demo MVP. The
 separate-state owner-only HTTPS/IAP edge with an API-only public-base-path rewrite. Its live OAuth,
 edge, DNS, owner browser, no-bypass controls, and integrated product journeys are qualified for the
 owner-only `credential_free` posture. The authoritative machine policy is
-`contracts/deployment/infrastructure-policy.v1.json`.
+`contracts/deployment/infrastructure-policy.v1.json`. A separate owner-only OpenAI/Massive/Tavily
+activation and rollback is repository-implemented but remains live-run pending; its machine policy
+is `contracts/providers/live-mode.v1.json`.
 
 The bootstrap, shared, and historical `db-f1-micro` staging roots were provisioned on 2026-11-10.
 The corrected `db-g1-small` lifecycle and application workloads were applied, verified, destroyed,
@@ -29,7 +31,8 @@ Apply the roots in this order:
    branch, and protected-environment checks.
 3. `environments/staging/` — create the disposable isolated staging VPC, private Cloud SQL instance,
    workload identities, separate runtime/release Qdrant secret metadata with a single `us-west1`
-   replica, and digest-pinned managed-state operator jobs.
+   replica, optional disposable live-provider secret metadata, and digest-pinned managed-state
+   operator jobs.
 4. `environments/staging-workloads/` — after the grants and migration job pass, create the private,
    digest-pinned frontend and backend Cloud Run services in the separate `workloads` state prefix.
 5. `environments/staging-edge/` — after the workloads are private and ready, create the global
@@ -49,6 +52,8 @@ make knowledge-release-staging
 make rotate-qdrant-runtime-key-staging
 make private-edge-up
 make qualify-private-demo
+make live-providers-staging-up
+make live-providers-staging-down
 make private-edge-down
 infrastructure/terraform/scripts/demo-runtime-down.sh
 ```
@@ -63,6 +68,16 @@ journey uses only a repository-owned synthetic Portfolio fixture and deletes onl
 created. It stores no browser authentication state, disables Playwright screenshots and traces, and
 writes only a secret-free revision-scoped evidence record after every journey and cleanup check
 passes.
+
+`make live-providers-staging-up` is the separate owner-only live cutover. It requires the qualified
+runtime and edge, confirms the OpenAI USD 20 provider-side hard limit and the selected account
+rights, creates only Secret Manager metadata/IAM through Terraform, and sends the owner to the GCP
+console to enter OpenAI, Massive, and Tavily keys. It observes only enabled numeric versions, then
+applies the complete live workload and rechecks readiness, IAP admission, direct-origin denial,
+OpenAI measured token usage, Massive provenance, and Tavily attribution. `make
+live-providers-staging-down` restores credential-free mode before deleting the three disposable
+provider secret resources and their versions. Neither path changes DNS, OAuth, IAP membership,
+application Principal behavior, or the existing `openai_live` implementation.
 
 `make private-edge-up` requires the disposable runtime to be ready. It refreshes the shared OAuth
 secret metadata without a payload, then pauses for the owner to create the external OAuth client and
@@ -134,18 +149,26 @@ The down wizard first applies a displayed non-destructive transition plan that r
 deletion guards while preserving the observed database tier. It then displays separate workload and
 staging destroy plans and requires the exact phrase `DESTROY EMPTY-DEMO-RUNTIME`. It destroys the
 workload state before the managed-state plan. Cloud SQL data, operator jobs, service identities,
-and both Qdrant secrets/versions are deleted. Google may temporarily retain the VPC, allocated
+both Qdrant secrets/versions, and any live-provider secrets/versions are deleted. Google may
+temporarily retain the VPC, allocated
 private-service range, and Service Networking connection; the wizard treats this as success only
 when those are the exact remaining Terraform resources and Cloud SQL/workload inventories are
 empty. Protected Terraform state, Artifact Registry, WIF, the budget, shared non-secret
 configuration, and the separately managed Qdrant cluster remain. The script never accepts a
-service-account key or secret payload.
+service-account key or secret payload. If live-provider secrets existed, they are destroyed with
+the runtime and the four non-secret GitHub live-mode/version selectors are reset to credential-free
+and `0` so the next plan cannot reference deleted versions.
 
 `terraform plan` is credentialed through short-lived GitHub OIDC only after the local bootstrap has
 created WIF and the protected GitHub environment. No workflow in this slice performs
 `terraform apply`. The `staging` GitHub environment must provide `GCP_BACKEND_IMAGE` and
 `GCP_FRONTEND_IMAGE` as full merged-main references pinned by `@sha256:` in the approved Artifact
 Registry, plus non-secret numeric `GCP_QDRANT_SECRET_VERSION`, before the expanded staging plans run.
+When live mode is active, the same environment additionally stores `GCP_LIVE_PROVIDER_MODE=live`
+and the positive numeric `GCP_OPENAI_SECRET_VERSION`, `GCP_MASSIVE_SECRET_VERSION`, and
+`GCP_TAVILY_SECRET_VERSION` selectors. These are deployment selectors, not credentials or new
+application environment names. Rollback sets the mode to `credential_free` and each unused version
+selector to `0`.
 
 Cloud Run rejected the first operator-job apply because the multi-container jobs combined a GHCR
 backend with a GCR proxy. Backend and frontend merged-main manifests are now mirrored through the

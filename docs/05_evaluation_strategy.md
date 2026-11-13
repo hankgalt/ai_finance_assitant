@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.9 | Status: Product baseline plus qualified M11 owner-only credential-free private-demo MVP; production-hardening horizon remains deferred | 2026-11-12
+Version 2.0 | Status: Product baseline plus qualified M11 credential-free MVP; owner-only live-provider qualification pending | 2026-11-12
 
 ## 1. Evaluation principles
 
@@ -88,6 +88,16 @@ not by itself a passing EVAL-20 result. The reviewed record for merged revision
 `e66751dc36ed1cd342b0480248ce772c64896834` passed the private-demo horizon. EVAL-19's deterministic
 two-Principal matrix remains the isolation evidence because viewer admission was intentionally
 disabled during the owner-only live run. The separate production-hardening horizon remains pending.
+
+The separate live-provider operator entry point is `make live-providers-staging-up`. Passing requires
+clean merged `main`; recorded OpenAI account tier and owner attestation of a USD 20 provider-side hard
+limit; Massive Stocks Basic owner-only and Tavily Researcher rights confirmation; positive numeric
+Secret Manager versions; exact Cloud Run configuration readback; ready model, market, news, storage,
+and knowledge checks; owner-observed OpenAI token measurements, Massive provenance, and Tavily
+attribution; and continued direct-origin denial. Its evidence must exclude credentials, prompts,
+provider responses, and application values. Repository implementation alone is not a live-provider
+qualification. `make live-providers-staging-down` restores credential-free mode before deleting the
+three disposable provider secrets.
 
 ## 4. Retrieval evaluation and collection activation
 
