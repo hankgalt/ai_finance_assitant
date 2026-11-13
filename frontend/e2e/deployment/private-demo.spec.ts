@@ -399,8 +399,17 @@ test("qualifies the assembled credential-free private demo", async ({
     await page.getByRole("button", { name: "Clear active session" }).click();
     await page.getByRole("button", { name: "Archive and start fresh" }).click();
     await expect
-      .poll(() => storedSessionId(page, identity.principal_id))
-      .not.toBe(qualificationSession.session_id);
+      .poll(async () => {
+        const candidateSessionId = await storedSessionId(
+          page,
+          identity.principal_id,
+        );
+        return (
+          candidateSessionId !== null &&
+          candidateSessionId !== qualificationSession.session_id
+        );
+      })
+      .toBe(true);
     const replacement = await storedSessionId(page, identity.principal_id);
     expect(replacement).not.toBeNull();
     createdSessions.add(replacement!);
@@ -427,7 +436,20 @@ test("qualifies the assembled credential-free private demo", async ({
     createdSessions.delete(qualificationSession.session_id);
   } finally {
     if (principalId !== null) {
-      const currentSessionId = await storedSessionId(page, principalId);
+      let currentSessionId = await storedSessionId(page, principalId);
+      if (currentSessionId === null) {
+        // Archiving deliberately clears the old key before the replacement
+        // Session is stored. Give that in-flight creation a bounded cleanup
+        // window even when a later qualification assertion fails.
+        await page
+          .waitForFunction(
+            ({ key }) => window.localStorage.getItem(key) !== null,
+            { key: `aifa.session.${principalId}` },
+            { timeout: 10_000 },
+          )
+          .catch(() => undefined);
+        currentSessionId = await storedSessionId(page, principalId);
+      }
       if (currentSessionId !== null) createdSessions.add(currentSessionId);
     }
     const cleanupResults = await Promise.all(
