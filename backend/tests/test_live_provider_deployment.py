@@ -104,6 +104,10 @@ def test_live_provider_operator_never_reads_or_persists_secret_payloads() -> Non
     assert '"run.googleapis.com/default-url-disabled"' in operator
     assert '"roles/iap.httpsResourceAccessor"' in operator
     assert 'EDGE_BACKEND_SERVICES=("aifa-staging-backend-edge"' in operator
+    assert "gcloud iap web get-iam-policy" in operator
+    assert "--resource-type=backend-services" in operator
+    assert '--service="$EDGE_ID"' in operator
+    assert "gcloud compute backend-services get-iam-policy" not in operator
     assert "DISABLE LIVE PROVIDERS" in operator
     assert "provider response" in operator
     assert "raw prompt" in operator

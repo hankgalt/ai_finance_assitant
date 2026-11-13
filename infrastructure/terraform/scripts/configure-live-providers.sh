@@ -487,12 +487,18 @@ run_wizard() {
   jq -e 'all(.bindings[]?.members[]?; . != "allUsers" and . != "allAuthenticatedUsers")' \
     "$SERVICE_IAM" >/dev/null
   for edge_service in "${EDGE_BACKEND_SERVICES[@]}"; do
-    gcloud compute backend-services get-iam-policy "$edge_service" \
-      --project="$PROJECT_ID" --global --format=json | jq -e \
+    EDGE_ID=$(gcloud compute backend-services describe "$edge_service" \
+      --project="$PROJECT_ID" --global --format='value(id)')
+    gcloud iap web get-iam-policy \
+      --project="$PROJECT_ID" \
+      --resource-type=backend-services \
+      --service="$EDGE_ID" \
+      --format=json | jq -e \
       --arg owner "user:$OWNER_EMAIL" '
         [.bindings[]? |
           select(.role == "roles/iap.httpsResourceAccessor") |
-          .members[]?] == [$owner]
+          .members[]?] == [$owner] and
+        all(.bindings[]?.members[]?; . != "allUsers" and . != "allAuthenticatedUsers")
       ' >/dev/null
   done
   DIRECT_URL=$(jq -r '.status.url // empty' "$SERVICE_DESCRIPTION")
