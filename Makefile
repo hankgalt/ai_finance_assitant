@@ -13,7 +13,7 @@ DEPLOYMENT_ENVIRONMENT ?= staging
 	managed-state-postgres-up managed-state-postgres-status managed-state-postgres-stop \
 	managed-state-postgres-check delivery-check infrastructure-check container-build \
 	mirror-merged-main-images set-deployment-image-variables knowledge-release-staging \
-	rotate-qdrant-runtime-key-staging private-edge-up private-edge-down
+	rotate-qdrant-runtime-key-staging private-edge-up private-edge-down qualify-private-demo
 
 backend-sync:
 	cd backend && uv sync
@@ -81,6 +81,9 @@ private-edge-up:
 
 private-edge-down:
 	./infrastructure/terraform/scripts/private-edge-down.sh
+
+qualify-private-demo:
+	./infrastructure/terraform/scripts/qualify-private-demo.sh
 
 frontend-install:
 	cd frontend && pnpm install

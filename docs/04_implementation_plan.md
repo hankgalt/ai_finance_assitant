@@ -1,6 +1,6 @@
 # AI Finance Assistant — Incremental implementation plan
 
-Version 3.5 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, live shared knowledge, focused runtime-key rotation, and the live edge/IAP boundary are qualified; integrated product journeys remain pending | 2026-11-12
+Version 3.6 | Status: M0–M9.1 complete; M10 planned; M11 application access, managed state, delivery, private workload lifecycle, live shared knowledge, focused runtime-key rotation, and the live edge/IAP boundary are qualified; assembled private-demo qualification is implemented with its live run pending | 2026-11-12
 
 ## 1. Delivery rules
 
@@ -523,13 +523,23 @@ qualified those controls for revision `3327a231fcc197d4a8032de7b8a30523fecc1eda`
 evidence is under `backend/artifacts/release/deployment/`. Integrated product journeys remain the
 final private-demo MVP gate.
 
+The final slice now defines the versioned assembled qualification contract, a read-only operator
+preflight, and a headed Playwright journey for the owner IAP identity, managed readiness, Assistant
+and SSE replay, Portfolio/Snapshot context, credential-free Market provenance, Goal projection,
+History, Inspector, accessibility, and qualification-created Session cleanup. It aggregates the
+five prerequisite evidence records without changing infrastructure, IAM, DNS, secrets, or provider
+mode. Repository implementation is complete; the live run from clean merged `main` and its
+revision-scoped evidence remain pending, so EVAL-20 is not yet closed and ADR-030 remains Proposed.
+
 **Remaining private-demo MVP sequence**
 
-1. Run the critical deployed Assistant, Portfolio, Snapshot, Goal, History, Run/SSE, and Inspector
-   journeys; record identity/isolation and direct-origin evidence; then prove reviewed teardown and
-   clean recreation from the persistent foundation. This evidence is the private-demo MVP release
-   gate. Keep viewer admission and viewer live-provider use disabled until separately approved, and
-   stop there rather than expanding into deferred production hardening.
+1. Merge the assembled qualification implementation, run `make qualify-private-demo` from clean
+   merged `main`, review and commit its secret-free revision-scoped evidence, and reconcile the
+   acceptance reports. The operator run covers the critical deployed Assistant, Portfolio,
+   Snapshot, Goal, History, Run/SSE, and Inspector journeys and rechecks the prerequisite lifecycle,
+   identity/isolation, and direct-origin evidence. This is the private-demo MVP release gate. Keep
+   viewer admission and viewer live-provider use disabled until separately approved, and stop there
+   rather than expanding into deferred production hardening.
 
 **Owner decisions required before implementation slices**
 

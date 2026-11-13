@@ -1,6 +1,6 @@
 # AI Finance Assistant — Evaluation, safety, and reliability strategy
 
-Version 1.7 | Status: Product baseline plus qualified M11 live private-edge controls; integrated private-demo MVP qualification remains pending | 2026-11-12
+Version 1.8 | Status: Product baseline plus qualified M11 live private-edge controls and an implemented assembled private-demo procedure; its live MVP qualification remains pending | 2026-11-12
 
 ## 1. Evaluation principles
 
@@ -78,6 +78,13 @@ owner-operated, allow-listed demonstration posture in PR-017. Backup/restore, PI
 multi-zone availability, measured RPO/RTO, full application/infrastructure/collection rollback,
 capacity/soak, formal SLO/alerting, and incident rehearsal must pass before any later
 production-readiness or broader-availability claim.
+
+The assembled EVAL-20 operator entry point is `make qualify-private-demo`. It runs only from clean
+merged `main`, verifies the already-qualified infrastructure and provider boundaries without
+changing them, opens a temporary headed browser for owner IAP authentication, exercises the critical
+deployed product journeys, cleans only qualification-created Sessions, and emits a secret-free
+revision-scoped record only after the final boundary readback passes. Repository implementation is
+not a passing EVAL-20 result; the reviewed live record remains required.
 
 ## 4. Retrieval evaluation and collection activation
 

@@ -1,6 +1,6 @@
 # AI Finance Assistant — System design
 
-Version 1.22 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, active private staging workload, qualified live shared knowledge and runtime-key rotation, and a qualified live private edge; integrated deployed journeys remain incomplete | 2026-11-12
+Version 1.23 | Status: Product baseline plus implemented M11 access/adapter/delivery boundaries, active private staging workload, qualified live shared knowledge, runtime-key rotation, and private edge, plus an implemented assembled qualification whose live run remains pending | 2026-11-12
 
 ## 1. Architecture principles
 
@@ -475,9 +475,11 @@ The separate-state frontend/backend workload and migration-first lifecycle were 
 verified before a reviewed teardown, then recreated for shared-knowledge qualification. Read-only
 reconciliation on 2026-11-12 found the `db-g1-small` Cloud SQL instance `RUNNABLE`, both services
 `Ready`, internal/load-balancer ingress, disabled default Cloud Run URLs, and no anonymous IAM. The
-repository now defines the load balancer/IAP edge and its reviewed cutover procedure, but no load
-balancer, IAP policy, OAuth client, certificate, or DNS record is represented as operational. The selected region is
-`us-west1`. The current billable staging runtime is active and disposable. Its VPC,
+repository-defined load balancer/IAP edge and its reviewed cutover procedure are live-qualified:
+the owner-only IAP policy, OAuth client, managed certificate, DNS record, exact base-path routing,
+and direct-origin denial have revision-scoped evidence. The assembled owner browser/API/SSE product
+journey is repository-implemented but has not yet run, so the private-demo MVP is not yet qualified.
+The selected region is `us-west1`. The current billable staging runtime is active and disposable. Its VPC,
 private-service allocated range, and Service Networking connection remain the approved
 reproducibility foundation; a reviewed teardown intentionally discards application state. The
 runtime carries no MVP backup/PITR/RPO/RTO guarantee.
