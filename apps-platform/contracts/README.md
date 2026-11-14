@@ -1,6 +1,6 @@
 # App Platform contracts
 
-Version 1 | Status: machine-contract authority; no runtime or provider adapter is implemented
+Version 1 | Status: machine-contract authority; fixture adapter implemented, no provider adapter
 
 This directory defines the versioned machine interfaces for AP-M3. The contracts are authoritative
 only inside the App Platform project and are subordinate to the product requirements, accepted
@@ -129,6 +129,14 @@ platform configuration. AP-M3 enables only contract-test-v1. It exists solely to
 shape and compiler semantics and is not a Fixture Application, network adapter, or provider
 implementation. Enabling a later kind requires its own approved plan, implementation, and evidence;
 changing the attachment fields or their meaning requires a new contract major version.
+
+AP-M4 enables `fixture-in-process-v1` only inside the deterministic fixture harness. Its exact
+resource-reference form is
+`urn:comfforts:app-platform:fixture:<application-id>:<attachment-id>`. The compiler verifies that
+the identifiers in the reference match the owning registration and attachment; activation then
+requires an exact target in the explicitly supplied in-memory adapter map. The reference performs
+no import, fetch, provider discovery, or credential lookup. This adapter adds no Version 1 field or
+provider behavior and is not evidence for a live attachment.
 
 ## Violation semantics
 

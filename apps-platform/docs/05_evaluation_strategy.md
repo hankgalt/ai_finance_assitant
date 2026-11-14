@@ -317,8 +317,10 @@ make -C apps-platform check
 
 `make check` must include `fixture-check` after governance and contract checks. The complete command
 uses only a supported Python 3 interpreter and its standard library. It performs no installation,
-network access, socket bind, subprocess call, browser automation, credential read, environment
-secret read, cloud access, external mutation, or committed artifact generation.
+network access, socket bind, browser automation, credential read, environment secret read, cloud
+access, external mutation, or committed artifact generation. The harness itself launches no
+subprocess; the extraction check may launch an isolated standard-library Python interpreter from a
+temporary project copy, as AP-EVAL-M3 already requires.
 
 The harness opens no listening socket. There is no registration API or database; tests supply
 reviewed Registration Sets directly to the in-memory activation interface.

@@ -888,6 +888,19 @@ def _attachment_binding_violations(
                             "contract-test reference does not match its owner and identifier",
                         )
                     )
+            elif attachment["adapter_kind"] == "fixture-in-process-v1":
+                expected_reference = (
+                    "urn:comfforts:app-platform:fixture:"
+                    f"{registration['application_id']}:{attachment['attachment_id']}"
+                )
+                if attachment["resource_reference"] != expected_reference:
+                    violations.append(
+                        Violation(
+                            "ATTACHMENT_INVALID",
+                            f"{path}/resource_reference",
+                            "fixture reference does not match its owner and identifier",
+                        )
+                    )
             if (
                 registration["admission"]["mode"] != "public"
                 and attachment["identity_requirement"] != "verified"
