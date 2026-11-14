@@ -164,6 +164,7 @@ def test_delivery_evidence_is_capability_owned_and_truthful_about_activated_cont
 
 def test_workflows_are_known_and_third_party_actions_are_immutable() -> None:
     expected = {
+        "apps-platform-ci.yml",
         "ci.yml",
         "cloud-identity-smoke.yml",
         "images.yml",
@@ -200,6 +201,19 @@ def test_ci_runs_credential_free_checks_and_real_postgres_qualification() -> Non
     assert "pnpm test" in workflow
     assert "pnpm build" in workflow
     assert "postgres:17.11-alpine3.23@sha256:" in workflow
+
+
+def test_apps_platform_ci_is_path_scoped_and_credential_free() -> None:
+    workflow = _workflow("apps-platform-ci.yml")
+
+    assert workflow.count('      - "apps-platform/**"') == 2
+    assert workflow.count('      - ".github/workflows/apps-platform-ci.yml"') == 2
+    assert "permissions:\n  contents: read" in workflow
+    assert "run: make -C apps-platform check" in workflow
+    assert "secrets." not in workflow
+    assert "id-token: write" not in workflow
+    assert "gcloud" not in workflow
+    assert "terraform" not in workflow
 
 
 def test_pnpm_setup_is_explicit_when_package_manifest_is_not_at_repo_root() -> None:
