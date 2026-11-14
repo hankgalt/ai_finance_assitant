@@ -56,8 +56,8 @@ class GovernanceFoundationTest(unittest.TestCase):
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
 
-        self.assertIn("requirements and shared-edge ownership decisions defined", index)
-        self.assertIn("remaining decisions\npending", index)
+        self.assertIn("requirements, ownership, and admission decisions defined", index)
+        self.assertIn("fixture migration\ndecision pending", index)
         self.assertIn("does not claim", index)
         self.assertIn("Integration draft", index)
         self.assertIn("history-preserving subtree extraction", layout)
@@ -98,13 +98,17 @@ class GovernanceFoundationTest(unittest.TestCase):
         )
         observed = re.findall(r"^## (ADR-\d{3}) ·", decisions, re.MULTILINE)
 
-        self.assertEqual(observed, ["ADR-001", "ADR-002"])
-        self.assertEqual(decisions.count("Status: Accepted"), 2)
+        self.assertEqual(observed, ["ADR-001", "ADR-002", "ADR-003"])
+        self.assertEqual(decisions.count("Status: Accepted"), 3)
         for identifier in (
             "AP-PR-001",
             "AP-PR-002",
             "AP-PR-003",
+            "AP-PR-004",
+            "AP-PR-005",
+            "AP-PR-006",
             "AP-PR-007",
+            "AP-PR-008",
             "AP-QR-001",
             "AP-QR-002",
             "AP-QR-003",
@@ -127,6 +131,31 @@ class GovernanceFoundationTest(unittest.TestCase):
             "Direct manual route changes are drift",
         ):
             self.assertIn(boundary, decisions)
+
+    def test_admission_decision_does_not_become_feature_authorization(self) -> None:
+        decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
+            encoding="utf-8"
+        )
+        glossary = (PROJECT_ROOT / "GLOSSARY.md").read_text(encoding="utf-8")
+
+        for mode in ("**Public:**", "**Authenticated:**", "**Restricted:**"):
+            self.assertIn(mode, decisions)
+        for boundary in (
+            "Being listed does not grant admission",
+            "being admitted does not grant a Feature Entitlement",
+            "Email addresses are display or contact attributes",
+            "next request or new streaming-connection boundary",
+            "market-data-style Feature Entitlement",
+            "does not alter its current access policy",
+        ):
+            self.assertIn(boundary, decisions)
+        for term in (
+            "## Admission Decision",
+            "## Verified Identity Context",
+            "## Application Principal",
+            "## Feature Entitlement",
+        ):
+            self.assertIn(term, glossary)
 
 
 if __name__ == "__main__":
