@@ -19,6 +19,14 @@ It does not yet provide approved public-provider rights, private multi-user depl
 professional financial or tax advice, or M10 cash-flow import. M11 documents but has not implemented
 the IAP-protected GCP deployment.
 
+## Colocated projects
+
+[`apps-platform/`](apps-platform/) is a separately governed App Platform project under development.
+It is not a Finance Assistant module or runtime dependency, and its governance or integration drafts
+do not change the current Finance Assistant requirements, contracts, Terraform ownership, or
+deployment. Follow its own [project overview](apps-platform/README.md) and
+[documentation authority](apps-platform/docs/README.md) for work inside that subtree.
+
 The planned initial release is a production-oriented private demonstration release for the owner and approved viewers, not a public launch. Live provider demonstrations must remain within approved API terms and configured quotas; a separately selected credential-free mode remains reproducible and clearly labeled synthetic.
 
 Read [docs/release/developer-guide.md](docs/release/developer-guide.md), [docs/release/user-guide.md](docs/release/user-guide.md) & [docs/release/README.md](docs/release/README.md). See [docs/release/demo-script.md](docs/release/demo-script.md) to go over functionality demo.
