@@ -1,22 +1,24 @@
 # App Platform documentation
 
-Version 0.1 | Status: governance foundation; requirements and architecture decisions pending
+Version 0.2 | Status: product requirements defined; architecture decisions pending
 
-This directory is the design authority for Comfforts App Platform. The current slice establishes
-project governance only. It does not claim that the catalogue, Shared Edge, identity boundary,
-fixture applications, Terraform, or any cloud resource exists.
+This directory is the design authority for Comfforts App Platform. The current slice defines the
+platform requirements without implementing them. It does not claim that the catalogue, Shared Edge,
+identity boundary, fixture applications, Terraform, or any cloud resource exists.
 
 ## Current reading order and authority
 
 1. [Project overview](../README.md) states the current operational status and project boundary.
 2. [Domain glossary](../GLOSSARY.md) supplies canonical governance terms.
-3. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
-4. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
+3. [Product requirements](01_product_requirements.md) defines required behavior, quality, scope, and
+   ownership boundaries.
+4. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
+5. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
 
-The next approved documentation slice will add the platform requirements and architecture decision
-records. System design, implementation planning, evaluation strategy, threat modeling, contracts,
-fixtures, and Terraform remain deferred until their owning slice is approved. An absent authority
-must not be inferred from discussion history.
+The remaining work in this approved documentation slice will add the architecture decision records.
+System design, implementation planning, evaluation strategy, threat modeling, contracts, fixtures,
+and Terraform remain deferred until their owning slice is approved. An absent authority must not be
+inferred from discussion history.
 
 ## Future document precedence
 
@@ -30,8 +32,8 @@ Once present, conflicts will be resolved in this order:
 6. Runbooks and delivery evidence
 7. Prompts
 
-Until those documents exist, this governance foundation authorizes documentation and deterministic
-governance checks only.
+Until the remaining documents exist, the requirements and governance foundation authorize
+documentation and deterministic governance checks only.
 
 ## Scope labels
 

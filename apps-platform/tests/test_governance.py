@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -17,6 +18,7 @@ class GovernanceFoundationTest(unittest.TestCase):
             "GLOSSARY.md",
             "Makefile",
             "README.md",
+            "docs/01_product_requirements.md",
             "docs/README.md",
             "docs/repository_layout.md",
             "prompts/README.md",
@@ -49,15 +51,44 @@ class GovernanceFoundationTest(unittest.TestCase):
         self.assertIn("docs/repository_layout.md", instructions)
         self.assertIn("make -C apps-platform check", instructions)
 
-    def test_documentation_truthfully_limits_the_governance_slice(self) -> None:
+    def test_documentation_truthfully_limits_the_requirements_slice(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
 
-        self.assertIn("requirements and architecture decisions pending", index)
+        self.assertIn("product requirements defined; architecture decisions pending", index)
         self.assertIn("does not claim", index)
         self.assertIn("Integration draft", index)
         self.assertIn("history-preserving subtree extraction", layout)
         self.assertIn("Do not create a nested `.git`", layout)
+
+    def test_product_requirements_have_unique_stable_identifiers(self) -> None:
+        requirements = (PROJECT_ROOT / "docs/01_product_requirements.md").read_text(
+            encoding="utf-8"
+        )
+        observed = re.findall(r"^### (AP-(?:PR|QR)-\d{3}) ·", requirements, re.MULTILINE)
+        expected = {
+            *(f"AP-PR-{index:03d}" for index in range(1, 10)),
+            *(f"AP-QR-{index:03d}" for index in range(1, 7)),
+        }
+
+        self.assertEqual(set(observed), expected)
+        self.assertEqual(len(observed), len(set(observed)))
+
+    def test_product_requirements_preserve_platform_boundaries(self) -> None:
+        requirements = (PROJECT_ROOT / "docs/01_product_requirements.md").read_text(
+            encoding="utf-8"
+        )
+
+        for boundary in (
+            "feature authorization",
+            "Application State",
+            "Platform State",
+            "Fixture Applications",
+            "Integration Draft",
+            "Finance Assistant migration",
+            "no platform capability is implemented",
+        ):
+            self.assertIn(boundary, requirements)
 
 
 if __name__ == "__main__":
