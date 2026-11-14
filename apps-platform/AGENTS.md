@@ -6,13 +6,15 @@ repository's security, source-control, and destructive-action guardrails also ap
 ## Before modifying the platform
 
 1. Read [docs/README.md](docs/README.md) completely and follow its task-specific reading order.
-2. Read [GLOSSARY.md](GLOSSARY.md) for canonical platform terms and
+2. Read [product requirements](docs/01_product_requirements.md) and
+   [accepted architecture decisions](docs/02_architecture_decision_records.md). Map every planned
+   behavior to their identifiers and constraints.
+3. Read [GLOSSARY.md](GLOSSARY.md) for canonical platform terms and
    [docs/repository_layout.md](docs/repository_layout.md) before placing files.
-3. Inspect `git status` and preserve unrelated changes.
-4. State the platform slice and requirement, decision, and evaluation identifiers that own the
-   change once those authorities exist. During the governance foundation, state that no product
-   capability or live resource is being implemented.
-5. Stop for direction when an authority is absent or the requested work would change an active
+4. Inspect `git status` and preserve unrelated changes.
+5. State the platform slice and every `AP-PR-*`, `AP-QR-*`, `ADR-*`, plan, and evaluation identifier
+   that owns the change. Treat an absent downstream authority as unresolved rather than inferred.
+6. Stop for direction when an authority is absent or the requested work would change an active
    application, cloud resource, DNS record, credential, or Terraform state outside the approved
    slice.
 

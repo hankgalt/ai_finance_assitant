@@ -1,11 +1,11 @@
 # App Platform documentation
 
-Version 0.5 | Status: product requirements and accepted architecture decisions defined; system
-design pending
+Version 0.6 | Status: requirements-and-decisions slice complete; system design pending
 
-This directory is the design authority for Comfforts App Platform. The current slice defines the
-platform requirements without implementing them. It does not claim that the catalogue, Shared Edge,
-identity boundary, fixture applications, Terraform, or any cloud resource exists.
+This directory is the design authority for Comfforts App Platform. The completed slice defines the
+platform requirements and accepted decisions without implementing them. It does not claim that the
+catalogue, Shared Edge, identity boundary, fixture applications, Terraform, or any cloud resource
+exists.
 
 ## Current reading order and authority
 
@@ -17,10 +17,13 @@ identity boundary, fixture applications, Terraform, or any cloud resource exists
    application, registration, and state ownership.
 5. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
 6. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
+7. [System-design handoff](../prompts/starting_prompt.md) provides a bounded new-chat entry point for
+   proposing the next slice.
 
-The requirements and decisions are now defined. System design, implementation planning, evaluation
-strategy, threat modeling, contracts, fixture implementation, and Terraform remain deferred until
-their owning slice is approved. An absent authority must not be inferred from discussion history.
+The requirements-and-decisions slice is complete. System design, implementation planning,
+evaluation strategy, threat modeling, contracts, fixture implementation, and Terraform remain
+deferred until their owning slice is approved. An absent authority must not be inferred from
+discussion history.
 
 ## Future document precedence
 
@@ -50,10 +53,10 @@ documentation and deterministic governance checks only.
 
 ## Application boundary
 
-The App Platform will own only capabilities accepted by its future requirements. Application data,
-provider rights, feature entitlements, and product behavior remain under each application's own
-authority. Nothing under this subtree changes the active Finance Assistant requirements, contracts,
-Terraform state, DNS, IAP configuration, or deployment.
+The App Platform owns only the boundaries assigned by its product requirements and accepted
+decisions. Application data, provider rights, Feature Entitlements, and product behavior remain
+under each application's own authority. Nothing under this subtree changes the active Finance
+Assistant requirements, contracts, Terraform state, DNS, IAP configuration, or deployment.
 
 ## Evidence discipline
 

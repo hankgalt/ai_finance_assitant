@@ -36,5 +36,8 @@ Read `AGENTS.md` before changing this project and follow the authority and readi
 System design, implementation planning, and evaluation strategy remain deferred to their approved
 documentation slices.
 
+Use the [system-design handoff](prompts/starting_prompt.md) to begin the next chat without copying
+specifications or relying on this conversation's history.
+
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

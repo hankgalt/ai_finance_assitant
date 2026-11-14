@@ -1,4 +1,4 @@
-"""Standalone App Platform governance-foundation checks."""
+"""Standalone App Platform authority-foundation checks."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-class GovernanceFoundationTest(unittest.TestCase):
+class ProjectAuthorityTest(unittest.TestCase):
     def test_project_shell_is_self_contained(self) -> None:
         expected_files = (
             ".gitignore",
@@ -23,6 +23,7 @@ class GovernanceFoundationTest(unittest.TestCase):
             "docs/README.md",
             "docs/repository_layout.md",
             "prompts/README.md",
+            "prompts/starting_prompt.md",
             "tests/test_governance.py",
         )
 
@@ -49,17 +50,20 @@ class GovernanceFoundationTest(unittest.TestCase):
 
         self.assertIn("docs/README.md", instructions)
         self.assertIn("GLOSSARY.md", instructions)
+        self.assertIn("docs/01_product_requirements.md", instructions)
+        self.assertIn("docs/02_architecture_decision_records.md", instructions)
         self.assertIn("docs/repository_layout.md", instructions)
         self.assertIn("make -C apps-platform check", instructions)
 
-    def test_documentation_truthfully_limits_the_requirements_slice(self) -> None:
+    def test_documentation_truthfully_closes_the_requirements_slice(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
 
-        self.assertIn("product requirements and accepted architecture decisions defined", index)
-        self.assertIn("system\ndesign pending", index)
+        self.assertIn("requirements-and-decisions slice complete", index)
+        self.assertIn("system design pending", index)
         self.assertIn("does not claim", index)
         self.assertIn("Integration draft", index)
+        self.assertIn("requirements-and-decisions slice complete", layout)
         self.assertIn("history-preserving subtree extraction", layout)
         self.assertIn("Do not create a nested `.git`", layout)
 
@@ -165,7 +169,6 @@ class GovernanceFoundationTest(unittest.TestCase):
         )
         glossary = (PROJECT_ROOT / "GLOSSARY.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
-        prompts = (PROJECT_ROOT / "prompts/README.md").read_text(encoding="utf-8")
 
         for boundary in (
             "before any real application may be adopted",
@@ -178,8 +181,32 @@ class GovernanceFoundationTest(unittest.TestCase):
             self.assertIn(boundary, decisions)
         self.assertIn("## Application Adoption", glossary)
         self.assertIn("app-owned test state", layout)
-        self.assertIn("requirements-and-decisions-only state", prompts)
-        self.assertNotIn("governance-only state", prompts)
+
+    def test_starting_prompt_loads_authority_without_copying_it(self) -> None:
+        prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
+        prompt_index = (PROJECT_ROOT / "prompts/README.md").read_text(encoding="utf-8")
+        normalized_prompt = " ".join(prompt.split())
+
+        for authority in (
+            "AGENTS.md",
+            "docs/README.md",
+            "GLOSSARY.md",
+            "docs/01_product_requirements.md",
+            "docs/02_architecture_decision_records.md",
+            "docs/repository_layout.md",
+        ):
+            self.assertIn(authority, prompt)
+        for boundary in (
+            "Wait for owner approval before editing",
+            "leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
+            "An Integration Draft is not Application Adoption",
+            "credential-free, deterministic, and non-mutating",
+        ):
+            self.assertIn(boundary, normalized_prompt)
+        self.assertNotIn("### AP-PR-", prompt)
+        self.assertNotIn("## ADR-", prompt)
+        self.assertNotIn("terraform apply", prompt)
+        self.assertIn("[System-design handoff](starting_prompt.md)", prompt_index)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # App Platform repository layout
 
-Status: authoritative for the governance foundation
+Status: authoritative; requirements-and-decisions slice complete
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this
