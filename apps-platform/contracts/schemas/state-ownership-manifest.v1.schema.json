@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:comfforts:app-platform:schema:state-ownership-manifest:v1",
+  "title": "State Ownership Manifest Version 1",
+  "description": "A deterministic declaration of one state owner per resource reference. resources are sorted by resource_reference.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "generation",
+    "generation_digest",
+    "resources"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": 1
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "generation_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "resources": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 512,
+      "uniqueItems": true,
+      "description": "Entries are sorted by resource_reference.",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/platformResource"
+          },
+          {
+            "$ref": "#/$defs/applicationResource"
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "minLength": 71,
+      "maxLength": 71,
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "resourceReference": {
+      "type": "string",
+      "minLength": 7,
+      "maxLength": 324,
+      "pattern": "^urn:[a-z0-9][a-z0-9-]{0,31}:[A-Za-z0-9][A-Za-z0-9:._/-]{0,286}$"
+    },
+    "platformOwner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "owner_id"
+      ],
+      "properties": {
+        "state": {
+          "const": "platform"
+        },
+        "owner_id": {
+          "const": "app-platform"
+        }
+      }
+    },
+    "applicationOwner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "owner_id"
+      ],
+      "properties": {
+        "state": {
+          "const": "application"
+        },
+        "owner_id": {
+          "$ref": "urn:comfforts:app-platform:schema:registration-set:v1#/$defs/applicationId"
+        }
+      }
+    },
+    "platformResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_reference",
+        "resource_kind",
+        "management_mode",
+        "owner"
+      ],
+      "properties": {
+        "resource_reference": {
+          "$ref": "#/$defs/resourceReference"
+        },
+        "resource_kind": {
+          "enum": [
+            "shared-edge",
+            "catalogue",
+            "route",
+            "edge-connector"
+          ]
+        },
+        "management_mode": {
+          "const": "managed"
+        },
+        "owner": {
+          "$ref": "#/$defs/platformOwner"
+        }
+      }
+    },
+    "applicationResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_reference",
+        "resource_kind",
+        "management_mode",
+        "owner"
+      ],
+      "properties": {
+        "resource_reference": {
+          "$ref": "#/$defs/resourceReference"
+        },
+        "resource_kind": {
+          "const": "application-attachment"
+        },
+        "management_mode": {
+          "const": "referenced"
+        },
+        "owner": {
+          "$ref": "#/$defs/applicationOwner"
+        }
+      }
+    }
+  }
+}

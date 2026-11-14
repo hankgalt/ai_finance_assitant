@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:comfforts:app-platform:schema:application-attachment:v1",
+  "title": "Application Attachment Version 1",
+  "description": "A non-secret application-owned target reference. attachment_id values are sorted ascending in compiled output.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "owner_application_id",
+    "attachment_id",
+    "adapter_kind",
+    "resource_reference",
+    "mount_path",
+    "forwarding_mode",
+    "identity_requirement",
+    "audience",
+    "ingress_mode"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": 1
+    },
+    "owner_application_id": {
+      "$ref": "#/$defs/applicationId"
+    },
+    "attachment_id": {
+      "$ref": "#/$defs/attachmentId"
+    },
+    "adapter_kind": {
+      "$ref": "#/$defs/adapterKind"
+    },
+    "resource_reference": {
+      "type": "string",
+      "minLength": 7,
+      "maxLength": 324,
+      "pattern": "^urn:[a-z0-9][a-z0-9-]{0,31}:[A-Za-z0-9][A-Za-z0-9:._/-]{0,286}$"
+    },
+    "mount_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^(?:/|(?:/[a-z0-9][a-z0-9_-]{0,62})+)$"
+    },
+    "forwarding_mode": {
+      "enum": [
+        "preserve",
+        "strip_application_prefix",
+        "strip_attachment_mount"
+      ]
+    },
+    "identity_requirement": {
+      "enum": [
+        "none",
+        "verified"
+      ]
+    },
+    "audience": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/audience"
+        }
+      ]
+    },
+    "ingress_mode": {
+      "const": "shared_edge_only"
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "identity_requirement",
+        "audience"
+      ],
+      "properties": {
+        "identity_requirement": {
+          "const": "none"
+        },
+        "audience": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "identity_requirement",
+        "audience"
+      ],
+      "properties": {
+        "identity_requirement": {
+          "const": "verified"
+        },
+        "audience": {
+          "$ref": "#/$defs/audience"
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "applicationId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 63,
+      "pattern": "^[a-z][a-z0-9-]{1,61}[a-z0-9]$"
+    },
+    "attachmentId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 63,
+      "pattern": "^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "adapterKind": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 63,
+      "pattern": "^[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "audience": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._~:/?#\\[\\]@!$&'()*+,;=%-]{0,511}$"
+    }
+  }
+}
