@@ -1,0 +1,965 @@
+{
+  "contract_version": 1,
+  "cases": [
+    {
+      "case_id": "initial-staged",
+      "description": "Stage one public application without exposing a catalogue entry or route",
+      "evidence_class": "C",
+      "expected": "accept",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "valid/initial-registration-set.v1.json",
+      "expected_compiled": "valid/compiled-initial.v1.json",
+      "expected_ownership": "valid/ownership-initial.v1.json",
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-007",
+        "AP-QR-003",
+        "AP-QR-004",
+        "AP-QR-006"
+      ],
+      "decisions": [
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-007",
+        "AP-TM-008",
+        "AP-TM-014"
+      ]
+    },
+    {
+      "case_id": "activate-application",
+      "description": "Activate the staged application as one compiled catalogue, route, admission, attachment, and ownership generation",
+      "evidence_class": "C",
+      "expected": "accept",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": "valid/initial-registration-set.v1.json",
+      "proposed": "valid/active-registration-set.v1.json",
+      "expected_compiled": "valid/compiled-active.v1.json",
+      "expected_ownership": "valid/ownership-active.v1.json",
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003",
+        "AP-PR-004",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002",
+        "ADR-003"
+      ],
+      "threats": [
+        "AP-TM-002",
+        "AP-TM-006",
+        "AP-TM-007",
+        "AP-TM-008"
+      ]
+    },
+    {
+      "case_id": "activate-multiple-admission-modes",
+      "description": "Activate ordered public, authenticated, and restricted registrations with listed and unlisted catalogue behavior and multiple mounts",
+      "evidence_class": "C",
+      "expected": "accept",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": "valid/multi-staged-registration-set.v1.json",
+      "proposed": "valid/multi-active-registration-set.v1.json",
+      "expected_compiled": "valid/compiled-multi-active.v1.json",
+      "expected_ownership": "valid/ownership-multi-active.v1.json",
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-002",
+        "AP-PR-003",
+        "AP-PR-004",
+        "AP-PR-005",
+        "AP-PR-006",
+        "AP-PR-007",
+        "AP-PR-008",
+        "AP-QR-001",
+        "AP-QR-002",
+        "AP-QR-003",
+        "AP-QR-004",
+        "AP-QR-006"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002",
+        "ADR-003"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002",
+        "AP-TM-003",
+        "AP-TM-004",
+        "AP-TM-005",
+        "AP-TM-006",
+        "AP-TM-007",
+        "AP-TM-008",
+        "AP-TM-009",
+        "AP-TM-012"
+      ]
+    },
+    {
+      "case_id": "retire-application",
+      "description": "Retire the active application while retaining its immutable tombstone and removing platform exposure",
+      "evidence_class": "C",
+      "expected": "accept",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": "valid/active-registration-set.v1.json",
+      "proposed": "valid/retired-registration-set.v1.json",
+      "expected_compiled": "valid/compiled-retired.v1.json",
+      "expected_ownership": "valid/ownership-retired.v1.json",
+      "requirements": [
+        "AP-PR-003",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-007",
+        "AP-TM-008"
+      ]
+    },
+    {
+      "case_id": "reject-route-root",
+      "description": "Reject the root route reserved for the Shared Edge",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-root.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_BOUNDS",
+          "path": "/registrations/0/route_prefix"
+        },
+        {
+          "code": "ROUTE_RESERVED",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-platform",
+      "description": "Reject the platform-reserved route prefix",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-platform.v1.json",
+      "expected_violations": [
+        {
+          "code": "ROUTE_RESERVED",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-well-known",
+      "description": "Reject the well-known route prefix reserved for platform protocols",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-well-known.v1.json",
+      "expected_violations": [
+        {
+          "code": "ROUTE_RESERVED",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-uppercase",
+      "description": "Reject an uppercase application prefix",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-uppercase.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-trailing-slash",
+      "description": "Reject a trailing route slash",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-trailing-slash.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-empty-segment",
+      "description": "Reject a route with an empty segment",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-empty-segment.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-dot-segment",
+      "description": "Reject a route containing a dot segment",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-dot-segment.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-percent-encoding",
+      "description": "Reject percent encoding in an application prefix",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-percent-encoding.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-encoded-separator",
+      "description": "Reject an encoded path separator",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-encoded-separator.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-query",
+      "description": "Reject a query component in an application prefix",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-query.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-fragment",
+      "description": "Reject a fragment component in an application prefix",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-fragment.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-control",
+      "description": "Reject a control character in an application prefix",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-control.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-route-unicode-lookalike",
+      "description": "Reject a Unicode lookalike in an application prefix",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/route-unicode-lookalike.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-002"
+      ]
+    },
+    {
+      "case_id": "reject-duplicate-route",
+      "description": "Reject duplicate application prefixes across the complete set",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/duplicate-route.v1.json",
+      "expected_violations": [
+        {
+          "code": "ROUTE_CONFLICT",
+          "path": "/registrations/1/route_prefix"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-002",
+        "AP-TM-009"
+      ]
+    },
+    {
+      "case_id": "reject-duplicate-mount",
+      "description": "Reject duplicate attachment mount paths within an application",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/duplicate-mount.v1.json",
+      "expected_violations": [
+        {
+          "code": "ATTACHMENT_CONFLICT",
+          "path": "/registrations/0/attachments/1/mount_path"
+        }
+      ],
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-009"
+      ]
+    },
+    {
+      "case_id": "reject-duplicate-attachment-id",
+      "description": "Reject duplicate attachment identifiers within an application",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/duplicate-attachment-id.v1.json",
+      "expected_violations": [
+        {
+          "code": "ATTACHMENT_CONFLICT",
+          "path": "/registrations/0/attachments/1/attachment_id"
+        }
+      ],
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-009"
+      ]
+    },
+    {
+      "case_id": "reject-unsupported-forwarding",
+      "description": "Reject an unsupported forwarding mode",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/unsupported-forwarding.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/attachments/0/forwarding_mode"
+        }
+      ],
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-012"
+      ]
+    },
+    {
+      "case_id": "reject-unsupported-adapter",
+      "description": "Reject an attachment adapter not enabled by reviewed platform configuration",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/unsupported-adapter.v1.json",
+      "expected_violations": [
+        {
+          "code": "ATTACHMENT_INVALID",
+          "path": "/registrations/0/attachments/0/adapter_kind"
+        }
+      ],
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-011",
+        "AP-TM-013"
+      ]
+    },
+    {
+      "case_id": "reject-url-resource-reference",
+      "description": "Reject an arbitrary URL where an inert attachment URN is required",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/url-resource-reference.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/attachments/0/resource_reference"
+        }
+      ],
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-008"
+      ]
+    },
+    {
+      "case_id": "reject-wrong-attachment-owner",
+      "description": "Reject an attachment owner that differs from the registered application",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/wrong-attachment-owner.v1.json",
+      "expected_violations": [
+        {
+          "code": "ATTACHMENT_INVALID",
+          "path": "/registrations/0/attachments/0/owner_application_id"
+        }
+      ],
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-007",
+        "AP-PR-008"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-008",
+        "AP-TM-009"
+      ]
+    },
+    {
+      "case_id": "reject-wrong-scoped-reference",
+      "description": "Reject a contract-test reference scoped to another application",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/wrong-scoped-reference.v1.json",
+      "expected_violations": [
+        {
+          "code": "ATTACHMENT_INVALID",
+          "path": "/registrations/0/attachments/0/resource_reference"
+        }
+      ],
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-007",
+        "AP-PR-008"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-008",
+        "AP-TM-009"
+      ]
+    },
+    {
+      "case_id": "reject-unsafe-catalogue",
+      "description": "Reject private, marked-up, oversized, and unknown catalogue data",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/unsafe-catalogue.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_UNKNOWN",
+          "path": "/registrations/0/catalogue/internal_notes"
+        },
+        {
+          "code": "FIELD_BOUNDS",
+          "path": "/registrations/0/catalogue/summary"
+        },
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/catalogue/title"
+        },
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/catalogue/visibility"
+        }
+      ],
+      "requirements": [
+        "AP-PR-001",
+        "AP-PR-003"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-001",
+        "AP-TM-003",
+        "AP-TM-012"
+      ]
+    },
+    {
+      "case_id": "reject-owner-only-admission",
+      "description": "Reject owner-only as a fourth Admission Mode",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/owner-only-admission.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_PATTERN",
+          "path": "/registrations/0/admission/mode"
+        }
+      ],
+      "requirements": [
+        "AP-PR-004",
+        "AP-PR-005",
+        "AP-PR-006"
+      ],
+      "decisions": [
+        "ADR-003"
+      ],
+      "threats": [
+        "AP-TM-005",
+        "AP-TM-006"
+      ]
+    },
+    {
+      "case_id": "reject-forbidden-application-fields",
+      "description": "Reject email identity keys, Feature Entitlements, product roles, and provider rights",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/forbidden-application-fields.v1.json",
+      "expected_violations": [
+        {
+          "code": "FIELD_UNKNOWN",
+          "path": "/registrations/0/admission/members/0/email"
+        },
+        {
+          "code": "FIELD_UNKNOWN",
+          "path": "/registrations/0/attachments/0/provider_right"
+        },
+        {
+          "code": "FIELD_UNKNOWN",
+          "path": "/registrations/0/feature_entitlements"
+        },
+        {
+          "code": "FIELD_UNKNOWN",
+          "path": "/registrations/0/product_role"
+        }
+      ],
+      "requirements": [
+        "AP-PR-004",
+        "AP-PR-005",
+        "AP-PR-006",
+        "AP-PR-008"
+      ],
+      "decisions": [
+        "ADR-003",
+        "ADR-004"
+      ],
+      "threats": [
+        "AP-TM-005",
+        "AP-TM-006",
+        "AP-TM-009",
+        "AP-TM-010"
+      ]
+    },
+    {
+      "case_id": "reject-shared-audience",
+      "description": "Reject one protected audience reused by mutually untrusted applications",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": null,
+      "proposed": "invalid/shared-audience.v1.json",
+      "expected_violations": [
+        {
+          "code": "IDENTITY_INVALID",
+          "path": "/registrations/1/attachments/0/audience"
+        }
+      ],
+      "requirements": [
+        "AP-PR-004",
+        "AP-PR-005",
+        "AP-PR-008"
+      ],
+      "decisions": [
+        "ADR-003",
+        "ADR-004"
+      ],
+      "threats": [
+        "AP-TM-005",
+        "AP-TM-009"
+      ]
+    },
+    {
+      "case_id": "replace-attachment-reference",
+      "description": "Replace an active attachment reference while retaining the preceding reviewed generation as rollback input",
+      "evidence_class": "C",
+      "expected": "accept",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": "valid/active-registration-set.v1.json",
+      "proposed": "valid/replaced-attachment-registration-set.v1.json",
+      "expected_compiled": "valid/compiled-replaced-attachment.v1.json",
+      "expected_ownership": "valid/ownership-replaced-attachment.v1.json",
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-003",
+        "AP-PR-007",
+        "AP-PR-008"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002",
+        "ADR-004"
+      ],
+      "threats": [
+        "AP-TM-007",
+        "AP-TM-008"
+      ]
+    },
+    {
+      "case_id": "restore-reviewed-attachment-reference",
+      "description": "Restore the old reviewed attachment reference in a complete generation without a resource-destruction instruction",
+      "evidence_class": "C",
+      "expected": "accept",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": "valid/replaced-attachment-registration-set.v1.json",
+      "proposed": "valid/rollback-attachment-registration-set.v1.json",
+      "expected_compiled": "valid/compiled-rollback-attachment.v1.json",
+      "expected_ownership": "valid/ownership-rollback-attachment.v1.json",
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-003",
+        "AP-PR-007",
+        "AP-PR-008"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002",
+        "ADR-004"
+      ],
+      "threats": [
+        "AP-TM-007",
+        "AP-TM-008"
+      ]
+    },
+    {
+      "case_id": "content-release-with-unchanged-registration",
+      "description": "Accept a new complete generation whose application registration revision and stable attachment reference remain unchanged after an application-owned release",
+      "evidence_class": "C",
+      "expected": "accept",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": "valid/active-registration-set.v1.json",
+      "proposed": "valid/content-release-unchanged-registration-set.v1.json",
+      "expected_compiled": "valid/compiled-content-release-unchanged.v1.json",
+      "expected_ownership": "valid/ownership-content-release-unchanged.v1.json",
+      "requirements": [
+        "AP-PR-002",
+        "AP-PR-003",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-001",
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-007",
+        "AP-TM-008"
+      ]
+    },
+    {
+      "case_id": "reject-stale-predecessor",
+      "description": "Reject an update whose predecessor digest is stale",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": "valid/active-registration-set.v1.json",
+      "proposed": "invalid/stale-predecessor.v1.json",
+      "expected_violations": [
+        {
+          "code": "GENERATION_INVALID",
+          "path": "/previous_generation_digest"
+        }
+      ],
+      "requirements": [
+        "AP-PR-003",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-007",
+        "AP-TM-011"
+      ]
+    },
+    {
+      "case_id": "reject-missing-predecessor",
+      "description": "Reject an update that omits the digest of its supplied predecessor",
+      "evidence_class": "C",
+      "expected": "reject",
+      "platform_configuration": "valid/platform-configuration.v1.json",
+      "previous": "valid/active-registration-set.v1.json",
+      "proposed": "invalid/missing-predecessor.v1.json",
+      "expected_violations": [
+        {
+          "code": "GENERATION_INVALID",
+          "path": "/previous_generation_digest"
+        }
+      ],
+      "requirements": [
+        "AP-PR-003",
+        "AP-PR-007"
+      ],
+      "decisions": [
+        "ADR-002"
+      ],
+      "threats": [
+        "AP-TM-007",
+        "AP-TM-011"
+      ]
+    }
+  ]
+}

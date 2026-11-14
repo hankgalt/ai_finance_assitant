@@ -1,0 +1,120 @@
+{
+  "contract_version": 1,
+  "generation": 1,
+  "previous_generation_digest": null,
+  "proposal": {
+    "source_revision": "aaaaaaa",
+    "change_summary": "Stage synthetic public, authenticated, and restricted applications"
+  },
+  "registrations": [
+    {
+      "contract_version": 1,
+      "application_id": "gamma-app",
+      "registration_revision": 1,
+      "route_prefix": "/gamma",
+      "catalogue": {
+        "visibility": "listed",
+        "title": "Gamma",
+        "summary": "Synthetic restricted contract application"
+      },
+      "admission": {
+        "mode": "restricted",
+        "members": [
+          {
+            "issuer": "urn:comfforts:identity:synthetic",
+            "subject": "synthetic-user-b"
+          },
+          {
+            "issuer": "urn:comfforts:identity:synthetic",
+            "subject": "synthetic-user-a"
+          }
+        ]
+      },
+      "lifecycle": "staged",
+      "attachments": [
+        {
+          "contract_version": 1,
+          "owner_application_id": "gamma-app",
+          "attachment_id": "web",
+          "adapter_kind": "contract-test-v1",
+          "resource_reference": "urn:comfforts:app-platform:contract-test:gamma-app:web",
+          "mount_path": "/",
+          "forwarding_mode": "strip_application_prefix",
+          "identity_requirement": "verified",
+          "audience": "urn:comfforts:app-platform:audience:gamma-app",
+          "ingress_mode": "shared_edge_only"
+        }
+      ]
+    },
+    {
+      "contract_version": 1,
+      "application_id": "alpha-app",
+      "registration_revision": 1,
+      "route_prefix": "/alpha",
+      "catalogue": {
+        "visibility": "listed",
+        "title": "Alpha",
+        "summary": "Synthetic public contract application"
+      },
+      "admission": {
+        "mode": "public"
+      },
+      "lifecycle": "staged",
+      "attachments": [
+        {
+          "contract_version": 1,
+          "owner_application_id": "alpha-app",
+          "attachment_id": "web",
+          "adapter_kind": "contract-test-v1",
+          "resource_reference": "urn:comfforts:app-platform:contract-test:alpha-app:web",
+          "mount_path": "/",
+          "forwarding_mode": "strip_application_prefix",
+          "identity_requirement": "none",
+          "audience": null,
+          "ingress_mode": "shared_edge_only"
+        },
+        {
+          "contract_version": 1,
+          "owner_application_id": "alpha-app",
+          "attachment_id": "api",
+          "adapter_kind": "contract-test-v1",
+          "resource_reference": "urn:comfforts:app-platform:contract-test:alpha-app:api",
+          "mount_path": "/api/v1",
+          "forwarding_mode": "strip_attachment_mount",
+          "identity_requirement": "none",
+          "audience": null,
+          "ingress_mode": "shared_edge_only"
+        }
+      ]
+    },
+    {
+      "contract_version": 1,
+      "application_id": "beta-app",
+      "registration_revision": 1,
+      "route_prefix": "/beta",
+      "catalogue": {
+        "visibility": "unlisted",
+        "title": "Beta",
+        "summary": "Synthetic authenticated contract application"
+      },
+      "admission": {
+        "mode": "authenticated"
+      },
+      "lifecycle": "staged",
+      "attachments": [
+        {
+          "contract_version": 1,
+          "owner_application_id": "beta-app",
+          "attachment_id": "web",
+          "adapter_kind": "contract-test-v1",
+          "resource_reference": "urn:comfforts:app-platform:contract-test:beta-app:web",
+          "mount_path": "/",
+          "forwarding_mode": "preserve",
+          "identity_requirement": "verified",
+          "audience": "urn:comfforts:app-platform:audience:beta-app",
+          "ingress_mode": "shared_edge_only"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "contract_version": 1,
+  "generation": 2,
+  "generation_digest": "sha256:dbbf3a48ddfa7457bb5260bf4060958f31c2485317a255d51b7adca86c9f9224",
+  "resources": [
+    {
+      "resource_reference": "urn:comfforts:app-platform:catalogue:root",
+      "resource_kind": "catalogue",
+      "management_mode": "managed",
+      "owner": {
+        "state": "platform",
+        "owner_id": "app-platform"
+      }
+    },
+    {
+      "resource_reference": "urn:comfforts:app-platform:contract-test:alpha-app:web",
+      "resource_kind": "application-attachment",
+      "management_mode": "referenced",
+      "owner": {
+        "state": "application",
+        "owner_id": "alpha-app"
+      }
+    },
+    {
+      "resource_reference": "urn:comfforts:app-platform:edge-connector:alpha-app:web",
+      "resource_kind": "edge-connector",
+      "management_mode": "managed",
+      "owner": {
+        "state": "platform",
+        "owner_id": "app-platform"
+      }
+    },
+    {
+      "resource_reference": "urn:comfforts:app-platform:route:alpha-app",
+      "resource_kind": "route",
+      "management_mode": "managed",
+      "owner": {
+        "state": "platform",
+        "owner_id": "app-platform"
+      }
+    },
+    {
+      "resource_reference": "urn:comfforts:app-platform:shared-edge:root",
+      "resource_kind": "shared-edge",
+      "management_mode": "managed",
+      "owner": {
+        "state": "platform",
+        "owner_id": "app-platform"
+      }
+    }
+  ]
+}
