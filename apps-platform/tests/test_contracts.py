@@ -139,6 +139,24 @@ class ContractSchemaTest(unittest.TestCase):
                     ["JSON_INVALID"],
                 )
 
+    def test_unpaired_unicode_surrogates_are_rejected_before_validation(self) -> None:
+        payloads = (
+            '{"value":"\\ud800"}',
+            '{"\\udfff":"value"}',
+        )
+        for payload in payloads:
+            with self.subTest(payload=payload), tempfile.TemporaryDirectory() as directory:
+                document_path = Path(directory) / "surrogate.json"
+                document_path.write_text(payload, encoding="utf-8")
+
+                loaded = load_json_document(document_path)
+
+                self.assertIsNone(loaded.value)
+                self.assertEqual(
+                    [violation.code for violation in loaded.violations],
+                    ["JSON_INVALID"],
+                )
+
     def test_json_document_size_is_bounded_before_parsing(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             document_path = Path(temporary_directory) / "oversized.json"

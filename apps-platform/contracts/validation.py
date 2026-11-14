@@ -102,6 +102,24 @@ def _reject_non_integer_number(value: str) -> None:
     raise _NonIntegerNumberError(value)
 
 
+def _contains_unpaired_surrogate(value: Any) -> bool:
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            return True
+        return False
+    if isinstance(value, list):
+        return any(_contains_unpaired_surrogate(item) for item in value)
+    if isinstance(value, dict):
+        return any(
+            _contains_unpaired_surrogate(key)
+            or _contains_unpaired_surrogate(item)
+            for key, item in value.items()
+        )
+    return False
+
+
 def load_json_document(path: Path, *, max_bytes: int = 1_048_576) -> LoadedDocument:
     """Load one bounded JSON document without accepting duplicate keys."""
 
@@ -138,6 +156,17 @@ def load_json_document(path: Path, *, max_bytes: int = 1_048_576) -> LoadedDocum
         return LoadedDocument(
             value=None,
             violations=(Violation("JSON_INVALID", "", str(error)),),
+        )
+    if _contains_unpaired_surrogate(value):
+        return LoadedDocument(
+            value=None,
+            violations=(
+                Violation(
+                    "JSON_INVALID",
+                    "",
+                    "document contains an invalid Unicode scalar value",
+                ),
+            ),
         )
     return LoadedDocument(value=value, violations=())
 
