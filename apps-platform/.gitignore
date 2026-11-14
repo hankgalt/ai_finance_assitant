@@ -1,0 +1,41 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+
+# Terraform working data and saved plans
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.json
+*.tfvars
+*.auto.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+
+# Python caches and reports
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node and browser output
+node_modules/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+
+# Local runtime output
+tmp/
+*.log
+.DS_Store
