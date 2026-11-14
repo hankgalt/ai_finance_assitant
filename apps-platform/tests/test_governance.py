@@ -20,10 +20,18 @@ class ProjectAuthorityTest(unittest.TestCase):
             "README.md",
             "docs/01_product_requirements.md",
             "docs/02_architecture_decision_records.md",
+            "docs/03_system_design.md",
+            "docs/04_implementation_plan.md",
+            "docs/05_evaluation_strategy.md",
+            "docs/06_threat_model.md",
             "docs/README.md",
             "docs/repository_layout.md",
+            "contracts/README.md",
+            "contracts/validation.py",
+            "contracts/test-vectors/manifest.v1.json",
             "prompts/README.md",
             "prompts/starting_prompt.md",
+            "tests/test_contracts.py",
             "tests/test_governance.py",
         )
 
@@ -32,7 +40,8 @@ class ProjectAuthorityTest(unittest.TestCase):
     def test_makefile_exposes_a_portable_non_mutating_check(self) -> None:
         makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
 
-        self.assertIn("check: governance-check", makefile)
+        self.assertIn("check: governance-check contract-check", makefile)
+        self.assertIn("PYTHONDONTWRITEBYTECODE=1", makefile)
         self.assertIn("python3", makefile)
         self.assertNotIn("../", makefile)
         self.assertNotIn("terraform apply", makefile)
@@ -52,25 +61,79 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("GLOSSARY.md", instructions)
         self.assertIn("docs/01_product_requirements.md", instructions)
         self.assertIn("docs/02_architecture_decision_records.md", instructions)
+        self.assertIn("docs/03_system_design.md", instructions)
+        self.assertIn("docs/06_threat_model.md", instructions)
+        self.assertIn("contracts/README.md", instructions)
         self.assertIn("docs/repository_layout.md", instructions)
         self.assertIn("make -C apps-platform check", instructions)
         self.assertIn("one bounded slice per pull request", instructions)
         self.assertIn("leave each change uncommitted until approval", instructions)
         self.assertIn("Merge it before starting the next documented slice", instructions)
 
-    def test_documentation_truthfully_closes_the_requirements_slice(self) -> None:
+    def test_documentation_truthfully_records_contract_implementation(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
+        overview = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
+            encoding="utf-8"
+        )
         normalized_index = " ".join(index.split())
+        normalized_overview = " ".join(overview.split())
 
-        self.assertIn("governance and requirements/decisions complete", normalized_index)
-        self.assertIn("requirements-and-decisions slice is complete", normalized_index)
-        self.assertIn("system design and contracts next", normalized_index)
-        self.assertIn("does not claim", index)
+        self.assertIn(
+            "system design and versioned contracts implemented", normalized_index
+        )
+        self.assertIn("Contract (`C`) evidence", normalized_index)
+        self.assertIn(
+            "no Fixture (`F`), Live (`L`), or Adoption (`A`) evidence",
+            normalized_index,
+        )
+        self.assertIn("AP-M3", overview)
+        self.assertIn(
+            "deterministic offline validation implemented", normalized_overview
+        )
+        self.assertIn("no platform runtime", normalized_overview)
         self.assertIn("Integration draft", index)
-        self.assertIn("requirements-and-decisions slice complete", layout)
+        self.assertIn("AP-M3 contract implementation recorded", layout)
+        self.assertIn("`contracts/`", layout)
+        self.assertIn("Version 1 schemas", layout)
+        self.assertIn("Version 1 contract index", design)
+        self.assertIn("revision-scoped Contract evidence", design)
+        self.assertIn(
+            "Runtime, Fixture, Live, and Adoption qualification remain later",
+            design,
+        )
         self.assertIn("history-preserving subtree extraction", layout)
         self.assertIn("Do not create a nested `.git`", layout)
+
+    def test_ap_m3_authorities_have_complete_unique_identifiers(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+        threat_model = (PROJECT_ROOT / "docs/06_threat_model.md").read_text(
+            encoding="utf-8"
+        )
+
+        work_packages = re.findall(r"^### (AP-M3-W\d+) ·", plan, re.MULTILINE)
+        evaluation_gates = re.findall(
+            r"^### (AP-EVAL-M3-\d{2}) ·", evaluation, re.MULTILINE
+        )
+        threats = re.findall(r"^### (AP-TM-\d{3}) ·", threat_model, re.MULTILINE)
+
+        self.assertEqual(
+            work_packages, [f"AP-M3-W{index}" for index in range(1, 7)]
+        )
+        self.assertEqual(
+            evaluation_gates,
+            [f"AP-EVAL-M3-{index:02d}" for index in range(1, 10)],
+        )
+        self.assertEqual(
+            threats,
+            [f"AP-TM-{index:03d}" for index in range(1, 15)],
+        )
 
     def test_product_requirements_have_unique_stable_identifiers(self) -> None:
         requirements = (PROJECT_ROOT / "docs/01_product_requirements.md").read_text(
@@ -187,7 +250,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("## Application Adoption", glossary)
         self.assertIn("app-owned test state", layout)
 
-    def test_starting_prompt_loads_authority_without_copying_it(self) -> None:
+    def test_fixture_planning_prompt_loads_authority_without_copying_it(self) -> None:
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
         prompt_index = (PROJECT_ROOT / "prompts/README.md").read_text(encoding="utf-8")
         normalized_prompt = " ".join(prompt.split())
@@ -198,7 +261,12 @@ class ProjectAuthorityTest(unittest.TestCase):
             "GLOSSARY.md",
             "docs/01_product_requirements.md",
             "docs/02_architecture_decision_records.md",
+            "docs/03_system_design.md",
+            "docs/04_implementation_plan.md",
+            "docs/05_evaluation_strategy.md",
+            "docs/06_threat_model.md",
             "docs/repository_layout.md",
+            "contracts/README.md",
         ):
             self.assertIn(authority, prompt)
         for boundary in (
@@ -206,12 +274,17 @@ class ProjectAuthorityTest(unittest.TestCase):
             "leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
             "An Integration Draft is not Application Adoption",
             "credential-free, deterministic, and non-mutating",
+            "updated `main` after the AP-M3 pull request has merged",
+            "propose item 4 planning and evaluation authority",
         ):
             self.assertIn(boundary, normalized_prompt)
         self.assertNotIn("### AP-PR-", prompt)
         self.assertNotIn("## ADR-", prompt)
         self.assertNotIn("terraform apply", prompt)
-        self.assertIn("[System-design/contracts handoff](starting_prompt.md)", prompt_index)
+        self.assertIn(
+            "[Deterministic-fixture planning handoff](starting_prompt.md)",
+            prompt_index,
+        )
 
     def test_incremental_delivery_sequence_keeps_contracts_and_fixtures_separate(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
@@ -224,16 +297,18 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Requirements and decisions — complete",
         ):
             self.assertIn(completed, index)
-        self.assertIn("System design and versioned contracts — next", index)
-        self.assertIn("Deterministic fixtures — following", index)
+        self.assertIn("System design and versioned contracts — implemented", index)
+        self.assertIn("Deterministic fixture planning — next after item 3 merges", index)
         self.assertIn("feat/apps-platform-system-design-contracts", index)
         self.assertIn("feat/apps-platform-fixtures", index)
         self.assertIn("separate bounded branch and pull request", normalized_index)
-        self.assertIn("obtain owner approval for the fixture implementation plan", normalized_index)
-        self.assertIn("propose item 3", normalized_prompt)
-        self.assertIn("without implementing a fixture runtime", normalized_prompt)
-        self.assertIn("Keep deterministic fixture implementation for item 4", normalized_prompt)
-        self.assertIn("Do not combine those slices in one branch or pull request", normalized_prompt)
+        self.assertIn(
+            "obtain owner approval for the fixture implementation plan",
+            normalized_index,
+        )
+        self.assertIn("propose item 4 planning and evaluation authority", normalized_prompt)
+        self.assertIn("Do not implement a Fixture Application", normalized_prompt)
+        self.assertIn("Item 4 belongs on a new bounded branch", normalized_prompt)
 
 
 if __name__ == "__main__":

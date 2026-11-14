@@ -1,0 +1,25 @@
+{
+  "contract_version": 1,
+  "generation": 3,
+  "generation_digest": "sha256:1f0c716cb37cba205260f90913c68aea29c7ed4d86a79b9e9b934da772547eb2",
+  "resources": [
+    {
+      "resource_reference": "urn:comfforts:app-platform:catalogue:root",
+      "resource_kind": "catalogue",
+      "management_mode": "managed",
+      "owner": {
+        "state": "platform",
+        "owner_id": "app-platform"
+      }
+    },
+    {
+      "resource_reference": "urn:comfforts:app-platform:shared-edge:root",
+      "resource_kind": "shared-edge",
+      "management_mode": "managed",
+      "owner": {
+        "state": "platform",
+        "owner_id": "app-platform"
+      }
+    }
+  ]
+}

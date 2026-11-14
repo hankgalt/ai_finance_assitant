@@ -29,6 +29,36 @@ the platform authoritative for the application's data, providers, or capability 
 The versioned declaration that binds a unique route prefix to application attachments, admission
 policy, catalogue metadata, and lifecycle state.
 
+## Registration Set
+
+The complete versioned collection of current Application Registrations, including retained retired
+tombstones, proposed and reviewed as one atomic configuration input.
+
+## Registration Generation
+
+An immutable, numbered revision derived from one valid Registration Set and linked to the preceding
+reviewed generation by digest.
+
+## Compiled Shared Edge Configuration
+
+The deterministic catalogue, routing, admission, and attachment configuration derived from one
+valid Registration Generation. It is future provider-adapter input, not proof of deployment.
+
+## Last Reviewed Working Configuration
+
+The most recent whole Registration Generation accepted for platform operation and eligible for
+restoration when a later generation fails. It does not include or roll back Application State.
+
+## Application Attachment
+
+A versioned, non-secret reference that binds an application subpath to an application-owned runtime
+through an allow-listed platform adapter. Referencing the runtime does not transfer its ownership.
+
+## Catalogue Visibility
+
+The explicit policy deciding whether an active Registered Application appears in the root
+catalogue. It is independent of Admission Mode and does not grant access.
+
 ## Admission Mode
 
 The platform policy deciding whether a request may reach an application attachment, such as public,
@@ -64,6 +94,12 @@ Application State ownership.
 
 State owned by a Registered Application, including its runtime, data, provider configuration, and
 application-specific authorization. Its exact future boundary is defined by approved contracts.
+
+## State Ownership Manifest
+
+A revision-scoped declaration that assigns each managed resource reference to exactly one Platform
+State or named Application State owner. References between states do not transfer management
+authority.
 
 ## Fixture Application
 

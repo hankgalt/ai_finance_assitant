@@ -1,0 +1,40 @@
+{
+  "contract_version": 1,
+  "generation": 2,
+  "previous_generation_digest": "sha256:bdf0608ec2111ad74e6042edb2be550f47a8f4a15ca5ac7b3a6d09951df75008",
+  "proposal": {
+    "source_revision": "2222222",
+    "change_summary": "Activate the alpha contract application"
+  },
+  "registrations": [
+    {
+      "contract_version": 1,
+      "application_id": "alpha-app",
+      "registration_revision": 2,
+      "route_prefix": "/alpha",
+      "catalogue": {
+        "visibility": "listed",
+        "title": "Alpha",
+        "summary": "Synthetic contract application"
+      },
+      "admission": {
+        "mode": "public"
+      },
+      "lifecycle": "active",
+      "attachments": [
+        {
+          "contract_version": 1,
+          "owner_application_id": "alpha-app",
+          "attachment_id": "web",
+          "adapter_kind": "contract-test-v1",
+          "resource_reference": "urn:comfforts:app-platform:contract-test:alpha-app:web",
+          "mount_path": "/",
+          "forwarding_mode": "strip_application_prefix",
+          "identity_requirement": "none",
+          "audience": null,
+          "ingress_mode": "shared_edge_only"
+        }
+      ]
+    }
+  ]
+}

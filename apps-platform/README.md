@@ -1,7 +1,8 @@
 # Comfforts App Platform
 
-Status: product requirements and accepted architecture decisions defined; no platform runtime or
-cloud resource is implemented.
+Status: AP-M3 system design, Version 1 machine contracts, and deterministic offline validation
+implemented; no platform runtime, Fixture Application, or cloud resource is implemented or
+qualified.
 
 Comfforts App Platform is a separately governed project temporarily colocated in the
 AI Finance Assistant repository. It is intended to own the shared application catalogue and edge
@@ -32,12 +33,15 @@ or the live Finance Assistant deployment.
 ## Project authority
 
 Read `AGENTS.md` before changing this project and follow the authority and reading order in
-`docs/README.md`. Product requirements and accepted architecture decisions are now authoritative.
-System design, implementation planning, and evaluation strategy remain deferred to their approved
-documentation slices.
+`docs/README.md`. Product requirements, accepted architecture decisions, system design, threat
+model, AP-M3 plan and evaluation strategy, and Version 1 contracts are authoritative within their
+declared boundaries. The schemas and reference compiler provide Contract (`C`) evidence only; they
+do not prove runtime or provider behavior.
 
-Use the [system-design/contracts handoff](prompts/starting_prompt.md) to begin the next chat without
-copying specifications or relying on this conversation's history.
+AP-M3 repository behavior passes its deterministic gate at this revision. Delivery item 3 is not
+complete until its pull request merges, and delivery item 4 has no approved plan or evaluation
+authority yet. After the merge, use the
+[deterministic-fixture planning handoff](prompts/starting_prompt.md) from updated `main`.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

@@ -4,9 +4,8 @@ Prompts are bounded task entry points, not architecture authority. Each prompt m
 platform documentation required for its task instead of copying requirements, decisions, or
 acceptance criteria.
 
-- [System-design/contracts handoff](starting_prompt.md) starts a new chat by loading the approved
-  requirements, decisions, vocabulary, delivery sequence, and repository boundary before proposing
-  the next slice.
+- [Deterministic-fixture planning handoff](starting_prompt.md) starts a new chat from updated `main`
+  after AP-M3 merges. It loads the approved Contract boundary before proposing item 4 authority.
 
-The handoff prompt authorizes planning only. It does not create system-design authority or permit
-implementation, infrastructure mutation, application migration, or live qualification.
+The handoff prompt authorizes an item 4 plan and evaluation proposal only. It does not authorize a
+Fixture Application, infrastructure mutation, application migration, or live qualification.

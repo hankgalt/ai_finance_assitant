@@ -1,0 +1,6 @@
+{
+  "contract_version": 1,
+  "enabled_attachment_adapter_kinds": [
+    "contract-test-v1"
+  ]
+}

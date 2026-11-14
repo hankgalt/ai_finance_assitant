@@ -1,8 +1,11 @@
 PYTHON ?= python3
 
-.PHONY: check governance-check
+.PHONY: check governance-check contract-check
 
-check: governance-check ## Run every currently implemented deterministic platform check.
+check: governance-check contract-check ## Run every implemented deterministic platform check.
 
 governance-check: ## Verify the standalone project shell without credentials or external services.
-	$(PYTHON) -m unittest discover -s tests -p 'test_*.py'
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_governance tests.test_finance_integration_draft
+
+contract-check: ## Verify versioned contracts without credentials or external services.
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_contracts
