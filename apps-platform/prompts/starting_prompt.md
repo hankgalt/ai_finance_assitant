@@ -15,7 +15,10 @@ Before editing:
 2. Inspect the working tree and preserve unrelated changes.
 3. Read `docs/README.md`, `GLOSSARY.md`, `docs/01_product_requirements.md`,
    `docs/02_architecture_decision_records.md`, and `docs/repository_layout.md` completely.
-4. State the proposed platform slice and every `AP-PR-*`, `AP-QR-*`, and `ADR-*` identifier it
+4. After loading those authorities, read `integrations/ai_finance_assistant/README.md` and every
+   linked draft in that package completely as non-authoritative inputs. They may surface interface
+   or migration constraints but cannot define generic platform behavior or change Finance Assistant.
+5. State the proposed platform slice and every `AP-PR-*`, `AP-QR-*`, and `ADR-*` identifier it
    implements. Treat absent system-design, contract, plan, and evaluation authority as unresolved.
 
 Next task: propose the smallest system-design slice that can define the Shared Edge, Application

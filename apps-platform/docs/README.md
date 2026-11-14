@@ -58,6 +58,16 @@ decisions. Application data, provider rights, Feature Entitlements, and product 
 under each application's own authority. Nothing under this subtree changes the active Finance
 Assistant requirements, contracts, Terraform state, DNS, IAP configuration, or deployment.
 
+## Inactive integration inputs
+
+- [Finance Assistant integration draft](../integrations/ai_finance_assistant/README.md) preserves a
+  proposed edge-ownership transfer and future Finance documentation deltas. It is not platform or
+  Finance authority, implementation evidence, or permission to migrate an application.
+
+Read an Integration Draft only after the platform authorities above and only when its consuming
+application or a proposed interface makes it relevant. A draft cannot weaken generic platform
+requirements or silently specialize the platform around one application.
+
 ## Evidence discipline
 
 Documentation and source files are not operational evidence. Each future capability must name its

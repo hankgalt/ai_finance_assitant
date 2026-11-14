@@ -15,6 +15,7 @@ directory the new repository root.
 | `GLOSSARY.md` | Canonical platform vocabulary |
 | `docs/` | Platform design authority and future runbooks/evidence indexes |
 | `prompts/` | Bounded task entry points that link to authoritative documents |
+| `integrations/` | Inactive application-adoption inputs with no consuming-app authority |
 | `tests/` | Behavior-named deterministic platform checks |
 | `Makefile` | Portable project-local developer and verification interface |
 | `.gitignore` | Platform-local generated, secret, state, and build exclusions |
@@ -29,7 +30,6 @@ These locations may be created only by their approved slice:
 | `infrastructure/terraform/` | Independent platform state roots and reusable infrastructure modules |
 | `catalog/` | Root application catalogue implementation |
 | `fixtures/` | Deterministic Registered Applications and app-owned test state used for qualification |
-| `integrations/` | Inactive application-adoption inputs that cannot modify a consuming application |
 | `artifacts/` | Secret-free generated or reviewed platform evidence |
 
 The reservation is not authorization to scaffold empty modules or imply later capabilities.
