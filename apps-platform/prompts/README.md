@@ -4,5 +4,9 @@ Prompts are bounded task entry points, not architecture authority. Each prompt m
 platform documentation required for its task instead of copying requirements, decisions, or
 acceptance criteria.
 
-The reusable starting prompt will be added after the platform requirements and architecture
-decisions are approved. Until then, `../README.md` truthfully describes the governance-only state.
+- [System-design/contracts handoff](starting_prompt.md) starts a new chat by loading the approved
+  requirements, decisions, vocabulary, delivery sequence, and repository boundary before proposing
+  the next slice.
+
+The handoff prompt authorizes planning only. It does not create system-design authority or permit
+implementation, infrastructure mutation, application migration, or live qualification.

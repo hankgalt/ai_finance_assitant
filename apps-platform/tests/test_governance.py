@@ -1,7 +1,8 @@
-"""Standalone App Platform governance-foundation checks."""
+"""Standalone App Platform authority-foundation checks."""
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-class GovernanceFoundationTest(unittest.TestCase):
+class ProjectAuthorityTest(unittest.TestCase):
     def test_project_shell_is_self_contained(self) -> None:
         expected_files = (
             ".gitignore",
@@ -17,9 +18,12 @@ class GovernanceFoundationTest(unittest.TestCase):
             "GLOSSARY.md",
             "Makefile",
             "README.md",
+            "docs/01_product_requirements.md",
+            "docs/02_architecture_decision_records.md",
             "docs/README.md",
             "docs/repository_layout.md",
             "prompts/README.md",
+            "prompts/starting_prompt.md",
             "tests/test_governance.py",
         )
 
@@ -46,18 +50,190 @@ class GovernanceFoundationTest(unittest.TestCase):
 
         self.assertIn("docs/README.md", instructions)
         self.assertIn("GLOSSARY.md", instructions)
+        self.assertIn("docs/01_product_requirements.md", instructions)
+        self.assertIn("docs/02_architecture_decision_records.md", instructions)
         self.assertIn("docs/repository_layout.md", instructions)
         self.assertIn("make -C apps-platform check", instructions)
+        self.assertIn("one bounded slice per pull request", instructions)
+        self.assertIn("leave each change uncommitted until approval", instructions)
+        self.assertIn("Merge it before starting the next documented slice", instructions)
 
-    def test_documentation_truthfully_limits_the_governance_slice(self) -> None:
+    def test_documentation_truthfully_closes_the_requirements_slice(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
+        normalized_index = " ".join(index.split())
 
-        self.assertIn("requirements and architecture decisions pending", index)
+        self.assertIn("governance and requirements/decisions complete", normalized_index)
+        self.assertIn("requirements-and-decisions slice is complete", normalized_index)
+        self.assertIn("system design and contracts next", normalized_index)
         self.assertIn("does not claim", index)
         self.assertIn("Integration draft", index)
+        self.assertIn("requirements-and-decisions slice complete", layout)
         self.assertIn("history-preserving subtree extraction", layout)
         self.assertIn("Do not create a nested `.git`", layout)
+
+    def test_product_requirements_have_unique_stable_identifiers(self) -> None:
+        requirements = (PROJECT_ROOT / "docs/01_product_requirements.md").read_text(
+            encoding="utf-8"
+        )
+        observed = re.findall(r"^### (AP-(?:PR|QR)-\d{3}) ·", requirements, re.MULTILINE)
+        expected = {
+            *(f"AP-PR-{index:03d}" for index in range(1, 10)),
+            *(f"AP-QR-{index:03d}" for index in range(1, 7)),
+        }
+
+        self.assertEqual(set(observed), expected)
+        self.assertEqual(len(observed), len(set(observed)))
+
+    def test_product_requirements_preserve_platform_boundaries(self) -> None:
+        requirements = (PROJECT_ROOT / "docs/01_product_requirements.md").read_text(
+            encoding="utf-8"
+        )
+
+        for boundary in (
+            "feature authorization",
+            "Application State",
+            "Platform State",
+            "Fixture Applications",
+            "Integration Draft",
+            "Finance Assistant migration",
+            "no platform capability is implemented",
+        ):
+            self.assertIn(boundary, requirements)
+
+    def test_architecture_decisions_are_unique_and_trace_requirements(self) -> None:
+        decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
+            encoding="utf-8"
+        )
+        observed = re.findall(r"^## (ADR-\d{3}) ·", decisions, re.MULTILINE)
+
+        self.assertEqual(observed, ["ADR-001", "ADR-002", "ADR-003", "ADR-004"])
+        self.assertEqual(decisions.count("Status: Accepted"), 4)
+        for identifier in (
+            "AP-PR-001",
+            "AP-PR-002",
+            "AP-PR-003",
+            "AP-PR-004",
+            "AP-PR-005",
+            "AP-PR-006",
+            "AP-PR-007",
+            "AP-PR-008",
+            "AP-PR-009",
+            "AP-QR-001",
+            "AP-QR-002",
+            "AP-QR-003",
+            "AP-QR-004",
+            "AP-QR-006",
+        ):
+            self.assertIn(identifier, decisions)
+
+    def test_shared_edge_decisions_preserve_exclusive_ownership(self) -> None:
+        decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
+            encoding="utf-8"
+        )
+
+        for boundary in (
+            "certificate secures a hostname",
+            "not a certificate boundary",
+            "only authoritative input",
+            "No resource may be managed by both states",
+            "does not transfer ownership",
+            "does not move them",
+            "Direct manual route changes are drift",
+        ):
+            self.assertIn(boundary, decisions)
+
+    def test_admission_decision_does_not_become_feature_authorization(self) -> None:
+        decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
+            encoding="utf-8"
+        )
+        glossary = (PROJECT_ROOT / "GLOSSARY.md").read_text(encoding="utf-8")
+
+        for mode in ("**Public:**", "**Authenticated:**", "**Restricted:**"):
+            self.assertIn(mode, decisions)
+        for boundary in (
+            "Being listed does not grant admission",
+            "being admitted does not grant a Feature Entitlement",
+            "Email addresses are display or contact attributes",
+            "next request or new streaming-connection boundary",
+            "market-data-style Feature Entitlement",
+            "does not alter its current access policy",
+        ):
+            self.assertIn(boundary, decisions)
+        for term in (
+            "## Admission Decision",
+            "## Verified Identity Context",
+            "## Application Principal",
+            "## Feature Entitlement",
+        ):
+            self.assertIn(term, glossary)
+
+    def test_fixture_first_decision_keeps_application_adoption_separate(self) -> None:
+        decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
+            encoding="utf-8"
+        )
+        glossary = (PROJECT_ROOT / "GLOSSARY.md").read_text(encoding="utf-8")
+        layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
+
+        for boundary in (
+            "before any real application may be adopted",
+            "remain outside\nPlatform State",
+            "no Finance Assistant code",
+            "is not platform acceptance evidence",
+            "A cutover must leave each resource with one active state owner",
+            "Finance Assistant-owned slice and evidence",
+        ):
+            self.assertIn(boundary, decisions)
+        self.assertIn("## Application Adoption", glossary)
+        self.assertIn("app-owned test state", layout)
+
+    def test_starting_prompt_loads_authority_without_copying_it(self) -> None:
+        prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
+        prompt_index = (PROJECT_ROOT / "prompts/README.md").read_text(encoding="utf-8")
+        normalized_prompt = " ".join(prompt.split())
+
+        for authority in (
+            "AGENTS.md",
+            "docs/README.md",
+            "GLOSSARY.md",
+            "docs/01_product_requirements.md",
+            "docs/02_architecture_decision_records.md",
+            "docs/repository_layout.md",
+        ):
+            self.assertIn(authority, prompt)
+        for boundary in (
+            "Wait for owner approval before editing",
+            "leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
+            "An Integration Draft is not Application Adoption",
+            "credential-free, deterministic, and non-mutating",
+        ):
+            self.assertIn(boundary, normalized_prompt)
+        self.assertNotIn("### AP-PR-", prompt)
+        self.assertNotIn("## ADR-", prompt)
+        self.assertNotIn("terraform apply", prompt)
+        self.assertIn("[System-design/contracts handoff](starting_prompt.md)", prompt_index)
+
+    def test_incremental_delivery_sequence_keeps_contracts_and_fixtures_separate(self) -> None:
+        index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
+        prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
+        normalized_index = " ".join(index.split())
+        normalized_prompt = " ".join(prompt.split())
+
+        for completed in (
+            "Governance foundation — complete",
+            "Requirements and decisions — complete",
+        ):
+            self.assertIn(completed, index)
+        self.assertIn("System design and versioned contracts — next", index)
+        self.assertIn("Deterministic fixtures — following", index)
+        self.assertIn("feat/apps-platform-system-design-contracts", index)
+        self.assertIn("feat/apps-platform-fixtures", index)
+        self.assertIn("separate bounded branch and pull request", normalized_index)
+        self.assertIn("obtain owner approval for the fixture implementation plan", normalized_index)
+        self.assertIn("propose item 3", normalized_prompt)
+        self.assertIn("without implementing a fixture runtime", normalized_prompt)
+        self.assertIn("Keep deterministic fixture implementation for item 4", normalized_prompt)
+        self.assertIn("Do not combine those slices in one branch or pull request", normalized_prompt)
 
 
 if __name__ == "__main__":
