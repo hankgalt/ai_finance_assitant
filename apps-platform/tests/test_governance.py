@@ -346,6 +346,57 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("Finance Assistant code", design)
         self.assertIn("network direct-bypass control", threat_model)
 
+    def test_ap_m4_authorities_have_complete_unique_identifiers(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+
+        work_packages = re.findall(r"^#### (AP-M4-W\d+) ·", plan, re.MULTILINE)
+        evaluation_gates = re.findall(
+            r"^### (AP-EVAL-M4-\d{2}) ·", evaluation, re.MULTILINE
+        )
+
+        self.assertEqual(
+            work_packages, [f"AP-M4-W{index}" for index in range(1, 8)]
+        )
+        self.assertEqual(
+            evaluation_gates,
+            [f"AP-EVAL-M4-{index:02d}" for index in range(1, 10)],
+        )
+        self.assertEqual(len(work_packages), len(set(work_packages)))
+        self.assertEqual(len(evaluation_gates), len(set(evaluation_gates)))
+
+    def test_ap_m4_authority_is_fixture_only(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_plan = " ".join(plan.split())
+        normalized_evaluation = " ".join(evaluation.split())
+
+        for boundary in (
+            "It does not authorize a listening service",
+            "external registration endpoint, or database",
+            "AP-M4 produces Fixture (`F`) evidence only",
+            "Each work package is a separate small commit",
+            "Finance Assistant requirements, code, infrastructure",
+        ):
+            self.assertIn(boundary, normalized_plan)
+
+        for gate_boundary in (
+            "AP-EVAL-M3 continues to own Contract (`C`) evidence",
+            "Live (`L`) and Adoption (`A`) evidence remain unavailable",
+            "no listening socket",
+            "There is no registration API or database",
+            "AP-EVAL-M4 passes only when all nine gates",
+        ):
+            self.assertIn(gate_boundary, normalized_evaluation)
+
 
 if __name__ == "__main__":
     unittest.main()

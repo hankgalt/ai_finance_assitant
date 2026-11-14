@@ -1,10 +1,12 @@
 # App Platform implementation plan
 
-Version 0.1 | Status: implementation-plan authority for AP-M3 only
+Version 0.2 | Status: implementation-plan authority for AP-M3 and AP-M4
 
-This document owns delivery item 3, the system-design-and-versioned-contracts slice. It does not
-authorize a Shared Edge runtime, catalogue runtime, Fixture Application, Terraform configuration,
-cloud resource, DNS change, identity change, credential, or Application Adoption.
+This document preserves delivery item 3, the system-design-and-versioned-contracts slice, and owns
+delivery item 4, the deterministic-fixtures slice. AP-M4 authorizes only the in-process fixture
+implementation defined here. It does not authorize a listening service, live Shared Edge, Terraform
+configuration, cloud resource, DNS change, production identity change, credential, or Application
+Adoption.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
@@ -265,9 +267,9 @@ AP-M3 does not prove that:
 - a Fixture Application or real application is compatible; or
 - Finance Assistant has adopted or can migrate to the platform.
 
-Delivery item 4 has no approved implementation plan, evaluation strategy, fixture topology, or
-milestone identifier in this document. It may be proposed only from `main` after the AP-M3 pull
-request merges. Infrastructure and Application Adoption remain later independent slices.
+AP-M3 did not approve a fixture implementation. That merge dependency is now satisfied and the
+separate AP-M4 authority below does not retroactively add Fixture evidence to AP-M3. Infrastructure
+and Application Adoption remain later independent slices.
 
 ## Plan trace
 
@@ -277,3 +279,266 @@ request merges. Infrastructure and Application Adoption remain later independent
 | AP-M3-W4 | AP-PR-001 through AP-PR-007; AP-QR-001 through AP-QR-004, AP-QR-006 | ADR-001, ADR-002, ADR-003 | AP-TM-001 through AP-TM-012, AP-TM-014 |
 | AP-M3-W5 | AP-PR-001 through AP-PR-008; AP-QR-001 through AP-QR-004, AP-QR-006 | ADR-001 through ADR-004 | Contract (`C`) portions of AP-TM-001 through AP-TM-014 |
 | AP-M3-W6 | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 | AP-TM-010, AP-TM-011, AP-TM-014 |
+
+## AP-M4 · Deterministic Fixture Applications
+
+### Outcome
+
+AP-M4 implements the smallest deterministic qualification harness for the logical platform design.
+It provides one deep in-process module with three observable operations:
+
+```text
+activate(proposed_registration_set) -> activation_result
+rollback(reviewed_generation_digest) -> activation_result
+handle(request) -> response
+```
+
+Activation resolves the declared predecessor against the harness's current reviewed generation;
+the caller cannot substitute a separate predecessor object. Activation and rollback change only
+the harness's in-memory Platform State. `handle` accepts and returns immutable values and is the
+request test surface. Callers cannot configure routes, catalogue entries, admission exceptions, or
+attachment targets outside a compiled generation and the read-only adapter map supplied at
+construction.
+
+AP-M4 produces Fixture (`F`) evidence only. It does not turn the harness into a network server or
+qualify a live provider, real identity, persistent control plane, or consuming application.
+
+### Scope
+
+AP-M4 includes:
+
+- the deterministic reference topology and fixture threat profile selected in system design;
+- a Python standard-library, synchronous, in-process request pipeline with no listening socket;
+- the `fixture-in-process-v1` attachment adapter and its exact inert resource-reference binding;
+- HTML catalogue projection, canonical route and mount selection, forwarding, and closed responses;
+- public, authenticated, and restricted admission using synthetic identities;
+- fixture-only signed identity delivery, independent application verification, and replay denial;
+- three independently constructed Fixture Applications and their Application State;
+- reviewed registration generations, atomic in-memory activation, lifecycle journeys, and rollback;
+- deterministic behavior, security, extraction, non-mutation, and redaction tests; and
+- status, repository-layout, and next-slice handoff reconciliation after the gate passes.
+
+AP-M4 excludes:
+
+- a socket, HTTP framework, browser, process manager, external registration endpoint, or database;
+- network ingress, DNS, TLS, OAuth, production signing, credential, IAM, or provider discovery;
+- persistence, concurrent writers, streaming, load, availability, or performance qualification;
+- Terraform, cloud resources, state backends, live plans, deployment, or operator mutation;
+- changes to Version 1 attachment fields or identity claims; and
+- Finance Assistant requirements, code, infrastructure, identity, state, registration, migration,
+  access, or Application Adoption.
+
+### Dependencies
+
+| Dependency | Required state | AP-M4 treatment |
+| --- | --- | --- |
+| AP-M3 | Merged to clean `main` with `make check` passing | Reuse the accepted Version 1 contracts and compiler |
+| Fixture system design | Owner-approved on the AP-M4 branch | Implement only the selected in-process topology and evidence boundary |
+| Threat profile | Owner-approved on the AP-M4 branch | Cover every applicable Fixture (`F`) claim without implying Live (`L`) evidence |
+| AP-M4 plan and evaluation | Approved before runtime edits | Bind implementation paths, observable behavior, gates, and evidence |
+| Python runtime | Supported Python 3 standard library | Add no package, service, credential, or network dependency |
+| Owner decisions | Recorded in design | Use the three fixtures, exact limits, synthetic assertion profile, and Git-reviewed registration model |
+
+Changing a Version 1 field, a requirement, an accepted ADR, or the Fixture evidence boundary stops
+the affected package for owner review. An Integration Draft, a real application, or live provider
+behavior cannot substitute for a missing AP-M4 dependency.
+
+### Work packages
+
+#### AP-M4-W1 · Fixture topology and threat profile
+
+Deliverables update only:
+
+- `docs/03_system_design.md`;
+- `docs/06_threat_model.md`; and
+- focused authority checks in `tests/test_governance.py`.
+
+This package selects the in-process reference topology, three fixtures, request limits, synthetic
+identity profile, in-memory generation model, direct-bypass claim boundary, and remaining live
+decisions. It implements no runtime and creates no Fixture evidence.
+
+#### AP-M4-W2 · Plan and evaluation authority
+
+Deliverables update only:
+
+- `docs/04_implementation_plan.md`;
+- `docs/05_evaluation_strategy.md`; and
+- focused AP-M4 identifier and scope checks in `tests/test_governance.py`.
+
+This package defines the remaining implementation order, exact acceptance boundary, mandatory
+Fixture gates, evidence, exclusions, and handoff. It may not add `fixtures/` implementation.
+
+#### AP-M4-W3 · Deterministic reference edge and attachment binding
+
+Deliverables:
+
+- `fixtures/__init__.py` and `fixtures/reference_edge.py`;
+- the `fixture-in-process-v1` semantic binding in `contracts/validation.py` and its policy in
+  `contracts/README.md`;
+- `tests/test_fixtures.py` coverage for bounded requests, catalogue, routes, mounts, forwarding,
+  closed responses, and attachment failure; and
+- a standard-library `fixture-check` target in `Makefile`, included by `make check`.
+
+The reference edge implements one `handle(request) -> response` interface. Adapter resolution is an
+exact read-only map lookup; it performs no dynamic import, URL fetch, filesystem lookup, or provider
+discovery. An invalid fixture resource reference or missing target rejects activation without
+changing the current generation.
+
+#### AP-M4-W4 · Synthetic identity and admission
+
+Deliverables extend only:
+
+- `fixtures/reference_edge.py` with the explicitly constructed identity adapter and fixture signer;
+- `fixtures/identity.py` with envelope verification and the bounded replay store; and
+- `tests/test_fixtures.py` with public, authenticated, restricted, stripping, forgery, expiry,
+  issuer, audience, cross-application, and replay cases.
+
+The implementation uses only injected public test material and an injected clock. It must not read
+an environment secret, select a production algorithm, emulate OAuth, or describe its in-process
+assertion denial as network-origin protection.
+
+#### AP-M4-W5 · Independent Fixture Applications and registrations
+
+Deliverables:
+
+- `fixtures/applications.py`;
+- complete reviewed generations under `fixtures/registrations/`;
+- synthetic fixture-owned setup under `fixtures/data/` only when data cannot be clearer as code;
+  and
+- `tests/test_fixtures.py` coverage for all three applications, principal derivation, entitlement
+  denial, catalogue visibility, state isolation, and cross-application denial.
+
+`fixture-public`, `fixture-authenticated`, and `fixture-restricted` each receive their own runtime
+and Application State. Registration inputs use the public Version 1 contracts and must not copy
+contract test vectors or depend on Finance Assistant.
+
+#### AP-M4-W6 · Generation lifecycle, failure, and rollback journeys
+
+Deliverables extend only:
+
+- `fixtures/reference_edge.py` with atomic activation and rollback over reviewed in-memory
+  generations;
+- the fixture registration generations needed for update, suspension, retirement, and attachment
+  replacement; and
+- `tests/test_fixtures.py` with successful and failed lifecycle journeys.
+
+Tests observe initial registration, an unchanged-registration application release, a registration
+update, suspension, retirement, replacement, invalid or unavailable activation, failure isolation,
+and rollback. A generation change must never roll back, delete, or transfer Fixture Application
+State.
+
+#### AP-M4-W7 · Qualification record and handoff
+
+Deliverables update only after every behavioral gate passes:
+
+- `README.md`, `docs/README.md`, and `docs/repository_layout.md`;
+- `prompts/README.md` and `prompts/starting_prompt.md`;
+- `AGENTS.md` only if the authoritative reading or verification order changes;
+- governance checks that protect truthful AP-M4 status; and
+- the pull-request handoff record, without committing generated or authenticated evidence.
+
+The updates may record the exact Fixture evidence obtained at the evaluated revision. They must
+leave Live and Adoption evidence unavailable and must not initiate infrastructure or application
+adoption work.
+
+### Ordered delivery
+
+Work proceeds in this order:
+
+1. approve fixture topology and threat-profile authority;
+2. approve AP-M4 planning and evaluation authority;
+3. implement and approve the bounded reference edge and fixture adapter binding;
+4. implement and approve synthetic identity and admission;
+5. implement and approve the three Fixture Applications and reviewed registrations;
+6. implement and approve lifecycle, failure, and rollback journeys; and
+7. run the complete gate, record actual evidence, and reconcile the handoff.
+
+Each work package is a separate small commit reviewed before the next package is edited. A later
+package may change an earlier file only to complete the behavior assigned above, correct a proven
+inconsistency, or record actual results. It may not add a listening service, live provider behavior,
+or Application Adoption.
+
+### Acceptance criteria
+
+AP-M4 is accepted only when all of the following are true:
+
+1. Every implemented behavior traces to AP-PR-001 through AP-PR-009, AP-QR-001 through AP-QR-006,
+   ADR-001 through ADR-004, the fixture system design, and the applicable Fixture portions of
+   AP-TM-001 through AP-TM-014.
+2. Exactly three independent fixtures register through Version 1 complete Registration Sets, and
+   only `fixture-in-process-v1` resolves in the harness.
+3. The request pipeline enforces the exact method, path, query, header, body, and response limits
+   before untrusted values cross their relevant seam.
+4. Catalogue, routes, attachment mounts, forwarding, admission, and closed responses derive only
+   from the one current compiled generation.
+5. Protected fixtures independently reject missing, visitor-controlled, forged, expired,
+   wrong-issuer, wrong-audience, cross-application, and replayed assertions.
+6. Platform admission never grants the restricted fixture's synthetic premium Feature Entitlement,
+   and each fixture's principal and state remain application-scoped.
+7. Activation and rollback change one complete generation atomically, preserve the last reviewed
+   generation after failure, and never mutate Fixture Application State.
+8. Every mandatory AP-EVAL-M4 gate passes through `make check` without credentials, network access,
+   package installation, browser use, cloud access, external mutation, or mandatory skips.
+9. Tests and evidence label in-process direct-call denial, synthetic cryptography, and in-memory
+   lifecycle behavior as Fixture evidence rather than network, production-identity, or persistence
+   qualification.
+10. Finance Assistant and every infrastructure, Terraform, DNS, identity, credential, deployment,
+    and Application Adoption path remain unchanged.
+
+Near-complete behavior, a warning-only denial, an undocumented skip, a test against an unreviewed
+generation, or a Fixture result presented as Live or Adoption evidence fails AP-M4.
+
+### Required evidence
+
+The pull-request handoff records:
+
+- branch, AP-M3 merge base, evaluated source revision, and final revision;
+- one commit and changed-path list for each AP-M4 work package;
+- exact commands, working directory, interpreter version, exit status, duration, test count,
+  failures, errors, warnings, and skips;
+- fixture registration generation and digest, contract and compiler versions, enabled adapter kind,
+  and identities expressed only as synthetic labels;
+- the requirements, ADRs, and Fixture threat claims covered by each gate;
+- security and privacy impact, limitations, and every unresolved Live and Adoption decision; and
+- confirmation that no credential, network call, state backend, saved plan, authenticated payload,
+  or external mutation was used.
+
+Console output from the revision-scoped deterministic run is sufficient. Generated reports,
+screenshots, captured assertion envelopes, interpreter caches, and copied state are not committed as
+proof.
+
+### Security and privacy impact
+
+AP-M4 introduces executable parsing, routing, admission, assertion, and application seams for
+synthetic inputs. It reduces design ambiguity by exercising their failure behavior, but it creates
+no external ingress and processes no real identity or application data. Public test key material is
+deliberately non-secret and must never be reused as a credential.
+
+Logs and test diagnostics may contain fixture identifiers, generation digests, outcome codes, and
+correlation identifiers. They must not contain assertion envelopes, restricted member sets,
+session labels, request bodies, principal maps, entitlement contents, or application state.
+
+### Limitations and deferred work
+
+AP-M4 cannot prove that:
+
+- the Shared Edge is network reachable, correctly deployed, or isolated from direct origin access;
+- DNS, TLS, OAuth, IAM, provider signing, key custody, rotation, quotas, or alerts work;
+- generation state survives a process restart or concurrent operator change;
+- the harness meets availability, latency, throughput, accessibility, or browser requirements; or
+- a real application, including Finance Assistant, is compatible with or authorized to adopt the
+  platform.
+
+Infrastructure implementation, Live qualification, and each Application Adoption require separate
+owner-approved branches, plans, evaluation gates, and evidence after AP-M4 merges.
+
+### Plan trace
+
+| Work packages | Requirements | Decisions | Threats |
+| --- | --- | --- | --- |
+| AP-M4-W1 through AP-M4-W2 | AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006 | ADR-001 through ADR-004 | Fixture (`F`) portions of AP-TM-001 through AP-TM-014 |
+| AP-M4-W3 | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004 | AP-TM-001 through AP-TM-004, AP-TM-007, AP-TM-009, AP-TM-012, AP-TM-013 |
+| AP-M4-W4 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002, AP-QR-005 | ADR-003, ADR-004 | AP-TM-004 through AP-TM-006, AP-TM-009, AP-TM-010, AP-TM-013 |
+| AP-M4-W5 | AP-PR-001 through AP-PR-006, AP-PR-008, AP-PR-009; AP-QR-001 through AP-QR-004, AP-QR-006 | ADR-001 through ADR-004 | AP-TM-001 through AP-TM-006, AP-TM-008 through AP-TM-010, AP-TM-014 |
+| AP-M4-W6 | AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004 | AP-TM-003, AP-TM-007 through AP-TM-009, AP-TM-013 |
+| AP-M4-W7 | AP-PR-008, AP-PR-009; AP-QR-003 through AP-QR-006 | ADR-004 | AP-TM-010, AP-TM-011, AP-TM-014 |
