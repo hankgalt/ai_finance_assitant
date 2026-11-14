@@ -85,9 +85,9 @@ The complete set, rather than an individual registration, is the validation scop
 uniqueness, reserved paths, attachment ownership, and catalogue derivation are cross-registration
 properties. The compiler interface is also the deterministic test surface.
 
-The versioned schemas, canonical serialization rules, violation codes, and contract test vectors
-are owned by the later contract commit in this same delivery item. Their absence must not be filled
-by a runtime implementation.
+The [Version 1 contract index](../contracts/README.md), schemas, canonical serialization rules,
+violation codes, and reviewed vectors now own the machine interface described here. They implement
+offline Contract evidence only; a runtime or provider adapter cannot fill a later authority gap.
 
 ### Shared Edge
 
@@ -400,12 +400,11 @@ runtime or control as operational.
 
 ## Design acceptance boundary
 
-This system design is accepted only as documentation authority. It is not evidence that the
-Registration Compiler, schemas, Shared Edge, catalogue, admission, identity delivery, attachments,
-fixtures, state controls, or rollback behavior exist. The system-design-and-contracts slice must
-still add its plan, evaluation strategy, threat model, schemas, deterministic validation, and
-passing repository checks before it can satisfy its implementation gate. Runtime and live
-qualification remain later gates.
+This system design remains documentation authority rather than operational evidence. AP-M3 now
+provides revision-scoped Contract evidence that the Version 1 schemas and deterministic reference
+compiler satisfy their declared offline gate. It is not evidence that a Shared Edge, catalogue,
+admission runtime, identity delivery, provider attachment, Fixture Application, state control, or
+rollback procedure exists. Runtime, Fixture, Live, and Adoption qualification remain later gates.
 
 ## Design trace
 

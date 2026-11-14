@@ -11,10 +11,14 @@ repository's security, source-control, and destructive-action guardrails also ap
    behavior to their identifiers and constraints.
 3. Read [GLOSSARY.md](GLOSSARY.md) for canonical platform terms and
    [docs/repository_layout.md](docs/repository_layout.md) before placing files.
-4. Inspect `git status` and preserve unrelated changes.
-5. State the platform slice and every `AP-PR-*`, `AP-QR-*`, `ADR-*`, plan, and evaluation identifier
+4. Before changing platform interfaces or planning their consumers, read the
+   [system design](docs/03_system_design.md), [threat model](docs/06_threat_model.md), and
+   [contract index](contracts/README.md). Use the plan and evaluation authority for the active
+   milestone; when either is absent, propose it and wait for approval before implementation.
+5. Inspect `git status` and preserve unrelated changes.
+6. State the platform slice and every `AP-PR-*`, `AP-QR-*`, `ADR-*`, plan, and evaluation identifier
    that owns the change. Treat an absent downstream authority as unresolved rather than inferred.
-6. Stop for direction when an authority is absent or the requested work would change an active
+7. Stop for direction when an authority is absent or the requested work would change an active
    application, cloud resource, DNS record, credential, or Terraform state outside the approved
    slice.
 
@@ -24,6 +28,9 @@ repository's security, source-control, and destructive-action guardrails also ap
 - Parent Finance Assistant specifications do not define platform behavior.
 - Application integration drafts are inactive inputs until the consuming application adopts them
   through its own requirements and release process.
+- Version 1 schemas, the reference compiler, and deterministic vectors provide Contract evidence
+  only. Runtime, provider, Fixture, Live, and Adoption claims require their later authorities and
+  evidence gates.
 - Keep canonical platform implementation, contracts, tests, prompts, and evidence inside this
   subtree so repository extraction preserves them.
 

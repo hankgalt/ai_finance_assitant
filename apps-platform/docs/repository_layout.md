@@ -1,6 +1,6 @@
 # App Platform repository layout
 
-Status: authoritative; requirements-and-decisions slice complete
+Status: authoritative; AP-M3 contract implementation recorded
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this
@@ -16,7 +16,8 @@ directory the new repository root.
 | `docs/` | Platform design authority and future runbooks/evidence indexes |
 | `prompts/` | Bounded task entry points that link to authoritative documents |
 | `integrations/` | Inactive application-adoption inputs with no consuming-app authority |
-| `tests/` | Behavior-named deterministic platform checks |
+| `contracts/` | Version 1 schemas, deterministic reference compiler, and reviewed contract vectors; no runtime adapter |
+| `tests/` | Behavior-named governance and contract checks |
 | `Makefile` | Portable project-local developer and verification interface |
 | `.gitignore` | Platform-local generated, secret, state, and build exclusions |
 
@@ -26,7 +27,6 @@ These locations may be created only by their approved slice:
 
 | Path | Intended owner |
 | --- | --- |
-| `contracts/` | Versioned platform, registration, admission, catalogue, and migration interfaces |
 | `infrastructure/terraform/` | Independent platform state roots and reusable infrastructure modules |
 | `catalog/` | Root application catalogue implementation |
 | `fixtures/` | Deterministic Registered Applications and app-owned test state used for qualification |

@@ -64,8 +64,8 @@ class FinanceIntegrationDraftTest(unittest.TestCase):
 
         self.assertIn("Inactive integration inputs", docs_index)
         self.assertIn("integrations/ai_finance_assistant/README.md", prompt)
-        self.assertIn("every linked draft in that package completely", normalized_prompt)
-        self.assertIn("as non-authoritative inputs", normalized_prompt)
+        self.assertIn("only if the owner separately scopes", normalized_prompt)
+        self.assertIn("non-authoritative", normalized_prompt)
         self.assertIn("cannot define generic platform behavior", normalized_prompt)
         self.assertIn("Inactive application-adoption inputs", layout)
 
