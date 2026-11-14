@@ -1,7 +1,7 @@
 # App Platform documentation
 
-Version 0.4 | Status: requirements, ownership, and admission decisions defined; fixture migration
-decision pending
+Version 0.5 | Status: product requirements and accepted architecture decisions defined; system
+design pending
 
 This directory is the design authority for Comfforts App Platform. The current slice defines the
 platform requirements without implementing them. It does not claim that the catalogue, Shared Edge,
@@ -18,10 +18,9 @@ identity boundary, fixture applications, Terraform, or any cloud resource exists
 5. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
 6. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
 
-The remaining work in this approved documentation slice will decide the fixture-first migration
-boundary. System design, implementation planning, evaluation strategy, threat modeling, contracts,
-fixtures, and Terraform remain deferred until their owning slice is approved. An absent authority
-must not be inferred from discussion history.
+The requirements and decisions are now defined. System design, implementation planning, evaluation
+strategy, threat modeling, contracts, fixture implementation, and Terraform remain deferred until
+their owning slice is approved. An absent authority must not be inferred from discussion history.
 
 ## Future document precedence
 

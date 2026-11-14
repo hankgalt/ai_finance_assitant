@@ -28,8 +28,8 @@ These locations may be created only by their approved slice:
 | `contracts/` | Versioned platform, registration, admission, catalogue, and migration interfaces |
 | `infrastructure/terraform/` | Independent platform state roots and reusable infrastructure modules |
 | `catalog/` | Root application catalogue implementation |
-| `fixtures/` | Deterministic applications used for independent platform qualification |
-| `integrations/` | Inactive, application-specific migration inputs |
+| `fixtures/` | Deterministic Registered Applications and app-owned test state used for qualification |
+| `integrations/` | Inactive application-adoption inputs that cannot modify a consuming application |
 | `artifacts/` | Secret-free generated or reviewed platform evidence |
 
 The reservation is not authorization to scaffold empty modules or imply later capabilities.

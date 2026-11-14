@@ -1,7 +1,7 @@
 # Comfforts App Platform
 
-Status: product requirements and ownership/admission decisions defined; no platform runtime or cloud
-resource is implemented.
+Status: product requirements and accepted architecture decisions defined; no platform runtime or
+cloud resource is implemented.
 
 Comfforts App Platform is a separately governed project temporarily colocated in the
 AI Finance Assistant repository. It is intended to own the shared application catalogue and edge
@@ -32,9 +32,9 @@ or the live Finance Assistant deployment.
 ## Project authority
 
 Read `AGENTS.md` before changing this project and follow the authority and reading order in
-`docs/README.md`. Product requirements and accepted ownership/admission decisions are now
-authoritative. The fixture-first migration decision, system design, implementation planning, and
-evaluation strategy remain deferred to their approved documentation slices.
+`docs/README.md`. Product requirements and accepted architecture decisions are now authoritative.
+System design, implementation planning, and evaluation strategy remain deferred to their approved
+documentation slices.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

@@ -56,8 +56,8 @@ class GovernanceFoundationTest(unittest.TestCase):
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
 
-        self.assertIn("requirements, ownership, and admission decisions defined", index)
-        self.assertIn("fixture migration\ndecision pending", index)
+        self.assertIn("product requirements and accepted architecture decisions defined", index)
+        self.assertIn("system\ndesign pending", index)
         self.assertIn("does not claim", index)
         self.assertIn("Integration draft", index)
         self.assertIn("history-preserving subtree extraction", layout)
@@ -98,8 +98,8 @@ class GovernanceFoundationTest(unittest.TestCase):
         )
         observed = re.findall(r"^## (ADR-\d{3}) ·", decisions, re.MULTILINE)
 
-        self.assertEqual(observed, ["ADR-001", "ADR-002", "ADR-003"])
-        self.assertEqual(decisions.count("Status: Accepted"), 3)
+        self.assertEqual(observed, ["ADR-001", "ADR-002", "ADR-003", "ADR-004"])
+        self.assertEqual(decisions.count("Status: Accepted"), 4)
         for identifier in (
             "AP-PR-001",
             "AP-PR-002",
@@ -109,9 +109,11 @@ class GovernanceFoundationTest(unittest.TestCase):
             "AP-PR-006",
             "AP-PR-007",
             "AP-PR-008",
+            "AP-PR-009",
             "AP-QR-001",
             "AP-QR-002",
             "AP-QR-003",
+            "AP-QR-004",
             "AP-QR-006",
         ):
             self.assertIn(identifier, decisions)
@@ -156,6 +158,28 @@ class GovernanceFoundationTest(unittest.TestCase):
             "## Feature Entitlement",
         ):
             self.assertIn(term, glossary)
+
+    def test_fixture_first_decision_keeps_application_adoption_separate(self) -> None:
+        decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
+            encoding="utf-8"
+        )
+        glossary = (PROJECT_ROOT / "GLOSSARY.md").read_text(encoding="utf-8")
+        layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
+        prompts = (PROJECT_ROOT / "prompts/README.md").read_text(encoding="utf-8")
+
+        for boundary in (
+            "before any real application may be adopted",
+            "remain outside\nPlatform State",
+            "no Finance Assistant code",
+            "is not platform acceptance evidence",
+            "A cutover must leave each resource with one active state owner",
+            "Finance Assistant-owned slice and evidence",
+        ):
+            self.assertIn(boundary, decisions)
+        self.assertIn("## Application Adoption", glossary)
+        self.assertIn("app-owned test state", layout)
+        self.assertIn("requirements-and-decisions-only state", prompts)
+        self.assertNotIn("governance-only state", prompts)
 
 
 if __name__ == "__main__":

@@ -182,3 +182,68 @@ and application-principal derivation contract remain system-design and contract 
   and entitlement revocation.
 - Expanding Finance Assistant from owner-only admission remains a future Finance Assistant change;
   this decision does not alter its current access policy.
+
+## ADR-004 · Qualify the platform with fixtures before application adoption
+
+Status: Accepted
+
+Requirements: AP-PR-008, AP-PR-009, AP-QR-001, AP-QR-003, AP-QR-004, AP-QR-006
+
+### Context
+
+Using Finance Assistant as the first platform test would couple platform acceptance to a real
+application's runtime, data, access policy, providers, and existing infrastructure. It would also
+make platform defects difficult to distinguish from application defects and could transfer resource
+ownership before the platform boundary is proven.
+
+### Decision
+
+The App Platform must reach its declared implementation and qualification gates with one or more
+deterministic Fixture Applications before any real application may be adopted. A fixture may
+live in this project for portability, but it participates as a Registered Application: its runtime,
+synthetic data, principals, Feature Entitlements, and fixture Application State remain outside
+Platform State.
+
+Together, the fixtures and platform qualification must be able to exercise:
+
+- root catalogue navigation, unique prefix routing, subpaths, and unmatched-path failure;
+- public, authenticated, and restricted Admission Modes;
+- Verified Identity Context, spoofed-identity rejection, and application principal derivation;
+- an admitted identity using an unrestricted feature while being denied a market-data-style Feature
+  Entitlement;
+- registration, update, suspension, retirement, route isolation, and rollback; and
+- rejection of direct access that bypasses a protected Shared Edge.
+
+Fixture behavior and data must be deterministic and synthetic. Fixture qualification must require
+no Finance Assistant code, production application data, paid provider, application credential, or
+write access to a real application's state.
+
+An Integration Draft may describe how a real application could consume the qualified platform
+interfaces, but it is not an application change and is not platform acceptance evidence. Application
+Adoption occurs only when the Application Owner incorporates the proposal through that application's
+own requirements, decisions, contracts, implementation, tests, state migration, cutover, rollback,
+and release approval. A cutover must leave each resource with one active state owner.
+
+The fixture topology, implementation language, synthetic identities, entitlement model, and
+qualification evidence schema remain system-design and evaluation decisions.
+
+### Considered alternatives
+
+- **Migrate Finance Assistant before qualifying the platform:** rejected because a real application
+  would become both the test harness and the migration subject, obscuring failures and ownership.
+- **Treat the existing deployed application as a fixture:** rejected because it contains real access
+  policy, credentials, providers, and application state that fixtures must not require.
+- **Let platform documents directly amend a consuming application:** rejected because the platform
+  cannot authorize changes to another project's requirements, state, or release.
+- **Qualify only static configuration:** rejected because routing, admission, identity delivery,
+  entitlement separation, lifecycle, and failure behavior are observable runtime boundaries.
+
+### Consequences
+
+- Platform implementation can proceed and be evaluated independently of Finance Assistant.
+- Fixture runtime and state must remain separable from Platform State even while colocated.
+- Platform qualification proves the platform contracts and controls, not compatibility with every
+  application.
+- Finance Assistant migration will require a later Finance Assistant-owned slice and evidence.
+- History-preserving repository extraction must retain the fixtures and their deterministic checks
+  so qualification does not depend on the containing repository.

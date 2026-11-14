@@ -67,13 +67,19 @@ application-specific authorization. Its exact future boundary is defined by appr
 
 ## Fixture Application
 
-A deterministic, non-production application used to qualify routing, identity delivery, admission,
-registration, and lifecycle behavior without depending on a real application migration.
+A deterministic, non-production Registered Application used to qualify platform behavior without a
+real application migration. Its runtime and state remain application-owned test assets, not Platform
+State.
 
 ## Integration Draft
 
 A non-authoritative migration input prepared for another application. It becomes active only when
 that application adopts it through its own documentation, contracts, tests, and release process.
+
+## Application Adoption
+
+The consuming Application Owner's explicit acceptance of an Integration Draft through that
+application's own authorities, implementation, migration, evidence, and release process.
 
 ## Qualification
 
