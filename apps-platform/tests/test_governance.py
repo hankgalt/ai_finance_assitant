@@ -54,13 +54,18 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("docs/02_architecture_decision_records.md", instructions)
         self.assertIn("docs/repository_layout.md", instructions)
         self.assertIn("make -C apps-platform check", instructions)
+        self.assertIn("one bounded slice per pull request", instructions)
+        self.assertIn("leave each change uncommitted until approval", instructions)
+        self.assertIn("Merge it before starting the next documented slice", instructions)
 
     def test_documentation_truthfully_closes_the_requirements_slice(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
+        normalized_index = " ".join(index.split())
 
-        self.assertIn("requirements-and-decisions slice complete", index)
-        self.assertIn("system design pending", index)
+        self.assertIn("governance and requirements/decisions complete", normalized_index)
+        self.assertIn("requirements-and-decisions slice is complete", normalized_index)
+        self.assertIn("system design and contracts next", normalized_index)
         self.assertIn("does not claim", index)
         self.assertIn("Integration draft", index)
         self.assertIn("requirements-and-decisions slice complete", layout)
@@ -206,7 +211,29 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertNotIn("### AP-PR-", prompt)
         self.assertNotIn("## ADR-", prompt)
         self.assertNotIn("terraform apply", prompt)
-        self.assertIn("[System-design handoff](starting_prompt.md)", prompt_index)
+        self.assertIn("[System-design/contracts handoff](starting_prompt.md)", prompt_index)
+
+    def test_incremental_delivery_sequence_keeps_contracts_and_fixtures_separate(self) -> None:
+        index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
+        prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
+        normalized_index = " ".join(index.split())
+        normalized_prompt = " ".join(prompt.split())
+
+        for completed in (
+            "Governance foundation — complete",
+            "Requirements and decisions — complete",
+        ):
+            self.assertIn(completed, index)
+        self.assertIn("System design and versioned contracts — next", index)
+        self.assertIn("Deterministic fixtures — following", index)
+        self.assertIn("feat/apps-platform-system-design-contracts", index)
+        self.assertIn("feat/apps-platform-fixtures", index)
+        self.assertIn("separate bounded branch and pull request", normalized_index)
+        self.assertIn("obtain owner approval for the fixture implementation plan", normalized_index)
+        self.assertIn("propose item 3", normalized_prompt)
+        self.assertIn("without implementing a fixture runtime", normalized_prompt)
+        self.assertIn("Keep deterministic fixture implementation for item 4", normalized_prompt)
+        self.assertIn("Do not combine those slices in one branch or pull request", normalized_prompt)
 
 
 if __name__ == "__main__":

@@ -27,6 +27,19 @@ repository's security, source-control, and destructive-action guardrails also ap
 - Keep canonical platform implementation, contracts, tests, prompts, and evidence inside this
   subtree so repository extraction preserves them.
 
+## Branch and review workflow
+
+- Start each approved slice from an updated, clean `main` on a dedicated feature branch.
+- Keep one bounded slice per pull request. Merge it before starting the next documented slice.
+- Use small coherent commits that remain independently reviewable. When the owner requests
+  commit-by-commit review, leave each change uncommitted until approval.
+- Keep later-slice implementation out of the current branch even when its directories or interfaces
+  are already reserved.
+- Run `make check` before handoff and report the actual result. A merged pull request records
+  repository progress; it does not by itself qualify runtime or cloud behavior.
+- Follow the completed/next sequence in [docs/README.md](docs/README.md); do not infer a new sequence
+  from branch names or discussion history.
+
 ## Verification
 
 - Run `make check` from this directory or `make -C apps-platform check` from the parent repository.
