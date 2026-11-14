@@ -310,6 +310,42 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("Do not implement a Fixture Application", normalized_prompt)
         self.assertIn("Item 4 belongs on a new bounded branch", normalized_prompt)
 
+    def test_fixture_design_selects_a_bounded_in_process_profile(self) -> None:
+        design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
+            encoding="utf-8"
+        )
+        threat_model = (PROJECT_ROOT / "docs/06_threat_model.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_threat_model = " ".join(threat_model.split())
+
+        for boundary in (
+            "handle(request) -> response",
+            "It opens no listening socket",
+            "fixture-in-process-v1",
+            "fixture-public",
+            "fixture-authenticated",
+            "fixture-restricted",
+            "adds no external registration endpoint",
+            "or database",
+            "No Fixture (`F`) evidence exists",
+        ):
+            self.assertIn(boundary, design)
+
+        for threat_control in (
+            "at most 32 headers",
+            "65,536 UTF-8 bytes",
+            "HMAC-SHA-256",
+            "60 seconds",
+            "256-entry fail-closed replay store",
+            "There is no registration API or database",
+            "produces no Fixture (`F`) evidence",
+        ):
+            self.assertIn(threat_control, normalized_threat_model)
+
+        self.assertIn("Finance Assistant code", design)
+        self.assertIn("network direct-bypass control", threat_model)
+
 
 if __name__ == "__main__":
     unittest.main()
