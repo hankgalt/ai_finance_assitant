@@ -19,6 +19,7 @@ class GovernanceFoundationTest(unittest.TestCase):
             "Makefile",
             "README.md",
             "docs/01_product_requirements.md",
+            "docs/02_architecture_decision_records.md",
             "docs/README.md",
             "docs/repository_layout.md",
             "prompts/README.md",
@@ -55,7 +56,8 @@ class GovernanceFoundationTest(unittest.TestCase):
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
 
-        self.assertIn("product requirements defined; architecture decisions pending", index)
+        self.assertIn("requirements and shared-edge ownership decisions defined", index)
+        self.assertIn("remaining decisions\npending", index)
         self.assertIn("does not claim", index)
         self.assertIn("Integration draft", index)
         self.assertIn("history-preserving subtree extraction", layout)
@@ -89,6 +91,42 @@ class GovernanceFoundationTest(unittest.TestCase):
             "no platform capability is implemented",
         ):
             self.assertIn(boundary, requirements)
+
+    def test_architecture_decisions_are_unique_and_trace_requirements(self) -> None:
+        decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
+            encoding="utf-8"
+        )
+        observed = re.findall(r"^## (ADR-\d{3}) ·", decisions, re.MULTILINE)
+
+        self.assertEqual(observed, ["ADR-001", "ADR-002"])
+        self.assertEqual(decisions.count("Status: Accepted"), 2)
+        for identifier in (
+            "AP-PR-001",
+            "AP-PR-002",
+            "AP-PR-003",
+            "AP-PR-007",
+            "AP-QR-001",
+            "AP-QR-002",
+            "AP-QR-003",
+            "AP-QR-006",
+        ):
+            self.assertIn(identifier, decisions)
+
+    def test_shared_edge_decisions_preserve_exclusive_ownership(self) -> None:
+        decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
+            encoding="utf-8"
+        )
+
+        for boundary in (
+            "certificate secures a hostname",
+            "not a certificate boundary",
+            "only authoritative input",
+            "No resource may be managed by both states",
+            "does not transfer ownership",
+            "does not move them",
+            "Direct manual route changes are drift",
+        ):
+            self.assertIn(boundary, decisions)
 
 
 if __name__ == "__main__":
