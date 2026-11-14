@@ -1,8 +1,15 @@
 # AI Finance Assistant documentation
 
-Version 3.9 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 credential-free MVP and owner-only live-provider posture qualified; M10 planned | 2026-11-13
+Version 3.10 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 credential-free MVP and owner-only live-provider posture qualified; M10 planned | 2026-11-13
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
+
+## Colocated project authority
+
+The [`apps-platform/`](../apps-platform/) subtree is a separately governed project. Its
+[documentation](../apps-platform/docs/README.md) is authoritative only for App Platform. Platform
+governance and inactive integration drafts do not alter the Finance Assistant requirements,
+decisions, design, plans, contracts, deployment status, or qualification evidence recorded here.
 
 ## Reading order and authority
 

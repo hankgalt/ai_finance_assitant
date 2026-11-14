@@ -2,10 +2,18 @@
 
 Status: Authoritative under accepted ADR-029 and ADR-030
 
-Updated: 2026-11-12
+Updated: 2026-11-13
 
 The repository is organized by durable product capability and interface. Milestones describe
 delivery history in `docs/`; they are not ownership boundaries for current machine-readable assets.
+
+## Colocated project boundary
+
+`apps-platform/` is a separately governed, extractable project rather than a Finance Assistant
+capability directory. Its own [repository layout](../apps-platform/docs/repository_layout.md) owns
+all canonical platform files. The parent repository contains only short authority pointers and a
+temporary path-scoped CI wrapper. Nothing in the subtree changes Finance Assistant architecture or
+deployment ownership until Finance adopts a separately approved integration contract.
 
 ## Ownership rules
 

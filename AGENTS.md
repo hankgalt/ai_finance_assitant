@@ -2,6 +2,15 @@
 
 These instructions apply to the entire repository.
 
+## Colocated project boundary
+
+Work under [`apps-platform/`](apps-platform/) is governed by
+[`apps-platform/AGENTS.md`](apps-platform/AGENTS.md) and its documentation authority. Finance
+Assistant requirements and milestones do not define App Platform behavior. The repository-wide
+security, source-control, secret-handling, and destructive-action guardrails in this file continue
+to apply while the projects are colocated; the Finance-specific reading order below applies outside
+that subtree.
+
 ## Before modifying implementation
 
 1. Read [docs/README.md](docs/README.md) for document authority, scope labels, and reading order.
