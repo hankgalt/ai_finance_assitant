@@ -30,10 +30,9 @@ or the live Finance Assistant deployment.
 
 ## Project authority
 
-Platform governance and reading order will be maintained in `docs/README.md`. Project-specific
-agent instructions will live in `AGENTS.md`. Requirements, architecture decisions, system design,
-implementation planning, and evaluation strategy are deliberately deferred to their next approved
-documentation slice.
+Read `AGENTS.md` before changing this project and follow the authority and reading order in
+`docs/README.md`. Requirements, architecture decisions, system design, implementation planning,
+and evaluation strategy are deliberately deferred to their next approved documentation slice.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

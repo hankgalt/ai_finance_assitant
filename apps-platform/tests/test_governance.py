@@ -13,8 +13,12 @@ class GovernanceFoundationTest(unittest.TestCase):
     def test_project_shell_is_self_contained(self) -> None:
         expected_files = (
             ".gitignore",
+            "AGENTS.md",
+            "GLOSSARY.md",
             "Makefile",
             "README.md",
+            "docs/README.md",
+            "docs/repository_layout.md",
             "prompts/README.md",
             "tests/test_governance.py",
         )
@@ -36,6 +40,24 @@ class GovernanceFoundationTest(unittest.TestCase):
         for pattern in (".env", "**/.terraform/", "*.tfstate", "*.tfplan", "*.tfvars"):
             self.assertIn(pattern, ignore)
         self.assertNotIn(".terraform.lock.hcl", ignore)
+
+    def test_agent_instructions_route_to_platform_authority(self) -> None:
+        instructions = (PROJECT_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+
+        self.assertIn("docs/README.md", instructions)
+        self.assertIn("GLOSSARY.md", instructions)
+        self.assertIn("docs/repository_layout.md", instructions)
+        self.assertIn("make -C apps-platform check", instructions)
+
+    def test_documentation_truthfully_limits_the_governance_slice(self) -> None:
+        index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
+        layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
+
+        self.assertIn("requirements and architecture decisions pending", index)
+        self.assertIn("does not claim", index)
+        self.assertIn("Integration draft", index)
+        self.assertIn("history-preserving subtree extraction", layout)
+        self.assertIn("Do not create a nested `.git`", layout)
 
 
 if __name__ == "__main__":
