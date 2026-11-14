@@ -344,7 +344,7 @@ gates. Static configuration or a successful compiler run is not runtime qualific
 Registrations, catalogue text, attachment references, identity headers, request paths, provider
 payloads, and operator-supplied configuration are untrusted inputs. Every interface is bounded,
 strictly parsed, and allow-listed before it can influence derived configuration. The dedicated
-threat model in this delivery item owns the detailed trust zones, abuse cases, controls, residual
+[threat model](06_threat_model.md) owns the detailed trust zones, abuse cases, controls, residual
 risks, and future qualification mappings.
 
 Platform logs and evidence may contain contract versions, generation digests, immutable application
