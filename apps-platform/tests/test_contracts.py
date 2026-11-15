@@ -170,12 +170,15 @@ class ContractSchemaTest(unittest.TestCase):
                 ["JSON_INVALID"],
             )
 
-    def test_default_check_includes_contract_gate(self) -> None:
+    def test_default_check_includes_contract_and_fixture_gates(self) -> None:
         makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
 
-        self.assertIn("check: governance-check contract-check", makefile)
+        self.assertIn(
+            "check: governance-check contract-check fixture-check", makefile
+        )
         self.assertIn("contract-check:", makefile)
-        self.assertEqual(makefile.count("PYTHONDONTWRITEBYTECODE=1"), 2)
+        self.assertIn("fixture-check:", makefile)
+        self.assertEqual(makefile.count("PYTHONDONTWRITEBYTECODE=1"), 3)
 
     def test_contract_layer_runs_from_an_extracted_project_copy(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

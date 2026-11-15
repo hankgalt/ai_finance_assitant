@@ -1,6 +1,6 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M3 contract implementation recorded
+Status: authoritative; AP-M4 deterministic Fixture implementation recorded
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this
@@ -17,7 +17,8 @@ directory the new repository root.
 | `prompts/` | Bounded task entry points that link to authoritative documents |
 | `integrations/` | Inactive application-adoption inputs with no consuming-app authority |
 | `contracts/` | Version 1 schemas, deterministic reference compiler, and reviewed contract vectors; no runtime adapter |
-| `tests/` | Behavior-named governance and contract checks |
+| `fixtures/` | In-process reference edge, synthetic identity, three independent Fixture Applications with app-owned test state, and reviewed registration generations |
+| `tests/` | Behavior-named governance, contract, and Fixture checks |
 | `Makefile` | Portable project-local developer and verification interface |
 | `.gitignore` | Platform-local generated, secret, state, and build exclusions |
 
@@ -29,7 +30,6 @@ These locations may be created only by their approved slice:
 | --- | --- |
 | `infrastructure/terraform/` | Independent platform state roots and reusable infrastructure modules |
 | `catalog/` | Root application catalogue implementation |
-| `fixtures/` | Deterministic Registered Applications and app-owned test state used for qualification |
 | `artifacts/` | Secret-free generated or reviewed platform evidence |
 
 The reservation is not authorization to scaffold empty modules or imply later capabilities.

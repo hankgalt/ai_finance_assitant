@@ -1,6 +1,6 @@
 # App Platform system design
 
-Version 0.1 | Status: system-design authority; no platform runtime or cloud resource is implemented
+Version 0.2 | Status: fixture design authority; no fixture runtime or cloud resource is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -28,8 +28,10 @@ The design separates three kinds of work:
 3. **Application operation:** an Application Owner supplies compatible attachments and retains its
    runtime, data, identity mapping, feature authorization, providers, and Application State.
 
-Only the first kind is implemented by the system-design-and-contracts slice. The other two require
-later approved implementation and evaluation authorities.
+The system-design-and-contracts slice implements only the first kind. This revision selects the
+deterministic Fixture Application design for delivery item 4, but it does not implement or qualify
+the Shared Edge or any application runtime. Implementation still requires separately approved
+planning and evaluation authority.
 
 ## Logical topology
 
@@ -359,16 +361,154 @@ monitoring.
 
 ## Fixture boundary
 
-Fixture Applications are future contract consumers, not internal compiler branches or privileged
-platform runtimes. Each fixture must register and attach through the same public contracts as any
-other application. Its runtime, synthetic data, Application Principals, Feature Entitlements, and
-Fixture Application State remain outside Platform State.
+Fixture Applications are contract consumers, not internal compiler branches or privileged platform
+runtimes. Each fixture registers and attaches through the same Version 1 contracts as any other
+application. Its runtime, synthetic data, Application Principals, Feature Entitlements, and Fixture
+Application State remain outside Platform State.
 
 Contract test vectors may use synthetic application names and identities to validate schemas and
 compiler behavior. They are not Fixture Applications and cannot qualify routing, identity delivery,
-direct-bypass denial, lifecycle operations, or rollback. Fixture topology and implementation begin
-only in delivery item 4 after this system-design-and-contracts pull request is merged and a separate
-fixture plan and evaluation gate are approved.
+direct-bypass denial, lifecycle operations, or rollback. Delivery item 4 must introduce independent
+fixture registrations and application-owned fixture implementations.
+
+### Deterministic reference topology
+
+Item 4 uses one Python standard-library, in-process request pipeline. Its external seam is one
+bounded `handle(request) -> response` operation over ordinary immutable request and response values.
+It opens no listening socket and performs no HTTP, DNS, TLS, filesystem, subprocess, credential, or
+cloud operation. An injected clock and explicitly constructed adapters make every result
+deterministic.
+
+```text
+ reviewed fixture Registration Set
+                |
+                v
+      Registration Compiler
+                |
+                v
+ immutable compiled generation ---> in-memory generation activation
+                                           |
+ synthetic request ------------------------v
+                               Deterministic Reference Edge
+                                 | catalogue / closed response
+                                 | admission + identity assertion
+                                 v
+                         fixture-in-process-v1
+                                 |
+                                 v
+                       Fixture Application State
+```
+
+The Deterministic Reference Edge is a fixture adapter for the logical Shared Edge interface. It
+must derive catalogue, route, admission, attachment, and lifecycle behavior only from one compiled
+generation. It may not add a route, admission exception, or catalogue entry through constructor
+options or fixture-specific branching. Provider-facing behavior, network ingress, TLS, concurrency,
+streaming, availability, and performance are outside this adapter and outside Fixture evidence.
+
+The only enabled attachment adapter kind is `fixture-in-process-v1`. Its resource references use
+`urn:comfforts:app-platform:fixture:<application-id>:<attachment-id>` and are inert lookup keys into
+an explicitly supplied read-only attachment map. Resolution performs no import, fetch, discovery,
+or dynamic execution. This selection does not define a live provider adapter or change the Version
+1 attachment schema.
+
+### Fixture Application set
+
+The fixture qualification set contains exactly three independent applications:
+
+| Fixture | Catalogue | Admission | Application-owned behavior |
+| --- | --- | --- | --- |
+| `fixture-public` | Listed | Public | Returns synthetic public content and exposes two mounts for forwarding and longest-match checks |
+| `fixture-authenticated` | Unlisted | Authenticated | Derives an application-scoped principal only after independently verifying the edge assertion |
+| `fixture-restricted` | Listed | Restricted | Admits one exact synthetic issuer-and-subject pair and separately denies an admitted principal a synthetic premium Feature Entitlement |
+
+Each fixture has its own runtime object, mutable synthetic state, principal map, entitlement policy,
+and assertion verifier inside separately constructed Fixture Application State. The platform holds
+only the attachment reference and callable adapter supplied at construction. One fixture cannot
+read or mutate another fixture or the platform's generation state. Finance Assistant code, data,
+infrastructure, identity, state, and migration are never fixture dependencies.
+
+### Request, catalogue, and response profile
+
+The item 4 pipeline accepts `GET` only and applies these fixture-only limits before routing or
+admission:
+
+- an ASCII method of at most 16 bytes;
+- a raw path of at most 1,024 UTF-8 bytes and query data of at most 1,024 UTF-8 bytes;
+- at most 32 headers, with an ASCII name of at most 64 bytes, a value of at most 1,024 UTF-8 bytes,
+  and at most 8,192 aggregate header bytes;
+- an empty request body; and
+- a response body of at most 65,536 UTF-8 bytes.
+
+Unsupported methods, malformed text, duplicate security-sensitive headers, limit violations, and
+non-empty bodies fail before attachment selection. These bounds qualify only this synchronous,
+in-process profile. Connection, streaming, network timeout, traffic-rate, concurrency, and live
+provider limits remain unresolved.
+
+The root `/` response is UTF-8 HTML derived from the compiled catalogue. The renderer escapes every
+text field for HTML and constructs each link only from the canonical registered route prefix. It
+does not accept templates, raw markup, arbitrary links, attachment references, or operator data.
+Deterministic tests inspect the parsed links and literal text; they do not require a browser.
+
+Unknown, malformed, reserved, staged, suspended, and retired paths return a closed platform
+response and never invoke an attachment. Authentication failures are distinct from restricted
+membership denial, but neither response reveals membership, attachment, or application-state
+details. An unavailable or oversized fixture response fails only the selected application and is
+never retried against another fixture.
+
+### Synthetic identity and application verification
+
+The fixture identity adapter recognizes only an explicit in-memory mapping from synthetic session
+labels to immutable `(issuer, subject)` pairs. Those labels and identities are test data, not
+credentials or an identity-provider simulation. Before routing, the edge removes every
+visitor-supplied `X-Comfforts-Verified-Identity` value.
+
+After successful protected admission, a fixture-only signer wraps the existing Version 1 Verified
+Identity Context in a deterministic HMAC-SHA-256 envelope. The signer uses injected, explicitly
+public test key material; it is not a production algorithm or key-management choice. Assertions
+have a maximum 60-second lifetime, allow zero clock skew, and use their correlation identifier as
+the replay identifier. Each protected fixture independently verifies the envelope, contract
+version, signature, issuer, application-specific audience, issued and expiry times, and replay
+identifier before deriving an Application Principal. A bounded 256-entry replay store removes only
+expired entries and fails closed when no safe capacity remains.
+
+Tests must call a protected fixture directly with a missing, forged, expired, wrong-issuer,
+wrong-audience, cross-application, and replayed assertion and observe denial. This is evidence of
+application-side assertion verification only. An in-process call cannot prove network origin
+isolation, provider IAM, key protection, or denial of a live direct-origin request; those remain
+Live and Adoption gates.
+
+### Registration, activation, and lifecycle
+
+Fixture registrations are committed, reviewed files that form complete Registration Sets. Item 4
+adds no external registration endpoint, self-service registration flow, or database. A proposed
+fixture change is compiled through the Version 1 compiler, then the complete generation is either
+installed in an in-memory reviewed-generation collection and selected by one current-generation
+pointer or rejected without changing runtime state.
+
+Activation swaps catalogue, routes, admission, attachments, and ownership as one generation.
+Rollback selects a retained, previously reviewed complete generation. It does not reverse or
+delete Fixture Application State. Tests must cover initial registration, an application release
+that preserves its registration, a registration update, suspension, retirement, attachment
+replacement, failed activation, and rollback. A process restart deliberately loses this in-memory
+activation state; persistence, concurrent writers, and an operator control plane remain later
+design decisions.
+
+This Git-reviewed, in-memory mechanism is the item 4 qualification harness, not a commitment that
+future real applications must use an external API or a database. Application Adoption must select
+and authorize its onboarding and operational workflow without weakening complete-generation review
+or exclusive state ownership.
+
+### Fixture evidence boundary
+
+Fixture evidence may qualify deterministic catalogue rendering, routing, forwarding, admission,
+synthetic identity delivery and application verification, application-owned entitlement denial,
+lifecycle behavior, rollback, failure isolation, state isolation, limits, and redaction through the
+same in-process seams used by callers. It may not qualify network reachability, DNS, TLS, OAuth,
+real credentials, signing-key custody, provider resources, IAM, direct-origin network denial,
+availability, performance, persistence, Application Adoption, or any Finance Assistant behavior.
+
+This section is design authority only. No Fixture (`F`) evidence exists until a later approved item
+4 plan, implementation, and evaluation record exercise these claims.
 
 Finance Assistant code, data, infrastructure, identity, state, and migration are never fixture
 dependencies. Its Integration Draft remains an inactive compatibility input.
@@ -390,7 +530,9 @@ This design intentionally does not select or implement:
 - a cloud project, region, load balancer, certificate, DNS, or provider-specific attachment adapter;
 - Terraform roots, modules, backends, resource names, state-transfer commands, or operator roles;
 - an identity provider, OAuth/IAP configuration, signing key, credential, or IAM binding;
-- a catalogue runtime, application runtime, Fixture Application, or default-response runtime;
+- the designed Deterministic Reference Edge, Fixture Applications, or their in-memory state;
+- a live catalogue or application runtime, external registration endpoint, registration database,
+  or operator control plane;
 - a log backend, retention period, alerting system, live cost threshold, or evidence store; or
 - Finance Assistant registration, Application Adoption, migration, access expansion, or cutover.
 
@@ -400,10 +542,11 @@ runtime or control as operational.
 
 ## Design acceptance boundary
 
-This system design remains documentation authority rather than operational evidence. AP-M3 now
-provides revision-scoped Contract evidence that the Version 1 schemas and deterministic reference
-compiler satisfy their declared offline gate. It is not evidence that a Shared Edge, catalogue,
-admission runtime, identity delivery, provider attachment, Fixture Application, state control, or
+This system design remains documentation authority rather than operational evidence. AP-M3 provides
+revision-scoped Contract evidence that the Version 1 schemas and deterministic reference compiler
+satisfy their declared offline gate. Version 0.2 additionally selects the deterministic fixture
+topology and qualification boundary; it is not evidence that the designed pipeline, catalogue,
+admission runtime, identity delivery, fixture attachment, Fixture Application, state control, or
 rollback procedure exists. Runtime, Fixture, Live, and Adoption qualification remain later gates.
 
 ## Design trace

@@ -1,0 +1,41 @@
+{
+  "manifest_version": 1,
+  "evidence_class": "F",
+  "generations": [
+    {
+      "generation": 1,
+      "path": "generation-1-staged.v1.json",
+      "expected_digest": "sha256:b8e092913c22c0d2322728d0f279b22b34162e22d8108335d3e8fee940a70458"
+    },
+    {
+      "generation": 2,
+      "path": "generation-2-active.v1.json",
+      "expected_digest": "sha256:4ee7b0a94d583d380cc42520b3cf78925144ada6a879e17246a55f474347a89d"
+    },
+    {
+      "generation": 3,
+      "path": "generation-3-registration-update.v1.json",
+      "expected_digest": "sha256:5febf14e338d709eb3759360697e16c197801dadeed90775da82c7688eec4eec"
+    },
+    {
+      "generation": 4,
+      "path": "generation-4-public-suspended.v1.json",
+      "expected_digest": "sha256:97fcb285526adef89123d12b2adcb1d6855d40917af72de47d993aa1332ac054"
+    },
+    {
+      "generation": 5,
+      "path": "generation-5-public-reactivated.v1.json",
+      "expected_digest": "sha256:1af1e0811ff0f80eeee7492b07614cb1e2fca8e9ffa4bab05165d94600992f87"
+    },
+    {
+      "generation": 6,
+      "path": "generation-6-public-attachment-replaced.v1.json",
+      "expected_digest": "sha256:a24306c3a00b3d4364edd3ad2d82bd7b872cd377e28935a8d3d86aa21672f497"
+    },
+    {
+      "generation": 7,
+      "path": "generation-7-authenticated-retired.v1.json",
+      "expected_digest": "sha256:51bd2981aa9620c91c070687d6ef1297a037226efa017cc182283e13cbb1d4dd"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # App Platform threat model
 
-Version 0.1 | Status: threat-model authority; no runtime control or qualification is implemented
+Version 0.2 | Status: fixture threat-profile authority; no fixture runtime or qualification is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -174,6 +174,37 @@ An evidence requirement marked `F`, `L`, or `A` remains deferred even if all con
 Live evidence must be secret-free and revision-scoped; screenshots or unredacted provider payloads
 are not default evidence.
 
+### Item 4 deterministic Fixture profile
+
+Delivery item 4 uses the `fixture-in-process-v1` adapter and one synchronous Python
+standard-library request pipeline. It has no listening socket, network ingress, external identity
+provider, live credential, persistent registration store, provider resource, or concurrency. The
+fixture application set contains separate public, authenticated, and restricted applications with
+separate Fixture Application State.
+
+The fixture pipeline accepts only `GET`, an empty body, paths and queries of at most 1,024 UTF-8
+bytes each, at most 32 headers, header names of at most 64 ASCII bytes, header values of at most
+1,024 UTF-8 bytes, at most 8,192 aggregate header bytes, and responses of at most 65,536 UTF-8
+bytes. A 16-byte method limit is applied before method selection. There is no connection or stream
+to limit; live connection, rate, concurrency, and timeout controls remain unresolved.
+
+Synthetic protected admission uses a deterministic fixture-only HMAC-SHA-256 assertion envelope
+around the Version 1 Verified Identity Context. Public test key material is injected, assertion
+lifetime is at most 60 seconds, clock skew is zero, and each fixture owns a 256-entry fail-closed
+replay store. These choices permit deterministic testing of signature, issuer, subject, audience,
+time, cross-application, and replay failures. They are not evidence for a production identity
+provider, algorithm, key custody, rotation, or network-origin control.
+
+Fixture registration inputs are reviewed complete generations. Successful compilation installs a
+complete generation into an in-memory reviewed-generation collection and atomically changes one
+current pointer; rejection preserves the prior generation. There is no registration API or
+database. Fixture Application State remains independently constructed and is never rolled back or
+deleted by a platform generation change.
+
+The detailed topology and evidence exclusions are owned by the [system design](03_system_design.md).
+Until the separate item 4 plan, implementation, and evaluation record are accepted, this profile
+is design authority and produces no Fixture (`F`) evidence.
+
 ## Threat register
 
 ### AP-TM-001 · Registration injection and unsafe catalogue content
@@ -192,8 +223,8 @@ becomes an executable provider command.
 and deterministic safe projection. `F` covers rendered catalogue behavior. `L` covers deployed
 headers and renderer configuration where applicable.
 
-**Residual risk:** Exact numeric limits and renderer technology remain contract and implementation
-decisions. They must be approved before the respective gate.
+**Residual risk:** Item 4 selects bounded HTML rendering for Fixture evidence. Live renderer
+technology, response headers, and provider limits remain later decisions.
 
 ### AP-TM-002 · Route confusion, shadowing, and traversal
 
@@ -230,8 +261,9 @@ Provider adapters resolve only their own typed references with least-privilege c
 cross-registration conflicts. `F` covers attachment selection and application isolation. `L`
 confirms resource identity, IAM, and absence of arbitrary egress.
 
-**Residual risk:** The first provider-specific attachment kind and its ownership proof remain later
-approved design and infrastructure decisions.
+**Residual risk:** `fixture-in-process-v1` resolves only inert, explicitly supplied fixture targets.
+The first provider-specific attachment kind and its ownership proof remain later approved design
+and infrastructure decisions.
 
 ### AP-TM-004 · Direct protected-origin bypass
 
@@ -244,11 +276,12 @@ The application independently verifies the signed assertion and application-spec
 header alone never compensates for a public protected origin.
 
 **Evidence:** `C` can prove only that protected attachments declare the required identity and
-ingress posture. `F` must exercise spoofed headers and direct-origin denial. `L` must read back and
-test the actual ingress and IAM configuration. `A` repeats the gate for a real application.
+ingress posture. `F` exercises spoofed headers and direct calls to protected fixture entry points,
+but can prove only assertion-side denial in one process. `L` must read back and test the actual
+ingress and IAM configuration. `A` repeats the gate for a real application.
 
-**Residual risk:** No direct-bypass control is implemented until an attachment adapter and runtime
-are deployed and qualified.
+**Residual risk:** No network direct-bypass control is implemented until a provider attachment and
+runtime are deployed and qualified. Fixture denial must never be reported as origin isolation.
 
 ### AP-TM-005 · Identity spoofing, replay, and confused audience
 
@@ -265,8 +298,10 @@ subject pairs. Applications derive their own principals and never use email as a
 missing, forged, expired, wrong-issuer, wrong-audience, and cross-application assertions. `L` covers
 signer, key discovery, algorithms, audience issuance, and clock behavior.
 
-**Residual risk:** Signer selection, algorithms, key rotation, allowed clock skew, maximum lifetime,
-and replay controls remain unresolved deployment and identity-contract decisions.
+**Residual risk:** The fixture-only signer, zero skew, 60-second lifetime, and bounded replay store
+qualify only deterministic failure behavior. Production signer selection, algorithms, key custody,
+rotation, skew, lifetime, and distributed replay posture remain unresolved deployment and identity
+decisions.
 
 ### AP-TM-006 · Admission mistaken for feature authorization
 
@@ -300,8 +335,9 @@ window.
 all-or-no-output failure. `F` covers register, update, suspend, retire, attachment replacement, and
 rollback journeys. `L` covers provider partial-failure recovery and drift.
 
-**Residual risk:** Storage, locking, deployment transaction, acceptance window, and operator
-rollback procedure remain implementation and evaluation decisions.
+**Residual risk:** Item 4 can qualify only an in-memory, single-caller generation swap. Persistent
+storage, locking, provider transactions, acceptance windows, and operator rollback procedures
+remain later implementation and evaluation decisions.
 
 ### AP-TM-008 · Dual state ownership or destructive cross-state action
 
@@ -390,8 +426,10 @@ resources and operator actions. Rate or abuse controls must not silently broaden
 limit and isolation behavior without load or availability claims. `L` covers provider quotas,
 timeouts, alerts, and billable-resource inventory.
 
-**Residual risk:** The initial platform is demo-scale with no high-availability commitment. Numeric
-runtime limits, rate controls, alert thresholds, and spending limits remain later owner decisions.
+**Residual risk:** The initial platform is demo-scale with no high-availability commitment. Item 4
+selects exact in-process request and response limits but cannot exercise connection, traffic-rate,
+concurrency, network timeout, provider quota, alert, or spending controls. Those remain later owner
+decisions.
 
 ### AP-TM-013 · External dependency failure or stale trust material
 
@@ -434,10 +472,9 @@ pass:
 
 | Decision | Required before |
 | --- | --- |
-| Exact schema sizes, counts, canonical serialization, and violation codes | Item 3 contract acceptance |
-| First attachment adapter kind and provider resource-reference grammar | Fixture implementation planning |
-| Identity provider, signer, algorithms, keys, rotation, skew, lifetime, and replay posture | Fixture identity implementation and live qualification |
-| Runtime request, header, body, connection, rate, and timeout limits | Fixture and live qualification |
+| First live provider attachment kind and provider resource-reference grammar | Infrastructure implementation |
+| Production identity provider, signer, algorithms, keys, rotation, skew, lifetime, and distributed replay posture | Live qualification |
+| Live request, header, body, connection, rate, concurrency, and timeout limits | Live qualification |
 | Cloud project, region, resource topology, ingress, IAM, and state backends | Infrastructure implementation |
 | Operator roles, review separation, branch protection, workload identity, and audit policy | Live mutation |
 | Logging backend, retention, access, redaction, deletion, and incident handling | Live evidence collection |

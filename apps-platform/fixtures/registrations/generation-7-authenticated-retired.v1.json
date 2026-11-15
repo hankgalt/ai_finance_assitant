@@ -1,0 +1,116 @@
+{
+  "contract_version": 1,
+  "generation": 7,
+  "previous_generation_digest": "sha256:a24306c3a00b3d4364edd3ad2d82bd7b872cd377e28935a8d3d86aa21672f497",
+  "proposal": {
+    "source_revision": "f78c4a73f1507afc6de52cbaadc3c7d6d8b042aa633155ac2e3a4ec37b997d2c",
+    "change_summary": "Retire the authenticated fixture registration"
+  },
+  "registrations": [
+    {
+      "contract_version": 1,
+      "application_id": "fixture-authenticated",
+      "registration_revision": 3,
+      "route_prefix": "/authenticated",
+      "catalogue": {
+        "visibility": "unlisted",
+        "title": "Authenticated Fixture",
+        "summary": "Synthetic application requiring a verified fixture identity"
+      },
+      "admission": {
+        "mode": "authenticated"
+      },
+      "lifecycle": "retired",
+      "attachments": [
+        {
+          "contract_version": 1,
+          "owner_application_id": "fixture-authenticated",
+          "attachment_id": "web",
+          "adapter_kind": "fixture-in-process-v1",
+          "resource_reference": "urn:comfforts:app-platform:fixture:fixture-authenticated:web",
+          "mount_path": "/",
+          "forwarding_mode": "strip_application_prefix",
+          "identity_requirement": "verified",
+          "audience": "urn:comfforts:app-platform:audience:fixture-authenticated",
+          "ingress_mode": "shared_edge_only"
+        }
+      ]
+    },
+    {
+      "contract_version": 1,
+      "application_id": "fixture-public",
+      "registration_revision": 6,
+      "route_prefix": "/public",
+      "catalogue": {
+        "visibility": "listed",
+        "title": "Public Fixture Updated",
+        "summary": "Synthetic public application with deterministic route mounts"
+      },
+      "admission": {
+        "mode": "public"
+      },
+      "lifecycle": "active",
+      "attachments": [
+        {
+          "contract_version": 1,
+          "owner_application_id": "fixture-public",
+          "attachment_id": "api",
+          "adapter_kind": "fixture-in-process-v1",
+          "resource_reference": "urn:comfforts:app-platform:fixture:fixture-public:api",
+          "mount_path": "/api/v1",
+          "forwarding_mode": "strip_attachment_mount",
+          "identity_requirement": "none",
+          "audience": null,
+          "ingress_mode": "shared_edge_only"
+        },
+        {
+          "contract_version": 1,
+          "owner_application_id": "fixture-public",
+          "attachment_id": "web-v2",
+          "adapter_kind": "fixture-in-process-v1",
+          "resource_reference": "urn:comfforts:app-platform:fixture:fixture-public:web-v2",
+          "mount_path": "/",
+          "forwarding_mode": "preserve",
+          "identity_requirement": "none",
+          "audience": null,
+          "ingress_mode": "shared_edge_only"
+        }
+      ]
+    },
+    {
+      "contract_version": 1,
+      "application_id": "fixture-restricted",
+      "registration_revision": 2,
+      "route_prefix": "/restricted",
+      "catalogue": {
+        "visibility": "listed",
+        "title": "Restricted Fixture",
+        "summary": "Synthetic application with restricted admission and app-owned entitlement"
+      },
+      "admission": {
+        "mode": "restricted",
+        "members": [
+          {
+            "issuer": "urn:comfforts:identity:fixture",
+            "subject": "synthetic-user-a"
+          }
+        ]
+      },
+      "lifecycle": "active",
+      "attachments": [
+        {
+          "contract_version": 1,
+          "owner_application_id": "fixture-restricted",
+          "attachment_id": "web",
+          "adapter_kind": "fixture-in-process-v1",
+          "resource_reference": "urn:comfforts:app-platform:fixture:fixture-restricted:web",
+          "mount_path": "/",
+          "forwarding_mode": "strip_application_prefix",
+          "identity_requirement": "verified",
+          "audience": "urn:comfforts:app-platform:audience:fixture-restricted",
+          "ingress_mode": "shared_edge_only"
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 # Comfforts App Platform
 
-Status: AP-M3 system design, Version 1 machine contracts, and deterministic offline validation
-implemented; no platform runtime, Fixture Application, or cloud resource is implemented or
-qualified.
+Status: AP-M4 deterministic in-process Fixture harness implemented and Fixture-qualified; no
+networked platform service, cloud resource, Live evidence, or Application Adoption is implemented
+or qualified.
 
 Comfforts App Platform is a separately governed project temporarily colocated in the
 AI Finance Assistant repository. It is intended to own the shared application catalogue and edge
@@ -34,14 +34,14 @@ or the live Finance Assistant deployment.
 
 Read `AGENTS.md` before changing this project and follow the authority and reading order in
 `docs/README.md`. Product requirements, accepted architecture decisions, system design, threat
-model, AP-M3 plan and evaluation strategy, and Version 1 contracts are authoritative within their
-declared boundaries. The schemas and reference compiler provide Contract (`C`) evidence only; they
-do not prove runtime or provider behavior.
+model, AP-M3/AP-M4 plan and evaluation authority, and Version 1 contracts are authoritative within
+their declared boundaries. The contract layer supplies Contract (`C`) evidence, and the in-process
+harness supplies Fixture (`F`) evidence only; neither proves provider or deployed behavior.
 
-AP-M3 repository behavior passes its deterministic gate at this revision. Delivery item 3 is not
-complete until its pull request merges, and delivery item 4 has no approved plan or evaluation
-authority yet. After the merge, use the
-[deterministic-fixture planning handoff](prompts/starting_prompt.md) from updated `main`.
+AP-M4 repository behavior passes its deterministic gate at this revision. Delivery item 4 is
+complete only after this pull request merges. After the merge, use the
+[infrastructure-planning handoff](prompts/starting_prompt.md) from updated `main` to propose item 5
+authority; it does not authorize infrastructure implementation or live mutation.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

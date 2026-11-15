@@ -1,12 +1,12 @@
 # App Platform evaluation strategy
 
-Version 0.1 | Status: deterministic evaluation authority for AP-M3 only
+Version 0.2 | Status: deterministic evaluation authority for AP-M3 and AP-M4
 
-This document defines how delivery item 3, AP-M3, is evaluated. It does not qualify a Shared Edge,
-catalogue runtime, identity provider, Application Attachment, Fixture Application, cloud resource,
-or consuming application.
+This document preserves how delivery item 3, AP-M3, is evaluated and defines the Fixture (`F`) gate
+for delivery item 4, AP-M4. AP-EVAL-M4 qualifies only the selected in-process harness. It does not
+qualify a live Shared Edge, provider identity, cloud resource, or consuming application.
 
-Plan: [AP-M3 implementation plan](04_implementation_plan.md)
+Plan: [App Platform implementation plan](04_implementation_plan.md)
 
 Design: [App Platform system design](03_system_design.md)
 
@@ -291,3 +291,257 @@ qualify availability, cost controls, logging, incident response, migration, or r
 
 Those gates require separately approved plans after AP-M3 merges. Finance Application Adoption
 requires Finance-owned authority and evidence in addition to qualified platform behavior.
+
+## AP-EVAL-M4 · Deterministic-fixtures gate
+
+### Evaluation claim
+
+A passing AP-EVAL-M4 result means only that the evaluated repository revision implements the
+in-process Deterministic Reference Edge and three synthetic Fixture Applications according to
+AP-M4. It provides Fixture (`F`) evidence for the behaviors explicitly named below.
+
+It does not mean the platform is deployed, network reachable, persistent, production-secure, or
+ready for a real application. Live (`L`) and Adoption (`A`) evidence remain unavailable. AP-EVAL-M3
+continues to own Contract (`C`) evidence, and its implemented contract regression checks must pass
+in the same `make check` run. AP-M3's historical no-fixture scope gate is not reinterpreted as a ban
+on the separately authorized AP-M4 implementation.
+
+### Evaluation environment
+
+AP-EVAL-M4 runs from the App Platform project root using the same extraction-safe entry points:
+
+```bash
+make check
+make -C apps-platform check
+```
+
+`make check` must include `fixture-check` after governance and contract checks. The complete command
+uses only a supported Python 3 interpreter and its standard library. It performs no installation,
+network access, socket bind, browser automation, credential read, environment secret read, cloud
+access, external mutation, or committed artifact generation. The harness itself launches no
+subprocess; the extraction check may launch an isolated standard-library Python interpreter from a
+temporary project copy, as AP-EVAL-M3 already requires.
+
+The harness opens no listening socket. There is no registration API or database; tests supply
+reviewed Registration Sets directly to the in-memory activation interface.
+
+Tests use an injected clock, deterministic correlation-identifier source, explicit synthetic
+session map, public test key material, immutable requests, and separately constructed in-memory
+Platform and Fixture Application State. An unexpected external dependency fails the gate.
+
+### AP-EVAL-M4-01 · Authority, trace, and scope integrity
+
+Verify that:
+
+- every `AP-M4-W*` and `AP-EVAL-M4-*` identifier is unique, complete, and traces to existing
+  requirements, decisions, design sections, and threats;
+- AP-M3 Contract evidence remains distinct and continues to pass;
+- the documented fixture limits and identity profile match executable constants and tests;
+- no Integration Draft or Finance artifact is loaded as fixture input; and
+- status text distinguishes designed, implemented, Fixture-qualified, Live-qualified, and adopted.
+
+Expected evidence: deterministic governance tests and the complete gate. Documentation presence
+alone cannot pass a behavioral AP-EVAL-M4 gate.
+
+### AP-EVAL-M4-02 · Registration, adapter binding, and atomic activation
+
+Using independent fixture registration files, verify that:
+
+- all three fixtures enter through a complete Version 1 Registration Set and the AP-M3 compiler;
+- only the reviewed `fixture-in-process-v1` kind is enabled for the harness;
+- every resource reference exactly matches its application and attachment identifier;
+- the compiled attachment resolves only through the explicitly supplied read-only map;
+- a wrong kind, malformed reference, absent target, owner mismatch, or stale predecessor rejects
+  activation before the current-generation pointer changes; and
+- successful activation installs catalogue, routes, admission, attachments, and ownership as one
+  generation.
+
+This gate proves the Fixture portions of AP-TM-003, AP-TM-007, AP-TM-008, AP-TM-009, and AP-TM-011.
+It does not prove a provider resource, IAM identity, state backend, or deployment transaction.
+
+### AP-EVAL-M4-03 · Catalogue, route, mount, and forwarding behavior
+
+Verify through `handle(request) -> response` that:
+
+- `/` returns deterministic UTF-8 HTML with only active, listed fixtures in canonical order;
+- catalogue titles and summaries are literal escaped text and every link is the registered prefix;
+- exact prefixes and segment-bounded subpaths route to only their registered fixture;
+- longest segment-bounded mount selection and all three Version 1 forwarding modes behave as
+  compiled;
+- near-prefixes, reserved paths, malformed paths, encoded separators, dot segments, staged,
+  suspended, retired, and unmatched paths return closed responses; and
+- an unavailable attachment fails only the selected fixture and never falls through to another.
+
+This gate supplies Fixture evidence for AP-TM-001, AP-TM-002, AP-TM-003, AP-TM-009, and AP-TM-013.
+It does not qualify provider path decoding, browser behavior, network routing, or availability.
+
+### AP-EVAL-M4-04 · Admission, header stripping, and assertion delivery
+
+Verify that:
+
+- public admission succeeds without identity and does not invent an Application Principal;
+- authenticated admission rejects a missing or unknown synthetic session;
+- restricted admission requires the exact registered synthetic issuer-and-subject pair;
+- a visitor-supplied `X-Comfforts-Verified-Identity` value is removed before attachment invocation;
+- a protected attachment receives only a newly issued assertion for its own audience after
+  successful admission; and
+- authentication and restricted-denial responses reveal no member list, assertion, attachment
+  reference, principal, entitlement, or application state.
+
+This gate supplies the edge-side Fixture portions of AP-TM-004, AP-TM-005, AP-TM-006, AP-TM-009,
+and AP-TM-010. It does not qualify OAuth, a production identity provider, key management, or network
+origin isolation.
+
+### AP-EVAL-M4-05 · Independent application verification and authorization
+
+Call protected fixture entry points directly and verify rejection of:
+
+- a missing, malformed, unsigned, wrong-key, or visitor-controlled assertion;
+- a wrong contract version, issuer, subject shape, or application audience;
+- an assertion issued in the future, expired, or longer than 60 seconds;
+- a cross-application assertion; and
+- a replayed correlation identifier or a new assertion when the 256-entry store has no expired
+  capacity.
+
+Then verify that a valid assertion derives an immutable application-scoped principal, while the
+restricted fixture independently denies the synthetic premium Feature Entitlement to an admitted
+principal who lacks it. Application-side verification must not consult platform membership or
+another fixture's state.
+
+This gate supplies assertion and authorization-separation Fixture evidence for AP-TM-004 through
+AP-TM-006, AP-TM-009, and AP-TM-010. It cannot prove key secrecy, distributed replay defense,
+provider rights, or a real application's authorization.
+
+### AP-EVAL-M4-06 · State and cross-application isolation
+
+Verify that:
+
+- each fixture is constructed with a distinct state object, principal map, entitlement policy,
+  verifier, and replay store;
+- a request, failure, identity, or state mutation in one fixture does not alter another fixture;
+- the reference edge holds only compiled references and the read-only adapter map, not application
+  data or write authority;
+- no fixture can change the current generation or another attachment mapping; and
+- generation activation, suspension, retirement, and rollback never mutate or delete fixture state.
+
+This gate supplies Fixture evidence for AP-TM-006, AP-TM-008, AP-TM-009, and AP-TM-014. In-process
+object isolation is not provider IAM or process-isolation evidence.
+
+### AP-EVAL-M4-07 · Release, update, lifecycle, failure, and rollback journeys
+
+Verify in sequence that:
+
+- the initial reviewed generation activates all intended fixture behavior;
+- an application release behind an unchanged attachment needs no Registration change;
+- a platform-facing update requires and activates a new complete generation;
+- suspension removes route and catalogue behavior without changing Fixture Application State;
+- reactivation restores the reviewed behavior; retirement is terminal and remains closed;
+- attachment replacement keeps distinct old and new targets available for rollback;
+- validation failure, missing attachment resolution, or simulated selected-attachment failure does
+  not partially activate or affect another fixture; and
+- rollback selects a retained reviewed generation as a whole without rolling back application state.
+
+This gate supplies the in-memory Fixture portions of AP-TM-007, AP-TM-008, AP-TM-009, and AP-TM-013.
+It does not qualify persistence, concurrent writers, a provider transaction, or an operator runbook.
+
+### AP-EVAL-M4-08 · Limits, redaction, determinism, extraction, and non-mutation
+
+At each exact boundary and one unit beyond it, verify the 16-byte method, 1,024-byte path,
+1,024-byte query, 32-header, 64-byte header-name, 1,024-byte header-value, 8,192-byte aggregate
+header, empty-body, 65,536-byte response, 60-second assertion, and 256-entry replay limits.
+
+Also verify that:
+
+- repeated runs from identical constructed state return byte-identical responses and outcomes;
+- diagnostics contain only approved fixture identifiers, generation digests, outcome codes, and
+  correlation identifiers;
+- diagnostics and failures omit assertion envelopes, sessions, restricted members, request bodies,
+  principals, entitlements, and application state;
+- tests run from a temporary copy of the project-local fixture and contract layers without a
+  containing-repository import; and
+- tracked inputs remain byte-identical and no unexpected file, cache treated as evidence, network
+  call, socket, credential read, or external mutation occurs.
+
+This gate supplies the bounded Fixture portions of AP-TM-001, AP-TM-005, AP-TM-010 through
+AP-TM-013. It is not load, concurrency, timeout, rate, cost, or availability evidence.
+
+### AP-EVAL-M4-09 · Truthful evidence and handoff
+
+Verify that the AP-M4 change:
+
+- records Fixture evidence only after AP-EVAL-M3 and AP-EVAL-M4 pass at the same revision;
+- reports the exact command, counts, failures, errors, warnings, and skips actually observed;
+- calls synthetic signing, direct entry-point denial, in-memory activation, and object isolation by
+  those names rather than production cryptography, direct-origin denial, persistence, or IAM;
+- leaves every Live and Adoption gate explicitly unavailable;
+- leaves Finance Assistant and infrastructure, Terraform, DNS, identity, credentials, deployment,
+  and access unchanged; and
+- directs the next task to separate infrastructure planning rather than implementation or
+  Application Adoption.
+
+### Determinism and mutation checks
+
+AP-M4 tests must recreate all mutable harness state for every case. They may advance only the
+injected clock, correlation sequence, generation pointer, replay store, and the explicitly selected
+fixture's synthetic state. Case order, wall clock, hash randomization, current user, absolute path,
+environment, network state, or prior test execution must not affect results.
+
+Tests compare requests, registration inputs, compiled generations, and non-selected state before
+and after each journey. Any unrequested mutation, ambient dependency, warning-only rejection,
+unbounded operation, or unexpected artifact fails the gate.
+
+### Threat coverage boundary
+
+| Threats | AP-EVAL-M4 claim |
+| --- | --- |
+| AP-TM-001 through AP-TM-003 | Bounded HTML catalogue, route and attachment selection, and inert fixture resolution |
+| AP-TM-004 | Header stripping and assertion-side direct-entry denial only; network origin remains unqualified |
+| AP-TM-005 | Deterministic synthetic signature, issuer, audience, time, cross-application, and replay failure behavior |
+| AP-TM-006 | Admission remains separate from fixture-owned principal and entitlement decisions |
+| AP-TM-007 | Single-process complete-generation activation and rollback |
+| AP-TM-008 | Independent in-memory Platform and Fixture Application State |
+| AP-TM-009 | Route, attachment, audience, failure, lifecycle, and state isolation among fixtures |
+| AP-TM-010 | Synthetic inputs and redacted deterministic diagnostics |
+| AP-TM-011 | Reviewed repository inputs and deterministic default checks; no live control plane |
+| AP-TM-012 | Exact in-process size and count limits; no traffic or cost claim |
+| AP-TM-013 | Deterministic logical dependency failure without insecure fallback |
+| AP-TM-014 | Generic fixtures only; no Integration Draft or Application Adoption behavior |
+
+### Pass, fail, and skip semantics
+
+AP-EVAL-M4 passes only when all nine gates and every implemented AP-M3 contract regression check
+pass in one revision-scoped `make check` run, expected test and registration-generation counts
+match their reviewed indexes, and there are zero failures, errors, unexpected warnings, and
+mandatory skips.
+
+A known Live or Adoption limitation is recorded as unavailable and is not a skip. Any mandatory
+fixture case that cannot run fails the gate. No manual override, document review, screenshot,
+provider result, or consuming-application test substitutes for a failing deterministic case.
+
+### Required evaluation evidence
+
+The AP-M4 pull-request handoff records:
+
+- evaluated commit, AP-M3 merge base, contract and fixture registration versions, and generation
+  digests;
+- exact command and working directory, interpreter version, duration, and test counts;
+- pass, failure, error, warning, and skip counts;
+- enabled fixture adapter, changed and evaluated paths, and synthetic fixture identifiers;
+- requirements, decisions, and threats covered by the Fixture gate;
+- security/privacy impact and unavailable Live and Adoption evidence; and
+- confirmation that no credential, network, socket, package installation, cloud account, browser,
+  external mutation, or generated proof artifact was used.
+
+Evidence reports actual output and evaluated revision. It must not pre-fill success, retain an
+assertion envelope, record synthetic session labels as if they were secrets, or claim that
+in-process behavior occurred on a network.
+
+### Limitations
+
+AP-EVAL-M4 performs no browser, accessibility, load, concurrency, rate, network, cloud, DNS, TLS,
+IAM, OAuth, Terraform, provider, persistence, real direct-origin, production cryptographic, cost,
+alerting, incident-response, migration, or application-product testing. It does not prove that a
+real application can or should adopt the platform.
+
+Infrastructure and Live qualification require a separate owner-approved slice after AP-M4 merges.
+Every Application Adoption remains an application-owned later slice with its own evidence.

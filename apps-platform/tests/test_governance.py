@@ -29,9 +29,15 @@ class ProjectAuthorityTest(unittest.TestCase):
             "contracts/README.md",
             "contracts/validation.py",
             "contracts/test-vectors/manifest.v1.json",
+            "fixtures/__init__.py",
+            "fixtures/applications.py",
+            "fixtures/identity.py",
+            "fixtures/reference_edge.py",
+            "fixtures/registrations/manifest.v1.json",
             "prompts/README.md",
             "prompts/starting_prompt.md",
             "tests/test_contracts.py",
+            "tests/test_fixtures.py",
             "tests/test_governance.py",
         )
 
@@ -40,7 +46,10 @@ class ProjectAuthorityTest(unittest.TestCase):
     def test_makefile_exposes_a_portable_non_mutating_check(self) -> None:
         makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
 
-        self.assertIn("check: governance-check contract-check", makefile)
+        self.assertIn(
+            "check: governance-check contract-check fixture-check",
+            makefile,
+        )
         self.assertIn("PYTHONDONTWRITEBYTECODE=1", makefile)
         self.assertIn("python3", makefile)
         self.assertNotIn("../", makefile)
@@ -70,39 +79,32 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("leave each change uncommitted until approval", instructions)
         self.assertIn("Merge it before starting the next documented slice", instructions)
 
-    def test_documentation_truthfully_records_contract_implementation(self) -> None:
+    def test_documentation_truthfully_records_fixture_qualification(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
         overview = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
-            encoding="utf-8"
-        )
         normalized_index = " ".join(index.split())
         normalized_overview = " ".join(overview.split())
 
         self.assertIn(
-            "system design and versioned contracts implemented", normalized_index
-        )
-        self.assertIn("Contract (`C`) evidence", normalized_index)
-        self.assertIn(
-            "no Fixture (`F`), Live (`L`), or Adoption (`A`) evidence",
+            "deterministic Fixture harness implemented and qualified",
             normalized_index,
         )
-        self.assertIn("AP-M3", overview)
+        self.assertIn("Contract (`C`) evidence", normalized_index)
+        self.assertIn("Fixture (`F`) evidence", normalized_index)
         self.assertIn(
-            "deterministic offline validation implemented", normalized_overview
+            "Live (`L`) and Adoption (`A`) evidence remain unavailable",
+            normalized_index,
         )
-        self.assertIn("no platform runtime", normalized_overview)
+        self.assertIn("AP-M4", overview)
+        self.assertIn("Fixture-qualified", normalized_overview)
+        self.assertIn("no networked platform service", normalized_overview)
         self.assertIn("Integration draft", index)
-        self.assertIn("AP-M3 contract implementation recorded", layout)
+        self.assertIn("AP-M4 deterministic Fixture implementation recorded", layout)
         self.assertIn("`contracts/`", layout)
+        self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)
-        self.assertIn("Version 1 contract index", design)
-        self.assertIn("revision-scoped Contract evidence", design)
-        self.assertIn(
-            "Runtime, Fixture, Live, and Adoption qualification remain later",
-            design,
-        )
+        self.assertIn("three independent Fixture Applications", layout)
         self.assertIn("history-preserving subtree extraction", layout)
         self.assertIn("Do not create a nested `.git`", layout)
 
@@ -250,7 +252,9 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("## Application Adoption", glossary)
         self.assertIn("app-owned test state", layout)
 
-    def test_fixture_planning_prompt_loads_authority_without_copying_it(self) -> None:
+    def test_infrastructure_planning_prompt_loads_authority_without_copying_it(
+        self,
+    ) -> None:
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
         prompt_index = (PROJECT_ROOT / "prompts/README.md").read_text(encoding="utf-8")
         normalized_prompt = " ".join(prompt.split())
@@ -267,26 +271,28 @@ class ProjectAuthorityTest(unittest.TestCase):
             "docs/06_threat_model.md",
             "docs/repository_layout.md",
             "contracts/README.md",
+            "fixtures/registrations/README.md",
         ):
             self.assertIn(authority, prompt)
         for boundary in (
             "Wait for owner approval before editing",
-            "leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
+            "Leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
             "An Integration Draft is not Application Adoption",
             "credential-free, deterministic, and non-mutating",
-            "updated `main` after the AP-M3 pull request has merged",
-            "propose item 4 planning and evaluation authority",
+            "updated `main` after the AP-M4 pull request has merged",
+            "propose item 5 planning and evaluation authority",
+            "Do not write Terraform",
         ):
             self.assertIn(boundary, normalized_prompt)
         self.assertNotIn("### AP-PR-", prompt)
         self.assertNotIn("## ADR-", prompt)
         self.assertNotIn("terraform apply", prompt)
         self.assertIn(
-            "[Deterministic-fixture planning handoff](starting_prompt.md)",
+            "[Infrastructure-planning handoff](starting_prompt.md)",
             prompt_index,
         )
 
-    def test_incremental_delivery_sequence_keeps_contracts_and_fixtures_separate(self) -> None:
+    def test_incremental_delivery_sequence_keeps_infrastructure_separate(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
         normalized_index = " ".join(index.split())
@@ -297,18 +303,111 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Requirements and decisions — complete",
         ):
             self.assertIn(completed, index)
-        self.assertIn("System design and versioned contracts — implemented", index)
-        self.assertIn("Deterministic fixture planning — next after item 3 merges", index)
-        self.assertIn("feat/apps-platform-system-design-contracts", index)
+        self.assertIn("System design and versioned contracts — complete", index)
+        self.assertIn(
+            "Deterministic fixtures — implemented and Fixture-qualified",
+            index,
+        )
+        self.assertIn(
+            "Platform infrastructure planning — next after item 4 merges",
+            index,
+        )
         self.assertIn("feat/apps-platform-fixtures", index)
         self.assertIn("separate bounded branch and pull request", normalized_index)
         self.assertIn(
-            "obtain owner approval for the fixture implementation plan",
+            "obtain owner approval for the smallest infrastructure implementation plan",
             normalized_index,
         )
-        self.assertIn("propose item 4 planning and evaluation authority", normalized_prompt)
-        self.assertIn("Do not implement a Fixture Application", normalized_prompt)
-        self.assertIn("Item 4 belongs on a new bounded branch", normalized_prompt)
+        self.assertIn("propose item 5 planning and evaluation authority", normalized_prompt)
+        self.assertIn("Do not write Terraform", normalized_prompt)
+        self.assertIn("Item 5 belongs on a new bounded branch", normalized_prompt)
+
+    def test_fixture_design_selects_a_bounded_in_process_profile(self) -> None:
+        design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
+            encoding="utf-8"
+        )
+        threat_model = (PROJECT_ROOT / "docs/06_threat_model.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_threat_model = " ".join(threat_model.split())
+
+        for boundary in (
+            "handle(request) -> response",
+            "It opens no listening socket",
+            "fixture-in-process-v1",
+            "fixture-public",
+            "fixture-authenticated",
+            "fixture-restricted",
+            "adds no external registration endpoint",
+            "or database",
+            "No Fixture (`F`) evidence exists",
+        ):
+            self.assertIn(boundary, design)
+
+        for threat_control in (
+            "at most 32 headers",
+            "65,536 UTF-8 bytes",
+            "HMAC-SHA-256",
+            "60 seconds",
+            "256-entry fail-closed replay store",
+            "There is no registration API or database",
+            "produces no Fixture (`F`) evidence",
+        ):
+            self.assertIn(threat_control, normalized_threat_model)
+
+        self.assertIn("Finance Assistant code", design)
+        self.assertIn("network direct-bypass control", threat_model)
+
+    def test_ap_m4_authorities_have_complete_unique_identifiers(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+
+        work_packages = re.findall(r"^#### (AP-M4-W\d+) ·", plan, re.MULTILINE)
+        evaluation_gates = re.findall(
+            r"^### (AP-EVAL-M4-\d{2}) ·", evaluation, re.MULTILINE
+        )
+
+        self.assertEqual(
+            work_packages, [f"AP-M4-W{index}" for index in range(1, 8)]
+        )
+        self.assertEqual(
+            evaluation_gates,
+            [f"AP-EVAL-M4-{index:02d}" for index in range(1, 10)],
+        )
+        self.assertEqual(len(work_packages), len(set(work_packages)))
+        self.assertEqual(len(evaluation_gates), len(set(evaluation_gates)))
+
+    def test_ap_m4_authority_is_fixture_only(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_plan = " ".join(plan.split())
+        normalized_evaluation = " ".join(evaluation.split())
+
+        for boundary in (
+            "It does not authorize a listening service",
+            "external registration endpoint, or database",
+            "AP-M4 produces Fixture (`F`) evidence only",
+            "Each work package is a separate small commit",
+            "Finance Assistant requirements, code, infrastructure",
+        ):
+            self.assertIn(boundary, normalized_plan)
+
+        for gate_boundary in (
+            "AP-EVAL-M3 continues to own Contract (`C`) evidence",
+            "Live (`L`) and Adoption (`A`) evidence remain unavailable",
+            "no listening socket",
+            "There is no registration API or database",
+            "AP-EVAL-M4 passes only when all nine gates",
+        ):
+            self.assertIn(gate_boundary, normalized_evaluation)
 
 
 if __name__ == "__main__":

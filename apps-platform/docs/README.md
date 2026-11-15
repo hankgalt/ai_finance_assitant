@@ -1,13 +1,15 @@
 # App Platform documentation
 
-Version 0.8 | Status: system design and versioned contracts implemented; runtime qualification
-unavailable
+Version 0.9 | Status: deterministic Fixture harness implemented and qualified; Live and Adoption
+qualification unavailable
 
-This directory is the design authority for Comfforts App Platform. AP-M3 adds the logical system
-design, threat boundary, Version 1 schemas, deterministic reference compiler, and reviewed contract
-vectors. That repository behavior supplies Contract (`C`) evidence only. There is no Fixture (`F`),
-Live (`L`), or Adoption (`A`) evidence, and no catalogue runtime, Shared Edge runtime, identity
-provider, Fixture Application, Terraform configuration, or cloud resource is implemented.
+This directory is the design authority for Comfforts App Platform. AP-M3 supplies Contract (`C`)
+evidence through the logical design, threat boundary, Version 1 schemas, deterministic compiler,
+and reviewed vectors. AP-M4 supplies Fixture (`F`) evidence through a synchronous in-process
+reference edge, synthetic identity boundary, three independent Fixture Applications, reviewed
+registration generations, and deterministic lifecycle journeys. Live (`L`) and Adoption (`A`)
+evidence remain unavailable. No networked Shared Edge, provider identity, Terraform configuration,
+cloud resource, DNS change, application migration, or production credential is implemented.
 
 ## Current reading order and authority
 
@@ -20,20 +22,22 @@ provider, Fixture Application, Terraform configuration, or cloud resource is imp
 5. [System design](03_system_design.md) defines logical modules, interfaces, lifecycle, state
    ownership, and later runtime boundaries.
 6. [Threat model](06_threat_model.md) defines trust zones, threats, controls, and evidence classes.
-7. [AP-M3 implementation plan](04_implementation_plan.md) owns delivery item 3 only.
-8. [AP-M3 evaluation strategy](05_evaluation_strategy.md) defines its deterministic Contract gate.
+7. [AP-M3 and AP-M4 implementation plan](04_implementation_plan.md) owns delivery items 3 and 4.
+8. [AP-M3 and AP-M4 evaluation strategy](05_evaluation_strategy.md) defines the deterministic
+   Contract and Fixture gates.
 9. [Version 1 contract index](../contracts/README.md) owns machine interfaces subordinate to the
    requirements, accepted decisions, and system design.
 10. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
 11. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
-12. [Deterministic-fixture planning handoff](../prompts/starting_prompt.md) provides a bounded entry
-    point for proposing item 4 after AP-M3 merges.
+12. [Infrastructure-planning handoff](../prompts/starting_prompt.md) provides a bounded entry point
+    for proposing item 5 only after AP-M4 merges.
 
-AP-M3 system design and versioned contracts are implemented at this repository revision and pass
-the deterministic gate. Item 3 delivery is complete only after its pull request merges. Item 4 has
-no approved implementation plan, evaluation strategy, milestone identifier, or fixture topology;
-those authorities must be proposed from updated `main` after the merge. An absent authority must
-not be inferred from contracts, branch history, discussion, or an Integration Draft.
+AP-M3 contract behavior and AP-M4 Fixture behavior are implemented at this repository revision and
+pass their deterministic gates. Item 4 delivery is complete only after its pull request merges.
+Item 5 has no approved implementation plan, Live evaluation strategy, provider topology, operator
+procedure, or infrastructure mutation authority; those must be proposed from updated `main` after
+the merge. An absent authority must not be inferred from fixture code, branch history, discussion,
+or an Integration Draft.
 
 ## Incremental delivery sequence
 
@@ -44,19 +48,19 @@ small reviewable commits, merge it, and only then begin the next item.
    boundary, local checks, and path-scoped parent workflow.
 2. **Requirements and decisions — complete:** product/quality requirements, accepted ownership,
    admission and fixture-first ADRs, handoff prompt, and inactive Finance integration package.
-3. **System design and versioned contracts — implemented:** AP-M3 defines the logical platform,
-   threat and evidence boundary, Version 1 machine contracts, deterministic compiler, and reviewed
-   vectors. Its checks pass without a fixture runtime, Terraform, cloud resource, DNS, identity
-   configuration, or Finance migration. Completion is recorded only by merging the pull request
-   from `feat/apps-platform-system-design-contracts`.
-4. **Deterministic fixture planning — next after item 3 merges:** from updated `main`, define and
-   obtain owner approval for the fixture implementation plan and evaluation strategy before adding
-   fixture code in later commits on the same bounded item 4 branch. The proposal must cover
-   public/authenticated/restricted admission, identity delivery, feature-entitlement denial,
-   routing, lifecycle, rollback, and direct-bypass cases. Suggested branch:
-   `feat/apps-platform-fixtures`.
-5. **Platform infrastructure and live qualification — later:** proceed only through separately
-   approved slices after deterministic fixture qualification.
+3. **System design and versioned contracts — complete:** AP-M3 defines the logical platform, threat
+   and evidence boundary, Version 1 machine contracts, deterministic compiler, and reviewed
+   vectors. Its pull request is merged, and its repository behavior supplies Contract evidence.
+4. **Deterministic fixtures — implemented and Fixture-qualified:** AP-M4 defines and exercises the
+   bounded in-process reference edge, synthetic identity, three independent fixtures, reviewed
+   registrations, lifecycle, failure isolation, and rollback. Its checks pass without a socket,
+   credential, provider, Terraform, cloud resource, DNS mutation, or application migration.
+   Completion is recorded only by merging the pull request from `feat/apps-platform-fixtures`.
+5. **Platform infrastructure planning — next after item 4 merges:** from updated `main`, propose and
+   obtain owner approval for the smallest infrastructure implementation plan and Live evaluation
+   strategy. Planning must resolve provider topology, state ownership, identity, ingress, DNS,
+   lifecycle, cost, operator, rollback, and evidence decisions before any infrastructure or live
+   mutation. Implementation belongs to later separately approved work.
 6. **Finance Application Adoption — later and independent:** use the inactive integration package
    only after platform qualification and Finance-owned adoption approval.
 
@@ -77,9 +81,10 @@ Conflicts are resolved in this order:
 7. Runbooks and delivery evidence
 8. Prompts
 
-Current AP-M3 authorities authorize the Version 1 contract implementation and Contract evidence
-only. Missing item 4 authorities block Fixture implementation rather than inheriting authority from
-the AP-M3 plan or evaluation strategy.
+Current AP-M3 and AP-M4 authorities authorize the Version 1 contract implementation, the
+deterministic in-process Fixture harness, and their Contract and Fixture evidence only. Missing item
+5 authorities block infrastructure implementation and Live qualification rather than inheriting
+authority from fixture code, the AP-M4 plan, or its evaluation strategy.
 
 ## Scope labels
 
@@ -111,7 +116,7 @@ requirements or silently specialize the platform around one application.
 
 ## Evidence discipline
 
-Passing contract tests are revision-scoped Contract evidence, not operational evidence. Each future
-capability must name its Fixture, Live, or Adoption gate and, where applicable, secret-free live
-evidence. Credentials, Terraform state, saved plans, authenticated browser state, and unredacted
-external payloads are never committed.
+Passing contract and Fixture tests are revision-scoped Contract and Fixture evidence, not deployed
+or operational evidence. Each future capability must name its Live or Adoption gate and, where
+applicable, secret-free live evidence. Credentials, Terraform state, saved plans, authenticated
+browser state, and unredacted external payloads are never committed.
