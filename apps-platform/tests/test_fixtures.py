@@ -125,6 +125,28 @@ class _RecordingAttachment:
         )
 
 
+class _ReleaseSwitch:
+    def __init__(self, delegate: Any, body: bytes) -> None:
+        self.delegate = delegate
+        self.body = body
+        self.failure: Exception | None = None
+        self.requests: list[Request] = []
+
+    def __call__(self, request: Request) -> Response:
+        self.requests.append(request)
+        if self.failure is not None:
+            raise self.failure
+        response = self.delegate(request)
+        if response.status != 200:
+            return response
+        return Response(
+            status=response.status,
+            outcome=response.outcome,
+            headers=response.headers,
+            body=self.body,
+        )
+
+
 class _Clock:
     def __init__(self, value: int) -> None:
         self.value = value
@@ -904,7 +926,7 @@ class ReviewedFixtureApplicationsTest(unittest.TestCase):
             identity_signer=self.signer,
         )
         self.registration_sets: list[dict[str, Any]] = []
-        for entry in self.manifest["generations"]:
+        for entry in self.manifest["generations"][:2]:
             document = load_json_document(self.registration_root / entry["path"])
             self.assertEqual(document.violations, ())
             self.registration_sets.append(document.value)
@@ -917,7 +939,7 @@ class ReviewedFixtureApplicationsTest(unittest.TestCase):
 
     def test_reviewed_registrations_activate_the_exact_fixture_set(self) -> None:
         self.assertEqual(
-            [entry["generation"] for entry in self.manifest["generations"]],
+            [entry["generation"] for entry in self.manifest["generations"][:2]],
             [1, 2],
         )
         self.assertEqual(
@@ -1064,6 +1086,329 @@ class ReviewedFixtureApplicationsTest(unittest.TestCase):
         self.assertNotIn("terraform", committed_text)
         self.assertNotIn("credential", committed_text)
         self.assertIn(RESTRICTED_AUDIENCE, committed_text)
+
+
+class FixtureLifecycleTest(unittest.TestCase):
+    def setUp(self) -> None:
+        registration_root = PROJECT_ROOT / "fixtures" / "registrations"
+        manifest_document = load_json_document(
+            registration_root / "manifest.v1.json"
+        )
+        self.assertEqual(manifest_document.violations, ())
+        self.manifest = manifest_document.value
+        self.assertEqual(
+            [entry["generation"] for entry in self.manifest["generations"]],
+            list(range(1, 8)),
+        )
+        self.registration_sets: list[dict[str, Any]] = []
+        for entry in self.manifest["generations"]:
+            document = load_json_document(registration_root / entry["path"])
+            self.assertEqual(document.violations, ())
+            self.registration_sets.append(document.value)
+
+        self.clock = _Clock(2_000)
+        self.key = b"public-lifecycle-fixture-key-material-v1"
+        self.fixture_set = build_fixture_applications(self.key, self.clock)
+        public_reference = (
+            "urn:comfforts:app-platform:fixture:fixture-public:web"
+        )
+        public_v2_reference = (
+            "urn:comfforts:app-platform:fixture:fixture-public:web-v2"
+        )
+        public_delegate = self.fixture_set.attachments[public_reference]
+        self.public_v1 = _ReleaseSwitch(public_delegate, b"public fixture\n")
+        self.public_v2 = _ReleaseSwitch(public_delegate, b"public fixture v2\n")
+        attachments = dict(self.fixture_set.attachments)
+        attachments[public_reference] = self.public_v1
+        attachments[public_v2_reference] = self.public_v2
+
+        identity_adapter = SyntheticIdentityAdapter(
+            {
+                "allowed-session": SyntheticIdentity(
+                    FIXTURE_IDENTITY_ISSUER, "synthetic-user-a"
+                ),
+                "other-session": SyntheticIdentity(
+                    FIXTURE_IDENTITY_ISSUER, "synthetic-user-b"
+                ),
+            }
+        )
+        self.edge = ReferenceEdge(
+            attachments,
+            identity_adapter=identity_adapter,
+            identity_signer=FixtureIdentitySigner(
+                self.key, self.clock, _CorrelationIds()
+            ),
+        )
+
+    def _activate(self, generation: int) -> str:
+        entry = self.manifest["generations"][generation - 1]
+        state_before_activation = self._snapshots()
+        result = self.edge.activate(self.registration_sets[generation - 1])
+        self.assertTrue(result.accepted, result.issues)
+        self.assertEqual(result.generation_digest, entry["expected_digest"])
+        self.assertEqual(self._snapshots(), state_before_activation)
+        if result.generation_digest is None:
+            self.fail("accepted fixture generation omitted its digest")
+        return result.generation_digest
+
+    def _session_headers(self) -> tuple[tuple[str, str], ...]:
+        return ((FIXTURE_SESSION_HEADER, "allowed-session"),)
+
+    def _snapshots(self) -> dict[str, Any]:
+        return {
+            name: state.snapshot()
+            for name, state in self.fixture_set.states.items()
+        }
+
+    def _catalogue(self) -> _CatalogueParser:
+        response = self.edge.handle(Request("GET", "/"))
+        self.assertEqual((response.status, response.outcome), (200, "catalogue"))
+        parser = _CatalogueParser()
+        parser.feed(response.body.decode("utf-8"))
+        return parser
+
+    def test_reviewed_lifecycle_failure_and_rollback_journey(self) -> None:
+        application_revision = hashlib.sha256(
+            (PROJECT_ROOT / "fixtures" / "applications.py").read_bytes()
+        ).hexdigest()
+        self.assertTrue(
+            all(
+                item["proposal"]["source_revision"] == application_revision
+                for item in self.registration_sets
+            )
+        )
+
+        generation_1_digest = self._activate(1)
+        self.assertEqual(self._catalogue().links, [])
+        self.assertEqual(
+            self.edge.handle(Request("GET", "/public")).status,
+            404,
+        )
+        self.assertEqual(
+            self._snapshots()["fixture-public"].handled_requests,
+            0,
+        )
+
+        generation_2_digest = self._activate(2)
+        self.assertNotEqual(generation_1_digest, generation_2_digest)
+        self.assertEqual(self._catalogue().links, ["/public", "/restricted"])
+        initial_public = self.edge.handle(Request("GET", "/public"))
+        initial_authenticated = self.edge.handle(
+            Request(
+                "GET",
+                "/authenticated",
+                headers=self._session_headers(),
+            )
+        )
+        self.assertEqual(initial_public.body, b"public fixture\n")
+        self.assertEqual(initial_authenticated.status, 200)
+
+        before_release = self._snapshots()
+        self.public_v1.body = b"public fixture release 2\n"
+        released = self.edge.handle(Request("GET", "/public"))
+        self.assertEqual(released.body, b"public fixture release 2\n")
+        self.assertEqual(
+            self._snapshots()["fixture-public"].handled_requests,
+            before_release["fixture-public"].handled_requests + 1,
+        )
+
+        stale_update = copy.deepcopy(self.registration_sets[2])
+        stale_update["previous_generation_digest"] = "sha256:" + ("0" * 64)
+        rejected_stale = self.edge.activate(stale_update)
+        self.assertFalse(rejected_stale.accepted)
+        self.assertEqual(rejected_stale.issues[0].code, "GENERATION_INVALID")
+        self.assertEqual(
+            self.edge.handle(Request("GET", "/public")).body,
+            b"public fixture release 2\n",
+        )
+
+        self._activate(3)
+        updated_catalogue = self._catalogue()
+        self.assertIn("Public Fixture Updated", "".join(updated_catalogue.text))
+
+        before_suspension = self._snapshots()
+        self._activate(4)
+        self.assertEqual(self._snapshots(), before_suspension)
+        self.assertNotIn("/public", self._catalogue().links)
+        suspended = self.edge.handle(Request("GET", "/public"))
+        self.assertEqual((suspended.status, suspended.outcome), (404, "route_closed"))
+        self.assertEqual(
+            self._snapshots()["fixture-public"],
+            before_suspension["fixture-public"],
+        )
+        restricted = self.edge.handle(
+            Request("GET", "/restricted", headers=self._session_headers())
+        )
+        self.assertEqual(restricted.status, 200)
+
+        before_reactivation = self._snapshots()
+        self._activate(5)
+        self.assertEqual(self._snapshots(), before_reactivation)
+        self.assertEqual(
+            self.edge.handle(Request("GET", "/public")).body,
+            b"public fixture release 2\n",
+        )
+
+        unavailable_replacement = copy.deepcopy(self.registration_sets[5])
+        public_registration = next(
+            item
+            for item in unavailable_replacement["registrations"]
+            if item["application_id"] == "fixture-public"
+        )
+        replacement = next(
+            item
+            for item in public_registration["attachments"]
+            if item["mount_path"] == "/"
+        )
+        replacement["attachment_id"] = "missing"
+        replacement["resource_reference"] = (
+            "urn:comfforts:app-platform:fixture:fixture-public:missing"
+        )
+        rejected_unavailable = self.edge.activate(unavailable_replacement)
+        self.assertFalse(rejected_unavailable.accepted)
+        self.assertEqual(
+            rejected_unavailable.issues[0].code,
+            "FIXTURE_ATTACHMENT_UNAVAILABLE",
+        )
+        self.assertEqual(
+            self.edge.handle(Request("GET", "/public")).body,
+            b"public fixture release 2\n",
+        )
+
+        generation_6_digest = self._activate(6)
+        replaced = self.edge.handle(Request("GET", "/public"))
+        self.assertEqual(replaced.body, b"public fixture v2\n")
+        self.assertTrue(self.public_v1.requests)
+        self.assertTrue(self.public_v2.requests)
+
+        before_failure = self._snapshots()
+        self.public_v2.failure = RuntimeError("synthetic replacement failure")
+        failed = self.edge.handle(Request("GET", "/public"))
+        healthy = self.edge.handle(
+            Request("GET", "/restricted", headers=self._session_headers())
+        )
+        self.assertEqual(
+            (failed.status, failed.outcome),
+            (502, "attachment_unavailable"),
+        )
+        self.assertEqual(healthy.status, 200)
+        self.assertEqual(
+            self._snapshots()["fixture-public"],
+            before_failure["fixture-public"],
+        )
+        self.public_v2.failure = None
+
+        authenticated_before_retirement = self.edge.handle(
+            Request(
+                "GET",
+                "/authenticated",
+                headers=self._session_headers(),
+            )
+        )
+        self.assertEqual(authenticated_before_retirement.status, 200)
+        before_retirement = self._snapshots()
+        generation_7_digest = self._activate(7)
+        self.assertEqual(self._snapshots(), before_retirement)
+        retired = self.edge.handle(
+            Request(
+                "GET",
+                "/authenticated",
+                headers=self._session_headers(),
+            )
+        )
+        self.assertEqual((retired.status, retired.outcome), (404, "route_closed"))
+        self.assertEqual(
+            self._snapshots()["fixture-authenticated"],
+            before_retirement["fixture-authenticated"],
+        )
+
+        invalid_reactivation = copy.deepcopy(self.registration_sets[6])
+        invalid_reactivation["generation"] = 8
+        invalid_reactivation["previous_generation_digest"] = generation_7_digest
+        invalid_reactivation["proposal"]["change_summary"] = (
+            "Attempt to reactivate a retired fixture"
+        )
+        authenticated_registration = next(
+            item
+            for item in invalid_reactivation["registrations"]
+            if item["application_id"] == "fixture-authenticated"
+        )
+        authenticated_registration["registration_revision"] = 4
+        authenticated_registration["lifecycle"] = "active"
+        rejected_reactivation = self.edge.activate(invalid_reactivation)
+        self.assertFalse(rejected_reactivation.accepted)
+        self.assertEqual(
+            rejected_reactivation.issues[0].code,
+            "LIFECYCLE_TRANSITION_INVALID",
+        )
+        self.assertEqual(
+            self.edge.handle(
+                Request(
+                    "GET",
+                    "/authenticated",
+                    headers=self._session_headers(),
+                )
+            ).status,
+            404,
+        )
+
+        state_before_rollback = self._snapshots()
+        rollback_replacement = self.edge.rollback(generation_6_digest)
+        self.assertTrue(rollback_replacement.accepted)
+        self.assertEqual(
+            rollback_replacement.generation_digest,
+            generation_6_digest,
+        )
+        self.assertEqual(self._snapshots(), state_before_rollback)
+        self.assertEqual(
+            self.edge.handle(Request("GET", "/public")).body,
+            b"public fixture v2\n",
+        )
+        restored_authenticated = self.edge.handle(
+            Request(
+                "GET",
+                "/authenticated",
+                headers=self._session_headers(),
+            )
+        )
+        self.assertEqual(restored_authenticated.status, 200)
+
+        generation_5_digest = self.manifest["generations"][4]["expected_digest"]
+        state_before_old_target = self._snapshots()
+        rollback_old_target = self.edge.rollback(generation_5_digest)
+        self.assertTrue(rollback_old_target.accepted)
+        self.assertEqual(
+            rollback_old_target.generation_digest,
+            generation_5_digest,
+        )
+        self.assertEqual(self._snapshots(), state_before_old_target)
+        self.assertEqual(
+            self.edge.handle(Request("GET", "/public")).body,
+            b"public fixture release 2\n",
+        )
+
+        conflicting_generation = copy.deepcopy(self.registration_sets[5])
+        conflicting_public = next(
+            item
+            for item in conflicting_generation["registrations"]
+            if item["application_id"] == "fixture-public"
+        )
+        conflicting_public["catalogue"]["title"] = "Conflicting Fixture"
+        conflict = self.edge.activate(conflicting_generation)
+        self.assertFalse(conflict.accepted)
+        self.assertEqual(conflict.issues[0].code, "FIXTURE_GENERATION_CONFLICT")
+        self.assertEqual(
+            self.edge.handle(Request("GET", "/public")).body,
+            b"public fixture release 2\n",
+        )
+
+        unknown = self.edge.rollback("sha256:" + ("f" * 64))
+        self.assertFalse(unknown.accepted)
+        self.assertEqual(unknown.issues[0].code, "FIXTURE_GENERATION_UNKNOWN")
+        self.assertEqual(
+            self.edge.handle(Request("GET", "/public")).body,
+            b"public fixture release 2\n",
+        )
 
 
 if __name__ == "__main__":

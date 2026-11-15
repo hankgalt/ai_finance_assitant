@@ -81,6 +81,12 @@ class ActivationResult:
     issues: tuple[ActivationIssue, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class _ReviewedGeneration:
+    registration_set: dict[str, Any]
+    compiled_configuration: dict[str, Any]
+
+
 class ReferenceEdge:
     """Compile, bind, and serve one deterministic in-memory generation."""
 
@@ -96,6 +102,8 @@ class ReferenceEdge:
         self._identity_signer = identity_signer
         self._current_registration_set: dict[str, Any] | None = None
         self._compiled_configuration: dict[str, Any] | None = None
+        self._reviewed_generations: dict[str, _ReviewedGeneration] = {}
+        self._generation_digests: dict[int, str] = {}
 
     def activate(self, proposed_registration_set: dict[str, Any]) -> ActivationResult:
         """Atomically compile and bind a complete proposed generation."""
@@ -121,12 +129,64 @@ class ReferenceEdge:
 
         if compilation.compiled_configuration is None:
             raise AssertionError("successful compilation omitted compiled configuration")
+        if compilation.generation_digest is None:
+            raise AssertionError("successful compilation omitted generation digest")
 
-        self._current_registration_set = copy.deepcopy(proposed_registration_set)
-        self._compiled_configuration = copy.deepcopy(
-            compilation.compiled_configuration
+        generation = proposed_registration_set["generation"]
+        existing_digest = self._generation_digests.get(generation)
+        if (
+            existing_digest is not None
+            and existing_digest != compilation.generation_digest
+        ):
+            return ActivationResult(
+                False,
+                None,
+                (
+                    ActivationIssue(
+                        "FIXTURE_GENERATION_CONFLICT",
+                        "/generation",
+                        "generation number is already bound to another reviewed digest",
+                    ),
+                ),
+            )
+
+        reviewed = _ReviewedGeneration(
+            registration_set=copy.deepcopy(proposed_registration_set),
+            compiled_configuration=copy.deepcopy(compilation.compiled_configuration),
         )
+        self._reviewed_generations[compilation.generation_digest] = reviewed
+        self._generation_digests[generation] = compilation.generation_digest
+        self._select_reviewed_generation(reviewed)
         return ActivationResult(True, compilation.generation_digest, ())
+
+    def rollback(self, reviewed_generation_digest: str) -> ActivationResult:
+        """Select one retained complete generation without changing application state."""
+
+        reviewed = (
+            self._reviewed_generations.get(reviewed_generation_digest)
+            if isinstance(reviewed_generation_digest, str)
+            else None
+        )
+        if reviewed is None:
+            return ActivationResult(
+                False,
+                None,
+                (
+                    ActivationIssue(
+                        "FIXTURE_GENERATION_UNKNOWN",
+                        "",
+                        "rollback target is not a reviewed generation",
+                    ),
+                ),
+            )
+        self._select_reviewed_generation(reviewed)
+        return ActivationResult(True, reviewed_generation_digest, ())
+
+    def _select_reviewed_generation(self, reviewed: _ReviewedGeneration) -> None:
+        self._current_registration_set = copy.deepcopy(reviewed.registration_set)
+        self._compiled_configuration = copy.deepcopy(
+            reviewed.compiled_configuration
+        )
 
     def handle(self, request: Request) -> Response:
         """Return the deterministic result of one bounded synthetic request."""
