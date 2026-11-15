@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import base64
 import copy
+import hashlib
+import hmac
+import json
 import shutil
 import subprocess
 import sys
@@ -12,7 +16,18 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
-from fixtures import ReferenceEdge, Request, Response
+from fixtures import (
+    FIXTURE_SESSION_HEADER,
+    VERIFIED_IDENTITY_HEADER,
+    FixtureIdentitySigner,
+    FixtureIdentityVerifier,
+    ReferenceEdge,
+    Request,
+    Response,
+    SyntheticIdentity,
+    SyntheticIdentityAdapter,
+    VerificationResult,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +38,8 @@ def _attachment(
     attachment_id: str,
     mount_path: str,
     forwarding_mode: str,
+    *,
+    audience: str | None = None,
 ) -> dict[str, Any]:
     return {
         "contract_version": 1,
@@ -35,8 +52,8 @@ def _attachment(
         ),
         "mount_path": mount_path,
         "forwarding_mode": forwarding_mode,
-        "identity_requirement": "none",
-        "audience": None,
+        "identity_requirement": "verified" if audience is not None else "none",
+        "audience": audience,
         "ingress_mode": "shared_edge_only",
     }
 
@@ -50,6 +67,7 @@ def _registration(
     revision: int,
     visibility: str = "listed",
     title: str | None = None,
+    admission: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "contract_version": 1,
@@ -61,7 +79,7 @@ def _registration(
             "title": title or application_id,
             "summary": f"Synthetic summary for {application_id}",
         },
-        "admission": {"mode": "public"},
+        "admission": copy.deepcopy(admission or {"mode": "public"}),
         "lifecycle": lifecycle,
         "attachments": attachments,
     }
@@ -100,6 +118,63 @@ class _RecordingAttachment:
             headers=(("Content-Type", "text/plain; charset=utf-8"),),
             body=self.body,
         )
+
+
+class _Clock:
+    def __init__(self, value: int) -> None:
+        self.value = value
+
+    def __call__(self) -> int:
+        return self.value
+
+
+class _CorrelationIds:
+    def __init__(self) -> None:
+        self.value = 0
+
+    def __call__(self) -> str:
+        self.value += 1
+        return f"fixture-request-{self.value}"
+
+
+class _VerifyingAttachment:
+    def __init__(self, verifier: FixtureIdentityVerifier) -> None:
+        self.verifier = verifier
+        self.requests: list[Request] = []
+        self.results: list[VerificationResult] = []
+
+    def __call__(self, request: Request) -> Response:
+        self.requests.append(request)
+        assertions = [
+            value
+            for name, value in request.headers
+            if name.lower() == VERIFIED_IDENTITY_HEADER.lower()
+        ]
+        result = self.verifier.verify(assertions[0] if len(assertions) == 1 else None)
+        self.results.append(result)
+        return Response(
+            status=200 if result.accepted else 401,
+            outcome="fixture-identity",
+            headers=(("Content-Type", "text/plain; charset=utf-8"),),
+            body=b"verified" if result.accepted else b"denied",
+        )
+
+
+def _signed_assertion(key: bytes, claims: dict[str, Any]) -> str:
+    payload = json.dumps(
+        claims,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    payload_segment = base64.urlsafe_b64encode(payload).rstrip(b"=").decode("ascii")
+    signed = f"fixture-v1.{payload_segment}".encode("ascii")
+    signature = hmac.new(key, signed, hashlib.sha256).digest()
+    signature_segment = (
+        base64.urlsafe_b64encode(signature).rstrip(b"=").decode("ascii")
+    )
+    return f"fixture-v1.{payload_segment}.{signature_segment}"
 
 
 class _CatalogueParser(HTMLParser):
@@ -317,6 +392,17 @@ class ReferenceEdgeTest(unittest.TestCase):
                 ),
                 400,
             ),
+            (
+                Request(
+                    "GET",
+                    "/alpha",
+                    headers=(
+                        (FIXTURE_SESSION_HEADER, "one"),
+                        (FIXTURE_SESSION_HEADER.lower(), "two"),
+                    ),
+                ),
+                400,
+            ),
         )
         for request, expected_status in cases:
             with self.subTest(request=request):
@@ -365,7 +451,10 @@ class ReferenceEdgeTest(unittest.TestCase):
             }
             program = "\n".join(
                 (
-                    "from fixtures import ReferenceEdge, Request",
+                    "from fixtures import (",
+                    "    FixtureIdentitySigner, FixtureIdentityVerifier,",
+                    "    ReferenceEdge, Request, SyntheticIdentity,",
+                    ")",
                     "registration_set = {",
                     "    'contract_version': 1,",
                     "    'generation': 1,",
@@ -380,6 +469,21 @@ class ReferenceEdgeTest(unittest.TestCase):
                     "result = edge.activate(registration_set)",
                     "assert result.accepted",
                     "assert edge.handle(Request('GET', '/')).status == 200",
+                    "clock = lambda: 100",
+                    "correlation_ids = iter(('extracted-request',))",
+                    "test_key = b'public-extraction-test-material'",
+                    "identity = SyntheticIdentity(",
+                    "    'urn:comfforts:identity:fixture', 'extracted-user',",
+                    ")",
+                    "signer = FixtureIdentitySigner(",
+                    "    test_key, clock, lambda: next(correlation_ids),",
+                    ")",
+                    "audience = 'urn:comfforts:app-platform:audience:extracted'",
+                    "assertion = signer.issue(identity, audience)",
+                    "verifier = FixtureIdentityVerifier(",
+                    "    test_key, identity.issuer, audience, clock,",
+                    ")",
+                    "assert verifier.verify(assertion).accepted",
                 )
             )
 
@@ -402,6 +506,362 @@ class ReferenceEdgeTest(unittest.TestCase):
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertEqual(before, after)
+
+
+class FixtureIdentityTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.key = b"public-fixture-key-material-v1"
+        self.issuer = "urn:comfforts:identity:fixture"
+        self.authenticated_audience = (
+            "urn:comfforts:app-platform:audience:identity-authenticated"
+        )
+        self.restricted_audience = (
+            "urn:comfforts:app-platform:audience:identity-restricted"
+        )
+        self.clock = _Clock(100)
+        self.allowed_identity = SyntheticIdentity(self.issuer, "synthetic-user-a")
+        self.other_identity = SyntheticIdentity(self.issuer, "synthetic-user-b")
+        identity_adapter = SyntheticIdentityAdapter(
+            {
+                "allowed-session": self.allowed_identity,
+                "other-session": self.other_identity,
+            }
+        )
+        signer = FixtureIdentitySigner(
+            self.key, self.clock, _CorrelationIds()
+        )
+        self.public = _RecordingAttachment(b"public")
+        self.authenticated = _VerifyingAttachment(
+            FixtureIdentityVerifier(
+                self.key,
+                self.issuer,
+                self.authenticated_audience,
+                self.clock,
+            )
+        )
+        self.restricted = _VerifyingAttachment(
+            FixtureIdentityVerifier(
+                self.key,
+                self.issuer,
+                self.restricted_audience,
+                self.clock,
+            )
+        )
+        self.attachment_map = {
+            "urn:comfforts:app-platform:fixture:identity-public:web": self.public,
+            "urn:comfforts:app-platform:fixture:identity-authenticated:web": (
+                self.authenticated
+            ),
+            "urn:comfforts:app-platform:fixture:identity-restricted:web": (
+                self.restricted
+            ),
+        }
+        self.edge = ReferenceEdge(
+            self.attachment_map,
+            identity_adapter=identity_adapter,
+            identity_signer=signer,
+        )
+        staged = self.edge.activate(
+            _registration_set(1, None, self._registrations("staged", 1))
+        )
+        self.assertTrue(staged.accepted)
+        active = self.edge.activate(
+            _registration_set(
+                2,
+                staged.generation_digest,
+                self._registrations("active", 2),
+            )
+        )
+        self.assertTrue(active.accepted)
+
+    def _registrations(self, lifecycle: str, revision: int) -> list[dict[str, Any]]:
+        return [
+            _registration(
+                "identity-restricted",
+                "/restricted",
+                [
+                    _attachment(
+                        "identity-restricted",
+                        "web",
+                        "/",
+                        "strip_application_prefix",
+                        audience=self.restricted_audience,
+                    )
+                ],
+                lifecycle=lifecycle,
+                revision=revision,
+                admission={
+                    "mode": "restricted",
+                    "members": [
+                        {
+                            "issuer": self.allowed_identity.issuer,
+                            "subject": self.allowed_identity.subject,
+                        }
+                    ],
+                },
+            ),
+            _registration(
+                "identity-public",
+                "/public",
+                [
+                    _attachment(
+                        "identity-public",
+                        "web",
+                        "/",
+                        "strip_application_prefix",
+                    )
+                ],
+                lifecycle=lifecycle,
+                revision=revision,
+            ),
+            _registration(
+                "identity-authenticated",
+                "/authenticated",
+                [
+                    _attachment(
+                        "identity-authenticated",
+                        "web",
+                        "/",
+                        "strip_application_prefix",
+                        audience=self.authenticated_audience,
+                    )
+                ],
+                lifecycle=lifecycle,
+                revision=revision,
+                admission={"mode": "authenticated"},
+            ),
+        ]
+
+    def _claims(self, correlation_id: str = "fixture-claim") -> dict[str, Any]:
+        return {
+            "contract_version": 1,
+            "issuer": self.issuer,
+            "subject": "synthetic-user-a",
+            "audience": self.authenticated_audience,
+            "issued_at": 100,
+            "expires_at": 160,
+            "correlation_id": correlation_id,
+        }
+
+    def test_edge_applies_admission_and_replaces_visitor_identity(self) -> None:
+        public_response = self.edge.handle(
+            Request(
+                "GET",
+                "/public",
+                headers=(
+                    (VERIFIED_IDENTITY_HEADER, "visitor-controlled"),
+                    (FIXTURE_SESSION_HEADER, "allowed-session"),
+                ),
+            )
+        )
+        self.assertEqual((public_response.status, public_response.body), (200, b"public"))
+        self.assertEqual(self.public.requests[-1].headers, ())
+
+        missing = self.edge.handle(Request("GET", "/authenticated"))
+        unknown = self.edge.handle(
+            Request(
+                "GET",
+                "/authenticated",
+                headers=((FIXTURE_SESSION_HEADER, "unknown-session"),),
+            )
+        )
+        self.assertEqual(
+            (missing.status, missing.body),
+            (401, b"authentication required\n"),
+        )
+        self.assertEqual((unknown.status, unknown.body), (missing.status, missing.body))
+
+        authenticated = self.edge.handle(
+            Request(
+                "GET",
+                "/authenticated",
+                headers=(
+                    (VERIFIED_IDENTITY_HEADER, "visitor-controlled"),
+                    (FIXTURE_SESSION_HEADER, "allowed-session"),
+                ),
+            )
+        )
+        self.assertEqual((authenticated.status, authenticated.body), (200, b"verified"))
+        self.assertTrue(self.authenticated.results[-1].accepted)
+        forwarded_headers = self.authenticated.requests[-1].headers
+        self.assertNotIn("visitor-controlled", dict(forwarded_headers).values())
+        self.assertFalse(
+            any(
+                name.lower() == FIXTURE_SESSION_HEADER.lower()
+                for name, _ in forwarded_headers
+            )
+        )
+        self.assertEqual(
+            sum(
+                name.lower() == VERIFIED_IDENTITY_HEADER.lower()
+                for name, _ in forwarded_headers
+            ),
+            1,
+        )
+
+        denied = self.edge.handle(
+            Request(
+                "GET",
+                "/restricted",
+                headers=((FIXTURE_SESSION_HEADER, "other-session"),),
+            )
+        )
+        self.assertEqual((denied.status, denied.body), (403, b"admission denied\n"))
+        self.assertFalse(self.restricted.requests)
+
+        allowed = self.edge.handle(
+            Request(
+                "GET",
+                "/restricted",
+                headers=((FIXTURE_SESSION_HEADER, "allowed-session"),),
+            )
+        )
+        self.assertEqual((allowed.status, allowed.body), (200, b"verified"))
+        self.assertTrue(self.restricted.results[-1].accepted)
+
+    def test_protected_entry_point_verifies_audience_and_replay(self) -> None:
+        direct_missing = self.authenticated(Request("GET", "/"))
+        self.assertEqual(direct_missing.status, 401)
+        self.assertEqual(self.authenticated.results[-1].code, "assertion_missing")
+
+        admitted = self.edge.handle(
+            Request(
+                "GET",
+                "/authenticated",
+                headers=((FIXTURE_SESSION_HEADER, "allowed-session"),),
+            )
+        )
+        self.assertEqual(admitted.status, 200)
+        forwarded_request = self.authenticated.requests[-1]
+
+        replayed = self.authenticated(forwarded_request)
+        self.assertEqual(replayed.status, 401)
+        self.assertEqual(self.authenticated.results[-1].code, "identity_replayed")
+
+        cross_application = self.restricted(forwarded_request)
+        self.assertEqual(cross_application.status, 401)
+        self.assertEqual(
+            self.restricted.results[-1].code,
+            "identity_audience_invalid",
+        )
+
+    def test_protected_route_fails_closed_without_identity_dependencies(self) -> None:
+        edge = ReferenceEdge(self.attachment_map)
+        staged = edge.activate(
+            _registration_set(1, None, self._registrations("staged", 1))
+        )
+        self.assertTrue(staged.accepted)
+        active = edge.activate(
+            _registration_set(
+                2,
+                staged.generation_digest,
+                self._registrations("active", 2),
+            )
+        )
+        self.assertTrue(active.accepted)
+
+        response = edge.handle(
+            Request(
+                "GET",
+                "/authenticated",
+                headers=((FIXTURE_SESSION_HEADER, "allowed-session"),),
+            )
+        )
+        self.assertEqual((response.status, response.outcome), (503, "identity_unavailable"))
+        self.assertFalse(self.authenticated.requests)
+
+    def test_verifier_rejects_forged_and_invalid_claims(self) -> None:
+        cases: list[tuple[str, str | None, str]] = [
+            ("missing", None, "assertion_missing"),
+            ("malformed", "visitor-controlled", "assertion_malformed"),
+            ("unsigned", "fixture-v1.e30", "assertion_malformed"),
+            (
+                "wrong-key",
+                _signed_assertion(b"other-public-test-key", self._claims()),
+                "assertion_signature_invalid",
+            ),
+        ]
+        changed_claims = (
+            ("version", {"contract_version": 2}, "identity_contract_invalid"),
+            (
+                "issuer",
+                {"issuer": "urn:comfforts:identity:other"},
+                "identity_issuer_invalid",
+            ),
+            ("subject", {"subject": "bad subject"}, "identity_contract_invalid"),
+            (
+                "audience",
+                {"audience": self.restricted_audience},
+                "identity_audience_invalid",
+            ),
+            (
+                "future",
+                {"issued_at": 101, "expires_at": 161},
+                "identity_not_yet_valid",
+            ),
+            (
+                "expired",
+                {"issued_at": 40, "expires_at": 100},
+                "identity_expired",
+            ),
+            (
+                "lifetime",
+                {"issued_at": 100, "expires_at": 161},
+                "identity_lifetime_invalid",
+            ),
+        )
+        for name, changes, code in changed_claims:
+            claims = self._claims(f"fixture-{name}")
+            claims.update(changes)
+            cases.append((name, _signed_assertion(self.key, claims), code))
+
+        for name, assertion, expected_code in cases:
+            with self.subTest(name=name):
+                verifier = FixtureIdentityVerifier(
+                    self.key,
+                    self.issuer,
+                    self.authenticated_audience,
+                    self.clock,
+                )
+                result = verifier.verify(assertion)
+                self.assertFalse(result.accepted)
+                self.assertIsNone(result.identity)
+                self.assertEqual(result.code, expected_code)
+
+        valid = FixtureIdentityVerifier(
+            self.key,
+            self.issuer,
+            self.authenticated_audience,
+            self.clock,
+        ).verify(_signed_assertion(self.key, self._claims("fixture-valid")))
+        self.assertTrue(valid.accepted)
+        self.assertEqual(valid.identity.subject, "synthetic-user-a")
+
+    def test_replay_store_is_bounded_and_removes_only_expired_entries(self) -> None:
+        verifier = FixtureIdentityVerifier(
+            self.key,
+            self.issuer,
+            self.authenticated_audience,
+            self.clock,
+        )
+        for index in range(256):
+            assertion = _signed_assertion(
+                self.key, self._claims(f"fixture-replay-{index}")
+            )
+            self.assertTrue(verifier.verify(assertion).accepted)
+
+        full = verifier.verify(
+            _signed_assertion(self.key, self._claims("fixture-replay-full"))
+        )
+        self.assertEqual((full.accepted, full.code), (False, "replay_capacity"))
+
+        self.clock.value = 161
+        replacement_claims = self._claims("fixture-replay-after-expiry")
+        replacement_claims.update({"issued_at": 161, "expires_at": 221})
+        after_expiry = verifier.verify(
+            _signed_assertion(self.key, replacement_claims)
+        )
+        self.assertTrue(after_expiry.accepted)
 
 
 if __name__ == "__main__":

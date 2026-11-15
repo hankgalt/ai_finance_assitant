@@ -11,10 +11,15 @@ from types import MappingProxyType
 from typing import Any, TypeAlias
 
 from contracts.validation import compile_registration_set
+from .identity import (
+    FIXTURE_SESSION_HEADER,
+    VERIFIED_IDENTITY_HEADER,
+    FixtureIdentitySigner,
+    SyntheticIdentityAdapter,
+)
 
 
 FIXTURE_ADAPTER_KIND = "fixture-in-process-v1"
-VERIFIED_IDENTITY_HEADER = "x-comfforts-verified-identity"
 
 MAX_METHOD_BYTES = 16
 MAX_PATH_BYTES = 1_024
@@ -79,8 +84,16 @@ class ActivationResult:
 class ReferenceEdge:
     """Compile, bind, and serve one deterministic in-memory generation."""
 
-    def __init__(self, attachments: Mapping[str, Attachment]) -> None:
+    def __init__(
+        self,
+        attachments: Mapping[str, Attachment],
+        *,
+        identity_adapter: SyntheticIdentityAdapter | None = None,
+        identity_signer: FixtureIdentitySigner | None = None,
+    ) -> None:
         self._attachments = MappingProxyType(dict(attachments))
+        self._identity_adapter = identity_adapter
+        self._identity_signer = identity_signer
         self._current_registration_set: dict[str, Any] | None = None
         self._compiled_configuration: dict[str, Any] | None = None
 
@@ -132,17 +145,27 @@ class ReferenceEdge:
         if route is None:
             return _plain_response(404, "route_closed", "not found")
 
+        attachment = _select_attachment(route, request.path)
+        if attachment is None:
+            return _plain_response(404, "route_closed", "not found")
         policy = next(
             item["policy"]
             for item in self._compiled_configuration["admission_policies"]
             if item["application_id"] == route["application_id"]
         )
+        forwarded_headers = _headers_without_fixture_identity(request.headers)
         if policy["mode"] != "public":
-            return _plain_response(401, "authentication_required", "authentication required")
+            admission_failure, assertion = self._protected_admission(
+                request.headers, policy, attachment
+            )
+            if admission_failure is not None:
+                return admission_failure
+            forwarded_headers = forwarded_headers + (
+                (VERIFIED_IDENTITY_HEADER, assertion),
+            )
+            if not _valid_headers(forwarded_headers):
+                return _plain_response(400, "request_invalid", "invalid request")
 
-        attachment = _select_attachment(route, request.path)
-        if attachment is None:
-            return _plain_response(404, "route_closed", "not found")
         target = self._attachments.get(attachment["resource_reference"])
         if target is None:
             return _plain_response(502, "attachment_unavailable", "unavailable")
@@ -151,7 +174,7 @@ class ReferenceEdge:
             method=request.method,
             path=_forwarded_path(route["route_prefix"], attachment, request.path),
             query=request.query,
-            headers=request.headers,
+            headers=forwarded_headers,
             body=request.body,
         )
         try:
@@ -166,6 +189,38 @@ class ReferenceEdge:
             headers=response.headers,
             body=response.body,
         )
+
+    def _protected_admission(
+        self,
+        headers: tuple[Header, ...],
+        policy: dict[str, Any],
+        attachment: dict[str, Any],
+    ) -> tuple[Response | None, str]:
+        if self._identity_adapter is None or self._identity_signer is None:
+            return _plain_response(503, "identity_unavailable", "unavailable"), ""
+        session_label = _header_value(headers, FIXTURE_SESSION_HEADER)
+        identity = self._identity_adapter.resolve(session_label)
+        if identity is None:
+            return (
+                _plain_response(
+                    401, "authentication_required", "authentication required"
+                ),
+                "",
+            )
+        if policy["mode"] == "restricted" and not any(
+            member["issuer"] == identity.issuer
+            and member["subject"] == identity.subject
+            for member in policy["members"]
+        ):
+            return _plain_response(403, "admission_denied", "admission denied"), ""
+        audience = attachment["audience"]
+        if attachment["identity_requirement"] != "verified" or audience is None:
+            return _plain_response(503, "identity_unavailable", "unavailable"), ""
+        try:
+            assertion = self._identity_signer.issue(identity, audience)
+        except Exception:
+            return _plain_response(503, "identity_unavailable", "unavailable"), ""
+        return None, assertion
 
     def _attachment_binding_issues(
         self, registration_set: dict[str, Any]
@@ -271,7 +326,10 @@ def _valid_headers(
     if not isinstance(headers, tuple) or len(headers) > MAX_HEADER_COUNT:
         return False
     aggregate = 0
-    identity_count = 0
+    security_header_counts = {
+        VERIFIED_IDENTITY_HEADER.lower(): 0,
+        FIXTURE_SESSION_HEADER.lower(): 0,
+    }
     for header in headers:
         if not isinstance(header, tuple) or len(header) != 2:
             return False
@@ -289,11 +347,32 @@ def _valid_headers(
         ):
             return False
         aggregate += len(name_bytes) + len(value_bytes)
-        if name.lower() == VERIFIED_IDENTITY_HEADER:
-            identity_count += 1
+        normalized_name = name.lower()
+        if normalized_name in security_header_counts:
+            security_header_counts[normalized_name] += 1
     if aggregate > MAX_HEADER_BYTES:
         return False
-    return not reject_duplicate_identity or identity_count <= 1
+    return not reject_duplicate_identity or all(
+        count <= 1 for count in security_header_counts.values()
+    )
+
+
+def _header_value(headers: tuple[Header, ...], name: str) -> str | None:
+    expected = name.lower()
+    for header_name, value in headers:
+        if header_name.lower() == expected:
+            return value
+    return None
+
+
+def _headers_without_fixture_identity(
+    headers: tuple[Header, ...],
+) -> tuple[Header, ...]:
+    removed = {
+        VERIFIED_IDENTITY_HEADER.lower(),
+        FIXTURE_SESSION_HEADER.lower(),
+    }
+    return tuple(header for header in headers if header[0].lower() not in removed)
 
 
 def _is_reserved_path(path: str) -> bool:
