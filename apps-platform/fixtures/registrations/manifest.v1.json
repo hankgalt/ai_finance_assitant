@@ -1,0 +1,16 @@
+{
+  "manifest_version": 1,
+  "evidence_class": "F",
+  "generations": [
+    {
+      "generation": 1,
+      "path": "generation-1-staged.v1.json",
+      "expected_digest": "sha256:b8e092913c22c0d2322728d0f279b22b34162e22d8108335d3e8fee940a70458"
+    },
+    {
+      "generation": 2,
+      "path": "generation-2-active.v1.json",
+      "expected_digest": "sha256:4ee7b0a94d583d380cc42520b3cf78925144ada6a879e17246a55f474347a89d"
+    }
+  ]
+}

@@ -16,8 +16,12 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
+from contracts.validation import load_json_document
 from fixtures import (
+    AUTHENTICATED_AUDIENCE,
     FIXTURE_SESSION_HEADER,
+    FIXTURE_IDENTITY_ISSUER,
+    RESTRICTED_AUDIENCE,
     VERIFIED_IDENTITY_HEADER,
     FixtureIdentitySigner,
     FixtureIdentityVerifier,
@@ -27,6 +31,7 @@ from fixtures import (
     SyntheticIdentity,
     SyntheticIdentityAdapter,
     VerificationResult,
+    build_fixture_applications,
 )
 
 
@@ -862,6 +867,203 @@ class FixtureIdentityTest(unittest.TestCase):
             _signed_assertion(self.key, replacement_claims)
         )
         self.assertTrue(after_expiry.accepted)
+
+
+class ReviewedFixtureApplicationsTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.registration_root = PROJECT_ROOT / "fixtures" / "registrations"
+        manifest_document = load_json_document(
+            self.registration_root / "manifest.v1.json"
+        )
+        self.assertEqual(manifest_document.violations, ())
+        self.manifest = manifest_document.value
+        self.assertEqual(self.manifest["manifest_version"], 1)
+        self.assertEqual(self.manifest["evidence_class"], "F")
+
+        self.clock = _Clock(1_000)
+        self.key = b"public-reviewed-fixture-key-material-v1"
+        self.correlation_ids = _CorrelationIds()
+        self.fixture_set = build_fixture_applications(self.key, self.clock)
+        self.allowed_identity = SyntheticIdentity(
+            FIXTURE_IDENTITY_ISSUER, "synthetic-user-a"
+        )
+        identity_adapter = SyntheticIdentityAdapter(
+            {
+                "allowed-session": self.allowed_identity,
+                "other-session": SyntheticIdentity(
+                    FIXTURE_IDENTITY_ISSUER, "synthetic-user-b"
+                ),
+            }
+        )
+        self.signer = FixtureIdentitySigner(
+            self.key, self.clock, self.correlation_ids
+        )
+        self.edge = ReferenceEdge(
+            self.fixture_set.attachments,
+            identity_adapter=identity_adapter,
+            identity_signer=self.signer,
+        )
+        self.registration_sets: list[dict[str, Any]] = []
+        for entry in self.manifest["generations"]:
+            document = load_json_document(self.registration_root / entry["path"])
+            self.assertEqual(document.violations, ())
+            self.registration_sets.append(document.value)
+            result = self.edge.activate(document.value)
+            self.assertTrue(result.accepted, result.issues)
+            self.assertEqual(result.generation_digest, entry["expected_digest"])
+
+    def _session_headers(self, session: str = "allowed-session") -> tuple[tuple[str, str], ...]:
+        return ((FIXTURE_SESSION_HEADER, session),)
+
+    def test_reviewed_registrations_activate_the_exact_fixture_set(self) -> None:
+        self.assertEqual(
+            [entry["generation"] for entry in self.manifest["generations"]],
+            [1, 2],
+        )
+        self.assertEqual(
+            set(self.fixture_set.states),
+            {"fixture-public", "fixture-authenticated", "fixture-restricted"},
+        )
+        self.assertEqual(
+            set(self.fixture_set.attachments),
+            {
+                "urn:comfforts:app-platform:fixture:fixture-public:web",
+                "urn:comfforts:app-platform:fixture:fixture-public:api",
+                "urn:comfforts:app-platform:fixture:fixture-authenticated:web",
+                "urn:comfforts:app-platform:fixture:fixture-restricted:web",
+            },
+        )
+
+        catalogue = self.edge.handle(Request("GET", "/"))
+        parser = _CatalogueParser()
+        parser.feed(catalogue.body.decode("utf-8"))
+        self.assertEqual(parser.links, ["/public", "/restricted"])
+        self.assertNotIn("/authenticated", parser.links)
+
+        public = self.edge.handle(Request("GET", "/public"))
+        public_api = self.edge.handle(Request("GET", "/public/api/v1/status"))
+        authenticated = self.edge.handle(
+            Request("GET", "/authenticated", headers=self._session_headers())
+        )
+        restricted = self.edge.handle(
+            Request("GET", "/restricted", headers=self._session_headers())
+        )
+        self.assertEqual((public.status, public.body), (200, b"public fixture\n"))
+        self.assertEqual(
+            (public_api.status, public_api.body),
+            (200, b"public fixture api\n"),
+        )
+        self.assertEqual((authenticated.status, authenticated.body), (200, b"unrestricted fixture\n"))
+        self.assertEqual((restricted.status, restricted.body), (200, b"unrestricted fixture\n"))
+
+    def test_application_principals_and_feature_entitlements_remain_app_owned(self) -> None:
+        authenticated = self.edge.handle(
+            Request("GET", "/authenticated", headers=self._session_headers())
+        )
+        unrestricted = self.edge.handle(
+            Request("GET", "/restricted", headers=self._session_headers())
+        )
+        premium = self.edge.handle(
+            Request("GET", "/restricted/premium", headers=self._session_headers())
+        )
+
+        self.assertEqual(authenticated.status, 200)
+        self.assertEqual(unrestricted.status, 200)
+        self.assertEqual((premium.status, premium.body), (403, b"feature denied\n"))
+        self.assertEqual(premium.outcome, "forwarded")
+
+        public_state = self.fixture_set.states["fixture-public"].snapshot()
+        authenticated_state = self.fixture_set.states[
+            "fixture-authenticated"
+        ].snapshot()
+        restricted_state = self.fixture_set.states["fixture-restricted"].snapshot()
+        self.assertEqual(public_state.principal_count, 0)
+        self.assertEqual(authenticated_state.principal_count, 1)
+        self.assertEqual(restricted_state.principal_count, 1)
+        self.assertEqual(restricted_state.feature_denials, 1)
+        self.assertNotEqual(
+            authenticated_state.principal_fingerprints,
+            restricted_state.principal_fingerprints,
+        )
+
+    def test_fixture_state_and_identity_are_isolated_across_applications(self) -> None:
+        states = self.fixture_set.states
+        self.assertEqual(len({id(state) for state in states.values()}), 3)
+        with self.assertRaises(AttributeError):
+            setattr(states["fixture-public"], "application_id", "other-application")
+
+        self.edge.handle(Request("GET", "/public"))
+        after_public = {name: state.snapshot() for name, state in states.items()}
+        self.assertEqual(after_public["fixture-public"].handled_requests, 1)
+        self.assertEqual(after_public["fixture-authenticated"].handled_requests, 0)
+        self.assertEqual(after_public["fixture-restricted"].handled_requests, 0)
+
+        self.edge.handle(
+            Request("GET", "/authenticated", headers=self._session_headers())
+        )
+        after_authenticated = {
+            name: state.snapshot() for name, state in states.items()
+        }
+        self.assertEqual(after_authenticated["fixture-public"].handled_requests, 1)
+        self.assertEqual(
+            after_authenticated["fixture-authenticated"].handled_requests, 1
+        )
+        self.assertEqual(after_authenticated["fixture-restricted"].handled_requests, 0)
+
+        assertion = self.signer.issue(
+            self.allowed_identity, AUTHENTICATED_AUDIENCE
+        )
+        restricted_attachment = self.fixture_set.attachments[
+            "urn:comfforts:app-platform:fixture:fixture-restricted:web"
+        ]
+        cross_application = restricted_attachment(
+            Request(
+                "GET",
+                "/",
+                headers=((VERIFIED_IDENTITY_HEADER, assertion),),
+            )
+        )
+        self.assertEqual((cross_application.status, cross_application.body), (401, b"identity denied\n"))
+        self.assertEqual(
+            states["fixture-restricted"].snapshot().handled_requests,
+            0,
+        )
+
+        missing = restricted_attachment(Request("GET", "/"))
+        self.assertEqual((missing.status, missing.body), (401, b"identity denied\n"))
+        self.assertEqual(
+            states["fixture-restricted"].snapshot().handled_requests,
+            0,
+        )
+
+    def test_registration_inputs_are_independent_and_revision_bound(self) -> None:
+        application_revision = hashlib.sha256(
+            (PROJECT_ROOT / "fixtures" / "applications.py").read_bytes()
+        ).hexdigest()
+        for registration_set in self.registration_sets:
+            self.assertEqual(
+                registration_set["proposal"]["source_revision"],
+                application_revision,
+            )
+            self.assertEqual(
+                {item["application_id"] for item in registration_set["registrations"]},
+                {
+                    "fixture-public",
+                    "fixture-authenticated",
+                    "fixture-restricted",
+                },
+            )
+
+        committed_text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(self.registration_root.glob("*.json"))
+        ).lower()
+        self.assertNotIn("contract-test-v1", committed_text)
+        self.assertNotIn("ai_finance", committed_text)
+        self.assertNotIn("finance assistant", committed_text)
+        self.assertNotIn("terraform", committed_text)
+        self.assertNotIn("credential", committed_text)
+        self.assertIn(RESTRICTED_AUDIENCE, committed_text)
 
 
 if __name__ == "__main__":
