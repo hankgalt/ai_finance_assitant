@@ -2,7 +2,8 @@
 
 Version 1.1 | Status: AP-M6 implementation in progress; catalogue, routing, sessions, admission,
 assertions, application verification, Cloud Run attachment resolution, and bounded proxying
-implemented locally; provider operation, Live, and Adoption qualification unavailable
+implemented locally; read-only status and redacted completion events implemented locally; provider
+operation, Live, and Adoption qualification unavailable
 
 This directory is the design authority for Comfforts App Platform. AP-M3 supplies Contract (`C`)
 evidence through the logical design, threat boundary, Version 1 schemas, deterministic compiler,
@@ -52,8 +53,11 @@ readiness, owner, audience, and edge-caller grant checks. AP-M6-W8 implements bo
 HTTP-stream, SSE, upload, download, and WebSocket delivery with service identity, header
 replacement, cancellation, timeouts, concurrency, and process-local rate limits. Deterministic
 verification uses only fakes and ephemeral loopback transports; it performs no provider operation.
-An absent behavior or later authority must not be inferred from planning documents, fixture code,
-branch history, discussion, or an Integration Draft.
+AP-M6-W9 implements operator-authorized generation status, shared correlation, coarse local adapter
+health, and one typed redacted completion event per request or stream. It configures no operator
+identity, provider log sink, bucket, retention, or Live readback. An absent behavior or later
+authority must not be inferred from planning documents, fixture code, branch history, discussion,
+or an Integration Draft.
 
 ## Incremental delivery sequence
 
@@ -82,7 +86,9 @@ small reviewable commits, merge it, and only then begin the next item.
    AP-M6-W4 supplies catalogue and registered routing, AP-M6-W5 supplies sessions and admission,
    AP-M6-W6 supplies assertions and application verification, and AP-M6-W7 supplies Cloud Run
    attachment resolution. AP-M6-W8 supplies bounded application proxying; later work packages
-   remain unavailable. AP-M6 performs no Terraform or cloud mutation.
+   remain unavailable. AP-M6-W9 supplies read-only status and redacted completion events. Later
+   qualification and handoff packages remain unavailable. AP-M6 performs no Terraform or cloud
+   mutation.
 7. **Terraform and workflow implementation — later:** AP-M7 may implement reviewed configuration
    and static gates only after AP-M6 merges; it performs no authenticated plan or apply.
 8. **Non-production qualification deployment — later:** AP-M8 may bootstrap and deploy only through

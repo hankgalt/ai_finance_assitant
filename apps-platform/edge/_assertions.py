@@ -377,7 +377,12 @@ class AssertionIssuer:
         self._clock = clock
         self._correlation_ids = correlation_ids
 
-    async def issue(self, identity: PlatformIdentity, audience: str) -> str:
+    async def issue(
+        self,
+        identity: PlatformIdentity,
+        audience: str,
+        correlation_id: str | None = None,
+    ) -> str:
         if not isinstance(identity, PlatformIdentity):
             raise AssertionUnavailable("identity assertion unavailable")
         issued_at = _clock_value(self._clock)
@@ -388,7 +393,11 @@ class AssertionIssuer:
             audience=audience,
             issued_at=issued_at,
             expires_at=issued_at + ASSERTION_LIFETIME_SECONDS,
-            correlation_id=self._correlation_ids.token(24),
+            correlation_id=(
+                correlation_id
+                if correlation_id is not None
+                else self._correlation_ids.token(24)
+            ),
         )
         payload = asdict(context)
         if validate_contract_instance(payload, IDENTITY_CONTEXT_SCHEMA):

@@ -1,8 +1,8 @@
 # App Platform system design
 
 Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile;
-Cloud Run attachment resolution and bounded proxying implemented locally; no provider operation or
-live infrastructure is implemented
+Cloud Run attachment resolution, bounded proxying, read-only status, and redacted completion events
+implemented locally; no provider operation or live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -743,6 +743,30 @@ cap plus bounded path and query leaves room below the global external Applicatio
 [request-timeout guidance](https://cloud.google.com/run/docs/configuring/request-timeout), and
 [load-balancer quotas](https://cloud.google.com/load-balancing/docs/quotas). Larger uploads or
 downloads require a later reviewed profile rather than an application-specific exception.
+
+AP-M6-W9 adds one reserved, read-only `/_platform/status` operation. It denies access unless an
+injected operator authorizer approves the request; the initial exact-session adapter compares only
+the immutable issuer-and-subject pair. The response contains the bound source revision, non-secret
+component version, Registration Generation number and digest, contract and compiler versions, and
+coarse process-local adapter states. It contains no route table, attachment reference or target,
+restricted member, operator identity, session, assertion, provider payload, state, plan, secret, or
+mutation interface. Status reads the already bound generation and local observations; it cannot
+load, discover, activate, reload, roll back, or change them. Exact operator identity and deployed
+authorization remain infrastructure inputs.
+
+An outer ASGI completion boundary creates one opaque correlation identifier for each HTTP request
+or WebSocket connection. The same value is supplied to any application assertion and replaces any
+visitor correlation header before application delivery. After the boundary closes, a typed event
+can contain only source revision, generation digest, normalized application and attachment-based
+route identifiers, coarse outcome, response status class or WebSocket class, bounded latency,
+correlation identifier, and non-secret component versions. Stream timeout, size closure,
+disconnect, cancellation, and WebSocket close update only the coarse outcome. Sink failure marks
+the local sink observation degraded and never changes the visitor response.
+
+The production event adapter writes the typed JSON object through an injected standard logger;
+deterministic tests use an in-memory sink. Neither adapter accepts an arbitrary event mapping.
+Provider log routing, the dedicated bucket, seven-day retention, owner-only access, and absence of
+external export remain AP-M7 through AP-M9 configuration and Live evidence, not AP-M6 behavior.
 
 ## Fixture boundary
 

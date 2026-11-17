@@ -19,6 +19,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from websockets.asyncio.client import connect as websocket_connect
 from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
+from ._observability import correlation_id, record_outcome
 from ._routing import RoutedApplicationRequest
 
 
@@ -52,6 +53,7 @@ CLIENT_BUCKET_RETENTION_SECONDS = 10.0 * 60.0
 MAX_CLIENT_BUCKETS = 4_096
 
 IDENTITY_HEADER = b"x-comfforts-verified-identity"
+CORRELATION_HEADER = b"x-comfforts-correlation-id"
 PLATFORM_COOKIES = {
     b"__Host-comfforts-session",
     b"__Host-comfforts-oidc",
@@ -69,6 +71,7 @@ HOP_BY_HOP_HEADERS = {
 REQUEST_MANAGED_HEADERS = {
     b"authorization",
     b"host",
+    CORRELATION_HEADER,
     IDENTITY_HEADER,
 }
 SECURITY_SENSITIVE_HEADERS = {
@@ -707,6 +710,7 @@ def _safe_application_set_cookie(value: bytes) -> bool:
 def application_request_headers(
     headers: Iterable[tuple[bytes, bytes]],
     assertion: str | None,
+    request_correlation_id: str | None = None,
 ) -> tuple[tuple[bytes, bytes], ...]:
     """Remove visitor-controlled transport and identity headers."""
 
@@ -730,6 +734,10 @@ def application_request_headers(
         result.append((name, value))
     if assertion is not None:
         result.append((IDENTITY_HEADER, assertion.encode("ascii")))
+    if request_correlation_id is not None:
+        result.append(
+            (CORRELATION_HEADER, request_correlation_id.encode("ascii"))
+        )
     return tuple(result)
 
 
@@ -874,6 +882,16 @@ def _client_key(scope: Mapping[str, Any]) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def _websocket_outcome(close_code: int) -> str:
+    if close_code in {1000, 1001}:
+        return "success"
+    if close_code in {1002, 1009}:
+        return "invalid"
+    if close_code == 4429:
+        return "limited"
+    return "dependency_unavailable"
+
+
 def _response_with_raw_headers(
     body: bytes,
     status_code: int,
@@ -915,6 +933,7 @@ class BoundedApplicationProxy:
         headers = application_request_headers(
             request.scope.get("headers", ()),
             routed.verified_identity_assertion,
+            correlation_id(request.scope),
         )
         upstream_request = UpstreamHttpRequest(
             method=request.method,
@@ -931,8 +950,10 @@ class BoundedApplicationProxy:
                 timeout=self._limits.request_timeout_seconds,
             )
         except RequestBodyTooLarge:
+            record_outcome(request.scope, "limited")
             return _closed_response(413, "request too large")
         except Exception:
+            record_outcome(request.scope, "dependency_unavailable")
             return _closed_response(503, "application unavailable")
         try:
             if not 200 <= upstream.status_code <= 599:
@@ -979,9 +1000,11 @@ class BoundedApplicationProxy:
             stream_lease = await self._streams.acquire(_client_key(request.scope))
             if stream_lease is None:
                 await _safe_close(upstream)
+                record_outcome(request.scope, "limited")
                 return _closed_response(429, "stream limited")
         except Exception:
             await _safe_close(upstream)
+            record_outcome(request.scope, "invalid")
             return _closed_response(502, "application response invalid")
 
         async def stream_body() -> AsyncIterator[bytes]:
@@ -992,6 +1015,7 @@ class BoundedApplicationProxy:
                 while True:
                     remaining = deadline - asyncio.get_running_loop().time()
                     if remaining <= 0:
+                        record_outcome(request.scope, "dependency_unavailable")
                         return
                     try:
                         chunk = await asyncio.wait_for(
@@ -1004,14 +1028,20 @@ class BoundedApplicationProxy:
                     except StopAsyncIteration:
                         return
                     except TimeoutError:
+                        record_outcome(request.scope, "dependency_unavailable")
                         return
                     if not isinstance(chunk, bytes):
+                        record_outcome(request.scope, "invalid")
                         return
                     total += len(chunk)
                     if total > self._limits.stream_bytes:
+                        record_outcome(request.scope, "limited")
                         return
                     if chunk:
                         yield chunk
+            except asyncio.CancelledError:
+                record_outcome(request.scope, "cancelled")
+                raise
             finally:
                 await _safe_close(upstream)
                 await stream_lease.release()
@@ -1076,6 +1106,7 @@ class BoundedApplicationProxy:
             headers=application_request_headers(
                 websocket.scope.get("headers", ()),
                 routed.verified_identity_assertion,
+                correlation_id(websocket.scope),
             ),
             subprotocols=tuple(websocket.scope.get("subprotocols", ())),
         )
@@ -1186,12 +1217,17 @@ class BoundedApplicationProxy:
                 for task in tasks:
                     task.cancel()
                 await asyncio.gather(*tasks, return_exceptions=True)
+            record_outcome(
+                websocket.scope,
+                _websocket_outcome(close_code),
+            )
             await upstream.close(code=close_code)
             try:
                 await websocket.close(code=close_code)
             except (RuntimeError, WebSocketDisconnect):
                 pass
         except Exception:
+            record_outcome(websocket.scope, "dependency_unavailable")
             if upstream is not None:
                 try:
                     await upstream.close(code=1013)

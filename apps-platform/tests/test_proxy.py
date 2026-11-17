@@ -297,6 +297,7 @@ class ProxyEnvelopeTest(unittest.TestCase):
             (
                 (b"host", b"visitor.example"),
                 (b"authorization", b"Bearer visitor-value"),
+                (b"x-comfforts-correlation-id", b"visitor-controlled"),
                 (b"x-comfforts-verified-identity", b"forged"),
                 (b"x-forwarded-for", b"visitor-controlled"),
                 (b"connection", b"keep-alive, x-remove"),
@@ -308,6 +309,7 @@ class ProxyEnvelopeTest(unittest.TestCase):
                 ),
             ),
             "signed.application.assertion",
+            "request-correlation-0001",
         )
 
         self.assertEqual(
@@ -318,6 +320,10 @@ class ProxyEnvelopeTest(unittest.TestCase):
                 (
                     b"x-comfforts-verified-identity",
                     b"signed.application.assertion",
+                ),
+                (
+                    b"x-comfforts-correlation-id",
+                    b"request-correlation-0001",
                 ),
             ),
         )

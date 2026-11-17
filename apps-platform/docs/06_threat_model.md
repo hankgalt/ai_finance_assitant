@@ -1,8 +1,8 @@
 # App Platform threat model
 
 Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls;
-Cloud Run attachment resolution and bounded proxying implemented locally; no provider operation or
-live infrastructure is implemented
+Cloud Run attachment resolution, bounded proxying, read-only status, and redacted completion events
+implemented locally; no provider operation or live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -404,11 +404,13 @@ identifiers. Secret payloads and application data are prohibited and externally 
 artifacts. `F`, `L`, and `A` inspect generated evidence and logs for redaction without recording the
 prohibited payloads themselves.
 
-**Residual risk:** Seven-day owner-only logging, 30-day evidence, no external export, and minimized
-fields are selected but not implemented. AP-M6-W6 assertions exclude email, sessions, provider
-tokens, roles, and application data, but operational redaction remains AP-M6-W9 work. Provider-
-mandated audit metadata may still include operator or network information and remains subject to
-provider access and retention behavior.
+**Residual risk:** AP-M6-W9 implements one typed, minimized local completion-event shape, shared
+correlation, an injected standard-logging seam, prohibited-data tests, and an operator-authorized
+read-only status response. It configures no provider sink or bucket. Seven-day owner-only logging,
+30-day evidence, no external export, and provider audit behavior remain unimplemented and
+unqualified until their infrastructure and Live gates pass. Provider-mandated audit metadata may
+still include operator or network information and remains subject to provider access and retention
+behavior.
 
 ### AP-TM-011 · Unauthorized control-plane change, drift, or supply-chain substitution
 

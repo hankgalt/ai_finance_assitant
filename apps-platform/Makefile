@@ -14,4 +14,4 @@ fixture-check: ## Verify the deterministic in-process fixture edge without exter
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_fixtures
 
 runtime-check: ## Verify the Shared Edge interface without credentials or external network access.
-	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_edge_runtime tests.test_proxy
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_edge_runtime tests.test_proxy tests.test_observability

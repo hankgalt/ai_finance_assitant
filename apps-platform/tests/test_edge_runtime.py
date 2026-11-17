@@ -69,6 +69,7 @@ AsgiApplication = Callable[[AsgiScope, AsgiReceive, AsgiSend], Awaitable[None]]
 GENERATION_BUCKET = "qualification-config"
 GENERATION_OBJECT = "compiled/generation-2.json"
 GENERATION_OBJECT_GENERATION = 7
+SOURCE_REVISION = "0123456789abcdef0123456789abcdef01234567"
 GENERATION_CONTENT_DIGEST = (
     "sha256:697e0ef7d5c03490afe2e82f990fa306"
     "ad5a19b37b575de1b70634bc966f930e"
@@ -177,6 +178,7 @@ def generation_configuration(
 ) -> RuntimeConfiguration:
     return RuntimeConfiguration(
         profile="qualification-v1",
+        source_revision=SOURCE_REVISION,
         generation_bucket=GENERATION_BUCKET,
         generation_object=GENERATION_OBJECT,
         generation_object_generation=GENERATION_OBJECT_GENERATION,
@@ -564,6 +566,14 @@ class FixedTokenSource:
 
     def token(self, entropy_bytes: int) -> str:
         del entropy_bytes
+        return self._values.pop(0)
+
+
+class FixedCorrelationIds:
+    def __init__(self, values: list[str]) -> None:
+        self._values = values
+
+    def new(self) -> str:
         return self._values.pop(0)
 
 
@@ -1505,7 +1515,6 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
             "/alphabet",
             "/Alpha",
             "/_platform",
-            "/_platform/status",
             "/.well-known",
         )
         malformed_paths = (
@@ -2332,7 +2341,7 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         clock = FixedClock(10_000)
         issuer, keys = assertion_components(
             clock,
-            ["request-correlation-0001"],
+            ["unused-issuer-correlation"],
         )
         handoff = RecordingRouteHandoff()
         app = create_app(
@@ -2344,6 +2353,9 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
                 clock=clock,
                 assertion_issuer=issuer,
                 verification_key_source=keys,
+                correlation_ids=FixedCorrelationIds(
+                    ["request-correlation-0001"]
+                ),
             ),
         )
 
@@ -2702,12 +2714,19 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         self.assertEqual(source.load_count, 1)
 
     def test_generation_binding_must_be_complete_and_well_formed(self) -> None:
+        with self.assertRaisesRegex(ValueError, "full Git object identifier"):
+            RuntimeConfiguration(
+                profile="qualification-v1",
+                source_revision="abbreviated",
+            )
+
         with self.assertRaisesRegex(
             ValueError,
             "generation binding must be complete",
         ):
             RuntimeConfiguration(
                 profile="qualification-v1",
+                source_revision=SOURCE_REVISION,
                 generation_bucket=GENERATION_BUCKET,
             )
 
@@ -2717,6 +2736,7 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         ):
             RuntimeConfiguration(
                 profile="qualification-v1",
+                source_revision=SOURCE_REVISION,
                 generation_bucket=GENERATION_BUCKET,
                 generation_object=GENERATION_OBJECT,
                 generation_object_generation=cast(Any, True),
@@ -2818,11 +2838,15 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         ):
             RuntimeConfiguration(
                 profile=cast(Any, "unreviewed-profile"),
+                source_revision=SOURCE_REVISION,
             )
 
     def test_unconfigured_edge_fails_closed_through_asgi_interface(self) -> None:
         app = create_app(
-            RuntimeConfiguration(profile="qualification-v1"),
+            RuntimeConfiguration(
+                profile="qualification-v1",
+                source_revision=SOURCE_REVISION,
+            ),
             RuntimeAdapters(),
         )
 

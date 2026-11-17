@@ -3,7 +3,9 @@
 Status: AP-M6 implementation in progress; immutable generation loading, catalogue, routing,
 Platform Sessions, admission, identity assertions, application verification, and Cloud Run
 attachment resolution plus bounded HTTP, SSE, and WebSocket proxying are implemented locally.
-AP-M4 remains Fixture-qualified and AP-M5 remains planning-validated.
+Read-only generation status, correlation, adapter-health observations, and redacted completion
+events are also implemented locally. AP-M4 remains Fixture-qualified and AP-M5 remains
+planning-validated.
 No Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
 implemented or qualified.
 
@@ -76,6 +78,16 @@ streaming HTTP/SSE, uploads, downloads, and bidirectional WebSockets. Exact requ
 message, timeout, concurrency, and process-local rate limits fail closed and cancel bounded work.
 Production transports are exercised only against ephemeral loopback servers or deterministic
 fakes; no external target, service identity, credential, cloud resource, or Live route is used.
+
+AP-M6-W9 adds an operator-authorization seam and a read-only `/_platform/status` operation exposing
+only source revision, generation facts, and coarse local adapter health. One generated correlation
+identifier follows each HTTP or WebSocket boundary into application delivery and any identity
+assertion. A typed completion-event allow-list retains only revision/generation facts, normalized
+application and route identifiers, coarse outcome, status class, latency, correlation, and
+non-secret component versions. Tests prove prohibited request, response, identity, visitor,
+provider, credential, state, and plan data cannot enter that shape. An injected standard-logging
+adapter exists, but no log bucket, sink, retention rule, operator identity configuration, provider
+call, credential, or Live readback is created or qualified.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

@@ -63,6 +63,19 @@ from ._proxy import (
     SystemMonotonicClock,
     TrustedClientClassifier,
 )
+from ._observability import (
+    AdapterHealthRegistry,
+    CompletionEventMiddleware,
+    CompletionEventSink,
+    CorrelationIdSource,
+    OperatorAuthorizer,
+    SecureCorrelationIdSource,
+    SOURCE_REVISION_PATTERN,
+    correlation_id,
+    record_outcome,
+    record_route,
+    runtime_status_document,
+)
 
 
 DIGEST_PATTERN = re.compile(r"sha256:[0-9a-f]{64}")
@@ -72,6 +85,7 @@ FLOW_COOKIE = "__Host-comfforts-oidc"
 LOGIN_PATH = "/_platform/login"
 CALLBACK_PATH = "/_platform/auth/callback"
 LOGOUT_PATH = "/_platform/logout"
+STATUS_PATH = "/_platform/status"
 SESSION_LIFETIME_SECONDS = 8 * 60 * 60
 FLOW_LIFETIME_SECONDS = 10 * 60
 MAX_QUERY_BYTES = 2_048
@@ -90,6 +104,7 @@ class RuntimeConfiguration:
     """Non-secret process configuration accepted by the Shared Edge."""
 
     profile: Literal["qualification-v1"]
+    source_revision: str
     generation_bucket: str | None = None
     generation_object: str | None = None
     generation_object_generation: int | None = None
@@ -100,6 +115,11 @@ class RuntimeConfiguration:
     def __post_init__(self) -> None:
         if self.profile != "qualification-v1":
             raise ValueError(f"unsupported runtime profile: {self.profile}")
+        if (
+            not isinstance(self.source_revision, str)
+            or SOURCE_REVISION_PATTERN.fullmatch(self.source_revision) is None
+        ):
+            raise ValueError("source revision must be a full Git object identifier")
         generation_values = (
             self.generation_bucket,
             self.generation_object,
@@ -168,6 +188,9 @@ class RuntimeAdapters:
     trusted_client_classifier: TrustedClientClassifier | None = None
     monotonic_clock: MonotonicClock | None = None
     proxy_limits: ProxyLimits | None = None
+    operator_authorizer: OperatorAuthorizer | None = None
+    correlation_ids: CorrelationIdSource | None = None
+    completion_events: CompletionEventSink | None = None
 
 
 def _single_query_value(request: Request, name: str) -> str | None:
@@ -254,9 +277,15 @@ def _validated_return_to(
     if canonical_path is None:
         return None
     if canonical_path != "/":
-        if is_reserved_path(configuration, canonical_path):
+        if (
+            canonical_path != STATUS_PATH
+            and is_reserved_path(configuration, canonical_path)
+        ):
             return None
-        if select_application_route(configuration, canonical_path) is None:
+        if (
+            canonical_path != STATUS_PATH
+            and select_application_route(configuration, canonical_path) is None
+        ):
             return None
     return value
 
@@ -289,6 +318,7 @@ def _valid_google_authorization_url(value: str) -> bool:
 async def _session_identity(
     request: Request | WebSocket,
     adapters: RuntimeAdapters,
+    health: AdapterHealthRegistry,
 ) -> tuple[PlatformIdentity | None, bool]:
     session_id = _cookie_value(request, SESSION_COOKIE)
     if session_id is None:
@@ -298,9 +328,12 @@ async def _session_identity(
     try:
         session = await adapters.identity_store.get_session(session_id)
     except IdentityUnavailable:
+        health.observe("session_store", available=False)
         return None, False
     except Exception:
+        health.observe("session_store", available=False)
         return None, False
+    health.observe("session_store", available=True)
     if session is None:
         return None, True
     if session.expires_at <= adapters.clock.now():
@@ -315,6 +348,7 @@ async def _session_identity(
 async def _resolved_request(
     routed_request: RoutedApplicationRequest,
     adapters: RuntimeAdapters,
+    health: AdapterHealthRegistry,
 ) -> RoutedApplicationRequest | None:
     if routed_request.adapter_kind == ADAPTER_KIND:
         if adapters.attachment_resolver is None:
@@ -331,7 +365,9 @@ async def _resolved_request(
                 )
             )
         except Exception:
+            health.observe("attachment_resolver", available=False)
             return None
+        health.observe("attachment_resolver", available=True)
         return replace(
             routed_request,
             resolved_attachment=resolved_attachment,
@@ -346,6 +382,8 @@ async def _asserted_request(
     identity: PlatformIdentity | None,
     admission_mode: str,
     adapters: RuntimeAdapters,
+    health: AdapterHealthRegistry,
+    request_correlation_id: str | None,
 ) -> RoutedApplicationRequest | None:
     if identity is None:
         return routed_request
@@ -358,9 +396,12 @@ async def _asserted_request(
         assertion = await adapters.assertion_issuer.issue(
             identity,
             routed_request.identity_audience,
+            request_correlation_id,
         )
     except Exception:
+        health.observe("assertion_issuer", available=False)
         return routed_request if admission_mode == "public" else None
+    health.observe("assertion_issuer", available=True)
     return replace(
         routed_request,
         verified_identity_assertion=assertion,
@@ -373,6 +414,19 @@ def create_app(
 ) -> ASGIApp:
     """Create the ASGI application without opening a socket or performing I/O."""
     active_generation: LoadedGeneration | None = None
+    health = AdapterHealthRegistry(
+        {
+            "application_proxy": adapters.application_proxy is not None,
+            "assertion_issuer": adapters.assertion_issuer is not None,
+            "attachment_resolver": adapters.attachment_resolver is not None,
+            "completion_events": adapters.completion_events is not None,
+            "generation_source": adapters.generation_source is not None,
+            "identity_provider": adapters.google_oidc is not None,
+            "operator_authorization": adapters.operator_authorizer is not None,
+            "session_store": adapters.identity_store is not None,
+            "verification_keys": adapters.verification_key_source is not None,
+        }
+    )
 
     @asynccontextmanager
     async def lifespan(_: Starlette):
@@ -387,7 +441,9 @@ def create_app(
                     adapters.generation_source,
                 )
             except GenerationLoadError as error:
+                health.observe("generation_source", available=False)
                 raise RuntimeError(f"generation startup failed: {error.code}") from None
+            health.observe("generation_source", available=True)
         yield
 
     async def unavailable(request: Request) -> Response:
@@ -397,6 +453,45 @@ def create_app(
         if path is None:
             return _closed_response(400, "invalid request")
         identity_ready = _identity_ready(runtime_configuration, adapters)
+
+        if path == STATUS_PATH:
+            if request.method != "GET":
+                return _closed_response(405, "method not allowed")
+            identity, identity_store_available = await _session_identity(
+                request,
+                adapters,
+                health,
+            )
+            if not identity_store_available:
+                return _closed_response(503, "status unavailable")
+            if adapters.operator_authorizer is None:
+                return _closed_response(503, "status unavailable")
+            try:
+                authorized = await adapters.operator_authorizer.authorized(
+                    request,
+                    identity,
+                )
+            except Exception:
+                health.observe("operator_authorization", available=False)
+                return _closed_response(503, "status unavailable")
+            health.observe("operator_authorization", available=True)
+            if not authorized:
+                return _closed_response(403, "forbidden")
+            payload = json.dumps(
+                runtime_status_document(
+                    source_revision=runtime_configuration.source_revision,
+                    generation=active_generation,
+                    health=health,
+                ),
+                ensure_ascii=True,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("ascii")
+            return Response(
+                payload,
+                media_type="application/json",
+                headers={"Cache-Control": "no-store"},
+            )
 
         if path == LOGIN_PATH:
             if not identity_ready:
@@ -437,7 +532,11 @@ def create_app(
                 if not _valid_google_authorization_url(provider_url):
                     raise IdentityUnavailable("identity provider unavailable")
             except Exception:
+                health.observe("identity_provider", available=False)
+                health.observe("session_store", available=False)
                 return _closed_response(503, "identity unavailable")
+            health.observe("identity_provider", available=True)
+            health.observe("session_store", available=True)
             response = RedirectResponse(provider_url, status_code=303)
             response.headers["Cache-Control"] = "no-store"
             _set_opaque_cookie(response, FLOW_COOKIE, flow_id, FLOW_LIFETIME_SECONDS)
@@ -486,7 +585,11 @@ def create_app(
                     ),
                 )
             except Exception:
+                health.observe("identity_provider", available=False)
+                health.observe("session_store", available=False)
                 return _closed_response(503, "identity unavailable")
+            health.observe("identity_provider", available=True)
+            health.observe("session_store", available=True)
             response = RedirectResponse(return_to, status_code=303)
             response.headers["Cache-Control"] = "no-store"
             _clear_opaque_cookie(response, FLOW_COOKIE)
@@ -513,7 +616,9 @@ def create_app(
                 try:
                     await adapters.identity_store.delete_session(session_id)
                 except Exception:
+                    health.observe("session_store", available=False)
                     return _closed_response(503, "identity unavailable")
+                health.observe("session_store", available=True)
             response = RedirectResponse(return_to, status_code=303)
             response.headers["Cache-Control"] = "no-store"
             _clear_opaque_cookie(response, SESSION_COOKIE)
@@ -539,7 +644,9 @@ def create_app(
                     separators=(",", ":"),
                 ).encode("utf-8")
             except Exception:
+                health.observe("verification_keys", available=False)
                 return _closed_response(503, "verification keys unavailable")
+            health.observe("verification_keys", available=True)
             return Response(
                 payload,
                 media_type="application/json",
@@ -560,7 +667,11 @@ def create_app(
             active_generation.configuration,
             route["application_id"],
         )
-        identity, identity_store_available = await _session_identity(request, adapters)
+        identity, identity_store_available = await _session_identity(
+            request,
+            adapters,
+            health,
+        )
         if admission_mode != "public" and identity is None:
             if not identity_ready or not identity_store_available:
                 return _closed_response(503, "identity unavailable")
@@ -594,7 +705,16 @@ def create_app(
         )
         if routed_request is None:
             return _closed_response(404, "not found")
-        routed_request = await _resolved_request(routed_request, adapters)
+        record_route(
+            request.scope,
+            routed_request.application_id,
+            routed_request.attachment_id,
+        )
+        routed_request = await _resolved_request(
+            routed_request,
+            adapters,
+            health,
+        )
         if routed_request is None:
             return _closed_response(503, "application attachment unavailable")
         routed_request = await _asserted_request(
@@ -602,6 +722,8 @@ def create_app(
             identity,
             admission_mode,
             adapters,
+            health,
+            correlation_id(request.scope),
         )
         if routed_request is None:
             return _closed_response(503, "identity assertion unavailable")
@@ -614,10 +736,17 @@ def create_app(
             routed_request.resolved_attachment is not None
             and adapters.application_proxy is not None
         ):
-            return await adapters.application_proxy.forward_http(
-                request,
-                routed_request,
-            )
+            try:
+                response = await adapters.application_proxy.forward_http(
+                    request,
+                    routed_request,
+                )
+            except Exception:
+                health.observe("application_proxy", available=False)
+                record_outcome(request.scope, "dependency_unavailable")
+                return _closed_response(503, "application unavailable")
+            health.observe("application_proxy", available=True)
+            return response
         return _closed_response(503, "application forwarding unavailable")
 
     async def websocket_application(websocket: WebSocket) -> None:
@@ -642,6 +771,7 @@ def create_app(
         identity, identity_store_available = await _session_identity(
             websocket,
             adapters,
+            health,
         )
         if admission_mode != "public" and identity is None:
             close_code = (
@@ -680,7 +810,16 @@ def create_app(
         if routed_request is None:
             await websocket.close(code=4404, reason="not found")
             return
-        routed_request = await _resolved_request(routed_request, adapters)
+        record_route(
+            websocket.scope,
+            routed_request.application_id,
+            routed_request.attachment_id,
+        )
+        routed_request = await _resolved_request(
+            routed_request,
+            adapters,
+            health,
+        )
         if routed_request is None:
             await websocket.close(code=1013, reason="application unavailable")
             return
@@ -689,6 +828,8 @@ def create_app(
             identity,
             admission_mode,
             adapters,
+            health,
+            correlation_id(websocket.scope),
         )
         if routed_request is None:
             await websocket.close(code=1013, reason="identity unavailable")
@@ -704,10 +845,20 @@ def create_app(
         ):
             await websocket.close(code=1013, reason="application unavailable")
             return
-        await adapters.application_proxy.forward_websocket(
-            websocket,
-            routed_request,
-        )
+        try:
+            await adapters.application_proxy.forward_websocket(
+                websocket,
+                routed_request,
+            )
+        except Exception:
+            health.observe("application_proxy", available=False)
+            record_outcome(websocket.scope, "dependency_unavailable")
+            try:
+                await websocket.close(code=1013, reason="application unavailable")
+            except RuntimeError:
+                pass
+            return
+        health.observe("application_proxy", available=True)
 
     application = Starlette(
         routes=[
@@ -716,9 +867,19 @@ def create_app(
         ],
         lifespan=lifespan,
     )
-    return RuntimeLimitMiddleware(
+    monotonic_clock = adapters.monotonic_clock or SystemMonotonicClock()
+    limited_application = RuntimeLimitMiddleware(
         application,
         limits=adapters.proxy_limits or ProxyLimits(),
-        clock=adapters.monotonic_clock or SystemMonotonicClock(),
+        clock=monotonic_clock,
         classifier=adapters.trusted_client_classifier,
+    )
+    return CompletionEventMiddleware(
+        limited_application,
+        source_revision=runtime_configuration.source_revision,
+        generation_digest=runtime_configuration.generation_digest,
+        correlation_ids=adapters.correlation_ids or SecureCorrelationIdSource(),
+        sink=adapters.completion_events,
+        clock=monotonic_clock,
+        health=health,
     )

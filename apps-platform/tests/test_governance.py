@@ -40,6 +40,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             "edge/_assertions.py",
             "edge/_generation.py",
             "edge/_identity.py",
+            "edge/_observability.py",
             "edge/_proxy.py",
             "edge/_routing.py",
             "edge/_runtime.py",
@@ -51,6 +52,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             "tests/test_edge_runtime.py",
             "tests/test_fixtures.py",
             "tests/test_governance.py",
+            "tests/test_observability.py",
             "tests/test_proxy.py",
             "tests/fixtures/assertion-test-keys.jwk.json",
             "tests/fixtures/oidc-test-private.jwk.json",
@@ -78,9 +80,16 @@ class ProjectAuthorityTest(unittest.TestCase):
         )
         lock = tomllib.loads((PROJECT_ROOT / "uv.lock").read_text(encoding="utf-8"))
         makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+        observability = (PROJECT_ROOT / "edge/_observability.py").read_text(
+            encoding="utf-8"
+        )
         packages = {package["name"]: package for package in lock["package"]}
 
         self.assertEqual(pyproject["project"]["requires-python"], ">=3.12")
+        self.assertIn(
+            f'RUNTIME_VERSION = "{pyproject["project"]["version"]}"',
+            observability,
+        )
         self.assertEqual(
             pyproject["project"]["dependencies"],
             [
@@ -191,9 +200,10 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
         self.assertIn(
-            "AP-M6 Cloud Run attachment resolution and bounded proxying recorded",
+            "AP-M6 Cloud Run attachment resolution, bounded proxying, read-only status,",
             layout,
         )
+        self.assertIn("redacted completion events recorded", layout)
         self.assertIn("`contracts/`", layout)
         self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)
