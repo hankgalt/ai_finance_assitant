@@ -1,6 +1,6 @@
 # App Platform architecture decision records
 
-Version 0.5 | Status: accepted decisions through initial Live qualification planning; no platform infrastructure is implemented
+Version 0.6 | Status: accepted decisions through initial Live qualification planning; no platform infrastructure is implemented
 
 These records capture hard-to-reverse App Platform boundaries. They are authoritative only for this
 project and do not transfer ownership of an existing application's resources. Requirement
@@ -679,3 +679,133 @@ Assistant record, certificate, load balancer, or state.
   cleanup at its expiration.
 - This decision creates no registration file, configuration bucket, object, edge revision, DNS
   record, certificate, deployment, mutation, or Live evidence.
+
+## ADR-009 · Bound demo observability, evidence, and spend
+
+Status: Accepted
+
+Requirements: AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007, AP-PR-008, AP-QR-002,
+AP-QR-004, AP-QR-005, AP-QR-006
+
+### Context
+
+The qualification environment is a low-traffic public demo with no production availability
+commitment. Detailed visitor or application logging would create privacy exposure without improving
+the generic platform evidence boundary. Unbounded Cloud Run scaling, retention, image history, or
+diagnostic exports could also exceed the owner's small budget even when application traffic is low.
+
+Budget notifications are not a hard spending cap, and Cloud Run instance limits can be exceeded
+briefly during a deployment or traffic spike. The platform therefore needs layered controls and an
+explicit owner response rather than claiming that one provider setting prevents all excess spend.
+
+### Decision
+
+Platform runtime logs use structured records in a dedicated Cloud Logging bucket in the
+qualification project and `us-west1`. Log access is restricted to the App Platform Owner, retention
+is seven days, and no sink exports logs outside the cloud project.
+
+One edge event per completed request or streaming-connection boundary may record only:
+
+- source revision and Registration Generation digest;
+- immutable application identifier and normalized route identifier;
+- coarse admission, routing, dependency, and response outcome;
+- response status class, latency, and correlation identifier; and
+- platform component and non-secret version identifiers needed for readback.
+
+The platform does not log raw assertions, session cookies or identifiers, restricted member sets,
+issuer-subject pairs, email addresses, request or response bodies, query strings, raw application
+paths, application data, provider payloads, secrets, Terraform state, saved plans, or streaming
+chunks. The edge does not intentionally retain source IP addresses, user-agent strings, or other
+visitor metadata. Provider-mandated administrative audit metadata remains inside the project under
+provider access controls and is not copied into platform logs or evidence.
+
+Control-plane audit events include compilation rejection, reviewed plan creation, apply, generation
+activation and rollback, DNS or TLS action, key rotation, IAM or state-backend change, denied
+operator action, drift detection and reconciliation, break-glass use, incident start and closure,
+and destructive cleanup. These events use digests and coarse outcomes rather than embedding the
+affected state or secret material.
+
+Live qualification evidence is a redacted, revision-scoped bundle stored in a dedicated private GCS
+evidence bucket in the qualification project. It records source and plan digests, generation and
+image digests, provider and runtime readback outcomes, exact evaluation commands, timestamps,
+failures, limitations, and evidence-class labels. Evidence retention is 30 days and access is
+limited to the App Platform Owner. Evidence is not exported outside the project. Screenshots,
+authenticated browser state, raw provider responses, and unredacted logs are never authoritative
+evidence. Git may retain only an approved secret-free evidence index or digest, not the bundle.
+
+The App Platform Owner is the initial security, availability, privacy, and cost incident contact.
+Incident handling stops new changes, records the affected revision and generation, preserves
+permitted evidence, assesses whether a route suspension or owner-confirmed rollback is safe, and
+records recovery and follow-up. It does not authorize automatic deletion, credential disclosure,
+or silent provider-console repair. Automated security and availability alerts beyond the budget
+notifications are deferred until post-qualification operating needs are known; a mandatory Live
+gate failure is itself a failed qualification, not an alert substitute.
+
+The qualification project has a monthly budget of USD 20 with owner notifications at 50, 80, and
+100 percent of forecast or actual spend as configured by the provider. At 50 percent the owner
+reviews attribution. At 80 percent new billable changes pause pending review. At 100 percent the
+owner decides whether to continue, suspend nonessential registrations, or perform an explicitly
+approved teardown. Billing is not disabled automatically, and no budget event destroys state,
+evidence, DNS, keys, or application resources.
+
+The initial Cloud Run limits are:
+
+| Runtime | Minimum instances | Maximum instances | CPU | Memory | Concurrency |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Shared Edge | 0 | 2 | 1 vCPU | 512 MiB | 20 |
+| Each Fixture Application | 0 | 1 | 1 vCPU | 512 MiB | 10 |
+
+Scale-to-zero and reasonable cold starts are accepted. SSE and WebSocket connections are supported
+for at most 55 minutes per connection and consume concurrency while open. The platform does not
+pre-warm an instance. A provider may briefly exceed the maximum during deployment or traffic
+spikes, so these values are cost guards rather than absolute spend guarantees.
+
+The initial environment has exactly one non-production Shared Edge, global load balancer, and
+qualification hostname. It enables no CDN, WAF, HSM key, production replica, always-on instance,
+Firestore backup, or Firestore point-in-time recovery. Firestore contains only minimal expiring
+Platform Session data; access rejects the eight-hour expiry independently of asynchronous cleanup.
+KMS retains only the active signing version and the preceding verification version required by the
+approved overlap.
+
+Artifact Registry retains the active, rollback, and current-candidate image for each service.
+Cleanup policy is evaluated in dry-run mode first. Deleting an unreferenced image, old edge revision,
+compiled generation, or replaced application target requires owner approval and the applicable
+rollback-window checks; it is never inferred from a budget alert.
+
+Terraform validation must reject an unapproved billable service, additional environment or load
+balancer, nonzero Cloud Run minimum, absent maximum, larger initial CPU or memory allocation,
+longer retention, backup or PITR enablement, CDN, WAF, HSM, or missing ownership labels. Billable
+resources use at least `environment`, `managed_by`, `state_owner`, and, where applicable,
+`application_id` labels.
+
+The platform project pays for Shared Edge resources and the initial same-project qualification
+fixtures. A future application-owned project pays for its runtime, data, networking, and provider
+services unless an Application Adoption explicitly approves another allocation. Cross-project
+references never give the platform access to application billing or Terraform state.
+
+### Considered alternatives
+
+- **Retain detailed request logs for troubleshooting:** rejected because identity, paths, payloads,
+  and visitor metadata create unnecessary privacy and evidence risk for a demo.
+- **Export logs to an external analytics service:** rejected because it expands access, retention,
+  cost, and incident scope before a measured need exists.
+- **Treat screenshots as Live evidence:** rejected because they are difficult to redact, bind to a
+  source revision, reproduce, or validate mechanically.
+- **Set minimum Cloud Run instances to avoid cold starts:** rejected because low traffic and
+  reasonable cold starts are accepted while an always-on baseline would consume the small budget.
+- **Automatically disable billing or destroy resources at USD 20:** rejected because a partial
+  shutdown can lose recovery controls, leave DNS inconsistent, or destroy application-owned state.
+- **Enable every provider security and availability service initially:** rejected because CDN, WAF,
+  HSM, backups, and production redundancy are not required by the demo threat or availability
+  commitment and need separate cost justification.
+
+### Consequences
+
+- Seven-day logs support short investigations but do not provide long-term visitor analytics.
+- Evidence must be reviewed or promoted before its 30-day retention expires; expiration never turns
+  a missing gate into a pass.
+- Long-lived streams may hold both permitted edge instances and delay other requests at the selected
+  concurrency, which is acceptable for initial low traffic and must be measured during Live gates.
+- The USD 20 budget provides notification and response thresholds, not guaranteed maximum spend.
+- This decision creates no log or evidence bucket, budget, alert, runtime limit, label, cleanup
+  policy, incident automation, provider mutation, or Live evidence.

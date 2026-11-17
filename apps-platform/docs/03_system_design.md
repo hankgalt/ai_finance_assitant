@@ -1,6 +1,6 @@
 # App Platform system design
 
-Version 0.6 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
+Version 0.7 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -9,7 +9,7 @@ consuming application.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007, ADR-008
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007, ADR-008, ADR-009
 
 ## Design outcome
 
@@ -537,9 +537,55 @@ identifiers. They must not contain secret payloads, raw credentials, restricted 
 signed assertions, provider payloads, application request bodies, or application data. A
 correlation identifier is not an identity or authorization signal.
 
-Audit retention, logging backend, alert thresholds, and live cost controls remain deployment and
-evaluation decisions. Their absence is not permission to log more data or imply operational
-monitoring.
+The initial logging, evidence, incident, and cost profile is defined below. Its selection does not
+make a sink, retention policy, alert, responder, quota, or budget operational.
+
+### Initial logging, evidence, incident, and cost profile
+
+The edge emits one structured completion event per request or streaming connection into a dedicated
+Cloud Logging bucket in the qualification project and `us-west1`. Seven-day retention and
+owner-only access apply. Events contain only generation, application and route identifiers, coarse
+outcomes, status class, latency, correlation identifier, and non-secret platform versions. They
+exclude identity, visitor metadata, payloads, application data, assertions, sessions, secrets,
+state, saved plans, and stream chunks. Logs have no external sink.
+
+Control-plane events record digest-bound plan, apply, activation, rollback, DNS/TLS, key, IAM,
+state, drift, break-glass, incident, and destructive-cleanup outcomes without copying protected
+payloads. Provider-required administrative audit metadata remains restricted inside the project and
+is not copied into platform evidence.
+
+Secret-free Live evidence is a 30-day, owner-readable bundle in a dedicated GCS evidence bucket.
+It contains revision and plan digests, generation and image digests, redacted provider and runtime
+readback, commands, timestamps, results, failures, limitations, and evidence-class labels. A
+screenshot or raw provider export is not an authoritative record. Git may hold only a reviewed safe
+index or digest.
+
+The App Platform Owner is the initial incident responder. Response stops new mutation, identifies
+the revision and generation, preserves permitted evidence, and requires an explicit decision for
+suspension, rollback, secret rotation, or cleanup. Only budget notifications are automated in the
+first profile; later security or availability alerts require measured operating needs and a new
+reviewed decision.
+
+The project budget is USD 20 per month with owner notifications at 50, 80, and 100 percent. The
+80-percent threshold pauses new billable changes, and the 100-percent threshold requires an owner
+continuation, suspension, or teardown decision. No threshold disables billing or mutates resources
+automatically.
+
+The Shared Edge uses zero minimum and two maximum 1-vCPU, 512-MiB Cloud Run instances at concurrency
+20. Each Fixture Application uses zero minimum and one maximum instance with the same CPU and memory
+at concurrency 10. Streams last at most 55 minutes and hold concurrency while open. The initial
+profile has one non-production edge and load balancer and no CDN, WAF, HSM, production replica,
+always-on instance, Firestore backup, or Firestore point-in-time recovery.
+
+Firestore holds only expiring Platform Sessions. KMS keeps only active and required overlapping
+verification versions. Artifact Registry retains active, rollback, and current-candidate images;
+cleanup begins in dry-run and deletion remains owner-approved. Terraform checks reject unbounded or
+larger runtimes, extra environments or edges, unapproved billable services, longer retention, and
+missing `environment`, `managed_by`, `state_owner`, or applicable `application_id` labels.
+
+The platform project pays for Shared Edge and initial same-project qualification resources. Later
+application projects pay for their runtime, data, networking, and provider services unless their
+Application Adoption explicitly records another allocation.
 
 ## Fixture boundary
 
@@ -717,7 +763,8 @@ This design intentionally does not select or implement:
   endpoint, registration database, or operator control plane;
 - a configuration bucket, compiled generation object, candidate edge revision, traffic change,
   DNS record, certificate activation, readback execution, or rollback execution;
-- a log backend, retention period, alerting system, live cost threshold, or evidence store; or
+- a log or evidence bucket, sink, retention rule, budget, alert, runtime scaling setting, cleanup
+  policy, label policy, incident automation, or cost-response action;
 - Finance Assistant registration, Application Adoption, migration, access expansion, or cutover.
 
 The implementation plan, evaluation strategy, threat model, versioned schemas, and deterministic
@@ -730,9 +777,10 @@ This system design remains documentation authority rather than operational evide
 revision-scoped Contract evidence that the Version 1 schemas and deterministic reference compiler
 satisfy their declared offline gate. AP-M4 supplies the Fixture evidence defined by Version 0.2.
 Version 0.3 selects the initial GCP Live topology, Version 0.4 selects its identity trust profile,
-Version 0.5 selects state and operator authority, and Version 0.6 selects activation, DNS, readback,
-and rollback behavior. None supplies Terraform, provider, network, identity, deployment, or Live
-evidence. Adoption qualification remains a later application-owned gate.
+Version 0.5 selects state and operator authority, Version 0.6 selects activation, DNS, readback, and
+rollback behavior, and Version 0.7 selects observability, evidence, incident, and cost controls.
+None supplies Terraform, provider, network, identity, deployment, or Live evidence. Adoption
+qualification remains a later application-owned gate.
 
 ## Design trace
 
@@ -746,3 +794,4 @@ evidence. Adoption qualification remains a later application-owned gate.
 | Fixture and adoption boundary | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 |
 | Initial GCP Live topology and Cloud Run attachments | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
 | Terraform state and operator authority | AP-PR-002, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-007 |
+| Observability, evidence, incidents, and cost | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007, AP-PR-008; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-004, ADR-009 |

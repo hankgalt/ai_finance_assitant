@@ -183,9 +183,10 @@ class ProjectAuthorityTest(unittest.TestCase):
                 "ADR-006",
                 "ADR-007",
                 "ADR-008",
+                "ADR-009",
             ],
         )
-        self.assertEqual(decisions.count("Status: Accepted"), 8)
+        self.assertEqual(decisions.count("Status: Accepted"), 9)
         normalized_decisions = " ".join(decisions.split())
         for identifier in (
             "AP-PR-001",
@@ -260,6 +261,26 @@ class ProjectAuthorityTest(unittest.TestCase):
             "no registration file, configuration bucket, object, edge revision, DNS",
         ):
             self.assertIn(activation_and_rollback_decision, normalized_decisions)
+
+        for evidence_and_cost_decision in (
+            "dedicated Cloud Logging bucket",
+            "retention is seven days",
+            "does not intentionally retain source IP addresses",
+            "dedicated private GCS evidence bucket",
+            "Evidence retention is 30 days",
+            "Screenshots, authenticated browser state, raw provider responses",
+            "App Platform Owner is the initial security, availability, privacy, and cost incident contact",
+            "monthly budget of USD 20",
+            "notifications at 50, 80, and 100 percent",
+            "Shared Edge | 0 | 2 | 1 vCPU | 512 MiB | 20",
+            "Each Fixture Application | 0 | 1 | 1 vCPU | 512 MiB | 10",
+            "at most 55 minutes per connection",
+            "no CDN, WAF, HSM key, production replica",
+            "Cleanup policy is evaluated in dry-run mode first",
+            "platform project pays for Shared Edge resources",
+            "no log or evidence bucket, budget, alert, runtime limit",
+        ):
+            self.assertIn(evidence_and_cost_decision, normalized_decisions)
 
     def test_shared_edge_decisions_preserve_exclusive_ownership(self) -> None:
         decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
