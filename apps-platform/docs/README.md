@@ -1,9 +1,7 @@
 # App Platform documentation
 
-Version 1.1 | Status: AP-M6 implementation in progress; catalogue, routing, sessions, admission,
-assertions, application verification, Cloud Run attachment resolution, and bounded proxying
-implemented locally; read-only status and redacted completion events implemented locally; provider
-operation, Live, and Adoption qualification unavailable
+Version 1.2 | Status: AP-M6 locally implemented and passing its deterministic repository gate;
+provider operation, Terraform, deployment, Live, and Adoption qualification unavailable
 
 This directory is the design authority for Comfforts App Platform. AP-M3 supplies Contract (`C`)
 evidence through the logical design, threat boundary, Version 1 schemas, deterministic compiler,
@@ -11,8 +9,10 @@ and reviewed vectors. AP-M4 supplies Fixture (`F`) evidence through a synchronou
 reference edge, synthetic identity boundary, three independent Fixture Applications, reviewed
 registration generations, and deterministic lifecycle journeys. AP-M5 supplies accepted provider
 topology, identity, state, operator, lifecycle, evidence, incident, and cost planning plus a
-deterministic planning gate. Live (`L`) and Adoption (`A`) evidence remain unavailable. No listening
-or deployed Shared Edge, provider identity, Terraform configuration, cloud resource, DNS change,
+deterministic planning gate. AP-M6 supplies locally tested repository implementation of the
+networked Shared Edge and production-adapter logic through deterministic fakes and process-local
+loopback. Live (`L`) and Adoption (`A`) evidence remain unavailable. No deployed Shared Edge,
+provider identity, Terraform configuration, cloud resource, DNS change,
 application migration, or production credential is implemented.
 
 ## Current reading order and authority
@@ -34,19 +34,20 @@ application migration, or production credential is implemented.
    requirements, accepted decisions, and system design.
 10. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
 11. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
-12. [Provider-runtime handoff](../prompts/starting_prompt.md) provides a bounded entry point for
-    proposing AP-M6 only after AP-M5 merges.
+12. [Terraform-and-workflow handoff](../prompts/starting_prompt.md) provides a bounded entry point
+    for proposing AP-M7 authority only after AP-M6 merges.
 
 AP-M3 Contract behavior, AP-M4 Fixture behavior, and AP-M5 planning authority are merged and pass
-their deterministic gates. AP-M6-W1 is accepted. AP-M6-W2 implements the locked dependency
-environment and closed-default ASGI foundation. AP-M6-W3 implements bounded immutable-generation
+their deterministic gates. AP-M6-W1 through AP-M6-W11 are implemented locally, and the complete
+AP-EVAL-M6 gate passes. AP-M6-W2 implements the locked dependency environment and closed-default
+ASGI foundation. AP-M6-W3 implements bounded immutable-generation
 loading and a locally tested Cloud Storage source adapter; it performs no provider operation.
 AP-M6-W4 implements escaped catalogue projection, canonical path closure, registered route and
 mount selection, and path rewriting. AP-M6-W5 implements the Google OIDC and opaque Platform
 Session boundary, public/authenticated/restricted admission, exact restricted membership, absolute
-expiry, safe logout, and production/fake provider and store seams. Its route handoff remains closed
-until forwarding exists. AP-M6-W6 implements minimized ES256 assertions, exact application
-audiences, Cloud KMS and deterministic signing seams, public-only current/overlap JWKS, visitor-
+expiry, safe logout, and production/fake provider and store seams. AP-M6-W6 implements minimized
+ES256 assertions, exact application audiences, Cloud KMS and deterministic signing seams,
+public-only current/overlap JWKS, visitor-
 value replacement, and independent application verification with bounded key caching. AP-M6-W7
 implements strict Cloud Run URN parsing, injected production/fake metadata adapters, and exact
 readiness, owner, audience, and edge-caller grant checks. AP-M6-W8 implements bounded HTTP,
@@ -55,9 +56,12 @@ replacement, cancellation, timeouts, concurrency, and process-local rate limits.
 verification uses only fakes and ephemeral loopback transports; it performs no provider operation.
 AP-M6-W9 implements operator-authorized generation status, shared correlation, coarse local adapter
 health, and one typed redacted completion event per request or stream. It configures no operator
-identity, provider log sink, bucket, retention, or Live readback. An absent behavior or later
-authority must not be inferred from planning documents, fixture code, branch history, discussion,
-or an Integration Draft.
+identity, provider log sink, bucket, retention, or Live readback. AP-M6-W10 binds all runtime and
+prior regression gates into the default check, enforces loopback-only tests and clean extraction,
+and verifies exact limits, isolation, and redaction. AP-M6-W11 records only local implementation
+status and hands the next task to AP-M7 after merge. An absent behavior or later authority must not
+be inferred from planning documents, fixture code, branch history, discussion, or an Integration
+Draft.
 
 ## Incremental delivery sequence
 
@@ -80,17 +84,16 @@ small reviewable commits, merge it, and only then begin the next item.
    ADR-005 through ADR-009, the provider-specific design, AP-M5 plan, AP-EVAL-M5, and future claim
    boundaries. It creates no runtime, Terraform, workflow authority, cloud resource, DNS change, or
    Live evidence. Its merged evidence proves planning consistency only.
-6. **Networked provider runtime — implementation in progress:** AP-M6 selects the deep ASGI module,
+6. **Networked provider runtime — locally implemented:** AP-M6 implements the deep ASGI module,
    locked dependency policy, exact request profile, eleven work packages, and ten deterministic
-   gates. AP-M6-W2 supplies the locked foundation, AP-M6-W3 supplies immutable generation loading,
-   AP-M6-W4 supplies catalogue and registered routing, AP-M6-W5 supplies sessions and admission,
-   AP-M6-W6 supplies assertions and application verification, and AP-M6-W7 supplies Cloud Run
-   attachment resolution. AP-M6-W8 supplies bounded application proxying; later work packages
-   remain unavailable. AP-M6-W9 supplies read-only status and redacted completion events. Later
-   qualification and handoff packages remain unavailable. AP-M6 performs no Terraform or cloud
-   mutation.
-7. **Terraform and workflow implementation — later:** AP-M7 may implement reviewed configuration
-   and static gates only after AP-M6 merges; it performs no authenticated plan or apply.
+   gates. The default gate passes with deterministic fakes and process-local loopback. This is
+   repository implementation evidence only: AP-M6 performs no Terraform, cloud mutation,
+   deployment, Live qualification, or Application Adoption. Its pull request must merge before the
+   next slice begins.
+7. **Terraform and workflow implementation — next after merge:** AP-M7 must first refine its
+   detailed implementation and evaluation authority on a separate owner-approved branch. It may
+   then implement reviewed configuration and static gates only; it performs no authenticated plan
+   or apply.
 8. **Non-production qualification deployment — later:** AP-M8 may bootstrap and deploy only through
    separately approved protected operator actions after repository extraction and AP-M7 merge.
 9. **Live qualification — later:** AP-M9 must execute the approved Live gates against the exact
@@ -152,7 +155,8 @@ requirements or silently specialize the platform around one application.
 ## Evidence discipline
 
 Passing contract and Fixture tests are revision-scoped Contract and Fixture evidence. Passing
-AP-EVAL-M5 proves planning consistency only. Neither is deployed or operational evidence. Each
+AP-EVAL-M5 proves planning consistency only. Passing AP-EVAL-M6 proves only the locally tested
+repository implementation named by that gate. None is deployed or operational evidence. Each
 future capability must pass its named gate and, where applicable, retain secret-free Live evidence.
 Credentials, Terraform state, saved plans, authenticated browser state, and unredacted external
 payloads are never committed.

@@ -1,11 +1,11 @@
 # Comfforts App Platform
 
-Status: AP-M6 implementation in progress; immutable generation loading, catalogue, routing,
-Platform Sessions, admission, identity assertions, application verification, and Cloud Run
-attachment resolution plus bounded HTTP, SSE, and WebSocket proxying are implemented locally.
-Read-only generation status, correlation, adapter-health observations, and redacted completion
-events are also implemented locally. AP-M4 remains Fixture-qualified and AP-M5 remains
-planning-validated.
+Status: AP-M6 is locally implemented and passes its deterministic AP-EVAL-M6 repository gate.
+Immutable generation loading, catalogue and routing, Platform Sessions and admission, identity
+assertions and application verification, Cloud Run attachment resolution, bounded HTTP, SSE, and
+WebSocket proxying, read-only status, correlation, adapter-health observations, and redacted
+completion events are implemented locally. AP-M4 remains Fixture-qualified and AP-M5 remains
+planning-validated. AP-M6 supplies repository implementation evidence only.
 No Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
 implemented or qualified.
 
@@ -44,19 +44,18 @@ within their declared boundaries. The contract layer supplies Contract (`C`) evi
 in-process harness supplies Fixture (`F`) evidence only; AP-M5 supplies planning authority rather
 than provider or deployed evidence.
 
-AP-M3 through AP-M5 are merged and pass their deterministic gates. AP-M6-W1 is accepted, and
-AP-M6-W2 supplies the locked dependency environment and closed-default ASGI foundation. AP-M6-W3
-adds bounded compiled-generation parsing, exact object/content/generation binding, and an injected
+AP-M3 through AP-M5 are merged and pass their deterministic gates. AP-M6-W1 through AP-M6-W11 are
+implemented locally, and the complete credential-free `make check` gate passes. AP-M6-W2 supplies
+the locked dependency environment and closed-default ASGI foundation. AP-M6-W3 adds bounded
+compiled-generation parsing, exact object/content/generation binding, and an injected
 Cloud Storage source adapter. It performs no provider call during construction or verification and
 cannot discover, compile, activate, or mutate a generation. AP-M6-W4 renders the compiled catalogue
-and performs canonical, lifecycle-aware route and mount selection. Its deterministic handoff
-remains closed with `503`; it resolves no target and forwards no application request or response.
+and performs canonical, lifecycle-aware route and mount selection.
 AP-M6-W5 adds Google OIDC authorization-code-with-PKCE behavior, opaque host-only eight-hour
 Platform Sessions, Firestore and in-memory session adapters, optional public identity, exact
 issuer-and-subject restricted admission, and platform-owned logout. Deterministic tests replace
-provider and Firestore I/O; no OAuth credential or provider operation is required. Later work
-packages own proxy and operational behavior. No AP-M6 package authorizes Terraform, cloud, DNS,
-identity configuration, deployment, or Live mutation.
+provider and Firestore I/O; no OAuth credential or provider operation is required. No AP-M6 package
+authorizes Terraform, cloud, DNS, identity configuration, deployment, or Live mutation.
 
 AP-M6-W6 replaces admitted identity at the route handoff with a minimized, application-audience-
 bound ES256 assertion. It adds deterministic and Cloud KMS signing adapters, public-only JWKS with
@@ -88,6 +87,13 @@ non-secret component versions. Tests prove prohibited request, response, identit
 provider, credential, state, and plan data cannot enter that shape. An injected standard-logging
 adapter exists, but no log bucket, sink, retention rule, operator identity configuration, provider
 call, credential, or Live readback is created or qualified.
+
+AP-M6-W10 enforces the complete AP-EVAL-M6 matrix, including exact numeric boundaries, immutable
+generation and identity paths, fake-provider parity, streaming cancellation and isolation,
+loopback-only networking, history-independent extraction, dependency locking, redaction, and all
+prior regressions. AP-M6-W11 reconciles this status and routes the next task to an AP-M7 authority
+proposal only after the AP-M6 pull request merges. AP-M7 must remain a separate branch and pull
+request.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

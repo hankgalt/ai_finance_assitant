@@ -185,7 +185,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         normalized_overview = " ".join(overview.split())
 
         self.assertIn(
-            "AP-M6 implementation in progress",
+            "AP-M6 locally implemented",
             normalized_index,
         )
         self.assertIn("Contract (`C`) evidence", normalized_index)
@@ -197,9 +197,11 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("AP-M6", overview)
         self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
         self.assertIn(
-            "bounded HTTP, SSE, and WebSocket proxying are implemented locally",
+            "bounded HTTP, SSE, and WebSocket proxying",
             normalized_overview,
         )
+        self.assertIn("AP-M6 supplies repository implementation evidence only", overview)
+        self.assertIn("complete credential-free `make check` gate passes", overview)
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
         self.assertIn(
@@ -448,7 +450,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("## Application Adoption", glossary)
         self.assertIn("app-owned test state", layout)
 
-    def test_provider_runtime_prompt_loads_authority_without_copying_it(
+    def test_terraform_workflow_prompt_loads_authority_without_copying_it(
         self,
     ) -> None:
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
@@ -475,18 +477,18 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
             "An Integration Draft is not Application Adoption",
             "credential-free, deterministic, and non-mutating",
-            "updated `main` after the AP-M5 pull request has merged",
-            "propose AP-M6, the smallest locally testable networked provider-runtime slice",
-            "network server/framework, dependency policy",
-            "exact live header, request-body, response-body, non-streaming timeout",
-            "Do not write Terraform",
+            "updated `main` after the AP-M6 pull request has merged",
+            "propose AP-M7, the smallest Terraform-and-workflow implementation-authority slice",
+            "Treat absent detailed work packages, configuration contracts, evaluation commands",
+            "Do not initialize a Terraform backend",
+            "AP-M7 belongs on a new bounded branch and pull request after AP-M6 merges",
         ):
             self.assertIn(boundary, normalized_prompt)
         self.assertNotIn("### AP-PR-", prompt)
         self.assertNotIn("## ADR-", prompt)
         self.assertNotIn("terraform apply", prompt)
         self.assertIn(
-            "[Provider-runtime handoff](starting_prompt.md)",
+            "[Terraform-and-workflow handoff](starting_prompt.md)",
             prompt_index,
         )
 
@@ -511,8 +513,8 @@ class ProjectAuthorityTest(unittest.TestCase):
             index,
         )
         for later_slice in (
-            "Networked provider runtime — implementation in progress",
-            "Terraform and workflow implementation — later",
+            "Networked provider runtime — locally implemented",
+            "Terraform and workflow implementation — next after merge",
             "Non-production qualification deployment — later",
             "Live qualification — later",
             "Finance Application Adoption — later and independent",
@@ -520,12 +522,12 @@ class ProjectAuthorityTest(unittest.TestCase):
             self.assertIn(later_slice, index)
         self.assertIn("separate bounded branch and pull request", normalized_index)
         self.assertIn(
-            "propose AP-M6, the smallest locally testable networked provider-runtime slice",
+            "propose AP-M7, the smallest Terraform-and-workflow implementation-authority slice",
             normalized_prompt,
         )
         self.assertIn("Wait for owner approval before editing", normalized_prompt)
-        self.assertIn("Do not write Terraform", normalized_prompt)
-        self.assertIn("AP-M6 belongs on a new bounded branch", normalized_prompt)
+        self.assertIn("Do not initialize a Terraform backend", normalized_prompt)
+        self.assertIn("AP-M7 belongs on a new bounded branch", normalized_prompt)
 
     def test_fixture_design_selects_a_bounded_in_process_profile(self) -> None:
         design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
