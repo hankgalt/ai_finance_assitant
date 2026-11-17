@@ -1,7 +1,7 @@
 # App Platform documentation
 
-Version 1.0 | Status: AP-M5 infrastructure planning authority implemented and validated; Live and
-Adoption qualification unavailable
+Version 1.1 | Status: AP-M6 networked-runtime authority defined; runtime, Live, and Adoption
+qualification unavailable
 
 This directory is the design authority for Comfforts App Platform. AP-M3 supplies Contract (`C`)
 evidence through the logical design, threat boundary, Version 1 schemas, deterministic compiler,
@@ -24,10 +24,10 @@ migration, or production credential is implemented.
 5. [System design](03_system_design.md) defines logical modules, interfaces, lifecycle, state
    ownership, selected Live topology, and unresolved implementation inputs.
 6. [Threat model](06_threat_model.md) defines trust zones, threats, controls, and evidence classes.
-7. [AP-M3 through AP-M5 implementation plan](04_implementation_plan.md) owns delivery items 3
-   through 5 and separates later runtime, Terraform, deployment, and Live work.
-8. [Evaluation strategy](05_evaluation_strategy.md) defines AP-M3 through AP-M5 deterministic gates
-   and the future AP-M6 through AP-M9 claim boundaries.
+7. [AP-M3 through AP-M6 implementation plan](04_implementation_plan.md) owns delivery items 3
+   through 6 and separates runtime, Terraform, deployment, and Live work.
+8. [Evaluation strategy](05_evaluation_strategy.md) defines AP-M3 through AP-M6 deterministic gates
+   and the future AP-M7 through AP-M9 claim boundaries.
 9. [Version 1 contract index](../contracts/README.md) owns machine interfaces subordinate to the
    requirements, accepted decisions, and system design.
 10. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
@@ -35,12 +35,12 @@ migration, or production credential is implemented.
 12. [Provider-runtime handoff](../prompts/starting_prompt.md) provides a bounded entry point for
     proposing AP-M6 only after AP-M5 merges.
 
-AP-M3 Contract behavior and AP-M4 Fixture behavior are implemented and pass their deterministic
-gates. AP-M5 planning authority is implemented and passes AP-EVAL-M5 at this revision; item 5
-delivery is complete only after this pull request merges. AP-M5 implements no provider runtime or
-infrastructure and grants no mutation authority. AP-M6 still requires an owner-approved runtime
-proposal and its named decisions from updated `main`; an absent authority must not be inferred from
-planning documents, fixture code, branch history, discussion, or an Integration Draft.
+AP-M3 Contract behavior, AP-M4 Fixture behavior, and AP-M5 planning authority are merged and pass
+their deterministic gates. AP-M6 defines its network module, dependency, limit, implementation, and
+evaluation authority but implements no runtime behavior merely because those documents exist.
+AP-M6-W2 may begin only after owner acceptance of the exact AP-M6-W1 values. An absent behavior or
+later authority must not be inferred from planning documents, fixture code, branch history,
+discussion, or an Integration Draft.
 
 ## Incremental delivery sequence
 
@@ -63,10 +63,10 @@ small reviewable commits, merge it, and only then begin the next item.
    ADR-005 through ADR-009, the provider-specific design, AP-M5 plan, AP-EVAL-M5, and future claim
    boundaries. It creates no runtime, Terraform, workflow authority, cloud resource, DNS change, or
    Live evidence. Completion is recorded only after this pull request merges.
-6. **Networked provider runtime — next after item 5 merges:** from updated `main`, propose AP-M6,
-   resolve the network framework, dependency policy, and exact remaining request limits, and obtain
-   owner approval before implementing locally testable runtime behavior. AP-M6 performs no
-   Terraform or cloud mutation.
+6. **Networked provider runtime — authority defined, implementation pending:** AP-M6 selects the
+   deep ASGI module, locked dependency policy, exact request profile, eleven work packages, and ten
+   deterministic gates. Owner acceptance of AP-M6-W1 permits ordered local implementation; AP-M6
+   performs no Terraform or cloud mutation.
 7. **Terraform and workflow implementation — later:** AP-M7 may implement reviewed configuration
    and static gates only after AP-M6 merges; it performs no authenticated plan or apply.
 8. **Non-production qualification deployment — later:** AP-M8 may bootstrap and deploy only through
@@ -94,9 +94,10 @@ Conflicts are resolved in this order:
 8. Prompts
 
 Current AP-M3 and AP-M4 authorities authorize the Version 1 contract implementation, deterministic
-in-process Fixture harness, and their Contract and Fixture evidence. AP-M5 authorizes planning only.
-Provider runtime, Terraform, deployment, Live qualification, and Application Adoption remain
-separate AP-M6 through AP-M9 or application-owned gates rather than inheriting authority from AP-M5.
+in-process Fixture harness, and their Contract and Fixture evidence. AP-M5 authorizes planning, and
+AP-M6 authorizes only local provider-runtime implementation and tests after AP-M6-W1 acceptance.
+Terraform, deployment, Live qualification, and Application Adoption remain separate AP-M7 through
+AP-M9 or application-owned gates.
 
 ## Scope labels
 

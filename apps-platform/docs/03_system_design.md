@@ -1,6 +1,7 @@
 # App Platform system design
 
-Version 0.7 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
+Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile; no
+provider runtime or live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -587,6 +588,77 @@ The platform project pays for Shared Edge and initial same-project qualification
 application projects pay for their runtime, data, networking, and provider services unless their
 Application Adoption explicitly records another allocation.
 
+### AP-M6 networked runtime profile
+
+AP-M6 implements one deep Shared Edge module behind this external interface:
+
+```text
+create_app(runtime_configuration, adapters) -> ASGI application
+```
+
+The returned application is the interface used by the server and by integration tests. It accepts
+all network requests through one pipeline and hides catalogue projection, reserved paths, route
+selection, admission, identity assertion, attachment resolution, forwarding, limits, failure
+mapping, and completion-event redaction. Framework routes may identify platform-reserved paths and
+one catch-all entry, but they may not duplicate registration-derived application routes.
+
+The implementation uses Python 3.12 or newer, Starlette as the ASGI framework, and Uvicorn as the
+server. Provider and network behavior is accepted through internal seams for immutable generation
+loading, Google OIDC, Platform Sessions, assertion signing and public-key discovery, Cloud Run
+metadata, upstream HTTP/WebSocket transport, trusted client classification, and time. Each seam has
+both a production adapter and a deterministic fake before it is treated as real. Callers do not
+assemble the request pipeline or depend on those internal interfaces.
+
+The application-side verifier is a separate deep module with one interface that accepts an
+assertion, expected issuer, expected application audience, verification material, and time, then
+returns either Version 1 Verified Identity Context or an ordered verification violation. It does
+not perform admission, create an Application Principal, or grant a Feature Entitlement.
+
+Direct dependencies are declared in `pyproject.toml`; complete transitive resolution is committed
+in `uv.lock`. Runtime work adds a dependency only with its first production use. The selected
+families are Starlette and Uvicorn for ASGI, HTTPX and `websockets` for upstream transport, Authlib
+and `cryptography` for OIDC and ES256, and official Google Cloud clients for Storage, Firestore,
+KMS, Cloud Run metadata, and service identity. Production code may not hand-build provider signing,
+token, or discovery protocols. `make check` consumes an already synchronized locked environment;
+it performs no installation or network access.
+
+The initial `qualification-v1` request profile applies before target selection and permits lower
+environment settings but no higher value without a reviewed profile change:
+
+- ASCII methods of at most 16 bytes, raw paths of at most 4,096 bytes, and queries of at most 8,192
+  bytes;
+- at most 64 request headers, with an ASCII name of at most 128 bytes, a value of at most 8,192
+  bytes, and at most 32,768 aggregate header bytes;
+- at most 25 MiB per request body and per buffered response body;
+- at most 100 MiB per streamed HTTP response, SSE connection, or WebSocket connection, with at most
+  1 MiB in one WebSocket message;
+- a 10-second upstream connection timeout, a 300-second non-streaming request timeout, a 300-second
+  streaming idle timeout, and the already selected 55-minute absolute streaming lifetime; and
+- at most 20 active requests and 10 streaming connections per edge instance, with at most four
+  streams for one trusted client key.
+
+The profile uses an in-memory, per-instance token bucket of 120 request starts per minute per
+trusted client key with a burst of 40, 10 login starts per 10 minutes per key, and 20 WebSocket
+messages per second with a burst of 40. It also caps all request starts at 600 per minute per
+instance with a burst of 100. Client keys come only from load-balancer-authenticated metadata, are
+held for at most 10 minutes, and are never logged or persisted. When trusted client metadata is
+unavailable, only the instance-wide cap applies. This is bounded demo abuse resistance, not a
+distributed rate-limit or WAF claim; two instances can independently permit their full limits.
+
+Limit or saturation rejection occurs before application selection where possible, returns a closed
+`413`, `429`, or protocol-appropriate close result, and records only the coarse outcome and
+correlation identifier. The runtime drains or cancels bounded work and does not continue an
+upstream operation after the visitor connection or platform timeout closes it. The body and header
+caps remain below the selected provider limits while retaining room for provider-added metadata.
+Specifically, 25 MiB is below Cloud Run's 32-MiB HTTP/1 request and buffered-response limits, the
+55-minute stream lifetime is below its 60-minute request maximum, and the 32-KiB aggregate header
+cap plus bounded path and query leaves room below the global external Application Load Balancer's
+60-KiB combined request-header and URL limit. See the provider's
+[Cloud Run quotas](https://cloud.google.com/run/quotas),
+[request-timeout guidance](https://cloud.google.com/run/docs/configuring/request-timeout), and
+[load-balancer quotas](https://cloud.google.com/load-balancing/docs/quotas). Larger uploads or
+downloads require a later reviewed profile rather than an application-specific exception.
+
 ## Fixture boundary
 
 Fixture Applications are contract consumers, not internal compiler branches or privileged platform
@@ -753,7 +825,7 @@ compiler behavior, paths relative to that root, or ownership boundaries.
 
 ## Explicitly unresolved implementation decisions
 
-This design intentionally does not select or implement:
+This design intentionally does not implement:
 
 - Terraform modules, bucket names, backend objects, workflows, repository-bound federation,
   resource names, state-transfer commands, or IAM grants for the selected state and operator model;
@@ -767,6 +839,10 @@ This design intentionally does not select or implement:
   policy, label policy, incident automation, or cost-response action;
 - Finance Assistant registration, Application Adoption, migration, access expansion, or cutover.
 
+AP-M6 now resolves the network framework, dependency policy, and initial header, body, timeout, and
+abusive-traffic limits as implementation authority. Their presence in this design does not make the
+runtime, production adapters, provider resources, or Live behavior implemented or qualified.
+
 The implementation plan, evaluation strategy, threat model, versioned schemas, and deterministic
 validation added by this delivery item may constrain later work. They cannot describe an unresolved
 runtime or control as operational.
@@ -778,9 +854,10 @@ revision-scoped Contract evidence that the Version 1 schemas and deterministic r
 satisfy their declared offline gate. AP-M4 supplies the Fixture evidence defined by Version 0.2.
 Version 0.3 selects the initial GCP Live topology, Version 0.4 selects its identity trust profile,
 Version 0.5 selects state and operator authority, Version 0.6 selects activation, DNS, readback, and
-rollback behavior, and Version 0.7 selects observability, evidence, incident, and cost controls.
-None supplies Terraform, provider, network, identity, deployment, or Live evidence. Adoption
-qualification remains a later application-owned gate.
+rollback behavior, Version 0.7 selects observability, evidence, incident, and cost controls, and
+Version 0.8 selects the AP-M6 network module, dependency, and bounded-request profile. None supplies
+Terraform, provider, network, identity, deployment, or Live evidence. Adoption qualification
+remains a later application-owned gate.
 
 ## Design trace
 
@@ -793,5 +870,6 @@ qualification remains a later application-owned gate.
 | Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004, ADR-008 |
 | Fixture and adoption boundary | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 |
 | Initial GCP Live topology and Cloud Run attachments | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
+| AP-M6 network module and bounded-request profile | AP-PR-001 through AP-PR-008; AP-QR-002 through AP-QR-006 | ADR-001 through ADR-006, ADR-008, ADR-009 |
 | Terraform state and operator authority | AP-PR-002, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-007 |
 | Observability, evidence, incidents, and cost | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007, AP-PR-008; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-004, ADR-009 |

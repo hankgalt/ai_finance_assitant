@@ -1,8 +1,9 @@
 # Comfforts App Platform
 
-Status: AP-M5 infrastructure planning authority implemented and deterministically validated;
-AP-M4 remains Fixture-qualified. No networked platform service, Terraform configuration, cloud
-resource, deployment, Live evidence, or Application Adoption is implemented or qualified.
+Status: AP-M6 networked-runtime implementation authority defined; runtime implementation has not
+started. AP-M4 remains Fixture-qualified and AP-M5 remains planning-validated. No networked
+platform service, Terraform configuration, cloud resource, deployment, Live evidence, or
+Application Adoption is implemented or qualified.
 
 Comfforts App Platform is a separately governed project temporarily colocated in the
 AI Finance Assistant repository. It is intended to own the shared application catalogue and edge
@@ -34,16 +35,16 @@ or the live Finance Assistant deployment.
 
 Read `AGENTS.md` before changing this project and follow the authority and reading order in
 `docs/README.md`. Product requirements, accepted architecture decisions, system design, threat
-model, AP-M3 through AP-M5 plan and evaluation authority, and Version 1 contracts are authoritative
+model, AP-M3 through AP-M6 plan and evaluation authority, and Version 1 contracts are authoritative
 within their declared boundaries. The contract layer supplies Contract (`C`) evidence, and the
 in-process harness supplies Fixture (`F`) evidence only; AP-M5 supplies planning authority rather
 than provider or deployed evidence.
 
-AP-M3 through AP-M5 deterministic gates pass at this repository revision. Delivery item 5 is
-complete only after this pull request merges. After the merge, use the
-[provider-runtime handoff](prompts/starting_prompt.md) from updated `main` to propose AP-M6 and
-resolve its remaining runtime decisions before implementation. The handoff authorizes no Terraform,
-cloud, DNS, identity, deployment, or Live mutation.
+AP-M3 through AP-M5 are merged and pass their deterministic gates. AP-M6 now defines its runtime
+module, dependency, limit, implementation, and evaluation authority; no AP-M6 runtime behavior is
+implemented by that authority change. Implementation proceeds only in its ordered work packages
+after the owner accepts the exact AP-M6-W1 values. No AP-M6 package authorizes Terraform, cloud,
+DNS, identity configuration, deployment, or Live mutation.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

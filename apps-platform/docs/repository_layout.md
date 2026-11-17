@@ -1,6 +1,7 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M4 deterministic Fixture implementation recorded; AP-M5 infrastructure-planning locations reserved, no infrastructure implemented
+Status: authoritative; AP-M6 runtime locations approved after AP-M6-W1 acceptance; no runtime or
+infrastructure implemented
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this

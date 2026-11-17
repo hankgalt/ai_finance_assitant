@@ -34,6 +34,10 @@ repository's security, source-control, and destructive-action guardrails also ap
 - AP-M5 selects infrastructure and Live-qualification planning boundaries only. It authorizes no
   provider runtime, Terraform configuration, workflow mutation, credential, cloud action, DNS
   change, deployment, or Live claim.
+- AP-M6 authorizes only repository implementation of the networked Shared Edge and production
+  adapter logic tested through deterministic fakes and process-local loopback. It authorizes no
+  Terraform, external network, credential lookup, provider call, cloud or repository mutation,
+  deployment, Live claim, or Application Adoption.
 - Keep canonical platform implementation, contracts, tests, prompts, and evidence inside this
   subtree so repository extraction preserves them.
 

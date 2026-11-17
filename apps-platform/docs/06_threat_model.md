@@ -1,6 +1,7 @@
 # App Platform threat model
 
-Version 0.7 | Status: Fixture-qualified threat model and initial Live control profile; no live infrastructure is implemented
+Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls; no
+provider runtime or live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -424,18 +425,20 @@ request bodies, streaming connections, or traffic volume exhaust validation, edg
 logging, application, or billable provider capacity.
 
 **Required controls:** Contracts place numeric size and count limits on every collection and string.
-Compiler work is bounded and performs no external calls. Future adapters set request, header, body,
-connection, and timeout limits; isolate application failures; and expose explicit cost-bearing
-resources and operator actions. Rate or abuse controls must not silently broaden admission.
+Compiler work is bounded and performs no external calls. AP-M6 adapters enforce the approved
+`qualification-v1` request, header, body, connection, message, duration, concurrency, per-client,
+and per-instance limits; cancel closed work; isolate application failures; and expose no implicit
+cost-bearing action. Rate or abuse controls must not silently broaden admission.
 
-**Evidence:** `C` covers boundary values and deterministic rejection. `F` covers representative
-limit and isolation behavior without load or availability claims. `L` covers provider quotas,
-timeouts, alerts, and billable-resource inventory.
+**Evidence:** `C` covers contract boundary values and deterministic rejection. `F` covers the
+in-process profile. AP-EVAL-M6 covers the exact network-runtime profile with deterministic boundary
+and isolation tests but no load claim. `L` covers provider quotas, timeouts, alerts, billable-resource
+inventory, and observed multi-instance behavior.
 
-**Residual risk:** Scale-to-zero, maximum instances, concurrency, a 55-minute stream limit, and budget
-notifications are selected but not implemented. Provider limits can be exceeded briefly, budget
-notifications do not cap spend, and exact live header, body, and abusive-traffic limits still
-require implementation-plan and Live-gate values.
+**Residual risk:** All runtime and provider controls remain unimplemented until their named slices
+pass. The AP-M6 token buckets are per instance, are not a WAF or distributed rate limit, and can
+permit twice their per-instance values when both selected instances are active. Provider limits can
+be exceeded briefly, and budget notifications do not cap spend.
 
 ### AP-TM-013 · External dependency failure or stale trust material
 
@@ -480,7 +483,7 @@ pass:
 | Decision | Required before |
 | --- | --- |
 | OAuth client values, session-store realization, KMS/JWKS resources, and identity IAM bindings for the selected trust profile | Infrastructure implementation |
-| Exact live header, body, non-streaming timeout, and abusive-traffic limits | Infrastructure implementation and Live qualification |
+| Provider configuration/readback for the selected runtime limits and observed multi-instance abuse behavior | Terraform implementation and Live qualification |
 | Terraform modules, exact bucket and resource names, ingress realization, and IAM bindings for the selected GCP topology | Infrastructure implementation |
 | Dedicated repository identity, workflow subjects, branch protection, protected environment, and federation bindings | Repository extraction and Live mutation |
 | Configuration-bucket, candidate-revision, traffic-pointer, DNS/TLS, readback, and rollback realization | Infrastructure implementation and Live qualification |
