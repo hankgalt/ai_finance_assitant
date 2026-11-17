@@ -1,6 +1,6 @@
 # App Platform threat model
 
-Version 0.3 | Status: Fixture-qualified threat model and initial Live topology profile; no live infrastructure is implemented
+Version 0.4 | Status: Fixture-qualified threat model and initial Live trust profile; no live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -10,7 +10,7 @@ consuming application's security model.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006
 
 System design: [App Platform system design](03_system_design.md)
 
@@ -300,10 +300,10 @@ subject pairs. Applications derive their own principals and never use email as a
 missing, forged, expired, wrong-issuer, wrong-audience, and cross-application assertions. `L` covers
 signer, key discovery, algorithms, audience issuance, and clock behavior.
 
-**Residual risk:** The fixture-only signer, zero skew, 60-second lifetime, and bounded replay store
-qualify only deterministic failure behavior. Production signer selection, algorithms, key custody,
-rotation, skew, lifetime, and distributed replay posture remain unresolved deployment and identity
-decisions.
+**Residual risk:** The Live profile selects Google OIDC, ES256 in Cloud KMS, application audiences,
+a 60-second assertion, 30-second skew, and overlapping public keys, but none is implemented or
+qualified. The demo accepts residual cross-instance replay risk because it makes no distributed
+replay-prevention claim.
 
 ### AP-TM-006 · Admission mistaken for feature authorization
 
@@ -474,7 +474,7 @@ pass:
 
 | Decision | Required before |
 | --- | --- |
-| Production identity provider, signer, algorithms, keys, rotation, skew, lifetime, and distributed replay posture | Live qualification |
+| OAuth client values, session-store realization, KMS/JWKS resources, and identity IAM bindings for the selected trust profile | Infrastructure implementation |
 | Live request, header, body, connection, rate, concurrency, and timeout limits | Live qualification |
 | Terraform modules, state backends, resource names, ingress realization, and IAM bindings for the selected GCP topology | Infrastructure implementation |
 | Operator roles, review separation, branch protection, workload identity, and audit policy | Live mutation |
@@ -501,7 +501,7 @@ requirements without weakening them.
 | Threats | Requirements | Decisions |
 | --- | --- | --- |
 | AP-TM-001 through AP-TM-003 | AP-PR-001, AP-PR-002, AP-PR-003; AP-QR-002, AP-QR-003, AP-QR-004 | ADR-001, ADR-002, ADR-005 |
-| AP-TM-004 through AP-TM-006 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-005 |
+| AP-TM-004 through AP-TM-006 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-005, ADR-006 |
 | AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
-| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-005 |
+| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-005, ADR-006 |
 | AP-TM-014 | AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-006 | ADR-004 |

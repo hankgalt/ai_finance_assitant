@@ -1,6 +1,6 @@
 # App Platform system design
 
-Version 0.3 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
+Version 0.4 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -9,7 +9,7 @@ consuming application.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006
 
 ## Design outcome
 
@@ -335,13 +335,60 @@ Application Principal. A missing, malformed, unsigned, expired, wrong-issuer, or
 assertion fails closed. A public application may receive no identity and must not invent an
 Application Principal for an anonymous request.
 
-The configured identity provider, assertion signer, key discovery, algorithms, maximum assertion
-lifetime, and audience issuance procedure are provider-adapter and deployment decisions. A future
-contract must bind them without weakening the required claims or application verification.
+The initial provider, session, signing, key-discovery, algorithm, lifetime, skew, and rotation
+profile is defined below. It binds the existing Version 1 claims without adding email, provider
+tokens, product roles, or Feature Entitlements to Verified Identity Context.
 
 Admission-policy revocation takes effect at the next request or new streaming-connection boundary.
 This design does not promise termination of an already established connection. Application feature
 revocation remains application-owned.
+
+### Initial Live identity and session profile
+
+The Shared Edge uses Google OIDC authorization code with PKCE and accepts only a verified Google
+issuer and immutable subject. Both consumer Google and Google Workspace accounts may authenticate.
+The Registration Set, not the identity provider, decides whether that identity is admitted to a
+restricted application. The initial profile requires no MFA claim.
+
+The edge creates an opaque Platform Session backed by minimal Firestore Native state in the
+qualification project and region. The browser cookie is host-only, `Secure`, `HttpOnly`,
+`SameSite=Lax`, and scoped to `/`. The session expires absolutely after eight hours and cannot be
+silently renewed past that boundary. The platform retains no Google access or refresh token and
+does not use Visitor identity to call Google APIs.
+
+A valid session may add Verified Identity Context to a public request, while an absent or invalid
+session leaves a public request anonymous. A protected request without a valid session enters the
+edge-owned login flow or fails closed. Restricted membership compares exact issuer-and-subject
+pairs from the reviewed Registration Generation. Email is display-only session metadata and never
+enters the Version 1 assertion.
+
+The platform-reserved logout operation deletes the server-side session, clears the host cookie,
+and accepts only a validated platform-relative return location. It does not revoke the global
+Google session. An application may link to this operation from any registered path but cannot
+implement a second authoritative logout for the Platform Session.
+
+After admission, the edge strips the identity header and creates a compact assertion with a maximum
+60-second lifetime and at most 30 seconds of verifier clock skew. A new assertion is issued for each
+forwarded request or new streaming connection. One environment signer uses a software-protected
+Cloud KMS `EC_SIGN_P256_SHA256` key in `us-west1`, emits `ES256` with a version-specific key
+identifier, and binds every assertion to the registered
+`urn:comfforts:app-platform:audience:<application-id>` value.
+
+Only public verification keys are exposed through `/.well-known/jwks.json`. A new key is published
+before activation, one version signs, and the preceding key remains published for a 24-hour overlap.
+Rotation occurs at least every 90 days. Applications may cache keys for 15 minutes, refresh once on
+an unknown key identifier, and otherwise fail closed when verification material is unavailable or
+stale.
+
+The initial Live profile makes no distributed replay-prevention claim. Short lifetimes, unique
+correlation identifiers, audience binding, TLS, Cloud Run caller IAM, and optional bounded local
+replay checks reduce but do not eliminate replay risk. The Cloud Run edge-caller identity proves
+workload origin; it is not the Visitor and never becomes Verified Identity Context.
+
+Existing application-managed login remains outside this trust boundary. IAP and
+`@react-oauth/google` may continue on existing deployments, but a future Application Adoption must
+remove or isolate them from the platform route before their claims can be treated as application
+identity.
 
 ## Lifecycle and atomic change
 
@@ -592,7 +639,8 @@ This design intentionally does not select or implement:
 
 - Terraform roots, modules, backends, resource names, state-transfer commands, or operator roles
   for the selected GCP topology;
-- an identity provider, OAuth/IAP configuration, signing key, credential, or IAM binding;
+- OAuth client registration values, Firestore session configuration, KMS key versions, secret
+  versions, credentials, or IAM bindings for the selected identity profile;
 - a live catalogue, Shared Edge runtime, `gcp-cloud-run-v1` resolver, external registration
   endpoint, registration database, or operator control plane;
 - a log backend, retention period, alerting system, live cost threshold, or evidence store; or
@@ -607,9 +655,9 @@ runtime or control as operational.
 This system design remains documentation authority rather than operational evidence. AP-M3 provides
 revision-scoped Contract evidence that the Version 1 schemas and deterministic reference compiler
 satisfy their declared offline gate. AP-M4 supplies the Fixture evidence defined by Version 0.2.
-Version 0.3 selects the initial GCP Live topology but supplies no Terraform, provider, network,
-identity, deployment, or Live evidence. Adoption qualification remains a later application-owned
-gate.
+Version 0.3 selects the initial GCP Live topology, and Version 0.4 selects its identity trust
+profile. Neither supplies Terraform, provider, network, identity, deployment, or Live evidence.
+Adoption qualification remains a later application-owned gate.
 
 ## Design trace
 
@@ -618,7 +666,7 @@ gate.
 | Shared Edge and catalogue | AP-PR-001, AP-PR-003; AP-QR-002, AP-QR-006 | ADR-001, ADR-002 |
 | Registration, routing, and compiled generations | AP-PR-002, AP-PR-003, AP-PR-007; AP-QR-004, AP-QR-006 | ADR-002 |
 | Attachments and exclusive ownership | AP-PR-002, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-003 | ADR-001, ADR-002, ADR-004 |
-| Admission and verified identity | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004 |
+| Admission and verified identity | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-006 |
 | Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004 |
 | Fixture and adoption boundary | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 |
 | Initial GCP Live topology and Cloud Run attachments | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |

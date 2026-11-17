@@ -174,9 +174,17 @@ class ProjectAuthorityTest(unittest.TestCase):
 
         self.assertEqual(
             observed,
-            ["ADR-001", "ADR-002", "ADR-003", "ADR-004", "ADR-005"],
+            [
+                "ADR-001",
+                "ADR-002",
+                "ADR-003",
+                "ADR-004",
+                "ADR-005",
+                "ADR-006",
+            ],
         )
-        self.assertEqual(decisions.count("Status: Accepted"), 5)
+        self.assertEqual(decisions.count("Status: Accepted"), 6)
+        normalized_decisions = " ".join(decisions.split())
         for identifier in (
             "AP-PR-001",
             "AP-PR-002",
@@ -204,6 +212,22 @@ class ProjectAuthorityTest(unittest.TestCase):
             "no Terraform configuration",
         ):
             self.assertIn(live_topology_decision, decisions)
+
+        for live_identity_decision in (
+            "authorization-code flow",
+            "Consumer Google",
+            "accounts and Google Workspace accounts",
+            "Firestore Native",
+            "absolute lifetime of eight hours",
+            "EC_SIGN_P256_SHA256",
+            "maximum lifetime of 60 seconds",
+            "at most 30 seconds of clock skew",
+            "at least every 90 days",
+            "24-hour verification overlap",
+            "at most 15 minutes",
+            "does not claim distributed replay prevention",
+        ):
+            self.assertIn(live_identity_decision, normalized_decisions)
 
     def test_shared_edge_decisions_preserve_exclusive_ownership(self) -> None:
         decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
