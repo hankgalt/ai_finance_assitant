@@ -1,8 +1,8 @@
 # App Platform system design
 
 Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile;
-Cloud Run attachment resolution implemented locally; no provider operation or live infrastructure
-is implemented
+Cloud Run attachment resolution and bounded proxying implemented locally; no provider operation or
+live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -687,9 +687,25 @@ unconditional `roles/run.invoker` binding must contain the configured platform e
 principal. Conditional grants are not interpreted by the runtime. Any URL or state address in the
 registration, unsupported adapter, malformed URN, provider failure, missing service, mismatched
 scope, unready service, owner reuse, caller mismatch, audience mismatch, disabled Invoker check, or
-invalid provider target closes before the internal handoff. The handoff still returns `503` because
-request and stream proxying belong only to AP-M6-W8. Local fake readback is not evidence that IAM,
-ingress, a target service, or an edge caller exists in GCP.
+invalid provider target closes before application delivery. Local fake readback is not evidence
+that IAM, ingress, a target service, or an edge caller exists in GCP.
+
+AP-M6-W8 delivers only a successfully selected, admitted, asserted, and resolved request. Its HTTP
+transport obtains a Google service-identity token for the resolved audience, preserves the
+registration-derived rewritten path and raw query bytes, and never accepts a registration-supplied
+URL. Request forwarding removes hop-by-hop, forwarding, visitor authorization, platform-session,
+and visitor-controlled identity values before installing the edge-controlled authorization and
+application assertion. Response forwarding removes hop-by-hop and application-controlled platform
+identity or session behavior while preserving eligible application headers and cookies.
+
+The same proxy supports bounded uploads, buffered responses, streaming HTTP, SSE, downloads, and
+bidirectional WebSockets. It preserves an eligible WebSocket subprotocol, applies the same identity
+replacement, and closes both directions on visitor disconnect, upstream close, size or rate
+violation, idle or absolute timeout, or cancellation. Provider, transport, and malformed-response
+failures map to coarse closed results without selecting a different attachment. Deterministic tests
+exercise the production HTTP and WebSocket transports only against ephemeral process-local
+loopback servers and exercise remaining failure paths through deterministic fakes. They do not
+authenticate to GCP or prove deployed network behavior.
 
 The initial `qualification-v1` request profile applies before target selection and permits lower
 environment settings but no higher value without a reviewed profile change:
@@ -900,8 +916,9 @@ This design intentionally does not implement:
   resource names, state-transfer commands, or IAM grants for the selected state and operator model;
 - OAuth client registration values, Firestore session configuration, KMS key versions, secret
   versions, credentials, or IAM bindings for the selected identity profile;
-- a live catalogue, Shared Edge runtime, `gcp-cloud-run-v1` resolver, external registration
-  endpoint, registration database, or operator control plane;
+- a deployed live catalogue or Shared Edge runtime, provider-qualified `gcp-cloud-run-v1`
+  resolution or proxy operation, external registration endpoint, registration database, or
+  operator control plane;
 - a configuration bucket, compiled generation object, candidate edge revision, traffic change,
   DNS record, certificate activation, readback execution, or rollback execution;
 - a log or evidence bucket, sink, retention rule, budget, alert, runtime scaling setting, cleanup
@@ -909,8 +926,8 @@ This design intentionally does not implement:
 - Finance Assistant registration, Application Adoption, migration, access expansion, or cutover.
 
 AP-M6 now resolves the network framework, dependency policy, and initial header, body, timeout, and
-abusive-traffic limits as implementation authority. Their presence in this design does not make the
-runtime, production adapters, provider resources, or Live behavior implemented or qualified.
+abusive-traffic limits as implementation authority. Local runtime and adapter implementation does
+not make provider resources or Live behavior implemented or qualified.
 
 The implementation plan, evaluation strategy, threat model, versioned schemas, and deterministic
 validation added by this delivery item may constrain later work. They cannot describe an unresolved

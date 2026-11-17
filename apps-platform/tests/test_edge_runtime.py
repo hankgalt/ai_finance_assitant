@@ -21,6 +21,7 @@ from cryptography.hazmat.primitives.asymmetric.utils import Prehashed
 from joserfc import jwk, jwt
 from google.cloud import run_v2
 from google.iam.v1 import policy_pb2
+from starlette.responses import PlainTextResponse
 
 from edge import (
     ApplicationIdentityVerifier,
@@ -387,6 +388,70 @@ async def request_during_lifespan(
     return startup, response
 
 
+async def websocket_during_lifespan(
+    app: AsgiApplication,
+    path: str,
+    *,
+    query_string: bytes = b"",
+    headers: tuple[tuple[bytes, bytes], ...] = (),
+    subprotocols: tuple[str, ...] = ("chat",),
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    lifespan_incoming: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+    lifespan_outgoing: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+
+    async def lifespan_receive() -> dict[str, Any]:
+        return await lifespan_incoming.get()
+
+    async def lifespan_send(message: dict[str, Any]) -> None:
+        await lifespan_outgoing.put(message)
+
+    lifespan_task = asyncio.create_task(
+        app(
+            {
+                "type": "lifespan",
+                "asgi": {"version": "3.0", "spec_version": "2.0"},
+                "state": {},
+            },
+            lifespan_receive,
+            lifespan_send,
+        )
+    )
+    await lifespan_incoming.put({"type": "lifespan.startup"})
+    startup = await lifespan_outgoing.get()
+    incoming: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+    outgoing: list[dict[str, Any]] = []
+
+    async def receive() -> dict[str, Any]:
+        return await incoming.get()
+
+    async def send(message: dict[str, Any]) -> None:
+        outgoing.append(message)
+
+    await incoming.put({"type": "websocket.connect"})
+    await app(
+        {
+            "type": "websocket",
+            "asgi": {"version": "3.0", "spec_version": "2.4"},
+            "http_version": "1.1",
+            "scheme": "wss",
+            "path": path,
+            "raw_path": path.encode("utf-8"),
+            "query_string": query_string,
+            "headers": list(headers),
+            "state": {},
+            "client": ("127.0.0.1", 43210),
+            "server": ("testserver", 443),
+            "subprotocols": list(subprotocols),
+        },
+        receive,
+        send,
+    )
+    await lifespan_incoming.put({"type": "lifespan.shutdown"})
+    await lifespan_outgoing.get()
+    await lifespan_task
+    return startup, outgoing
+
+
 async def failed_startup(
     app: AsgiApplication,
 ) -> tuple[dict[str, Any], str]:
@@ -463,6 +528,26 @@ class RecordingRouteHandoff:
 
     async def dispatch(self, request: Any) -> None:
         self.requests.append(request)
+
+
+class RecordingApplicationProxy:
+    def __init__(self) -> None:
+        self.http_requests: list[Any] = []
+        self.websocket_requests: list[Any] = []
+
+    async def forward_http(self, request: Any, routed: Any) -> Any:
+        self.http_requests.append((request, routed))
+        return PlainTextResponse(
+            "proxied\n",
+            status_code=202,
+            headers={"X-Application-Proxy": "bounded"},
+        )
+
+    async def forward_websocket(self, websocket: Any, routed: Any) -> None:
+        self.websocket_requests.append(routed)
+        await websocket.accept(subprotocol="chat")
+        await websocket.send_text("proxied")
+        await websocket.close(code=1000)
 
 
 class FixedClock:
@@ -1551,6 +1636,119 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         )
         self.assertIsNotNone(routed.resolved_attachment)
         self.assertEqual(routed.resolved_attachment.target_uri, target_uri)
+
+    def test_resolved_http_route_is_delivered_through_application_proxy(self) -> None:
+        document = cloud_run_generation()
+        configuration, source = configured_generation(document)
+        resource = parse_cloud_run_reference(
+            document["routes"][0]["attachments"][0]["resource_reference"]
+        )
+        edge_caller = (
+            "serviceAccount:apps-platform-edge@comfforts-platform-non-prod."
+            "iam.gserviceaccount.com"
+        )
+        provider = InMemoryCloudRunMetadataProvider(
+            {
+                resource: CloudRunServiceMetadata(
+                    resource=resource,
+                    target_uri=(
+                        "https://alpha-app-455651441682.us-west1.run.app"
+                    ),
+                    ready=True,
+                    owner_application_id="alpha-app",
+                    audience=None,
+                    invoker_principals=frozenset({edge_caller}),
+                )
+            }
+        )
+        proxy = RecordingApplicationProxy()
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                attachment_resolver=CloudRunAttachmentResolver(
+                    provider,
+                    edge_caller,
+                ),
+                application_proxy=proxy,
+            ),
+        )
+
+        _, (status, headers, body) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha/report",
+                query_string=b"view=summary",
+            )
+        )
+
+        self.assertEqual(status, 202)
+        self.assertEqual(headers[b"x-application-proxy"], b"bounded")
+        self.assertEqual(body, b"proxied\n")
+        self.assertEqual(len(proxy.http_requests), 1)
+        routed = proxy.http_requests[0][1]
+        self.assertEqual(routed.path, "/report")
+        self.assertEqual(routed.query_string, b"view=summary")
+        self.assertIsNotNone(routed.resolved_attachment)
+
+    def test_resolved_websocket_route_is_delivered_through_application_proxy(
+        self,
+    ) -> None:
+        document = cloud_run_generation()
+        configuration, source = configured_generation(document)
+        resource = parse_cloud_run_reference(
+            document["routes"][0]["attachments"][0]["resource_reference"]
+        )
+        edge_caller = (
+            "serviceAccount:apps-platform-edge@comfforts-platform-non-prod."
+            "iam.gserviceaccount.com"
+        )
+        provider = InMemoryCloudRunMetadataProvider(
+            {
+                resource: CloudRunServiceMetadata(
+                    resource=resource,
+                    target_uri=(
+                        "https://alpha-app-455651441682.us-west1.run.app"
+                    ),
+                    ready=True,
+                    owner_application_id="alpha-app",
+                    audience=None,
+                    invoker_principals=frozenset({edge_caller}),
+                )
+            }
+        )
+        proxy = RecordingApplicationProxy()
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                attachment_resolver=CloudRunAttachmentResolver(
+                    provider,
+                    edge_caller,
+                ),
+                application_proxy=proxy,
+            ),
+        )
+
+        _, outgoing = asyncio.run(
+            websocket_during_lifespan(
+                app,
+                "/alpha/stream",
+                query_string=b"view=summary",
+            )
+        )
+
+        self.assertEqual(
+            [message["type"] for message in outgoing],
+            ["websocket.accept", "websocket.send", "websocket.close"],
+        )
+        self.assertEqual(outgoing[0]["subprotocol"], "chat")
+        self.assertEqual(outgoing[1]["text"], "proxied")
+        self.assertEqual(outgoing[2]["code"], 1000)
+        self.assertEqual(len(proxy.websocket_requests), 1)
+        routed = proxy.websocket_requests[0]
+        self.assertEqual(routed.path, "/stream")
+        self.assertEqual(routed.query_string, b"view=summary")
 
     def test_cloud_run_resolution_failure_never_reaches_handoff(self) -> None:
         edge_caller = (

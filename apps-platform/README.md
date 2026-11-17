@@ -2,8 +2,8 @@
 
 Status: AP-M6 implementation in progress; immutable generation loading, catalogue, routing,
 Platform Sessions, admission, identity assertions, application verification, and Cloud Run
-attachment resolution are implemented locally, while proxy behavior remains unavailable. AP-M4
-remains Fixture-qualified and AP-M5 remains planning-validated.
+attachment resolution plus bounded HTTP, SSE, and WebSocket proxying are implemented locally.
+AP-M4 remains Fixture-qualified and AP-M5 remains planning-validated.
 No Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
 implemented or qualified.
 
@@ -67,7 +67,15 @@ through an injected Cloud Run metadata adapter. Resolution requires matching pro
 service, Application State owner, readiness, application audience, and an unconditional edge-caller
 Invoker grant before the provider-derived target can reach the internal handoff. Deterministic
 metadata exercises success and every closed mismatch; no provider call, IAM mutation, target
-request, credential, or cloud resource is used. AP-M6-W8 still owns application proxying.
+request, credential, or cloud resource is used.
+
+AP-M6-W8 forwards an eligible resolved request through one bounded application proxy. It preserves
+the rewritten path and raw query, obtains a Cloud Run service-identity token, strips hop-by-hop and
+visitor-controlled identity headers, installs the platform assertion, and supports buffered HTTP,
+streaming HTTP/SSE, uploads, downloads, and bidirectional WebSockets. Exact request, response,
+message, timeout, concurrency, and process-local rate limits fail closed and cancel bounded work.
+Production transports are exercised only against ephemeral loopback servers or deterministic
+fakes; no external target, service identity, credential, cloud resource, or Live route is used.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

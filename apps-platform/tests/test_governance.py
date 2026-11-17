@@ -40,6 +40,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             "edge/_assertions.py",
             "edge/_generation.py",
             "edge/_identity.py",
+            "edge/_proxy.py",
             "edge/_routing.py",
             "edge/_runtime.py",
             "edge/verification.py",
@@ -50,6 +51,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             "tests/test_edge_runtime.py",
             "tests/test_fixtures.py",
             "tests/test_governance.py",
+            "tests/test_proxy.py",
             "tests/fixtures/assertion-test-keys.jwk.json",
             "tests/fixtures/oidc-test-private.jwk.json",
             "uv.lock",
@@ -89,9 +91,11 @@ class ProjectAuthorityTest(unittest.TestCase):
                 "google-cloud-firestore>=2.34,<2.35",
                 "google-cloud-storage>=3.17,<3.18",
                 "google-crc32c>=1.9,<1.10",
+                "google-auth>=2.62,<2.63",
                 "httpx>=0.28,<0.29",
                 "starlette>=1.10,<1.11",
                 "uvicorn>=0.54,<0.55",
+                "websockets>=17.4,<18",
             ],
         )
         self.assertFalse(pyproject["tool"]["uv"]["package"])
@@ -102,9 +106,11 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertEqual(packages["google-cloud-firestore"]["version"], "2.34.1")
         self.assertEqual(packages["google-cloud-storage"]["version"], "3.17.1")
         self.assertEqual(packages["google-crc32c"]["version"], "1.9.0")
+        self.assertEqual(packages["google-auth"]["version"], "2.62.2")
         self.assertEqual(packages["httpx"]["version"], "0.28.1")
         self.assertEqual(packages["starlette"]["version"], "1.10.0")
         self.assertEqual(packages["uvicorn"]["version"], "0.54.0")
+        self.assertEqual(packages["websockets"]["version"], "17.4")
         self.assertIn("hash", packages["authlib"]["sdist"])
         self.assertIn("hash", packages["cryptography"]["sdist"])
         self.assertIn("hash", packages["google-cloud-kms"]["sdist"])
@@ -112,9 +118,11 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("hash", packages["google-cloud-firestore"]["sdist"])
         self.assertIn("hash", packages["google-cloud-storage"]["sdist"])
         self.assertIn("hash", packages["google-crc32c"]["sdist"])
+        self.assertIn("hash", packages["google-auth"]["sdist"])
         self.assertIn("hash", packages["httpx"]["sdist"])
         self.assertIn("hash", packages["starlette"]["sdist"])
         self.assertIn("hash", packages["uvicorn"]["sdist"])
+        self.assertIn("hash", packages["websockets"]["sdist"])
         self.assertIn("runtime-check", makefile)
         self.assertNotIn("uv sync", makefile)
         self.assertNotIn("uv lock", makefile)
@@ -177,12 +185,15 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("AP-M6", overview)
         self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
         self.assertIn(
-            "proxy behavior remains unavailable",
+            "bounded HTTP, SSE, and WebSocket proxying are implemented locally",
             normalized_overview,
         )
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
-        self.assertIn("AP-M6 Cloud Run attachment resolution recorded", layout)
+        self.assertIn(
+            "AP-M6 Cloud Run attachment resolution and bounded proxying recorded",
+            layout,
+        )
         self.assertIn("`contracts/`", layout)
         self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)
@@ -679,7 +690,8 @@ class ProjectAuthorityTest(unittest.TestCase):
             normalized_threat_model,
         )
         self.assertIn(
-            "remaining request and proxy limits remain unimplemented",
+            "AP-M6-W8 implements the remaining request, body, response, stream, "
+            "message, duration, concurrency, and process-local rate limits",
             normalized_threat_model,
         )
 

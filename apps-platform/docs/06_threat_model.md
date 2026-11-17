@@ -1,8 +1,8 @@
 # App Platform threat model
 
 Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls;
-Cloud Run attachment resolution implemented locally; no provider operation or live infrastructure
-is implemented
+Cloud Run attachment resolution and bounded proxying implemented locally; no provider operation or
+live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -244,8 +244,9 @@ conflicts. Unknown and malformed paths fail closed without fallback to another a
 `L` confirms the provider adapter implements the same behavior.
 
 **Residual risk:** AP-M6-W4 compares raw and decoded ASGI paths, rejects alternate encodings, and
-uses segment-bounded route and mount selection locally. Uvicorn and provider-specific decoding still
-require process-local and Live conformance gates before qualification.
+uses segment-bounded route and mount selection locally. AP-M6-W8 preserves the selected rewritten
+path and raw query in process-local transport tests. Uvicorn and provider-specific decoding still
+require their later conformance and Live gates before qualification.
 
 ### AP-TM-003 · Malicious or mistaken attachment reference
 
@@ -286,9 +287,11 @@ ingress and IAM configuration. `A` repeats the gate for a real application.
 
 **Residual risk:** AP-M6-W6 implements local visitor-value replacement and independent assertion
 verification. AP-M6-W7 rejects fake metadata without the exact edge-caller Invoker grant, but it
-does not create or prove that caller, Cloud Run ingress, or network isolation. The load balancer and
-deployed network direct-bypass control remain future work. Local metadata and verifier denial must
-never be reported as origin isolation.
+does not create or prove that caller, Cloud Run ingress, or network isolation. AP-M6-W8 strips
+visitor authorization and identity values, installs edge-controlled service identity and the
+application assertion, and forwards only the resolved origin in local tests. The load balancer and
+deployed network direct-bypass control remain future work. Local metadata, transport, and verifier
+denial must never be reported as origin isolation.
 
 ### AP-TM-005 · Identity spoofing, replay, and confused audience
 
@@ -446,8 +449,9 @@ inventory, and observed multi-instance behavior.
 **Residual risk:** AP-M6-W2 implements construction-time profile rejection and an unconfigured
 closed response. AP-M6-W3 bounds compiled-generation bytes and fails closed on load or validation
 failure. AP-M6-W4 enforces the 4,096-byte path limit. AP-M6-W5 bounds identity query and cookie
-inputs and uses absolute session and login-flow expiry. The remaining request and proxy limits
-remain unimplemented until their named slices pass.
+inputs and uses absolute session and login-flow expiry. AP-M6-W8 implements the remaining request,
+body, response, stream, message, duration, concurrency, and process-local rate limits and cancels
+closed work in deterministic tests.
 The AP-M6 token buckets are per instance, are not a WAF or distributed rate limit, and can permit
 twice their per-instance values when both selected instances are active. Provider limits can be
 exceeded briefly, and budget notifications do not cap spend.
@@ -470,10 +474,11 @@ DNS, TLS, key rotation, certificate, provider failure, and recovery behavior.
 failure. AP-M6-W5 fails protected admission closed on provider or session-store failure while public
 routes remain anonymously usable. AP-M6-W6 fails protected assertion issuance and stale or
 unavailable verification keys closed; public routes may remain anonymous. AP-M6-W7 fails one
-unavailable or mismatched attachment closed without selecting another target. The selected DNS,
-certificate, activation, and owner-confirmed rollback sequence is not implemented or qualified.
-Provider availability and disaster recovery beyond the 15-minute post-approval rollback objective
-remain outside the demo commitment.
+unavailable or mismatched attachment closed without selecting another target. AP-M6-W8 maps local
+transport failure, timeout, malformed response, disconnect, and cancellation to closed outcomes
+without another target. The selected DNS, certificate, activation, and owner-confirmed rollback
+sequence is not implemented or qualified. Provider availability and disaster recovery beyond the
+15-minute post-approval rollback objective remain outside the demo commitment.
 
 ### AP-TM-014 · Integration Draft or fixture mistaken for Application Adoption
 

@@ -12,8 +12,9 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
-from starlette.routing import Route
+from starlette.routing import Route, WebSocketRoute
 from starlette.types import ASGIApp
+from starlette.websockets import WebSocket
 
 from ._attachments import (
     ADAPTER_KIND,
@@ -45,6 +46,7 @@ from ._identity import (
 )
 from ._routing import (
     RouteHandoff,
+    RoutedApplicationRequest,
     is_reserved_path,
     render_catalogue,
     request_path,
@@ -52,6 +54,14 @@ from ._routing import (
     route_admission_policy,
     routed_application_request,
     select_application_route,
+)
+from ._proxy import (
+    ApplicationProxy,
+    MonotonicClock,
+    ProxyLimits,
+    RuntimeLimitMiddleware,
+    SystemMonotonicClock,
+    TrustedClientClassifier,
 )
 
 
@@ -154,6 +164,10 @@ class RuntimeAdapters:
     token_source: TokenSource | None = None
     assertion_issuer: AssertionIssuer | None = None
     verification_key_source: VerificationKeySource | None = None
+    application_proxy: ApplicationProxy | None = None
+    trusted_client_classifier: TrustedClientClassifier | None = None
+    monotonic_clock: MonotonicClock | None = None
+    proxy_limits: ProxyLimits | None = None
 
 
 def _single_query_value(request: Request, name: str) -> str | None:
@@ -273,7 +287,7 @@ def _valid_google_authorization_url(value: str) -> bool:
 
 
 async def _session_identity(
-    request: Request,
+    request: Request | WebSocket,
     adapters: RuntimeAdapters,
 ) -> tuple[PlatformIdentity | None, bool]:
     session_id = _cookie_value(request, SESSION_COOKIE)
@@ -296,6 +310,61 @@ async def _session_identity(
             pass
         return None, True
     return session.identity, True
+
+
+async def _resolved_request(
+    routed_request: RoutedApplicationRequest,
+    adapters: RuntimeAdapters,
+) -> RoutedApplicationRequest | None:
+    if routed_request.adapter_kind == ADAPTER_KIND:
+        if adapters.attachment_resolver is None:
+            return None
+        try:
+            resolved_attachment = await adapters.attachment_resolver.resolve(
+                AttachmentResolutionRequest(
+                    adapter_kind=routed_request.adapter_kind,
+                    resource_reference=routed_request.resource_reference,
+                    owner_application_id=(
+                        routed_request.attachment_owner_application_id
+                    ),
+                    audience=routed_request.identity_audience,
+                )
+            )
+        except Exception:
+            return None
+        return replace(
+            routed_request,
+            resolved_attachment=resolved_attachment,
+        )
+    if routed_request.adapter_kind == "contract-test-v1":
+        return routed_request
+    return None
+
+
+async def _asserted_request(
+    routed_request: RoutedApplicationRequest,
+    identity: PlatformIdentity | None,
+    admission_mode: str,
+    adapters: RuntimeAdapters,
+) -> RoutedApplicationRequest | None:
+    if identity is None:
+        return routed_request
+    if (
+        routed_request.identity_audience is None
+        or adapters.assertion_issuer is None
+    ):
+        return routed_request if admission_mode == "public" else None
+    try:
+        assertion = await adapters.assertion_issuer.issue(
+            identity,
+            routed_request.identity_audience,
+        )
+    except Exception:
+        return routed_request if admission_mode == "public" else None
+    return replace(
+        routed_request,
+        verified_identity_assertion=assertion,
+    )
 
 
 def create_app(
@@ -525,57 +594,131 @@ def create_app(
         )
         if routed_request is None:
             return _closed_response(404, "not found")
-        if routed_request.adapter_kind == ADAPTER_KIND:
-            if adapters.attachment_resolver is None:
-                return _closed_response(503, "application attachment unavailable")
-            try:
-                resolved_attachment = await adapters.attachment_resolver.resolve(
-                    AttachmentResolutionRequest(
-                        adapter_kind=routed_request.adapter_kind,
-                        resource_reference=routed_request.resource_reference,
-                        owner_application_id=(
-                            routed_request.attachment_owner_application_id
-                        ),
-                        audience=routed_request.identity_audience,
-                    )
-                )
-            except Exception:
-                return _closed_response(503, "application attachment unavailable")
-            routed_request = replace(
-                routed_request,
-                resolved_attachment=resolved_attachment,
-            )
-        elif routed_request.adapter_kind != "contract-test-v1":
+        routed_request = await _resolved_request(routed_request, adapters)
+        if routed_request is None:
             return _closed_response(503, "application attachment unavailable")
-        assertion: str | None = None
-        if identity is not None:
-            if (
-                routed_request.identity_audience is None
-                or adapters.assertion_issuer is None
-            ):
-                if admission_mode != "public":
-                    return _closed_response(503, "identity assertion unavailable")
-            else:
-                try:
-                    assertion = await adapters.assertion_issuer.issue(
-                        identity,
-                        routed_request.identity_audience,
-                    )
-                except Exception:
-                    if admission_mode != "public":
-                        return _closed_response(503, "identity assertion unavailable")
-        routed_request = replace(
+        routed_request = await _asserted_request(
             routed_request,
-            verified_identity_assertion=assertion,
+            identity,
+            admission_mode,
+            adapters,
         )
+        if routed_request is None:
+            return _closed_response(503, "identity assertion unavailable")
         if adapters.route_handoff is not None:
             try:
                 await adapters.route_handoff.dispatch(routed_request)
             except Exception:
                 pass
+        if (
+            routed_request.resolved_attachment is not None
+            and adapters.application_proxy is not None
+        ):
+            return await adapters.application_proxy.forward_http(
+                request,
+                routed_request,
+            )
         return _closed_response(503, "application forwarding unavailable")
 
-    return Starlette(
-        routes=[Route("/{path:path}", unavailable)],
+    async def websocket_application(websocket: WebSocket) -> None:
+        if active_generation is None:
+            await websocket.close(code=1013, reason="platform unavailable")
+            return
+        path = request_path(websocket.scope)
+        if path is None:
+            await websocket.close(code=4400, reason="invalid request")
+            return
+        if path == "/" or is_reserved_path(active_generation.configuration, path):
+            await websocket.close(code=4404, reason="not found")
+            return
+        route = select_application_route(active_generation.configuration, path)
+        if route is None:
+            await websocket.close(code=4404, reason="not found")
+            return
+        admission_mode = route_admission_mode(
+            active_generation.configuration,
+            route["application_id"],
+        )
+        identity, identity_store_available = await _session_identity(
+            websocket,
+            adapters,
+        )
+        if admission_mode != "public" and identity is None:
+            close_code = (
+                4401
+                if _identity_ready(runtime_configuration, adapters)
+                and identity_store_available
+                else 1013
+            )
+            await websocket.close(
+                code=close_code,
+                reason=(
+                    "authentication required"
+                    if close_code == 4401
+                    else "identity unavailable"
+                ),
+            )
+            return
+        if admission_mode == "restricted" and identity is not None:
+            policy = route_admission_policy(
+                active_generation.configuration,
+                route["application_id"],
+            )
+            members = policy.get("members", []) if policy is not None else []
+            if not any(
+                member.get("issuer") == identity.issuer
+                and member.get("subject") == identity.subject
+                for member in members
+            ):
+                await websocket.close(code=4403, reason="forbidden")
+                return
+        routed_request = routed_application_request(
+            route,
+            path,
+            websocket.scope.get("query_string", b""),
+        )
+        if routed_request is None:
+            await websocket.close(code=4404, reason="not found")
+            return
+        routed_request = await _resolved_request(routed_request, adapters)
+        if routed_request is None:
+            await websocket.close(code=1013, reason="application unavailable")
+            return
+        routed_request = await _asserted_request(
+            routed_request,
+            identity,
+            admission_mode,
+            adapters,
+        )
+        if routed_request is None:
+            await websocket.close(code=1013, reason="identity unavailable")
+            return
+        if adapters.route_handoff is not None:
+            try:
+                await adapters.route_handoff.dispatch(routed_request)
+            except Exception:
+                pass
+        if (
+            routed_request.resolved_attachment is None
+            or adapters.application_proxy is None
+        ):
+            await websocket.close(code=1013, reason="application unavailable")
+            return
+        await adapters.application_proxy.forward_websocket(
+            websocket,
+            routed_request,
+        )
+
+    application = Starlette(
+        routes=[
+            Route("/{path:path}", unavailable),
+            WebSocketRoute("/{path:path}", websocket_application),
+        ],
         lifespan=lifespan,
+    )
+    return RuntimeLimitMiddleware(
+        application,
+        limits=adapters.proxy_limits or ProxyLimits(),
+        clock=adapters.monotonic_clock or SystemMonotonicClock(),
+        classifier=adapters.trusted_client_classifier,
     )
