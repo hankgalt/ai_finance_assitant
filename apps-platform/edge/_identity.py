@@ -6,13 +6,32 @@ import base64
 import hashlib
 import secrets
 import time
+import warnings
 from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import urlsplit
 
 import httpx
-from authlib.integrations.httpx_client import AsyncOAuth2Client
-from authlib.jose import JsonWebToken
+from authlib.deprecate import AuthlibDeprecationWarning
+
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message=r"The httpx module is deprecated; please use httpx2 instead\.",
+        category=AuthlibDeprecationWarning,
+    )
+    from authlib.integrations.httpx_client import AsyncOAuth2Client
+
+with warnings.catch_warnings():
+    warnings.filterwarnings(
+        "ignore",
+        message=(
+            r"authlib\.jose module is deprecated, please use joserfc instead\."
+            r".*"
+        ),
+        category=AuthlibDeprecationWarning,
+    )
+    from authlib.jose import JsonWebToken
 from authlib.oidc.core import CodeIDToken
 
 

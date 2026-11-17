@@ -84,7 +84,15 @@ async def call_http(app: Any) -> list[dict[str, Any]]:
     incoming = [
         {
             "type": "http.request",
-            "body": b"request-body-secret-marker",
+            "body": (
+                b"request-body-secret-marker "
+                b"stream-chunk-secret-marker "
+                b"provider-payload-secret-marker "
+                b"application-data-secret-marker "
+                b"credential-secret-marker "
+                b"terraform-state-secret-marker "
+                b"saved-plan-secret-marker"
+            ),
             "more_body": False,
         }
     ]
@@ -152,6 +160,12 @@ class CompletionEventTest(unittest.IsolatedAsyncioTestCase):
             "visitor-agent-marker",
             "203.0.113.10",
             "request-body-secret-marker",
+            "stream-chunk-secret-marker",
+            "provider-payload-secret-marker",
+            "application-data-secret-marker",
+            "credential-secret-marker",
+            "terraform-state-secret-marker",
+            "saved-plan-secret-marker",
             "response-secret-marker",
             "response-body-secret-marker",
         ):
