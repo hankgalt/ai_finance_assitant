@@ -1,9 +1,10 @@
 # Comfforts App Platform
 
-Status: AP-M6 implementation in progress; the locked ASGI runtime foundation is implemented, while
-generation, routing, identity, provider, and proxy behavior remain unavailable. AP-M4 remains
-Fixture-qualified and AP-M5 remains planning-validated. No Terraform configuration, cloud resource,
-deployment, Live evidence, or Application Adoption is implemented or qualified.
+Status: AP-M6 implementation in progress; the locked ASGI foundation and immutable generation
+loading are implemented locally, while routing, identity, attachment-provider, and proxy behavior
+remain unavailable. AP-M4 remains Fixture-qualified and AP-M5 remains planning-validated. No
+Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
+implemented or qualified.
 
 Comfforts App Platform is a separately governed project temporarily colocated in the
 AI Finance Assistant repository. It is intended to own the shared application catalogue and edge
@@ -41,10 +42,12 @@ in-process harness supplies Fixture (`F`) evidence only; AP-M5 supplies planning
 than provider or deployed evidence.
 
 AP-M3 through AP-M5 are merged and pass their deterministic gates. AP-M6-W1 is accepted, and
-AP-M6-W2 supplies only the locked dependency environment, application factory, typed configuration
-and adapter bundle, and closed-default ASGI response. Later work packages own every generation,
-route, identity, provider, proxy, and operational behavior. No AP-M6 package authorizes Terraform,
-cloud, DNS, identity configuration, deployment, or Live mutation.
+AP-M6-W2 supplies the locked dependency environment and closed-default ASGI foundation. AP-M6-W3
+adds bounded compiled-generation parsing, exact object/content/generation binding, and an injected
+Cloud Storage source adapter. It performs no provider call during construction or verification and
+cannot discover, compile, activate, route, or mutate a generation. Later work packages own routing,
+identity, attachment-provider, proxy, and operational behavior. No AP-M6 package authorizes
+Terraform, cloud, DNS, identity configuration, deployment, or Live mutation.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

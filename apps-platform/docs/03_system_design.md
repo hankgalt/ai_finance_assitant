@@ -1,7 +1,8 @@
 # App Platform system design
 
-Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile; locked
-ASGI foundation implemented; no provider behavior or live infrastructure is implemented
+Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile;
+immutable generation loading implemented locally; no provider operation or live infrastructure is
+implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -621,6 +622,15 @@ and `cryptography` for OIDC and ES256, and official Google Cloud clients for Sto
 KMS, Cloud Run metadata, and service identity. Production code may not hand-build provider signing,
 token, or discovery protocols. `make check` consumes an already synchronized locked environment;
 it performs no installation or network access.
+
+AP-M6-W3 accepts at most one mebibyte from the exact configured Cloud Storage object generation
+through an injected source adapter; the ranged read includes only one additional byte needed to
+detect overflow. Startup verifies the raw SHA-256 content digest, applies the Version 1
+duplicate-safe JSON and compiled-configuration schema profile, and verifies the compiled generation
+digest before binding the generation in memory. Any missing adapter, source failure, invalid
+document, invalid contract, or digest mismatch fails startup with a coarse code. Loading does not
+discover storage, compile registrations, follow a mutable pointer, activate a provider revision, or
+reload during the process lifetime.
 
 The initial `qualification-v1` request profile applies before target selection and permits lower
 environment settings but no higher value without a reviewed profile change:

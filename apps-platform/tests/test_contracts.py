@@ -17,6 +17,7 @@ from contracts.validation import (
     ContractSchemaError,
     compile_registration_set,
     load_contract_schemas,
+    load_json_bytes,
     load_json_document,
     validate_contract_instance,
 )
@@ -169,6 +170,19 @@ class ContractSchemaTest(unittest.TestCase):
                 [violation.code for violation in loaded.violations],
                 ["JSON_INVALID"],
             )
+
+    def test_json_bytes_use_the_same_bounded_duplicate_safe_profile(self) -> None:
+        duplicate = load_json_bytes(b'{"value":1,"value":2}')
+        oversized = load_json_bytes(b'{"value":1}', max_bytes=4)
+
+        self.assertEqual(
+            [(violation.code, violation.path) for violation in duplicate.violations],
+            [("JSON_DUPLICATE_KEY", "/value")],
+        )
+        self.assertEqual(
+            [violation.code for violation in oversized.violations],
+            ["JSON_INVALID"],
+        )
 
     def test_default_check_includes_contract_fixture_and_runtime_gates(self) -> None:
         makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")

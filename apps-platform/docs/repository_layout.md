@@ -1,6 +1,6 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M6 locked ASGI runtime foundation recorded; no provider behavior or
+Status: authoritative; AP-M6 immutable generation loading recorded; no provider operation or
 infrastructure implemented
 
 The project is organized as an extractable repository root. Canonical platform files remain under
@@ -17,9 +17,9 @@ directory the new repository root.
 | `docs/` | Platform design authority and future runbooks/evidence indexes |
 | `prompts/` | Bounded task entry points that link to authoritative documents |
 | `integrations/` | Inactive application-adoption inputs with no consuming-app authority |
-| `contracts/` | Version 1 schemas, deterministic reference compiler, and reviewed contract vectors; no runtime adapter |
+| `contracts/` | Version 1 schemas, deterministic reference compiler, reviewed contract vectors, and bounded runtime JSON loading |
 | `fixtures/` | In-process reference edge, synthetic identity, three independent Fixture Applications with app-owned test state, and reviewed registration generations |
-| `edge/` | AP-M6 networked Shared Edge interface and implementation; only behavior accepted by the current work package may exist |
+| `edge/` | AP-M6 Shared Edge interface, immutable-generation source adapter, and accepted runtime behavior only |
 | `tests/` | Behavior-named governance, contract, and Fixture checks |
 | `pyproject.toml` and `uv.lock` | Direct runtime dependencies and complete frozen transitive resolution |
 | `Makefile` | Portable project-local developer and verification interface |

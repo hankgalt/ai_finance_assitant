@@ -36,6 +36,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             "fixtures/reference_edge.py",
             "fixtures/registrations/manifest.v1.json",
             "edge/__init__.py",
+            "edge/_generation.py",
             "edge/_runtime.py",
             "prompts/README.md",
             "prompts/starting_prompt.md",
@@ -73,11 +74,17 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertEqual(pyproject["project"]["requires-python"], ">=3.12")
         self.assertEqual(
             pyproject["project"]["dependencies"],
-            ["starlette>=1.10,<1.11", "uvicorn>=0.54,<0.55"],
+            [
+                "google-cloud-storage>=3.17,<3.18",
+                "starlette>=1.10,<1.11",
+                "uvicorn>=0.54,<0.55",
+            ],
         )
         self.assertFalse(pyproject["tool"]["uv"]["package"])
+        self.assertEqual(packages["google-cloud-storage"]["version"], "3.17.1")
         self.assertEqual(packages["starlette"]["version"], "1.10.0")
         self.assertEqual(packages["uvicorn"]["version"], "0.54.0")
+        self.assertIn("hash", packages["google-cloud-storage"]["sdist"])
         self.assertIn("hash", packages["starlette"]["sdist"])
         self.assertIn("hash", packages["uvicorn"]["sdist"])
         self.assertIn("runtime-check", makefile)
@@ -142,12 +149,12 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("AP-M6", overview)
         self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
         self.assertIn(
-            "generation, routing, identity, provider, and proxy behavior remain unavailable",
+            "routing, identity, attachment-provider, and proxy behavior remain unavailable",
             normalized_overview,
         )
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
-        self.assertIn("AP-M6 locked ASGI runtime foundation recorded", layout)
+        self.assertIn("AP-M6 immutable generation loading recorded", layout)
         self.assertIn("`contracts/`", layout)
         self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)
@@ -644,7 +651,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             normalized_threat_model,
         )
         self.assertIn(
-            "The selected runtime limits and all provider controls remain unimplemented",
+            "request and proxy limits remain unimplemented",
             normalized_threat_model,
         )
 
@@ -668,6 +675,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             )
 
         self.assertTrue((PROJECT_ROOT / "edge/__init__.py").is_file())
+        self.assertTrue((PROJECT_ROOT / "edge/_generation.py").is_file())
         self.assertTrue((PROJECT_ROOT / "edge/_runtime.py").is_file())
 
         for reserved_reference in (

@@ -4,6 +4,7 @@ version = "0.0.0"
 description = "Comfforts App Platform shared edge"
 requires-python = ">=3.12"
 dependencies = [
+  "google-cloud-storage>=3.17,<3.18",
   "starlette>=1.10,<1.11",
   "uvicorn>=0.54,<0.55",
 ]

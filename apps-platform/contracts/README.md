@@ -1,6 +1,7 @@
 # App Platform contracts
 
-Version 1 | Status: machine-contract authority; fixture adapter implemented, no provider adapter
+Version 1 | Status: machine-contract authority; fixture adapter and immutable-generation consumer
+implemented, no attachment provider adapter
 
 This directory defines the versioned machine interfaces for AP-M3. The contracts are authoritative
 only inside the App Platform project and are subordinate to the product requirements, accepted
@@ -80,6 +81,11 @@ The AP-M3 standard-library validator supports only this reviewed JSON Schema Dra
 A schema using another keyword fails the local schema-profile check until this authority and the
 validator are reviewed together. Annotation keywords title and description do not affect
 acceptance.
+
+The AP-M6 runtime applies this same bounded, duplicate-safe JSON profile to generation bytes before
+validating the compiled Shared Edge schema. It accepts only the exact configured object generation,
+content digest, and compiled generation digest. This consumer does not compile a Registration Set,
+follow a mutable source, select routes, or activate a provider revision.
 
 All cross-schema references are stable URNs from the local registry. Remote references and
 repository-external paths are prohibited.
