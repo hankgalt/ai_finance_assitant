@@ -181,9 +181,10 @@ class ProjectAuthorityTest(unittest.TestCase):
                 "ADR-004",
                 "ADR-005",
                 "ADR-006",
+                "ADR-007",
             ],
         )
-        self.assertEqual(decisions.count("Status: Accepted"), 6)
+        self.assertEqual(decisions.count("Status: Accepted"), 7)
         normalized_decisions = " ".join(decisions.split())
         for identifier in (
             "AP-PR-001",
@@ -228,6 +229,20 @@ class ProjectAuthorityTest(unittest.TestCase):
             "does not claim distributed replay prevention",
         ):
             self.assertIn(live_identity_decision, normalized_decisions)
+
+        for state_and_operator_decision in (
+            "remote GCS backend with native state locking and object versioning",
+            "Each Fixture Application uses a separate state bucket",
+            "at least 90 days old",
+            "at least 20 newer generations",
+            "No platform root uses `terraform_remote_state`",
+            "GitHub Actions using OIDC and GCP Workload Identity Federation",
+            "A pull-request plan is advisory",
+            "Routine workstation apply is prohibited",
+            "Provider-console changes are drift",
+            "no backend bucket, state, workflow, identity, credential, plan",
+        ):
+            self.assertIn(state_and_operator_decision, normalized_decisions)
 
     def test_shared_edge_decisions_preserve_exclusive_ownership(self) -> None:
         decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(

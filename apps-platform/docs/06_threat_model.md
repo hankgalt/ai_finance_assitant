@@ -1,6 +1,6 @@
 # App Platform threat model
 
-Version 0.4 | Status: Fixture-qualified threat model and initial Live trust profile; no live infrastructure is implemented
+Version 0.5 | Status: Fixture-qualified threat model and initial Live control profile; no live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -10,7 +10,7 @@ consuming application's security model.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007
 
 System design: [App Platform system design](03_system_design.md)
 
@@ -337,9 +337,9 @@ window.
 all-or-no-output failure. `F` covers register, update, suspend, retire, attachment replacement, and
 rollback journeys. `L` covers provider partial-failure recovery and drift.
 
-**Residual risk:** Item 4 can qualify only an in-memory, single-caller generation swap. Persistent
-storage, locking, provider transactions, acceptance windows, and operator rollback procedures
-remain later implementation and evaluation decisions.
+**Residual risk:** GCS locking and protected-main concurrency are selected but not implemented.
+Terraform cannot make several provider control planes transactional, so partial failure still
+requires stop, readback, inspection, and an owner-approved recovery decision.
 
 ### AP-TM-008 · Dual state ownership or destructive cross-state action
 
@@ -356,8 +356,9 @@ not backend access. Destructive actions identify exact targets and require expli
 fixture and platform lifecycle. `L` covers state inventories, plans, readback, and destructive-action
 guards. `A` proves exclusive ownership at every transfer phase for a real application.
 
-**Residual risk:** A manifest is a declaration until provider/state readback confirms it. Item 3
-cannot qualify live ownership.
+**Residual risk:** Separate roots and buckets reduce accidental cross-owner access but do not prove
+exclusive ownership until state inventory, IAM, provider readback, and destructive plans are
+qualified together.
 
 ### AP-TM-009 · Cross-application lateral movement
 
@@ -410,8 +411,9 @@ provider changes are drift and never become configuration authority.
 extraction-safe checks. `L` covers revision binding, workload identity, least privilege, drift
 readback, plan review, and audit records.
 
-**Residual risk:** Branch protection, reviewer policy, artifact signing, dependency pinning,
-workload identity, and provider audit settings remain repository and infrastructure decisions.
+**Residual risk:** Protected-main, exact-plan binding, and Workload Identity Federation are selected
+but unavailable before repository extraction and infrastructure implementation. The same owner may
+review and apply, so retained evidence and drift readback remain important compensating controls.
 
 ### AP-TM-012 · Availability and cost abuse
 
@@ -476,8 +478,8 @@ pass:
 | --- | --- |
 | OAuth client values, session-store realization, KMS/JWKS resources, and identity IAM bindings for the selected trust profile | Infrastructure implementation |
 | Live request, header, body, connection, rate, concurrency, and timeout limits | Live qualification |
-| Terraform modules, state backends, resource names, ingress realization, and IAM bindings for the selected GCP topology | Infrastructure implementation |
-| Operator roles, review separation, branch protection, workload identity, and audit policy | Live mutation |
+| Terraform modules, exact bucket and resource names, ingress realization, and IAM bindings for the selected GCP topology | Infrastructure implementation |
+| Dedicated repository identity, workflow subjects, branch protection, protected environment, and federation bindings | Repository extraction and Live mutation |
 | Logging backend, retention, access, redaction, deletion, and incident handling | Live evidence collection |
 | Cost thresholds, quotas, alerts, and approved billable resources | Live qualification |
 | Application-specific principals, data isolation, providers, and entitlements | Each Application Adoption |
@@ -502,6 +504,6 @@ requirements without weakening them.
 | --- | --- | --- |
 | AP-TM-001 through AP-TM-003 | AP-PR-001, AP-PR-002, AP-PR-003; AP-QR-002, AP-QR-003, AP-QR-004 | ADR-001, ADR-002, ADR-005 |
 | AP-TM-004 through AP-TM-006 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-005, ADR-006 |
-| AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
-| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-005, ADR-006 |
+| AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005, ADR-007 |
+| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-005, ADR-006, ADR-007 |
 | AP-TM-014 | AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-006 | ADR-004 |

@@ -1,6 +1,6 @@
 # App Platform system design
 
-Version 0.4 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
+Version 0.5 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -9,7 +9,7 @@ consuming application.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007
 
 ## Design outcome
 
@@ -435,6 +435,35 @@ No platform lifecycle action imports, recreates, or destroys an application reso
 application lifecycle action mutates or destroys the Shared Edge. Future adoption or state-transfer
 procedures must prove that a resource leaves one state before another state assumes it.
 
+### Initial Terraform state and operator profile
+
+The planned Terraform layout contains one backend-bootstrap root, one Platform State root, and one
+Fixture Application State root per fixture. The bootstrap and platform roots use different keys in
+one platform-state GCS bucket. Every fixture uses its own GCS bucket and root. Future application
+projects retain their own backends. This physical separation supports, but does not replace, the
+State Ownership Manifest and provider readback.
+
+GCS locking serializes each root. Object versioning retains a noncurrent state version until both
+90 days have elapsed and at least 20 newer generations exist. Backend contents, locks, plans, and
+recovery copies are restricted operational data and never enter Git or evidence artifacts.
+
+The only normal mutation path is an exact protected-main plan executed by GitHub Actions through
+OIDC and GCP Workload Identity Federation after explicit environment approval. Pull requests receive
+deterministic checks and advisory read-only plans; the merge commit is planned again and bound to
+the apply by source and plan digests. Each workflow identity is limited to its named root and
+operation. One concurrency guard and the backend lock prevent competing mutations.
+
+The dedicated repository, branch, workflow, and environment values must be known after extraction
+before a federation binding can exist. Until then, this is planning authority only. Local checks,
+validation, read-only planning, and readback remain available, but normal local apply is prohibited.
+An owner-declared break-glass operation uses short-lived credentials, exact targets, state backup,
+readback, and reconciliation; it never uses a stored service-account key.
+
+Bootstrap, import, force-unlock, state push, backend changes, rollback, and destroy are explicit
+operator procedures rather than hidden Terraform side effects. A provider error stops for
+inspection. Manual console changes remain drift and cannot become the reviewed baseline without a
+source change.
+
 ## Failure and rollback behavior
 
 - Schema, semantic, transition, or ownership failure produces ordered violations and no compiled
@@ -637,8 +666,8 @@ compiler behavior, paths relative to that root, or ownership boundaries.
 
 This design intentionally does not select or implement:
 
-- Terraform roots, modules, backends, resource names, state-transfer commands, or operator roles
-  for the selected GCP topology;
+- Terraform modules, bucket names, backend objects, workflows, repository-bound federation,
+  resource names, state-transfer commands, or IAM grants for the selected state and operator model;
 - OAuth client registration values, Firestore session configuration, KMS key versions, secret
   versions, credentials, or IAM bindings for the selected identity profile;
 - a live catalogue, Shared Edge runtime, `gcp-cloud-run-v1` resolver, external registration
@@ -655,9 +684,10 @@ runtime or control as operational.
 This system design remains documentation authority rather than operational evidence. AP-M3 provides
 revision-scoped Contract evidence that the Version 1 schemas and deterministic reference compiler
 satisfy their declared offline gate. AP-M4 supplies the Fixture evidence defined by Version 0.2.
-Version 0.3 selects the initial GCP Live topology, and Version 0.4 selects its identity trust
-profile. Neither supplies Terraform, provider, network, identity, deployment, or Live evidence.
-Adoption qualification remains a later application-owned gate.
+Version 0.3 selects the initial GCP Live topology, Version 0.4 selects its identity trust profile,
+and Version 0.5 selects state and operator authority. None supplies Terraform, provider, network,
+identity, deployment, or Live evidence. Adoption qualification remains a later application-owned
+gate.
 
 ## Design trace
 
@@ -665,8 +695,9 @@ Adoption qualification remains a later application-owned gate.
 | --- | --- | --- |
 | Shared Edge and catalogue | AP-PR-001, AP-PR-003; AP-QR-002, AP-QR-006 | ADR-001, ADR-002 |
 | Registration, routing, and compiled generations | AP-PR-002, AP-PR-003, AP-PR-007; AP-QR-004, AP-QR-006 | ADR-002 |
-| Attachments and exclusive ownership | AP-PR-002, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-003 | ADR-001, ADR-002, ADR-004 |
+| Attachments and exclusive ownership | AP-PR-002, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-003 | ADR-001, ADR-002, ADR-004, ADR-007 |
 | Admission and verified identity | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-006 |
 | Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004 |
 | Fixture and adoption boundary | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 |
 | Initial GCP Live topology and Cloud Run attachments | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
+| Terraform state and operator authority | AP-PR-002, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-007 |

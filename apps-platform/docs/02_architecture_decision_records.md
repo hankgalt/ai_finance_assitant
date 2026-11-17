@@ -1,6 +1,6 @@
 # App Platform architecture decision records
 
-Version 0.3 | Status: accepted decisions through initial Live qualification planning; no platform infrastructure is implemented
+Version 0.4 | Status: accepted decisions through initial Live qualification planning; no platform infrastructure is implemented
 
 These records capture hard-to-reverse App Platform boundaries. They are authoritative only for this
 project and do not transfer ownership of an existing application's resources. Requirement
@@ -436,3 +436,118 @@ and qualified.
 - Cloud Run IAM caller authentication remains mandatory and separate from Visitor assertions.
 - This decision selects the trust profile only. It creates no OAuth client, session database, key,
   secret, IAM binding, runtime, or Live evidence.
+
+## ADR-007 · Separate state roots and use federated protected-main operations
+
+Status: Accepted
+
+Requirements: AP-PR-002, AP-PR-007, AP-PR-008, AP-PR-009, AP-QR-001, AP-QR-003,
+AP-QR-004, AP-QR-005, AP-QR-006
+
+### Context
+
+Terraform state contains sensitive resource metadata and confers lifecycle authority over the
+resources it tracks. Combining the Shared Edge and application runtimes in one root would violate
+exclusive ownership even if those resources initially share a GCP project. Long-lived service
+account keys or routine workstation applies would also weaken the binding between reviewed source,
+the proposed plan, and the resulting provider change.
+
+The dedicated GitHub repository identity is not yet known because extraction has not occurred.
+Planning can select the authority model, but no Workload Identity Federation binding or live apply
+may be enabled until the repository and workflow subjects are exact.
+
+### Decision
+
+Terraform uses a remote GCS backend with native state locking and object versioning. The state
+layout has these independently initialized roots:
+
+```text
+infrastructure/terraform/bootstrap/
+infrastructure/terraform/platform/
+infrastructure/terraform/fixtures/<application-id>/
+```
+
+The bootstrap root owns only state-backend resources and their recovery controls. The platform root
+owns only Shared Edge, session, signing, observability, and registration-derived platform
+resources. Each Fixture Application has its own root for its Cloud Run runtime and other fixture
+Application State. A future real application owns its backend in its own project and authority
+chain; the platform never relocates that state into these roots.
+
+The bootstrap and platform roots use a dedicated platform-state bucket with distinct object
+prefixes because both are Platform State. Each Fixture Application uses a separate state bucket so
+the platform and other fixtures can be denied object access at the bucket boundary. Bucket names
+are environment configuration selected only after global-name availability is checked; they are
+not embedded in reusable modules or contracts.
+
+Every state bucket uses uniform bucket-level access, public-access prevention, object versioning,
+and recovery history that retains a noncurrent version until it is at least 90 days old and at
+least 20 newer generations exist. Terraform state, lock objects, saved plans, and recovery copies
+are never committed or used as qualification evidence.
+
+The bootstrap procedure is a one-time, explicitly approved owner operation from reviewed source.
+It uses short-lived human credentials to create the backend resources, migrates the temporary
+local bootstrap state into the new backend, verifies lineage and provider readback, and removes the
+temporary copy only after recovery is proven. Bootstrap and backend destruction are not normal
+platform lifecycle operations.
+
+Cross-state exchange uses versioned, non-secret references reviewed through Application
+Registrations and the State Ownership Manifest. No platform root uses `terraform_remote_state`,
+GCS object access, or application credentials to inspect an application's backend. An exported
+resource reference is data, not state access or management authority.
+
+Normal cloud operations run in GitHub Actions using OIDC and GCP Workload Identity Federation.
+There is no stored service-account key. After extraction, federation conditions must bind the
+dedicated repository, exact protected branch, approved workflow, and protected GitHub environment.
+The repository owner may review, approve, and trigger the workflow; one person may hold those roles
+for this personal demo, but the source, environment, and workload permissions remain distinct.
+
+Pull requests run `make check`, Terraform formatting and validation, and a reviewable read-only
+plan for each affected root. A pull-request plan is advisory because the merge revision differs.
+After merge, the protected-main workflow creates a new plan for the exact main commit, records its
+source and plan digests, requires explicit environment approval, and applies only that plan. A
+concurrency guard and backend lock permit at most one mutation for a state root at a time.
+
+Plan, apply, rollback, import, state-recovery, and destroy are separate workflow authorities.
+Planning identities may read provider and state metadata required to plan but cannot mutate cloud
+resources. Routine apply identities are scoped to one state owner. Import, force-unlock, state
+push, backend change, and destroy are break-glass operations requiring explicit owner approval,
+exact targets, pre-action state backup, post-action readback, and retained evidence. A partial
+provider failure stops for inspection; it does not automatically unlock, push state, destroy, or
+roll back.
+
+Local scripts may run deterministic checks, formatting, validation, read-only plans, and readback.
+Routine workstation apply is prohibited. If GitHub Actions is unavailable during an owner-declared
+emergency, the repository owner may use short-lived local GCP credentials for the smallest approved
+operation, record the exact source and commands, read back the result, and reconcile it through a
+reviewed commit. No emergency procedure permits a stored key or silent console change.
+
+Provider-console changes are drift, never authority. The next plan must surface drift, and the
+owner must either restore the reviewed configuration or adopt the difference through source review.
+
+### Considered alternatives
+
+- **Use one Terraform root for the platform and fixtures:** rejected because an apply or destroy
+  could mutate resources with different owners and lifecycles.
+- **Let the platform read application state outputs directly:** rejected because it leaks backend
+  structure and access across ownership boundaries.
+- **Use only local Terraform state:** rejected because workstation loss, concurrent changes, and
+  weak recovery would make the reviewed configuration difficult to restore.
+- **Store a GCP service-account key in GitHub:** rejected because long-lived credentials are not
+  bound to a repository revision, workflow subject, or short lifetime.
+- **Allow routine local applies:** rejected because they bypass protected-main approval, revision
+  binding, concurrency controls, and retained workflow evidence.
+- **Remove all emergency local authority:** rejected because a personal demo still needs a bounded
+  recovery path when the normal control plane is unavailable.
+
+### Consequences
+
+- The first bootstrap requires an owner-controlled, carefully evidenced exception before federated
+  CI can exist.
+- Separate fixture buckets add a small amount of configuration in exchange for clear state-access
+  and recovery boundaries.
+- Pull-request plans inform review but cannot be reused after merge; the exact protected-main plan
+  is the only apply input.
+- The repository owner can approve and apply, but cannot bypass the reviewed-source, protected-main,
+  short-lived-identity, exact-plan, and readback requirements during normal operation.
+- This decision creates no backend bucket, state, workflow, identity, credential, plan, provider
+  mutation, or Live evidence.
