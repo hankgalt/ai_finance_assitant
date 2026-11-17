@@ -14,8 +14,9 @@ networked Shared Edge and production-adapter logic through deterministic fakes a
 loopback. Live (`L`) and Adoption (`A`) evidence remain unavailable. No deployed Shared Edge,
 provider identity, Terraform configuration, cloud resource, DNS change,
 application migration, or production credential is implemented.
-Repository extraction is governed by a reviewed preparation runbook but has not been executed; the
-colocated tree remains authoritative until its explicit cutover gate passes.
+Repository extraction is governed by a reviewed preparation runbook, and its extraction-owned root
+check is prepared inside this project. No extraction has been executed; the colocated tree remains
+authoritative until its explicit cutover gate passes.
 
 ## Current reading order and authority
 

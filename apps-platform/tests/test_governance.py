@@ -15,6 +15,7 @@ class ProjectAuthorityTest(unittest.TestCase):
     def test_project_shell_is_self_contained(self) -> None:
         expected_files = (
             ".gitignore",
+            ".github/workflows/check.yml",
             "AGENTS.md",
             "GLOSSARY.md",
             "Makefile",
@@ -65,6 +66,56 @@ class ProjectAuthorityTest(unittest.TestCase):
         )
 
         self.assertTrue(all((PROJECT_ROOT / path).is_file() for path in expected_files))
+
+    def test_extraction_owned_workflow_is_root_relative_and_read_only(self) -> None:
+        workflow = (PROJECT_ROOT / ".github/workflows/check.yml").read_text(
+            encoding="utf-8"
+        )
+        uses = re.findall(r"^\s+- uses: ([^@\s]+)@([0-9a-f]{40})", workflow, re.MULTILINE)
+
+        self.assertEqual(
+            uses,
+            [
+                (
+                    "actions/checkout",
+                    "d23441a48e516b6c34aea4fa41551a30e30af803",
+                ),
+                (
+                    "actions/setup-python",
+                    "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+                ),
+                (
+                    "astral-sh/setup-uv",
+                    "68559e99cc807c1eb7e9238fd43a15bba460eec2",
+                ),
+            ],
+        )
+        self.assertEqual(workflow.count("- uses:"), len(uses))
+        for required in (
+            "pull_request:",
+            "push:",
+            "branches: [main]",
+            "workflow_dispatch:",
+            "permissions:\n  contents: read",
+            "persist-credentials: false",
+            "python-version: 3.12.12",
+            "version: 0.12.5",
+            "cache-dependency-glob: uv.lock",
+            "uv sync --frozen --python 3.12.12",
+            "run: make check",
+        ):
+            self.assertIn(required, workflow)
+        for prohibited in (
+            "pull_request_target",
+            "id-token: write",
+            "contents: write",
+            "apps-platform/",
+            "make -C",
+            "terraform",
+            "gcloud",
+            "secrets.",
+        ):
+            self.assertNotIn(prohibited, workflow)
 
     def test_makefile_exposes_a_portable_non_mutating_check(self) -> None:
         makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
@@ -208,7 +259,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
         self.assertIn(
-            "AP-M6 runtime recorded and repository-extraction procedure prepared",
+            "AP-M6 runtime, repository-extraction procedure, and extraction-owned root check recorded",
             normalized_layout,
         )
         self.assertIn(
@@ -221,7 +272,6 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("three independent Fixture Applications", layout)
         self.assertIn("history-preserving subtree extraction", layout)
         self.assertIn("Do not create a nested `.git`", layout)
-        self.assertIn("repository-extraction procedure prepared", layout)
 
     def test_repository_extraction_runbook_preserves_history_and_authority(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
@@ -808,7 +858,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             )
         )
         self.assertEqual(prohibited_files, [])
-        self.assertFalse((PROJECT_ROOT / ".github/workflows").exists())
+        self.assertTrue((PROJECT_ROOT / ".github/workflows/check.yml").is_file())
 
     def test_ap_m5_default_gate_has_no_live_operator_command(self) -> None:
         makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")

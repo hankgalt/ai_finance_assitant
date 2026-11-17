@@ -1,7 +1,7 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M6 runtime recorded and repository-extraction procedure prepared; no
-extraction, provider operation, or infrastructure implemented
+Status: authoritative; AP-M6 runtime, repository-extraction procedure, and extraction-owned root
+check recorded; no extraction, provider operation, or infrastructure implemented
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this
@@ -12,6 +12,7 @@ directory the new repository root.
 | Path | Owner |
 | --- | --- |
 | `AGENTS.md` | Platform engineering workflow and authority routing |
+| `.github/workflows/` | Credential-free dedicated-root checks; inert as workflows while this project remains a subtree |
 | `README.md` | Project overview, operational status, and local entry points |
 | `GLOSSARY.md` | Canonical platform vocabulary |
 | `docs/` | Platform design authority and future runbooks/evidence indexes |
@@ -54,7 +55,9 @@ The containing repository may have only temporary integration files outside this
 - a path-scoped GitHub Actions wrapper that delegates to `make -C apps-platform check`.
 
 Those files are not App Platform authority and will not be included by subtree extraction. The
-dedicated repository must recreate its own root workflow and repository settings.
+canonical root workflow is stored inside this subtree and becomes active only when extraction makes
+it repository-root `.github/workflows/check.yml`. Repository settings remain explicit operator
+actions after the initial push.
 
 ## Extraction rules
 
