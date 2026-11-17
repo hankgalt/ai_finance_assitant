@@ -720,7 +720,7 @@ class GateIntegrityTest(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, "non-loopback"):
                 candidate.connect(("192.0.2.1", 443))
             with self.assertRaisesRegex(AssertionError, "non-loopback"):
-                candidate.bind(("0.0.0.0", 0))
+                candidate.bind(("192.0.2.1", 0))
         finally:
             candidate.close()
         self.assertTrue(socket.getaddrinfo("127.0.0.1", 443))
