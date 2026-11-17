@@ -9,7 +9,7 @@ dependencies = [
   "fastapi>=0.162,<0.163",
   "httpx>=0.28,<0.29",
   "langgraph>=1.0,<2",
-  "langgraph-checkpoint-postgres==3.2.0",
+  "langgraph-checkpoint-postgres==3.2.1",
   "langgraph-checkpoint-sqlite>=3.1,<4",
   "langsmith>=0.4,<1",
   "mcp>=2.2,<3",
