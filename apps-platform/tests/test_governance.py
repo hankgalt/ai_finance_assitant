@@ -172,8 +172,11 @@ class ProjectAuthorityTest(unittest.TestCase):
         )
         observed = re.findall(r"^## (ADR-\d{3}) ·", decisions, re.MULTILINE)
 
-        self.assertEqual(observed, ["ADR-001", "ADR-002", "ADR-003", "ADR-004"])
-        self.assertEqual(decisions.count("Status: Accepted"), 4)
+        self.assertEqual(
+            observed,
+            ["ADR-001", "ADR-002", "ADR-003", "ADR-004", "ADR-005"],
+        )
+        self.assertEqual(decisions.count("Status: Accepted"), 5)
         for identifier in (
             "AP-PR-001",
             "AP-PR-002",
@@ -191,6 +194,16 @@ class ProjectAuthorityTest(unittest.TestCase):
             "AP-QR-006",
         ):
             self.assertIn(identifier, decisions)
+
+        for live_topology_decision in (
+            "comfforts-platform-non-prod",
+            "apps-staging.comfforts.com",
+            "gcp-cloud-run-v1",
+            "platform-owned Shared VPC",
+            "explicit, separately approved operator actions",
+            "no Terraform configuration",
+        ):
+            self.assertIn(live_topology_decision, decisions)
 
     def test_shared_edge_decisions_preserve_exclusive_ownership(self) -> None:
         decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(

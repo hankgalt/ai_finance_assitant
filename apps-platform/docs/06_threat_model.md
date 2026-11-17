@@ -1,6 +1,6 @@
 # App Platform threat model
 
-Version 0.2 | Status: fixture threat-profile authority; no fixture runtime or qualification is implemented
+Version 0.3 | Status: Fixture-qualified threat model and initial Live topology profile; no live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -10,7 +10,7 @@ consuming application's security model.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005
 
 System design: [App Platform system design](03_system_design.md)
 
@@ -261,9 +261,9 @@ Provider adapters resolve only their own typed references with least-privilege c
 cross-registration conflicts. `F` covers attachment selection and application isolation. `L`
 confirms resource identity, IAM, and absence of arbitrary egress.
 
-**Residual risk:** `fixture-in-process-v1` resolves only inert, explicitly supplied fixture targets.
-The first provider-specific attachment kind and its ownership proof remain later approved design
-and infrastructure decisions.
+**Residual risk:** `gcp-cloud-run-v1` and its typed resource grammar are selected for the first Live
+profile, but no provider lookup, IAM grant, ownership readback, or target validation is implemented
+or qualified. The fixture adapter remains the only executable adapter.
 
 ### AP-TM-004 · Direct protected-origin bypass
 
@@ -280,8 +280,10 @@ ingress posture. `F` exercises spoofed headers and direct calls to protected fix
 but can prove only assertion-side denial in one process. `L` must read back and test the actual
 ingress and IAM configuration. `A` repeats the gate for a real application.
 
-**Residual risk:** No network direct-bypass control is implemented until a provider attachment and
-runtime are deployed and qualified. Fixture denial must never be reported as origin isolation.
+**Residual risk:** The planned load-balancer, Cloud Run ingress, edge caller, and application-side
+verification layers name a future network direct-bypass control; they are not implemented until
+separately approved infrastructure and deployment slices complete. Fixture denial must never be
+reported as origin isolation.
 
 ### AP-TM-005 · Identity spoofing, replay, and confused audience
 
@@ -472,10 +474,9 @@ pass:
 
 | Decision | Required before |
 | --- | --- |
-| First live provider attachment kind and provider resource-reference grammar | Infrastructure implementation |
 | Production identity provider, signer, algorithms, keys, rotation, skew, lifetime, and distributed replay posture | Live qualification |
 | Live request, header, body, connection, rate, concurrency, and timeout limits | Live qualification |
-| Cloud project, region, resource topology, ingress, IAM, and state backends | Infrastructure implementation |
+| Terraform modules, state backends, resource names, ingress realization, and IAM bindings for the selected GCP topology | Infrastructure implementation |
 | Operator roles, review separation, branch protection, workload identity, and audit policy | Live mutation |
 | Logging backend, retention, access, redaction, deletion, and incident handling | Live evidence collection |
 | Cost thresholds, quotas, alerts, and approved billable resources | Live qualification |
@@ -499,8 +500,8 @@ requirements without weakening them.
 
 | Threats | Requirements | Decisions |
 | --- | --- | --- |
-| AP-TM-001 through AP-TM-003 | AP-PR-001, AP-PR-002, AP-PR-003; AP-QR-002, AP-QR-003, AP-QR-004 | ADR-001, ADR-002 |
-| AP-TM-004 through AP-TM-006 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004 |
-| AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004 |
-| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003 |
+| AP-TM-001 through AP-TM-003 | AP-PR-001, AP-PR-002, AP-PR-003; AP-QR-002, AP-QR-003, AP-QR-004 | ADR-001, ADR-002, ADR-005 |
+| AP-TM-004 through AP-TM-006 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-005 |
+| AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
+| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-005 |
 | AP-TM-014 | AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-006 | ADR-004 |

@@ -1,6 +1,6 @@
 # App Platform architecture decision records
 
-Version 0.1 | Status: accepted decisions; no platform capability is implemented
+Version 0.2 | Status: accepted decisions through initial Live qualification planning; no platform infrastructure is implemented
 
 These records capture hard-to-reverse App Platform boundaries. They are authoritative only for this
 project and do not transfer ownership of an existing application's resources. Requirement
@@ -247,3 +247,90 @@ qualification evidence schema remain system-design and evaluation decisions.
 - Finance Assistant migration will require a later Finance Assistant-owned slice and evidence.
 - History-preserving repository extraction must retain the fixtures and their deterministic checks
   so qualification does not depend on the containing repository.
+
+## ADR-005 · Qualify the first Live topology on GCP with Cloud Run attachments
+
+Status: Accepted
+
+Requirements: AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009,
+AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006
+
+### Context
+
+The first Live qualification must exercise a real Shared Edge and application attachment without
+making Finance Assistant the qualification target, transferring an application's runtime into
+Platform State, or duplicating registration-derived routes across provider layers. The topology
+must remain inexpensive at demo traffic, support future streaming applications, and admit later
+applications that retain their own GCP projects.
+
+### Decision
+
+The first Live qualification uses the dedicated GCP project `comfforts-platform-non-prod`
+(project number `455651441682`) and regional resources in `us-west1`. It has no production
+environment. The qualification hostname is `apps-staging.comfforts.com`; it does not change
+`apps.comfforts.com` or any Finance Assistant hostname, record, certificate, or edge resource.
+
+The platform Shared Edge consists of one global external Application Load Balancer with a reserved
+address, a Google-managed certificate, HTTP-to-HTTPS redirection, and one serverless backend that
+selects one Cloud Run edge service in `us-west1`. The load balancer does not copy the application
+catalogue or registration-derived prefix routes into its URL map. The Cloud Run edge is the single
+module that derives catalogue, routing, admission, assertion delivery, and attachment selection
+from the active Registration Generation.
+
+The initial live application adapter kind is `gcp-cloud-run-v1`. Its non-secret resource reference
+has this exact form:
+
+```text
+urn:comfforts:app-platform:gcp:cloud-run:<project-number>:<region>:<service-name>
+```
+
+The adapter resolves that typed reference through GCP resource metadata and IAM; it never fetches
+an application-supplied URL. Before activation, provider readback must show the exact service in
+the declared project and region, a ready target, the named Application State owner in the State
+Ownership Manifest, and an application-owner-authorized grant to the platform edge caller. This
+joint proof binds the target to the registration without transferring management authority.
+
+The first live Fixture Application targets may share the qualification project with the platform,
+but each retains a separate Terraform state root and remains Application State. The reference form
+also permits a later target in an application-owned GCP project. Later cross-project GCP
+attachments use a platform-owned Shared VPC host network, with each application project attached
+as a service project through its own adoption procedure. The platform owns only the host network
+and edge identity, while the Application Owner continues to own its Cloud Run service, runtime IAM,
+data, and Application State. Cross-project behavior requires its own later evidence.
+
+Protected Cloud Run targets must deny unauthenticated direct invocation and accept the dedicated
+edge caller through provider IAM in addition to independently verifying the application-bound
+platform assertion. A target needs no independent user-facing hostname or certificate. Public,
+authenticated, restricted, and application-entitlement behavior remain Admission and application
+authorization choices, not different infrastructure owners.
+
+The edge data path must preserve HTTPS requests required for ordinary responses, SSE, WebSocket,
+uploads, and downloads within separately approved limits. Plain HTTP exists only to redirect to
+HTTPS. CDN and WAF behavior are not part of the initial qualification topology. DNS record creation
+and cutover remain explicit, separately approved operator actions.
+
+### Considered alternatives
+
+- **Reuse an existing application project and edge:** rejected because qualification would couple
+  Platform State and lifecycle to an application and complicate later ownership transfer.
+- **Put application prefixes in the load balancer URL map:** rejected because the provider map and
+  the active Registration Generation could disagree about routing authority.
+- **Accept arbitrary application URLs:** rejected because registration could become an SSRF or
+  cross-application routing mechanism.
+- **Require every application to share the platform project:** rejected because later applications
+  must be able to retain project, runtime, data, and state ownership.
+- **Qualify Finance Assistant first:** rejected by ADR-004 and because its existing edge, Terraform
+  state, and access model remain outside this platform slice.
+
+### Consequences
+
+- The first provider implementation is intentionally GCP-specific; multi-cloud adapters remain
+  future independently reviewed capabilities.
+- The global load balancer and regional edge have different scopes, and the implementation must
+  make that distinction explicit.
+- The edge remains a hostname-wide concentration of risk and requires later IAM, identity,
+  rollback, observability, and cost evidence before Live qualification.
+- A same-project fixture result does not qualify cross-project Shared VPC attachment or any real
+  application adoption.
+- This decision selects topology only. It creates no Terraform configuration, provider resource,
+  DNS record, certificate, credential, deployment, or Live evidence.

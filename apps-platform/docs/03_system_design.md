@@ -1,6 +1,6 @@
 # App Platform system design
 
-Version 0.2 | Status: fixture design authority; no fixture runtime or cloud resource is implemented
+Version 0.3 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -9,7 +9,7 @@ consuming application.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005
 
 ## Design outcome
 
@@ -28,10 +28,10 @@ The design separates three kinds of work:
 3. **Application operation:** an Application Owner supplies compatible attachments and retains its
    runtime, data, identity mapping, feature authorization, providers, and Application State.
 
-The system-design-and-contracts slice implements only the first kind. This revision selects the
-deterministic Fixture Application design for delivery item 4, but it does not implement or qualify
-the Shared Edge or any application runtime. Implementation still requires separately approved
-planning and evaluation authority.
+AP-M3 implements the first kind, and AP-M4 implements and Fixture-qualifies the deterministic
+in-process form of the second and third kinds. This revision selects the initial provider topology
+for infrastructure planning. It does not implement a provider adapter, Terraform configuration,
+cloud resource, DNS change, deployment, or Live qualification.
 
 ## Logical topology
 
@@ -63,6 +63,45 @@ planning and evaluation authority.
 The configured hostname, cloud project, region, identity provider, and provider-adapter settings
 are deployment configuration. They are never embedded in reusable contracts or derived from the
 containing Finance Assistant repository.
+
+### Initial Live qualification topology
+
+The initial Live environment is the dedicated non-production GCP project
+`comfforts-platform-non-prod` (project number `455651441682`). Regional services are located in
+`us-west1`; the global load balancer remains a global resource. The first hostname is
+`apps-staging.comfforts.com`. Neither the environment nor its qualification procedure may read,
+import, mutate, or destroy Finance Assistant edge resources, DNS, Terraform state, identity, or
+deployment.
+
+```text
+ Visitor
+    |
+    | HTTP redirect / HTTPS, SSE, WebSocket, upload, download
+    v
+ global external Application Load Balancer
+    |  reserved address + Google-managed certificate
+    |  one serverless backend; no application-prefix routes
+    v
+ Cloud Run Shared Edge (us-west1)
+    |  catalogue + prefix routing + admission + assertion + target selection
+    |  dedicated edge caller
+    v
+ gcp-cloud-run-v1 typed attachment
+    |
+    v
+ application-owned Cloud Run service
+```
+
+The provider URL map performs only hostname-level forwarding and HTTP-to-HTTPS behavior. It sends
+all application traffic to one edge service, so the active Registration Generation remains the
+only application-routing authority. The initial profile has no CDN or WAF. Exact request, response,
+streaming, concurrency, timeout, and scaling limits belong to the later approved infrastructure
+profile and Live gate.
+
+The desired DNS record is platform-owned configuration, but record creation and cutover are an
+explicit, separately approved operator action. A Google-managed certificate covers the hostname,
+not application prefixes. No application attachment needs a separate client-facing DNS name or
+certificate, and this planning decision does not create either the record or certificate.
 
 ## Modules and seams
 
@@ -130,6 +169,30 @@ Protected attachments must accept traffic only through the Shared Edge using bot
 provider admission controls and verified application-side identity validation. A signed identity
 header alone is not permission to expose a public origin. The exact provider adapter and live
 direct-bypass qualification belong to later slices.
+
+### GCP Cloud Run attachment profile
+
+The first provider adapter kind is `gcp-cloud-run-v1`. Its resource reference is inert data with
+the exact grammar
+`urn:comfforts:app-platform:gcp:cloud-run:<project-number>:<region>:<service-name>`. It is not a URL,
+credential, Terraform address, or permission to discover arbitrary resources.
+
+The future adapter may resolve only the named Cloud Run service through GCP metadata and IAM. A
+target is activation-eligible only when provider readback establishes that the exact service exists
+in the declared project and region, reports ready, is assigned to the registration's named
+Application State owner, and has an Application-Owner-approved grant for the platform edge caller.
+No independent DNS check is part of ownership proof.
+
+The first live fixtures may use Cloud Run services in the qualification project while preserving
+separate platform and per-fixture state roots. The same reference grammar permits later
+cross-project targets, but same-project evidence does not qualify them. Later cross-project GCP
+applications use a platform-owned Shared VPC host network, with the application project attached
+as a service project through its own adoption procedure. Network attachment does not give Platform
+State ownership of the application's Cloud Run service, IAM policy, data, or Terraform state.
+
+Protected services require both provider-level direct-invocation denial and application-side
+assertion verification. The load balancer-to-edge and edge-to-application trust details are refined
+by the later identity profile; topology selection alone is not evidence that either control works.
 
 ## Application Registration and Registration Set
 
@@ -527,12 +590,11 @@ compiler behavior, paths relative to that root, or ownership boundaries.
 
 This design intentionally does not select or implement:
 
-- a cloud project, region, load balancer, certificate, DNS, or provider-specific attachment adapter;
-- Terraform roots, modules, backends, resource names, state-transfer commands, or operator roles;
+- Terraform roots, modules, backends, resource names, state-transfer commands, or operator roles
+  for the selected GCP topology;
 - an identity provider, OAuth/IAP configuration, signing key, credential, or IAM binding;
-- the designed Deterministic Reference Edge, Fixture Applications, or their in-memory state;
-- a live catalogue or application runtime, external registration endpoint, registration database,
-  or operator control plane;
+- a live catalogue, Shared Edge runtime, `gcp-cloud-run-v1` resolver, external registration
+  endpoint, registration database, or operator control plane;
 - a log backend, retention period, alerting system, live cost threshold, or evidence store; or
 - Finance Assistant registration, Application Adoption, migration, access expansion, or cutover.
 
@@ -544,10 +606,10 @@ runtime or control as operational.
 
 This system design remains documentation authority rather than operational evidence. AP-M3 provides
 revision-scoped Contract evidence that the Version 1 schemas and deterministic reference compiler
-satisfy their declared offline gate. Version 0.2 additionally selects the deterministic fixture
-topology and qualification boundary; it is not evidence that the designed pipeline, catalogue,
-admission runtime, identity delivery, fixture attachment, Fixture Application, state control, or
-rollback procedure exists. Runtime, Fixture, Live, and Adoption qualification remain later gates.
+satisfy their declared offline gate. AP-M4 supplies the Fixture evidence defined by Version 0.2.
+Version 0.3 selects the initial GCP Live topology but supplies no Terraform, provider, network,
+identity, deployment, or Live evidence. Adoption qualification remains a later application-owned
+gate.
 
 ## Design trace
 
@@ -559,3 +621,4 @@ rollback procedure exists. Runtime, Fixture, Live, and Adoption qualification re
 | Admission and verified identity | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004 |
 | Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004 |
 | Fixture and adoption boundary | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 |
+| Initial GCP Live topology and Cloud Run attachments | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
