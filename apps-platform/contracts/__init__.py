@@ -7,6 +7,7 @@ from .validation import (
     Violation,
     compile_registration_set,
     load_contract_schemas,
+    load_json_bytes,
     load_json_document,
     validate_contract_instance,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "Violation",
     "compile_registration_set",
     "load_contract_schemas",
+    "load_json_bytes",
     "load_json_document",
     "validate_contract_instance",
 ]

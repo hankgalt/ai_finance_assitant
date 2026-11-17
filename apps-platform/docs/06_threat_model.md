@@ -1,6 +1,8 @@
 # App Platform threat model
 
-Version 0.7 | Status: Fixture-qualified threat model and initial Live control profile; no live infrastructure is implemented
+Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls;
+Cloud Run attachment resolution, bounded proxying, read-only status, and redacted completion events
+implemented locally; no provider operation or live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -223,8 +225,8 @@ becomes an executable provider command.
 and deterministic safe projection. `F` covers rendered catalogue behavior. `L` covers deployed
 headers and renderer configuration where applicable.
 
-**Residual risk:** Item 4 selects bounded HTML rendering for Fixture evidence. Live renderer
-technology, response headers, and provider limits remain later decisions.
+**Residual risk:** AP-M6-W4 implements local escaped HTML projection with a no-store response. Live
+headers, browser behavior, and provider limits remain unqualified until the deployed gates pass.
 
 ### AP-TM-002 · Route confusion, shadowing, and traversal
 
@@ -241,8 +243,10 @@ conflicts. Unknown and malformed paths fail closed without fallback to another a
 `F` covers exact paths, subpaths, near-prefixes, encodings, reserved paths, and unmatched requests.
 `L` confirms the provider adapter implements the same behavior.
 
-**Residual risk:** Provider-specific path decoding can differ from the logical contract and requires
-adapter-level conformance tests before live qualification.
+**Residual risk:** AP-M6-W4 compares raw and decoded ASGI paths, rejects alternate encodings, and
+uses segment-bounded route and mount selection locally. AP-M6-W8 preserves the selected rewritten
+path and raw query in process-local transport tests. Uvicorn and provider-specific decoding still
+require their later conformance and Live gates before qualification.
 
 ### AP-TM-003 · Malicious or mistaken attachment reference
 
@@ -261,9 +265,10 @@ Provider adapters resolve only their own typed references with least-privilege c
 cross-registration conflicts. `F` covers attachment selection and application isolation. `L`
 confirms resource identity, IAM, and absence of arbitrary egress.
 
-**Residual risk:** `gcp-cloud-run-v1` and its typed resource grammar are selected for the first Live
-profile, but no provider lookup, IAM grant, ownership readback, or target validation is implemented
-or qualified. The fixture adapter remains the only executable adapter.
+**Residual risk:** AP-M6-W7 strictly parses `gcp-cloud-run-v1` and locally validates exact fake
+provider scope, readiness, declared owner, audience, target origin, and edge-caller grant. The
+production adapter is implemented behind an injected client, but no real provider lookup, IAM
+grant, ownership readback, target request, or Live qualification has occurred.
 
 ### AP-TM-004 · Direct protected-origin bypass
 
@@ -280,10 +285,13 @@ ingress posture. `F` exercises spoofed headers and direct calls to protected fix
 but can prove only assertion-side denial in one process. `L` must read back and test the actual
 ingress and IAM configuration. `A` repeats the gate for a real application.
 
-**Residual risk:** The planned load-balancer, Cloud Run ingress, edge caller, and application-side
-verification layers name a future network direct-bypass control; they are not implemented until
-separately approved infrastructure and deployment slices complete. Fixture denial must never be
-reported as origin isolation.
+**Residual risk:** AP-M6-W6 implements local visitor-value replacement and independent assertion
+verification. AP-M6-W7 rejects fake metadata without the exact edge-caller Invoker grant, but it
+does not create or prove that caller, Cloud Run ingress, or network isolation. AP-M6-W8 strips
+visitor authorization and identity values, installs edge-controlled service identity and the
+application assertion, and forwards only the resolved origin in local tests. The load balancer and
+deployed network direct-bypass control remain future work. Local metadata, transport, and verifier
+denial must never be reported as origin isolation.
 
 ### AP-TM-005 · Identity spoofing, replay, and confused audience
 
@@ -300,10 +308,12 @@ subject pairs. Applications derive their own principals and never use email as a
 missing, forged, expired, wrong-issuer, wrong-audience, and cross-application assertions. `L` covers
 signer, key discovery, algorithms, audience issuance, and clock behavior.
 
-**Residual risk:** The Live profile selects Google OIDC, ES256 in Cloud KMS, application audiences,
-a 60-second assertion, 30-second skew, and overlapping public keys, but none is implemented or
-qualified. The demo accepts residual cross-instance replay risk because it makes no distributed
-replay-prevention claim.
+**Residual risk:** AP-M6-W5 locally validates Google OIDC through a PKCE-bound, one-use flow and
+matches restricted identities by exact issuer and subject. AP-M6-W6 locally issues and independently
+verifies minimized ES256 assertions with exact audiences, 60-second lifetimes, 30-second skew,
+versioned keys, and bounded public-key overlap/cache behavior. Cloud KMS operation and application
+delivery remain unqualified. The demo accepts residual cross-instance replay risk because it makes
+no distributed replay-prevention claim.
 
 ### AP-TM-006 · Admission mistaken for feature authorization
 
@@ -394,9 +404,13 @@ identifiers. Secret payloads and application data are prohibited and externally 
 artifacts. `F`, `L`, and `A` inspect generated evidence and logs for redaction without recording the
 prohibited payloads themselves.
 
-**Residual risk:** Seven-day owner-only logging, 30-day evidence, no external export, and minimized
-fields are selected but not implemented. Provider-mandated audit metadata may still include operator
-or network information and remains subject to provider access and retention behavior.
+**Residual risk:** AP-M6-W9 implements one typed, minimized local completion-event shape, shared
+correlation, an injected standard-logging seam, prohibited-data tests, and an operator-authorized
+read-only status response. It configures no provider sink or bucket. Seven-day owner-only logging,
+30-day evidence, no external export, and provider audit behavior remain unimplemented and
+unqualified until their infrastructure and Live gates pass. Provider-mandated audit metadata may
+still include operator or network information and remains subject to provider access and retention
+behavior.
 
 ### AP-TM-011 · Unauthorized control-plane change, drift, or supply-chain substitution
 
@@ -424,18 +438,25 @@ request bodies, streaming connections, or traffic volume exhaust validation, edg
 logging, application, or billable provider capacity.
 
 **Required controls:** Contracts place numeric size and count limits on every collection and string.
-Compiler work is bounded and performs no external calls. Future adapters set request, header, body,
-connection, and timeout limits; isolate application failures; and expose explicit cost-bearing
-resources and operator actions. Rate or abuse controls must not silently broaden admission.
+Compiler work is bounded and performs no external calls. AP-M6 adapters enforce the approved
+`qualification-v1` request, header, body, connection, message, duration, concurrency, per-client,
+and per-instance limits; cancel closed work; isolate application failures; and expose no implicit
+cost-bearing action. Rate or abuse controls must not silently broaden admission.
 
-**Evidence:** `C` covers boundary values and deterministic rejection. `F` covers representative
-limit and isolation behavior without load or availability claims. `L` covers provider quotas,
-timeouts, alerts, and billable-resource inventory.
+**Evidence:** `C` covers contract boundary values and deterministic rejection. `F` covers the
+in-process profile. AP-EVAL-M6 covers the exact network-runtime profile with deterministic boundary
+and isolation tests but no load claim. `L` covers provider quotas, timeouts, alerts, billable-resource
+inventory, and observed multi-instance behavior.
 
-**Residual risk:** Scale-to-zero, maximum instances, concurrency, a 55-minute stream limit, and budget
-notifications are selected but not implemented. Provider limits can be exceeded briefly, budget
-notifications do not cap spend, and exact live header, body, and abusive-traffic limits still
-require implementation-plan and Live-gate values.
+**Residual risk:** AP-M6-W2 implements construction-time profile rejection and an unconfigured
+closed response. AP-M6-W3 bounds compiled-generation bytes and fails closed on load or validation
+failure. AP-M6-W4 enforces the 4,096-byte path limit. AP-M6-W5 bounds identity query and cookie
+inputs and uses absolute session and login-flow expiry. AP-M6-W8 implements the remaining request,
+body, response, stream, message, duration, concurrency, and process-local rate limits and cancels
+closed work in deterministic tests.
+The AP-M6 token buckets are per instance, are not a WAF or distributed rate limit, and can permit
+twice their per-instance values when both selected instances are active. Provider limits can be
+exceeded briefly, and budget notifications do not cap spend.
 
 ### AP-TM-013 · External dependency failure or stale trust material
 
@@ -451,7 +472,13 @@ status without implying success.
 **Evidence:** `F` covers logical dependency failure using deterministic adapters. `L` covers actual
 DNS, TLS, key rotation, certificate, provider failure, and recovery behavior.
 
-**Residual risk:** The selected DNS, certificate, immutable-generation, and owner-confirmed rollback
+**Residual risk:** Local immutable-generation loading fails startup on source, contract, or digest
+failure. AP-M6-W5 fails protected admission closed on provider or session-store failure while public
+routes remain anonymously usable. AP-M6-W6 fails protected assertion issuance and stale or
+unavailable verification keys closed; public routes may remain anonymous. AP-M6-W7 fails one
+unavailable or mismatched attachment closed without selecting another target. AP-M6-W8 maps local
+transport failure, timeout, malformed response, disconnect, and cancellation to closed outcomes
+without another target. The selected DNS, certificate, activation, and owner-confirmed rollback
 sequence is not implemented or qualified. Provider availability and disaster recovery beyond the
 15-minute post-approval rollback objective remain outside the demo commitment.
 
@@ -480,7 +507,7 @@ pass:
 | Decision | Required before |
 | --- | --- |
 | OAuth client values, session-store realization, KMS/JWKS resources, and identity IAM bindings for the selected trust profile | Infrastructure implementation |
-| Exact live header, body, non-streaming timeout, and abusive-traffic limits | Infrastructure implementation and Live qualification |
+| Provider configuration/readback for the selected runtime limits and observed multi-instance abuse behavior | Terraform implementation and Live qualification |
 | Terraform modules, exact bucket and resource names, ingress realization, and IAM bindings for the selected GCP topology | Infrastructure implementation |
 | Dedicated repository identity, workflow subjects, branch protection, protected environment, and federation bindings | Repository extraction and Live mutation |
 | Configuration-bucket, candidate-revision, traffic-pointer, DNS/TLS, readback, and rollback realization | Infrastructure implementation and Live qualification |

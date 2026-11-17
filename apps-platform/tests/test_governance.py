@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -34,11 +35,31 @@ class ProjectAuthorityTest(unittest.TestCase):
             "fixtures/identity.py",
             "fixtures/reference_edge.py",
             "fixtures/registrations/manifest.v1.json",
+            "edge/__init__.py",
+            "edge/_attachments.py",
+            "edge/_assertions.py",
+            "edge/_generation.py",
+            "edge/_identity.py",
+            "edge/_observability.py",
+            "edge/_proxy.py",
+            "edge/_routing.py",
+            "edge/_runtime.py",
+            "edge/verification.py",
             "prompts/README.md",
             "prompts/starting_prompt.md",
+            "pyproject.toml",
             "tests/test_contracts.py",
+            "tests/test_edge_runtime.py",
             "tests/test_fixtures.py",
             "tests/test_governance.py",
+            "tests/__init__.py",
+            "tests/_network_guard.py",
+            "tests/test_observability.py",
+            "tests/test_proxy.py",
+            "tests/test_runtime_qualification.py",
+            "tests/fixtures/assertion-test-keys.jwk.json",
+            "tests/fixtures/oidc-test-private.jwk.json",
+            "uv.lock",
         )
 
         self.assertTrue(all((PROJECT_ROOT / path).is_file() for path in expected_files))
@@ -56,10 +77,79 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertNotIn("terraform apply", makefile)
         self.assertNotIn("gcloud", makefile)
 
+    def test_locked_runtime_foundation_is_extraction_safe(self) -> None:
+        pyproject = tomllib.loads(
+            (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        lock = tomllib.loads((PROJECT_ROOT / "uv.lock").read_text(encoding="utf-8"))
+        makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+        observability = (PROJECT_ROOT / "edge/_observability.py").read_text(
+            encoding="utf-8"
+        )
+        packages = {package["name"]: package for package in lock["package"]}
+
+        self.assertEqual(pyproject["project"]["requires-python"], ">=3.12")
+        self.assertIn(
+            f'RUNTIME_VERSION = "{pyproject["project"]["version"]}"',
+            observability,
+        )
+        self.assertEqual(
+            pyproject["project"]["dependencies"],
+            [
+                "Authlib>=1.9,<1.10",
+                "cryptography>=50,<51",
+                "google-cloud-kms>=3.19,<3.20",
+                "google-cloud-run>=0.16,<0.17",
+                "google-cloud-firestore>=2.34,<2.35",
+                "google-cloud-storage>=3.17,<3.18",
+                "google-crc32c>=1.9,<1.10",
+                "google-auth>=2.62,<2.63",
+                "httpx>=0.28,<0.29",
+                "starlette>=1.10,<1.11",
+                "uvicorn>=0.54,<0.55",
+                "websockets>=17.4,<18",
+            ],
+        )
+        self.assertFalse(pyproject["tool"]["uv"]["package"])
+        self.assertEqual(packages["authlib"]["version"], "1.9.8")
+        self.assertEqual(packages["cryptography"]["version"], "50.0.2")
+        self.assertEqual(packages["google-cloud-kms"]["version"], "3.19.0")
+        self.assertEqual(packages["google-cloud-run"]["version"], "0.16.3")
+        self.assertEqual(packages["google-cloud-firestore"]["version"], "2.34.1")
+        self.assertEqual(packages["google-cloud-storage"]["version"], "3.17.1")
+        self.assertEqual(packages["google-crc32c"]["version"], "1.9.0")
+        self.assertEqual(packages["google-auth"]["version"], "2.62.2")
+        self.assertEqual(packages["httpx"]["version"], "0.28.1")
+        self.assertEqual(packages["starlette"]["version"], "1.10.0")
+        self.assertEqual(packages["uvicorn"]["version"], "0.54.0")
+        self.assertEqual(packages["websockets"]["version"], "17.4")
+        self.assertIn("hash", packages["authlib"]["sdist"])
+        self.assertIn("hash", packages["cryptography"]["sdist"])
+        self.assertIn("hash", packages["google-cloud-kms"]["sdist"])
+        self.assertIn("hash", packages["google-cloud-run"]["sdist"])
+        self.assertIn("hash", packages["google-cloud-firestore"]["sdist"])
+        self.assertIn("hash", packages["google-cloud-storage"]["sdist"])
+        self.assertIn("hash", packages["google-crc32c"]["sdist"])
+        self.assertIn("hash", packages["google-auth"]["sdist"])
+        self.assertIn("hash", packages["httpx"]["sdist"])
+        self.assertIn("hash", packages["starlette"]["sdist"])
+        self.assertIn("hash", packages["uvicorn"]["sdist"])
+        self.assertIn("hash", packages["websockets"]["sdist"])
+        self.assertIn("runtime-check", makefile)
+        self.assertNotIn("uv sync", makefile)
+        self.assertNotIn("uv lock", makefile)
+
     def test_local_ignore_policy_excludes_sensitive_runtime_state(self) -> None:
         ignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
 
-        for pattern in (".env", "**/.terraform/", "*.tfstate", "*.tfplan", "*.tfvars"):
+        for pattern in (
+            ".env",
+            ".venv/",
+            "**/.terraform/",
+            "*.tfstate",
+            "*.tfplan",
+            "*.tfvars",
+        ):
             self.assertIn(pattern, ignore)
         self.assertNotIn(".terraform.lock.hcl", ignore)
 
@@ -82,6 +172,10 @@ class ProjectAuthorityTest(unittest.TestCase):
             "AP-M5 selects infrastructure and Live-qualification planning boundaries only",
             instructions,
         )
+        self.assertIn(
+            "AP-M6 authorizes only repository implementation of the networked Shared Edge",
+            instructions,
+        )
 
     def test_documentation_truthfully_records_planning_and_evidence_status(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
@@ -91,7 +185,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         normalized_overview = " ".join(overview.split())
 
         self.assertIn(
-            "AP-M5 infrastructure planning authority implemented and validated",
+            "AP-M6 locally implemented",
             normalized_index,
         )
         self.assertIn("Contract (`C`) evidence", normalized_index)
@@ -100,12 +194,21 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Live (`L`) and Adoption (`A`) evidence remain unavailable",
             normalized_index,
         )
-        self.assertIn("AP-M5", overview)
+        self.assertIn("AP-M6", overview)
         self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
-        self.assertIn("No networked platform service", normalized_overview)
+        self.assertIn(
+            "bounded HTTP, SSE, and WebSocket proxying",
+            normalized_overview,
+        )
+        self.assertIn("AP-M6 supplies repository implementation evidence only", overview)
+        self.assertIn("complete credential-free `make check` gate passes", overview)
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
-        self.assertIn("AP-M4 deterministic Fixture implementation recorded", layout)
+        self.assertIn(
+            "AP-M6 Cloud Run attachment resolution, bounded proxying, read-only status,",
+            layout,
+        )
+        self.assertIn("redacted completion events recorded", layout)
         self.assertIn("`contracts/`", layout)
         self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)
@@ -347,7 +450,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("## Application Adoption", glossary)
         self.assertIn("app-owned test state", layout)
 
-    def test_provider_runtime_prompt_loads_authority_without_copying_it(
+    def test_terraform_workflow_prompt_loads_authority_without_copying_it(
         self,
     ) -> None:
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
@@ -374,18 +477,18 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
             "An Integration Draft is not Application Adoption",
             "credential-free, deterministic, and non-mutating",
-            "updated `main` after the AP-M5 pull request has merged",
-            "propose AP-M6, the smallest locally testable networked provider-runtime slice",
-            "network server/framework, dependency policy",
-            "exact live header, request-body, response-body, non-streaming timeout",
-            "Do not write Terraform",
+            "updated `main` after the AP-M6 pull request has merged",
+            "propose AP-M7, the smallest Terraform-and-workflow implementation-authority slice",
+            "Treat absent detailed work packages, configuration contracts, evaluation commands",
+            "Do not initialize a Terraform backend",
+            "AP-M7 belongs on a new bounded branch and pull request after AP-M6 merges",
         ):
             self.assertIn(boundary, normalized_prompt)
         self.assertNotIn("### AP-PR-", prompt)
         self.assertNotIn("## ADR-", prompt)
         self.assertNotIn("terraform apply", prompt)
         self.assertIn(
-            "[Provider-runtime handoff](starting_prompt.md)",
+            "[Terraform-and-workflow handoff](starting_prompt.md)",
             prompt_index,
         )
 
@@ -410,8 +513,8 @@ class ProjectAuthorityTest(unittest.TestCase):
             index,
         )
         for later_slice in (
-            "Networked provider runtime — next after item 5 merges",
-            "Terraform and workflow implementation — later",
+            "Networked provider runtime — locally implemented",
+            "Terraform and workflow implementation — next after merge",
             "Non-production qualification deployment — later",
             "Live qualification — later",
             "Finance Application Adoption — later and independent",
@@ -419,12 +522,12 @@ class ProjectAuthorityTest(unittest.TestCase):
             self.assertIn(later_slice, index)
         self.assertIn("separate bounded branch and pull request", normalized_index)
         self.assertIn(
-            "propose AP-M6, the smallest locally testable networked provider-runtime slice",
+            "propose AP-M7, the smallest Terraform-and-workflow implementation-authority slice",
             normalized_prompt,
         )
         self.assertIn("Wait for owner approval before editing", normalized_prompt)
-        self.assertIn("Do not write Terraform", normalized_prompt)
-        self.assertIn("AP-M6 belongs on a new bounded branch", normalized_prompt)
+        self.assertIn("Do not initialize a Terraform backend", normalized_prompt)
+        self.assertIn("AP-M7 belongs on a new bounded branch", normalized_prompt)
 
     def test_fixture_design_selects_a_bounded_in_process_profile(self) -> None:
         design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
@@ -462,7 +565,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("Finance Assistant code", design)
         self.assertIn("network direct-bypass control", threat_model)
 
-    def test_ap_m5_authorities_have_complete_unique_identifiers(self) -> None:
+    def test_ap_m5_and_ap_m6_authorities_have_complete_unique_identifiers(self) -> None:
         plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
             encoding="utf-8"
         )
@@ -474,11 +577,15 @@ class ProjectAuthorityTest(unittest.TestCase):
         planning_gates = re.findall(
             r"^### (AP-EVAL-M5-\d{2}) ·", evaluation, re.MULTILINE
         )
+        runtime_packages = re.findall(r"^#### (AP-M6-W\d+) ·", plan, re.MULTILINE)
+        runtime_gates = re.findall(
+            r"^#### (AP-EVAL-M6-\d{2}) ·", evaluation, re.MULTILINE
+        )
         live_gates = re.findall(
             r"^#### (AP-EVAL-M9-\d{2}) ·", evaluation, re.MULTILINE
         )
         future_boundaries = re.findall(
-            r"^### (AP-EVAL-M[6-9]) ·", evaluation, re.MULTILINE
+            r"^### (AP-EVAL-M[7-9]) ·", evaluation, re.MULTILINE
         )
 
         self.assertEqual(
@@ -490,17 +597,31 @@ class ProjectAuthorityTest(unittest.TestCase):
             [f"AP-EVAL-M5-{index:02d}" for index in range(1, 10)],
         )
         self.assertEqual(
+            runtime_packages,
+            [f"AP-M6-W{index}" for index in range(1, 12)],
+        )
+        self.assertEqual(
+            runtime_gates,
+            [f"AP-EVAL-M6-{index:02d}" for index in range(1, 11)],
+        )
+        self.assertEqual(
             live_gates,
             [f"AP-EVAL-M9-{index:02d}" for index in range(1, 11)],
         )
         self.assertEqual(
             future_boundaries,
-            ["AP-EVAL-M6", "AP-EVAL-M7", "AP-EVAL-M8", "AP-EVAL-M9"],
+            ["AP-EVAL-M7", "AP-EVAL-M8", "AP-EVAL-M9"],
         )
-        for identifiers in (work_packages, planning_gates, live_gates):
+        for identifiers in (
+            work_packages,
+            planning_gates,
+            runtime_packages,
+            runtime_gates,
+            live_gates,
+        ):
             self.assertEqual(len(identifiers), len(set(identifiers)))
 
-    def test_ap_m5_separates_later_delivery_and_names_missing_inputs(self) -> None:
+    def test_ap_m6_resolves_runtime_inputs_and_separates_later_delivery(self) -> None:
         plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
             encoding="utf-8"
         )
@@ -522,10 +643,10 @@ class ProjectAuthorityTest(unittest.TestCase):
         for planning_boundary in (
             "AP-M5 produces no Contract, Fixture, Live, or Adoption evidence",
             "Each item below requires a new owner-approved branch",
-            "It does not authorize a listening service",
             "no later slice inherits mutation authority merely because AP-M5 is accepted",
-            "Network server/framework and dependency policy",
-            "Header, request-body, response-body, non-streaming timeout, and abusive-traffic limits",
+            "Python 3.12-or-newer Starlette/Uvicorn runtime",
+            "exact header, body, timeout, concurrency, stream, rate, and rejection behavior",
+            "Owner acceptance of its exact values is required before AP-M6-W2",
             "Dedicated GitHub organization, repository, workflow subjects",
             "Globally unique state, configuration, log, and evidence bucket names",
             "These are unavailable inputs, not permission to query a provider",
@@ -533,7 +654,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             self.assertIn(planning_boundary, normalized_plan)
 
         for evaluation_boundary in (
-            "AP-EVAL-M5 qualifies planning consistency only",
+            "internally consistent planning authority for the initial GCP qualification topology",
             "It proves no provider behavior and creates no new evidence class",
             "The default `make check` remains separate and credential-free",
             "A deployment result cannot qualify routing, identity, direct-origin denial",
@@ -541,13 +662,62 @@ class ProjectAuthorityTest(unittest.TestCase):
         ):
             self.assertIn(evaluation_boundary, normalized_evaluation)
 
-    def test_ap_m5_reserved_capabilities_remain_absent(self) -> None:
+    def test_ap_m6_runtime_profile_is_exact_and_non_operational(self) -> None:
+        design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+        threat_model = (PROJECT_ROOT / "docs/06_threat_model.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_design = " ".join(design.split())
+        normalized_evaluation = " ".join(evaluation.split())
+        normalized_threat_model = " ".join(threat_model.split())
+
+        for selected_value in (
+            "create_app(runtime_configuration, adapters) -> ASGI application",
+            "Starlette as the ASGI framework",
+            "Uvicorn as the server",
+            "complete transitive resolution is committed in `uv.lock`",
+            "at most 64 request headers",
+            "at most 25 MiB per request body",
+            "at most 100 MiB per streamed HTTP response",
+            "300-second non-streaming request timeout",
+            "55-minute absolute streaming lifetime",
+            "at most 20 active requests and 10 streaming connections",
+            "120 request starts per minute per trusted client key",
+            "not a distributed rate-limit or WAF claim",
+        ):
+            self.assertIn(selected_value, normalized_design)
+
+        for evaluation_boundary in (
+            "must fail if a connection is attempted to any non-loopback address",
+            "Dependency synchronization is a separate setup action",
+            "AP-EVAL-M6 performs no authenticated provider",
+            "production adapters are locally tested implementations",
+        ):
+            self.assertIn(evaluation_boundary, normalized_evaluation)
+
+        self.assertIn(
+            "AP-EVAL-M6 covers the exact network-runtime profile",
+            normalized_threat_model,
+        )
+        self.assertIn(
+            "AP-M6-W8 implements the remaining request, body, response, stream, "
+            "message, duration, concurrency, and process-local rate limits",
+            normalized_threat_model,
+        )
+
+    def test_ap_m6_runtime_path_is_bounded_and_later_capabilities_remain_absent(
+        self,
+    ) -> None:
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(
             encoding="utf-8"
         )
 
         reserved_paths = (
-            "edge",
             "registrations",
             "infrastructure",
             "artifacts",
@@ -556,8 +726,13 @@ class ProjectAuthorityTest(unittest.TestCase):
         for relative_path in reserved_paths:
             self.assertFalse(
                 (PROJECT_ROOT / relative_path).exists(),
-                f"AP-M5 must not create reserved capability path: {relative_path}",
+                f"AP-M6 must not create later capability path: {relative_path}",
             )
+
+        self.assertTrue((PROJECT_ROOT / "edge/__init__.py").is_file())
+        self.assertTrue((PROJECT_ROOT / "edge/_generation.py").is_file())
+        self.assertTrue((PROJECT_ROOT / "edge/_routing.py").is_file())
+        self.assertTrue((PROJECT_ROOT / "edge/_runtime.py").is_file())
 
         for reserved_reference in (
             "`edge/`",
@@ -643,7 +818,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         normalized_evaluation = " ".join(evaluation.split())
 
         for boundary in (
-            "It does not authorize a listening service",
+            "It does not turn the harness into a network server",
             "external registration endpoint, or database",
             "AP-M4 produces Fixture (`F`) evidence only",
             "Each work package is a separate small commit",

@@ -1,12 +1,13 @@
 # App Platform evaluation strategy
 
-Version 0.3 | Status: deterministic evaluation authority through AP-M5; future AP-M6 through AP-M9 claim boundaries
+Version 0.4 | Status: deterministic evaluation authority through AP-M6; future AP-M7 through AP-M9
+claim boundaries
 
-This document preserves how delivery item 3, AP-M3, and delivery item 4, AP-M4, are evaluated. It
-now defines the deterministic planning gate for delivery item 5, AP-M5, and the claim boundaries
-that later AP-M6 through AP-M9 authorities must refine before implementation or use. AP-EVAL-M5
-qualifies planning consistency only; it does not qualify a live Shared Edge, provider identity,
-cloud resource, deployment, or consuming application.
+This document preserves how delivery items 3 through 5 are evaluated and now defines AP-EVAL-M6 for
+delivery item 6, the networked provider runtime. AP-EVAL-M6 qualifies only repository behavior
+through deterministic and process-local integration tests. AP-EVAL-M7 through AP-EVAL-M9 remain
+future claim boundaries. No gate in this document qualifies a deployed Shared Edge, provider
+identity, cloud resource, consuming application, or Live behavior.
 
 Plan: [App Platform implementation plan](04_implementation_plan.md)
 
@@ -785,26 +786,189 @@ load, concurrency, network, DNS, TLS, IAM, OAuth, KMS, Firestore, provider, budg
 deployment, rollback, recovery, incident, migration, or application-product test. It cannot qualify
 any selected control as implemented or operational.
 
+## AP-EVAL-M6 · Networked-provider-runtime gate
+
+### Evaluation claim
+
+A passing AP-EVAL-M6 result means only that the exact repository revision implements the networked
+Shared Edge and production-provider adapter logic and passes deterministic tests through fake
+adapters and process-local loopback. It supplies implementation evidence, not Live evidence.
+
+It does not prove a real Google login, persistent Platform Session, managed signing key, Cloud Run
+target, provider IAM grant, direct-origin denial, load balancer, DNS record, certificate, log sink,
+availability, cost, deployment, or Application Adoption.
+
+### Evaluation environment
+
+The gate runs from the App Platform root in an already synchronized `uv.lock` environment on Python
+3.12 or newer:
+
+```bash
+make check
+```
+
+While colocated, `make -C apps-platform check` is equivalent. Dependency synchronization is a
+separate setup action and is not part of the gate. The check command performs no installation,
+package-index request, DNS resolution, external network call, credential lookup, metadata-server
+call, browser action, provider access, repository mutation, or external state change.
+
+Unit and ASGI tests use in-memory adapters. Network integration tests may bind only an ephemeral
+loopback address, must keep the listener inside the test process, and must fail if a connection is
+attempted to any non-loopback address. Tests use fixed keys, clocks, nonces, identities, metadata,
+generations, and application responses committed as non-secret fixtures.
+
+### Gate structure
+
+#### AP-EVAL-M6-01 · Authority, packaging, and extraction
+
+Verify the approved ASGI interface, internal adapter seams, Python range, direct dependency
+declarations, frozen transitive lock, package metadata, ignored environment artifacts, and
+project-relative commands. A temporary history-independent copy must run the complete gate without
+the parent application package or repository layout.
+
+The path-scoped containing-repository workflow may synchronize the frozen environment while the
+projects are colocated, but no canonical runtime code or configuration may live outside
+`apps-platform/`.
+
+#### AP-EVAL-M6-02 · Runtime limits and closed parsing
+
+At each exact boundary and one unit beyond it, verify:
+
+- 16-byte methods, 4,096-byte paths, 8,192-byte queries, 64 headers, 128-byte header names,
+  8,192-byte header values, and 32,768 aggregate header bytes;
+- 25-MiB request and buffered-response bodies, 100-MiB streamed connection totals, and 1-MiB
+  WebSocket messages;
+- 10-second upstream connection, 300-second non-streaming, 300-second streaming-idle, and
+  55-minute absolute streaming timeouts;
+- 20 active requests, 10 streams, and four per-client streams per instance; and
+- per-client request, login, WebSocket-message, and instance-wide token-bucket rates and bursts.
+
+Malformed methods, paths, queries, text, framing, transfer encoding, content length, duplicate
+security-sensitive headers, hop-by-hop headers, limit overflow, saturation, and timeout fail before
+or cancel target work with deterministic closed results and no prohibited diagnostic data.
+
+#### AP-EVAL-M6-03 · Immutable generation, catalogue, and routing
+
+Verify exact object and content digest binding, Version 1 validation, one-generation startup,
+escaped catalogue output, catalogue visibility, reserved paths, canonical prefix and mount
+rewriting, query preservation, and staged/suspended/retired/unknown/malformed closure. Provider
+storage failure, digest mismatch, partial configuration, stale generation, or runtime reload attempt
+cannot produce a mixed or alternate route set.
+
+#### AP-EVAL-M6-04 · OIDC, sessions, admission, and logout
+
+Using deterministic OIDC and session adapters, verify PKCE, state and nonce binding, verified Google
+issuer and subject, opaque host-only cookie attributes, eight-hour absolute expiry, no silent renewal,
+no retained Google tokens, validated return locations, logout deletion, optional public identity,
+authenticated admission, exact restricted membership, email display-only treatment, revocation at
+the next request or new stream, and fail-closed provider or store errors.
+
+#### AP-EVAL-M6-05 · Assertions, JWKS, and application verification
+
+Verify visitor-header stripping, Version 1 claim minimization, ES256 signing, application-specific
+audience, versioned key identifier, 60-second lifetime, 30-second skew, current and overlapping key
+publication, 15-minute verifier caching, one refresh on an unknown key, and successful direct-entry
+application verification. Missing, malformed, unsigned, expired, premature, wrong-version,
+wrong-issuer, wrong-audience, unknown-key, stale-key, or cross-application assertions fail closed.
+
+No test claims distributed replay prevention or treats the edge caller identity as Visitor identity.
+
+#### AP-EVAL-M6-06 · Cloud Run reference and provider isolation
+
+Verify strict `gcp-cloud-run-v1` parsing and exact project number, region, service, application owner,
+readiness, edge-caller grant, and audience matching through fake provider metadata. Reject URLs,
+credentials, Terraform addresses, unsupported adapters, arbitrary discovery, wrong scope, absent or
+unready services, ownership mismatch, caller mismatch, cross-application reuse, and metadata failure.
+
+Production adapters must be constructible without performing I/O and must accept their client or
+transport dependency rather than creating it during import.
+
+#### AP-EVAL-M6-07 · HTTP and streaming proxy behavior
+
+Through ASGI and process-local loopback, verify request-path and query forwarding, allowed end-to-end
+headers, hop-by-hop removal, assertion replacement, uploads, buffered and streaming downloads, SSE,
+WebSocket handshake and bidirectional messages, backpressure, cancellation, visitor disconnect,
+idle and absolute expiry, application status propagation where safe, and protocol-appropriate
+failure mapping.
+
+One slow, malformed, saturated, disconnected, or failing application cannot select, block, leak, or
+mutate another application's target or state. No test makes an availability, throughput, or load
+claim.
+
+#### AP-EVAL-M6-08 · Status, outcomes, failure, and redaction
+
+Verify operator authorization for status/readback, revision and generation facts, adapter health,
+correlation identifiers, one completion event per request or stream, coarse outcome, status class,
+and latency. Across successful and failed paths, assert absence of assertions, session identifiers,
+cookies, authorization values, restricted members, issuer-subject pairs, email, visitor metadata,
+request or response bodies, stream chunks, provider payloads, application data, credentials,
+secrets, state, and plans.
+
+Status and readback cannot activate, reload, roll back, mutate, discover, or expose runtime secrets.
+
+#### AP-EVAL-M6-09 · Non-mutation and truthful evidence
+
+Verify that default checks reject external addresses and provider transports, use no environment
+credential, metadata server, browser, OAuth client, KMS key, Firestore database, GCS object, Cloud
+Run service, Terraform, DNS, repository setting, or live registration, and create no authenticated
+artifact. Finance Assistant and every Integration Draft remain unchanged and inactive.
+
+The repository and status documents call AP-M6 locally implemented only after all gates pass and
+retain deployed, Live, and Adoption claims as unavailable.
+
+#### AP-EVAL-M6-10 · Complete regression and handoff
+
+Run every AP-EVAL-M3, AP-EVAL-M4, AP-EVAL-M5, and AP-EVAL-M6 gate at one source revision with zero
+failures, errors, unexpected warnings, or mandatory skips. Verify unique identifiers and complete
+traceability for AP-M6-W1 through AP-M6-W11 and AP-EVAL-M6-01 through AP-EVAL-M6-10, then route the
+next task to AP-M7 only after the pull request merges.
+
+### Threat coverage boundary
+
+| Threats | AP-EVAL-M6 implementation claim |
+| --- | --- |
+| AP-TM-001 through AP-TM-003 | Generation, catalogue, route, attachment-reference, and provider-metadata inputs validate and fail closed |
+| AP-TM-004 through AP-TM-006 | Direct-entry verification, sessions, admission, assertions, audiences, and feature-authorization separation pass locally |
+| AP-TM-007 through AP-TM-009 | Immutable generation binding, failure isolation, ownership checks, and cross-application rejection pass locally; provider state does not |
+| AP-TM-010 | Errors, status, logs, and evidence pass prohibited-data redaction tests |
+| AP-TM-011 | Locked dependencies, digest binding, injected clients, extraction, and no implicit mutation pass repository tests |
+| AP-TM-012 | Exact size, duration, concurrency, stream, and per-instance rate limits pass deterministic boundary tests without load claims |
+| AP-TM-013 | Provider, key, session, storage, transport, disconnect, and timeout failures preserve closed behavior locally |
+| AP-TM-014 | Fixtures remain synthetic, Finance remains unchanged, and no implementation result is called Adoption or Live evidence |
+
+### Pass, fail, and skip semantics
+
+AP-EVAL-M6 passes only when all ten gates and every prior regression gate pass at one revision. Any
+external connection attempt, real credential use, provider call, missing production/fake adapter
+pair, untested limit, prohibited diagnostic value, cross-application effect, dependency drift,
+runtime mutation path, later-slice artifact, false operational claim, failure, error, unexpected
+warning, or mandatory skip fails the gate.
+
+An unavailable provider resource or Live control is a declared limitation, not a skipped AP-M6
+test. Platform-specific conditional skips are prohibited.
+
+### Required evaluation evidence
+
+The pull-request handoff records the branch, AP-M5 merge base, evaluated and final revisions,
+AP-M6 work-package commits and paths, `uv.lock` digest, Python version, exact commands and working
+directory, duration, test totals, failures, errors, warnings, and skips, identifier and threat
+coverage, security/privacy impact, limitations, and unresolved later inputs. It confirms loopback-
+only networking, fake-provider use, no external mutation, and unchanged Finance behavior.
+
+Console output is sufficient and no generated report is committed.
+
+### Limitations
+
+AP-EVAL-M6 performs no authenticated provider, browser, Terraform, repository-setting, DNS, TLS,
+IAM, deployment, load, availability, cost, direct-origin network, multi-instance, rollback,
+recovery, incident, migration, or application-product test. Its production adapters are locally
+tested implementations, not evidence that their required provider resources or permissions exist.
+
 ## Future evaluation boundaries
 
 The following sections constrain later authorities. They do not authorize implementation or
 provide a passing result. Each later milestone must refine its environment, commands, fixtures,
 expected results, evidence schema, pass/fail semantics, and exact source revision before work begins.
-
-### AP-EVAL-M6 · Networked-provider-runtime gate
-
-AP-EVAL-M6 may qualify only repository implementation of the networked Shared Edge and provider
-runtime through local deterministic and integration tests. It must cover catalogue and prefix
-routing, bounded HTTP behavior, forwarding, public/authenticated/restricted admission, OIDC flow
-seams through fake adapters, session lifecycle, logout, assertion signing and verification, JWKS,
-Cloud Run reference resolution through fake provider metadata, direct-entry application
-verification, immutable generation loading, status/readback, failure isolation, streaming seams,
-redaction, and extraction.
-
-AP-EVAL-M6 uses no real Google account, OAuth client, KMS key, Firestore database, Cloud Run service,
-Terraform, DNS, credential, socket exposed outside the test process, or provider mutation. It
-supplies implementation evidence only and no Live evidence. It cannot begin until the owner approves
-the network framework, dependency policy, and exact remaining request limits.
 
 ### AP-EVAL-M7 · Terraform-and-workflow gate
 

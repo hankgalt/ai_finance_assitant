@@ -120,15 +120,9 @@ def _contains_unpaired_surrogate(value: Any) -> bool:
     return False
 
 
-def load_json_document(path: Path, *, max_bytes: int = 1_048_576) -> LoadedDocument:
-    """Load one bounded JSON document without accepting duplicate keys."""
+def load_json_bytes(payload: bytes, *, max_bytes: int = 1_048_576) -> LoadedDocument:
+    """Load one bounded JSON byte string without accepting duplicate keys."""
 
-    if path.stat().st_size > max_bytes:
-        return LoadedDocument(
-            value=None,
-            violations=(Violation("JSON_INVALID", "", "document exceeds size limit"),),
-        )
-    payload = path.read_bytes()
     if len(payload) > max_bytes:
         return LoadedDocument(
             value=None,
@@ -169,6 +163,17 @@ def load_json_document(path: Path, *, max_bytes: int = 1_048_576) -> LoadedDocum
             ),
         )
     return LoadedDocument(value=value, violations=())
+
+
+def load_json_document(path: Path, *, max_bytes: int = 1_048_576) -> LoadedDocument:
+    """Load one bounded JSON document without accepting duplicate keys."""
+
+    if path.stat().st_size > max_bytes:
+        return LoadedDocument(
+            value=None,
+            violations=(Violation("JSON_INVALID", "", "document exceeds size limit"),),
+        )
+    return load_json_bytes(path.read_bytes(), max_bytes=max_bytes)
 
 
 def _normalized_registration_set(registration_set: dict[str, Any]) -> dict[str, Any]:

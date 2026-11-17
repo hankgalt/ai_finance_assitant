@@ -1,6 +1,8 @@
 # App Platform system design
 
-Version 0.7 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
+Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile;
+Cloud Run attachment resolution, bounded proxying, read-only status, and redacted completion events
+implemented locally; no provider operation or live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -587,6 +589,185 @@ The platform project pays for Shared Edge and initial same-project qualification
 application projects pay for their runtime, data, networking, and provider services unless their
 Application Adoption explicitly records another allocation.
 
+### AP-M6 networked runtime profile
+
+AP-M6 implements one deep Shared Edge module behind this external interface:
+
+```text
+create_app(runtime_configuration, adapters) -> ASGI application
+```
+
+The returned application is the interface used by the server and by integration tests. It accepts
+all network requests through one pipeline and hides catalogue projection, reserved paths, route
+selection, admission, identity assertion, attachment resolution, forwarding, limits, failure
+mapping, and completion-event redaction. Framework routes may identify platform-reserved paths and
+one catch-all entry, but they may not duplicate registration-derived application routes.
+
+The implementation uses Python 3.12 or newer, Starlette as the ASGI framework, and Uvicorn as the
+server. Provider and network behavior is accepted through internal seams for immutable generation
+loading, Google OIDC, Platform Sessions, assertion signing and public-key discovery, Cloud Run
+metadata, upstream HTTP/WebSocket transport, trusted client classification, and time. Each seam has
+both a production adapter and a deterministic fake before it is treated as real. Callers do not
+assemble the request pipeline or depend on those internal interfaces.
+
+The application-side verifier is a separate deep module with one interface that accepts an
+assertion, expected issuer, expected application audience, verification material, and time, then
+returns either Version 1 Verified Identity Context or an ordered verification violation. It does
+not perform admission, create an Application Principal, or grant a Feature Entitlement.
+
+Direct dependencies are declared in `pyproject.toml`; complete transitive resolution is committed
+in `uv.lock`. Runtime work adds a dependency only with its first production use. The selected
+families are Starlette and Uvicorn for ASGI, HTTPX and `websockets` for upstream transport, Authlib
+and `cryptography` for OIDC and ES256, and official Google Cloud clients for Storage, Firestore,
+KMS, Cloud Run metadata, and service identity. Production code may not hand-build provider signing,
+token, or discovery protocols. `make check` consumes an already synchronized locked environment;
+it performs no installation or network access.
+
+AP-M6-W3 accepts at most one mebibyte from the exact configured Cloud Storage object generation
+through an injected source adapter; the ranged read includes only one additional byte needed to
+detect overflow. Startup verifies the raw SHA-256 content digest, applies the Version 1
+duplicate-safe JSON and compiled-configuration schema profile, and verifies the compiled generation
+digest before binding the generation in memory. Any missing adapter, source failure, invalid
+document, invalid contract, or digest mismatch fails startup with a coarse code. Loading does not
+discover storage, compile registrations, follow a mutable pointer, activate a provider revision, or
+reload during the process lifetime.
+
+AP-M6-W4 renders only the active catalogue projection from that bound generation and escapes every
+value for HTML. One canonical raw-path parser rejects percent encoding, alternate separators,
+empty or dot segments, control or whitespace characters, decoded/raw disagreement, invalid UTF-8,
+and paths over 4,096 bytes. The same catch-all request path keeps reserved platform paths disjoint,
+selects only an active segment-bounded application prefix, selects the longest attachment mount,
+and applies the declared rewrite while preserving query bytes. Public routes expose only an
+internal deterministic route-selection handoff exercised by a deterministic fake and still return
+`503`; AP-M6-W4 performs no attachment resolution or proxy operation.
+
+AP-M6-W5 adds an edge-owned Google authorization-code flow with PKCE and validates only signed
+Google issuer-and-subject identity. A browser receives opaque host-only `Secure`, `HttpOnly`,
+`SameSite=Lax`, `Path=/` cookies; transient login material and minimal sessions remain server-side.
+The Firestore adapter hashes opaque identifiers before using them as document identifiers, consumes
+login flows once, and stores no Google access or refresh token. Sessions expire absolutely after
+eight hours without renewal. Public routing remains anonymous when session storage is unavailable;
+authenticated and restricted routing fail closed. Restricted admission compares the exact reviewed
+issuer-and-subject pair, never email. Logout deletes server state, clears the cookie, and accepts
+only a root or active registered platform-relative return location. Production provider and store
+adapters are exercised with deterministic local transports; default verification performs no
+provider call. AP-M6-W6 replaces the internal admitted identity at the handoff with its signed
+Version 1 assertion.
+
+AP-M6-W6 replaces any visitor-supplied identity value with a compact ES256 JWS only after identity
+is admitted and the selected attachment supplies its application-specific audience. The payload is
+exactly the Version 1 claim contract: contract version, canonical Google issuer, immutable subject,
+audience, issued and expiry times, and one request correlation identifier. It contains no email,
+session identifier, provider token, role, Feature Entitlement, or shared application principal.
+Assertions last 60 seconds and the independent application verifier accepts at most 30 seconds of
+clock skew.
+
+One signing seam has a deterministic fixed-key adapter and a Cloud KMS adapter bound to exact
+`us-west1` key-version resources. The KMS adapter validates digest, signature, public-key CRC32C,
+algorithm, and returned resource identity before accepting a result. The reserved JWKS path emits
+only bounded P-256 public verification material for the active and overlap keys with a 15-minute
+cache limit. The application verifier accepts an assertion, exact issuer, exact application
+audience, key fetcher, and time; it refreshes once for an unknown key and rejects unavailable or
+stale material. It returns Version 1 Verified Identity Context only after contract, signature,
+issuer, audience, lifetime, and clock validation. It creates no Application Principal, grants no
+Feature Entitlement, and makes no distributed replay-prevention claim.
+
+AP-M6-W7 accepts only the exact `gcp-cloud-run-v1` URN grammar and turns its project number, region,
+and service name into one exact Cloud Run v2 service read and one exact IAM-policy read. The
+production adapter accepts its Cloud Run client at construction and performs no discovery or I/O
+until resolution; deterministic verification supplies an exact-key in-memory metadata adapter.
+Provider readback is eligible only when the returned resource scope matches, reconciliation has
+completed successfully at the observed generation, a serving revision and provider-derived
+`https://*.run.app` origin exist, and the Invoker IAM check remains enabled.
+
+The Application Owner marks the service with `state_owner=application` and an `application_id`
+label matching the attachment owner. Protected targets also carry the exact application assertion
+audience in the `comfforts.com/identity-audience` annotation; public attachments omit it. An
+unconditional `roles/run.invoker` binding must contain the configured platform edge service-account
+principal. Conditional grants are not interpreted by the runtime. Any URL or state address in the
+registration, unsupported adapter, malformed URN, provider failure, missing service, mismatched
+scope, unready service, owner reuse, caller mismatch, audience mismatch, disabled Invoker check, or
+invalid provider target closes before application delivery. Local fake readback is not evidence
+that IAM, ingress, a target service, or an edge caller exists in GCP.
+
+AP-M6-W8 delivers only a successfully selected, admitted, asserted, and resolved request. Its HTTP
+transport obtains a Google service-identity token for the resolved audience, preserves the
+registration-derived rewritten path and raw query bytes, and never accepts a registration-supplied
+URL. Request forwarding removes hop-by-hop, forwarding, visitor authorization, platform-session,
+and visitor-controlled identity values before installing the edge-controlled authorization and
+application assertion. Response forwarding removes hop-by-hop and application-controlled platform
+identity or session behavior while preserving eligible application headers and cookies.
+
+The same proxy supports bounded uploads, buffered responses, streaming HTTP, SSE, downloads, and
+bidirectional WebSockets. It preserves an eligible WebSocket subprotocol, applies the same identity
+replacement, and closes both directions on visitor disconnect, upstream close, size or rate
+violation, idle or absolute timeout, or cancellation. Provider, transport, and malformed-response
+failures map to coarse closed results without selecting a different attachment. Deterministic tests
+exercise the production HTTP and WebSocket transports only against ephemeral process-local
+loopback servers and exercise remaining failure paths through deterministic fakes. They do not
+authenticate to GCP or prove deployed network behavior.
+
+The initial `qualification-v1` request profile applies before target selection and permits lower
+environment settings but no higher value without a reviewed profile change:
+
+- ASCII methods of at most 16 bytes, raw paths of at most 4,096 bytes, and queries of at most 8,192
+  bytes;
+- at most 64 request headers, with an ASCII name of at most 128 bytes, a value of at most 8,192
+  bytes, and at most 32,768 aggregate header bytes;
+- at most 25 MiB per request body and per buffered response body;
+- at most 100 MiB per streamed HTTP response, SSE connection, or WebSocket connection, with at most
+  1 MiB in one WebSocket message;
+- a 10-second upstream connection timeout, a 300-second non-streaming request timeout, a 300-second
+  streaming idle timeout, and the already selected 55-minute absolute streaming lifetime; and
+- at most 20 active requests and 10 streaming connections per edge instance, with at most four
+  streams for one trusted client key.
+
+The profile uses an in-memory, per-instance token bucket of 120 request starts per minute per
+trusted client key with a burst of 40, 10 login starts per 10 minutes per key, and 20 WebSocket
+messages per second with a burst of 40. It also caps all request starts at 600 per minute per
+instance with a burst of 100. Client keys come only from load-balancer-authenticated metadata, are
+held for at most 10 minutes, and are never logged or persisted. When trusted client metadata is
+unavailable, only the instance-wide cap applies. This is bounded demo abuse resistance, not a
+distributed rate-limit or WAF claim; two instances can independently permit their full limits.
+
+Limit or saturation rejection occurs before application selection where possible, returns a closed
+`413`, `429`, or protocol-appropriate close result, and records only the coarse outcome and
+correlation identifier. The runtime drains or cancels bounded work and does not continue an
+upstream operation after the visitor connection or platform timeout closes it. The body and header
+caps remain below the selected provider limits while retaining room for provider-added metadata.
+Specifically, 25 MiB is below Cloud Run's 32-MiB HTTP/1 request and buffered-response limits, the
+55-minute stream lifetime is below its 60-minute request maximum, and the 32-KiB aggregate header
+cap plus bounded path and query leaves room below the global external Application Load Balancer's
+60-KiB combined request-header and URL limit. See the provider's
+[Cloud Run quotas](https://cloud.google.com/run/quotas),
+[request-timeout guidance](https://cloud.google.com/run/docs/configuring/request-timeout), and
+[load-balancer quotas](https://cloud.google.com/load-balancing/docs/quotas). Larger uploads or
+downloads require a later reviewed profile rather than an application-specific exception.
+
+AP-M6-W9 adds one reserved, read-only `/_platform/status` operation. It denies access unless an
+injected operator authorizer approves the request; the initial exact-session adapter compares only
+the immutable issuer-and-subject pair. The response contains the bound source revision, non-secret
+component version, Registration Generation number and digest, contract and compiler versions, and
+coarse process-local adapter states. It contains no route table, attachment reference or target,
+restricted member, operator identity, session, assertion, provider payload, state, plan, secret, or
+mutation interface. Status reads the already bound generation and local observations; it cannot
+load, discover, activate, reload, roll back, or change them. Exact operator identity and deployed
+authorization remain infrastructure inputs.
+
+An outer ASGI completion boundary creates one opaque correlation identifier for each HTTP request
+or WebSocket connection. The same value is supplied to any application assertion and replaces any
+visitor correlation header before application delivery. After the boundary closes, a typed event
+can contain only source revision, generation digest, normalized application and attachment-based
+route identifiers, coarse outcome, response status class or WebSocket class, bounded latency,
+correlation identifier, and non-secret component versions. Stream timeout, size closure,
+disconnect, cancellation, and WebSocket close update only the coarse outcome. Sink failure marks
+the local sink observation degraded and never changes the visitor response.
+
+The production event adapter writes the typed JSON object through an injected standard logger;
+deterministic tests use an in-memory sink. Neither adapter accepts an arbitrary event mapping.
+Provider log routing, the dedicated bucket, seven-day retention, owner-only access, and absence of
+external export remain AP-M7 through AP-M9 configuration and Live evidence, not AP-M6 behavior.
+
 ## Fixture boundary
 
 Fixture Applications are contract consumers, not internal compiler branches or privileged platform
@@ -753,19 +934,24 @@ compiler behavior, paths relative to that root, or ownership boundaries.
 
 ## Explicitly unresolved implementation decisions
 
-This design intentionally does not select or implement:
+This design intentionally does not implement:
 
 - Terraform modules, bucket names, backend objects, workflows, repository-bound federation,
   resource names, state-transfer commands, or IAM grants for the selected state and operator model;
 - OAuth client registration values, Firestore session configuration, KMS key versions, secret
   versions, credentials, or IAM bindings for the selected identity profile;
-- a live catalogue, Shared Edge runtime, `gcp-cloud-run-v1` resolver, external registration
-  endpoint, registration database, or operator control plane;
+- a deployed live catalogue or Shared Edge runtime, provider-qualified `gcp-cloud-run-v1`
+  resolution or proxy operation, external registration endpoint, registration database, or
+  operator control plane;
 - a configuration bucket, compiled generation object, candidate edge revision, traffic change,
   DNS record, certificate activation, readback execution, or rollback execution;
 - a log or evidence bucket, sink, retention rule, budget, alert, runtime scaling setting, cleanup
   policy, label policy, incident automation, or cost-response action;
 - Finance Assistant registration, Application Adoption, migration, access expansion, or cutover.
+
+AP-M6 now resolves the network framework, dependency policy, and initial header, body, timeout, and
+abusive-traffic limits as implementation authority. Local runtime and adapter implementation does
+not make provider resources or Live behavior implemented or qualified.
 
 The implementation plan, evaluation strategy, threat model, versioned schemas, and deterministic
 validation added by this delivery item may constrain later work. They cannot describe an unresolved
@@ -778,9 +964,10 @@ revision-scoped Contract evidence that the Version 1 schemas and deterministic r
 satisfy their declared offline gate. AP-M4 supplies the Fixture evidence defined by Version 0.2.
 Version 0.3 selects the initial GCP Live topology, Version 0.4 selects its identity trust profile,
 Version 0.5 selects state and operator authority, Version 0.6 selects activation, DNS, readback, and
-rollback behavior, and Version 0.7 selects observability, evidence, incident, and cost controls.
-None supplies Terraform, provider, network, identity, deployment, or Live evidence. Adoption
-qualification remains a later application-owned gate.
+rollback behavior, Version 0.7 selects observability, evidence, incident, and cost controls, and
+Version 0.8 selects the AP-M6 network module, dependency, and bounded-request profile. None supplies
+Terraform, provider, network, identity, deployment, or Live evidence. Adoption qualification
+remains a later application-owned gate.
 
 ## Design trace
 
@@ -793,5 +980,6 @@ qualification remains a later application-owned gate.
 | Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004, ADR-008 |
 | Fixture and adoption boundary | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 |
 | Initial GCP Live topology and Cloud Run attachments | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
+| AP-M6 network module and bounded-request profile | AP-PR-001 through AP-PR-008; AP-QR-002 through AP-QR-006 | ADR-001 through ADR-006, ADR-008, ADR-009 |
 | Terraform state and operator authority | AP-PR-002, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-007 |
 | Observability, evidence, incidents, and cost | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007, AP-PR-008; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-004, ADR-009 |

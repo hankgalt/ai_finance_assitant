@@ -1,8 +1,13 @@
 # Comfforts App Platform
 
-Status: AP-M5 infrastructure planning authority implemented and deterministically validated;
-AP-M4 remains Fixture-qualified. No networked platform service, Terraform configuration, cloud
-resource, deployment, Live evidence, or Application Adoption is implemented or qualified.
+Status: AP-M6 is locally implemented and passes its deterministic AP-EVAL-M6 repository gate.
+Immutable generation loading, catalogue and routing, Platform Sessions and admission, identity
+assertions and application verification, Cloud Run attachment resolution, bounded HTTP, SSE, and
+WebSocket proxying, read-only status, correlation, adapter-health observations, and redacted
+completion events are implemented locally. AP-M4 remains Fixture-qualified and AP-M5 remains
+planning-validated. AP-M6 supplies repository implementation evidence only.
+No Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
+implemented or qualified.
 
 Comfforts App Platform is a separately governed project temporarily colocated in the
 AI Finance Assistant repository. It is intended to own the shared application catalogue and edge
@@ -34,16 +39,61 @@ or the live Finance Assistant deployment.
 
 Read `AGENTS.md` before changing this project and follow the authority and reading order in
 `docs/README.md`. Product requirements, accepted architecture decisions, system design, threat
-model, AP-M3 through AP-M5 plan and evaluation authority, and Version 1 contracts are authoritative
+model, AP-M3 through AP-M6 plan and evaluation authority, and Version 1 contracts are authoritative
 within their declared boundaries. The contract layer supplies Contract (`C`) evidence, and the
 in-process harness supplies Fixture (`F`) evidence only; AP-M5 supplies planning authority rather
 than provider or deployed evidence.
 
-AP-M3 through AP-M5 deterministic gates pass at this repository revision. Delivery item 5 is
-complete only after this pull request merges. After the merge, use the
-[provider-runtime handoff](prompts/starting_prompt.md) from updated `main` to propose AP-M6 and
-resolve its remaining runtime decisions before implementation. The handoff authorizes no Terraform,
-cloud, DNS, identity, deployment, or Live mutation.
+AP-M3 through AP-M5 are merged and pass their deterministic gates. AP-M6-W1 through AP-M6-W11 are
+implemented locally, and the complete credential-free `make check` gate passes. AP-M6-W2 supplies
+the locked dependency environment and closed-default ASGI foundation. AP-M6-W3 adds bounded
+compiled-generation parsing, exact object/content/generation binding, and an injected
+Cloud Storage source adapter. It performs no provider call during construction or verification and
+cannot discover, compile, activate, or mutate a generation. AP-M6-W4 renders the compiled catalogue
+and performs canonical, lifecycle-aware route and mount selection.
+AP-M6-W5 adds Google OIDC authorization-code-with-PKCE behavior, opaque host-only eight-hour
+Platform Sessions, Firestore and in-memory session adapters, optional public identity, exact
+issuer-and-subject restricted admission, and platform-owned logout. Deterministic tests replace
+provider and Firestore I/O; no OAuth credential or provider operation is required. No AP-M6 package
+authorizes Terraform, cloud, DNS, identity configuration, deployment, or Live mutation.
+
+AP-M6-W6 replaces admitted identity at the route handoff with a minimized, application-audience-
+bound ES256 assertion. It adds deterministic and Cloud KMS signing adapters, public-only JWKS with
+current/overlap keys, and an independent application verifier with bounded caching and fail-closed
+refresh behavior. Fixed synthetic keys and provider fakes exercise the adapters locally; no KMS
+key, credential, external request, or provider resource is used.
+
+AP-M6-W7 strictly parses the `gcp-cloud-run-v1` resource URN and resolves only that exact service
+through an injected Cloud Run metadata adapter. Resolution requires matching project, region,
+service, Application State owner, readiness, application audience, and an unconditional edge-caller
+Invoker grant before the provider-derived target can reach the internal handoff. Deterministic
+metadata exercises success and every closed mismatch; no provider call, IAM mutation, target
+request, credential, or cloud resource is used.
+
+AP-M6-W8 forwards an eligible resolved request through one bounded application proxy. It preserves
+the rewritten path and raw query, obtains a Cloud Run service-identity token, strips hop-by-hop and
+visitor-controlled identity headers, installs the platform assertion, and supports buffered HTTP,
+streaming HTTP/SSE, uploads, downloads, and bidirectional WebSockets. Exact request, response,
+message, timeout, concurrency, and process-local rate limits fail closed and cancel bounded work.
+Production transports are exercised only against ephemeral loopback servers or deterministic
+fakes; no external target, service identity, credential, cloud resource, or Live route is used.
+
+AP-M6-W9 adds an operator-authorization seam and a read-only `/_platform/status` operation exposing
+only source revision, generation facts, and coarse local adapter health. One generated correlation
+identifier follows each HTTP or WebSocket boundary into application delivery and any identity
+assertion. A typed completion-event allow-list retains only revision/generation facts, normalized
+application and route identifiers, coarse outcome, status class, latency, correlation, and
+non-secret component versions. Tests prove prohibited request, response, identity, visitor,
+provider, credential, state, and plan data cannot enter that shape. An injected standard-logging
+adapter exists, but no log bucket, sink, retention rule, operator identity configuration, provider
+call, credential, or Live readback is created or qualified.
+
+AP-M6-W10 enforces the complete AP-EVAL-M6 matrix, including exact numeric boundaries, immutable
+generation and identity paths, fake-provider parity, streaming cancellation and isolation,
+loopback-only networking, history-independent extraction, dependency locking, redaction, and all
+prior regressions. AP-M6-W11 reconciles this status and routes the next task to an AP-M7 authority
+proposal only after the AP-M6 pull request merges. AP-M7 must remain a separate branch and pull
+request.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

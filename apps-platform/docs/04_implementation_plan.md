@@ -1,13 +1,14 @@
 # App Platform implementation plan
 
-Version 0.3 | Status: implementation-plan authority for AP-M3 and AP-M4; infrastructure-planning authority for AP-M5
+Version 0.4 | Status: implementation-plan authority through AP-M6; no Terraform, deployment, or
+Live qualification authority
 
-This document preserves delivery item 3, the system-design-and-versioned-contracts slice, and
-delivery item 4, the deterministic-fixtures slice. It now owns delivery item 5, the
-infrastructure-planning slice. AP-M5 records provider, trust, state, operator, lifecycle,
-observability, evidence, and cost authority only. It does not authorize a listening service,
-Terraform configuration, cloud resource, DNS change, identity change, credential, deployment, Live
-qualification, or Application Adoption.
+This document preserves delivery item 3, the system-design-and-versioned-contracts slice, delivery
+item 4, the deterministic-fixtures slice, and delivery item 5, the infrastructure-planning slice.
+It now owns delivery item 6, the networked-provider-runtime slice. AP-M6 may implement and locally
+test a listening Shared Edge and production provider adapters through deterministic fakes. It does
+not authorize Terraform configuration, a cloud call, credential, provider resource, DNS or identity
+mutation, deployment, Live qualification, or Application Adoption.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
@@ -716,23 +717,249 @@ These updates may record AP-M5 as merged planning authority only. They must leav
 Terraform, deployment, Live, and Adoption claim unavailable and route the next task to AP-M6 only
 after this pull request merges.
 
-### Later delivery sequence
+## AP-M6 · Networked provider runtime implementation
 
-AP-M5 authorizes no later work by itself. Each item below requires a new owner-approved branch,
+### Outcome
+
+AP-M6 implements and deterministically tests the networked Shared Edge through the approved ASGI
+interface:
+
+```text
+create_app(runtime_configuration, adapters) -> ASGI application
+```
+
+The module owns the complete request pipeline behind that interface. Internal provider seams accept
+production and deterministic fake adapters; callers do not assemble catalogue, routing, admission,
+identity, target, forwarding, limit, failure, or logging behavior themselves. The separately
+consumable application verifier exposes one compact assertion-verification interface and grants no
+application permission.
+
+Passing AP-M6 provides repository implementation evidence only. It does not prove a provider
+resource, IAM grant, Google login, Cloud Run origin, DNS record, deployment, availability, cost, or
+Live behavior.
+
+### Scope
+
+AP-M6 includes:
+
+- the Python 3.12-or-newer Starlette/Uvicorn runtime and locked dependency environment;
+- immutable generation loading and digest binding through production and fake storage adapters;
+- the generation-derived root catalogue, reserved platform paths, prefix routing, and closed
+  default behavior;
+- Google OIDC and Firestore Platform Session adapters plus deterministic fakes;
+- ES256 assertion creation, KMS signing, JWKS publication, rotation overlap behavior, and the
+  direct-entry application verifier;
+- `gcp-cloud-run-v1` metadata resolution, readiness and ownership checks, service-identity target
+  transport, and deterministic provider fakes;
+- bounded HTTP, upload, download, SSE, and WebSocket forwarding under the approved
+  `qualification-v1` limits;
+- generation status/readback, failure isolation, correlation identifiers, completion outcomes, and
+  required redaction; and
+- deterministic unit, adapter-contract, ASGI, loopback integration, extraction, and regression
+  tests under AP-EVAL-M6.
+
+AP-M6 excludes:
+
+- a registration submission endpoint, registration database, operator control plane, mutable
+  generation pointer, or unreviewed route source;
+- Terraform, a backend, state, saved plan, workflow with cloud authority, repository setting,
+  credential, secret value, provider call, resource creation, IAM mutation, DNS change, identity
+  configuration, deployment, or authenticated evidence;
+- a real Google account, OAuth client, Firestore database, KMS key, GCS object, Cloud Run service,
+  load balancer, certificate, log bucket, budget, or alert;
+- distributed rate limiting, WAF, CDN, load, availability, browser, or Live claims; and
+- Finance Assistant code, configuration, state, hostname, identity, access, deployment, migration,
+  or Application Adoption.
+
+### Dependencies
+
+| Dependency | Required state | AP-M6 treatment |
+| --- | --- | --- |
+| AP-M3 and AP-M4 | Merged and passing | Preserve Version 1 contracts, compiler behavior, Fixture evidence, and regression gates |
+| AP-M5 | Merged and planning-validated | Implement only the runtime portion of the selected topology and trust profiles |
+| Runtime profile | Owner-approved in AP-M6-W1 | Use Starlette/Uvicorn, the locked dependency policy, and exact `qualification-v1` limits |
+| Provider access | Unavailable and prohibited | Exercise production adapter logic only through deterministic fake transports and metadata |
+| Terraform and deployment | Deferred to AP-M7 and AP-M8 | Create no infrastructure path, workflow authority, or external mutation |
+| Application Adoption | Unavailable | Use only independent Fixture Applications and synthetic identities |
+
+An unmet dependency stops the affected package. A fixture default, provider default, local
+credential, Finance configuration, or discussion history may not fill a missing input.
+
+### Work packages
+
+#### AP-M6-W1 · Runtime authority and limits
+
+Update `docs/03_system_design.md`, this plan, `docs/05_evaluation_strategy.md`, and
+`docs/06_threat_model.md` to approve:
+
+- the deep ASGI module interface and internal provider seams;
+- Python, Starlette, Uvicorn, dependency declaration, lock, and installation boundaries;
+- exact header, body, timeout, concurrency, stream, rate, and rejection behavior; and
+- the implementation, evidence, and later-slice exclusions.
+
+This package creates no runtime, dependency manifest, reserved implementation directory, or cloud
+configuration. Owner acceptance of its exact values is required before AP-M6-W2.
+
+#### AP-M6-W2 · Locked runtime foundation
+
+Add `pyproject.toml`, `uv.lock`, the smallest functional `edge/` package, an ASGI application
+factory, typed runtime settings and adapter bundle, a closed-default request result, and the
+project-local test target. Update only the existing path-scoped parent CI wrapper needed to
+synchronize the frozen environment while the project is colocated.
+
+The external module interface remains `create_app(runtime_configuration, adapters)`. Internal
+interfaces are not re-exported. Tests call the ASGI interface and prove that dependency setup is
+separate from the network-free `make check` command.
+
+#### AP-M6-W3 · Immutable generation loading
+
+Implement the generation-source seam, GCS production adapter, deterministic fake, exact object and
+content digest verification, Version 1 compiled-configuration validation, startup binding, and
+failure behavior. Loading one generation never discovers a bucket, follows a mutable registration
+source, compiles an unreviewed set, or changes the current provider pointer.
+
+#### AP-M6-W4 · Catalogue and registered routing
+
+Implement escaped root-catalogue rendering, explicit platform-reserved paths, exact longest-prefix
+selection within the already compiled non-overlapping route set, mount rewriting, staged/suspended/
+retired exclusion, and closed unknown or malformed behavior. Framework routing contains no copy of
+registration-derived application routes.
+
+#### AP-M6-W5 · Sessions and admission
+
+Implement Google OIDC authorization-code-with-PKCE flow, opaque host-only Platform Sessions,
+Firestore production and in-memory fake stores, public optional identity, authenticated and
+restricted admission, logout, absolute expiry, return-location validation, and fail-closed provider
+errors. No Google access or refresh token is retained, and email never becomes an admission key.
+
+#### AP-M6-W6 · Assertion and application verification
+
+Implement the Version 1 ES256 assertion envelope, KMS production and deterministic fake signers,
+application-specific audiences, 60-second lifetime, 30-second skew, versioned key identifiers,
+JWKS publication, overlap/cache behavior, visitor-header stripping, and the application-side
+verifier. Tests cover malformed, expired, wrong-issuer, wrong-audience, unknown-key, and stale-key
+results without a real key or identity.
+
+#### AP-M6-W7 · Cloud Run attachment resolution
+
+Implement strict `gcp-cloud-run-v1` URN parsing, Cloud Run production metadata and deterministic fake
+adapters, exact project/region/service matching, readiness, declared owner, edge-caller grant, and
+application-audience checks. A registration-supplied URL, credential, state address, provider query,
+cross-application result, or unresolved target fails closed.
+
+#### AP-M6-W8 · Bounded application proxy
+
+Implement service-identity target transport, path and query preservation, hop-by-hop and identity
+header handling, uploads, downloads, buffered and streamed HTTP, SSE, WebSocket bridging,
+cancellation, timeout, size, rate, and concurrency enforcement, and protocol-appropriate closed
+errors. Tests use loopback only inside the test process and never contact an external address.
+
+#### AP-M6-W9 · Status, readback, failure, and redaction
+
+Implement operator-authorized generation status and readback, correlation identifiers, one
+structured completion event per request or streaming connection, coarse outcomes, latency, adapter
+health, failure isolation, and the approved prohibited-data list. Status reports repository and
+generation facts only; it cannot activate, roll back, mutate, or reveal secrets or identity data.
+
+#### AP-M6-W10 · Runtime qualification gate
+
+Implement the complete AP-EVAL-M6 matrix in behavior-named tests and the default `make check`
+dependency chain. Enforce all AP-M6 identifiers and traces, exact limits, adapter parity, extraction,
+dependency locking, no external network, no credentials, no reserved later-slice paths, no provider
+or repository mutation, and all AP-M3/AP-M4 regressions.
+
+#### AP-M6-W11 · Runtime record and AP-M7 handoff
+
+After AP-EVAL-M6 passes, update `README.md`, `docs/README.md`, `prompts/starting_prompt.md`, prompt
+index, governance assertions, and the secret-free pull-request handoff. Record only locally
+implemented runtime behavior. Leave provider deployment, Terraform, Live, and Adoption claims
+unavailable and route the next task to AP-M7 only after the AP-M6 pull request merges.
+
+### Ordered delivery
+
+AP-M6 work proceeds in work-package order. Each package is a separately reviewable commit and adds
+its tests with its behavior. No package may defer failing behavior tests to AP-M6-W10, weaken an
+existing gate, or introduce a later-slice file because its interface is known.
+
+### Acceptance criteria
+
+AP-M6 is accepted only when all of the following are true:
+
+1. The owner has accepted AP-M6-W1's exact framework, dependency, and limit profile.
+2. The Shared Edge presents one small ASGI interface and keeps provider adapters behind internal
+   seams with production and deterministic fake implementations.
+3. One immutable compiled generation exclusively derives catalogue, platform paths, application
+   routing, admission, attachments, and status facts.
+4. Public, authenticated, and restricted requests, session lifecycle, logout, assertion delivery,
+   application verification, and every fail-closed identity path pass AP-EVAL-M6.
+5. Cloud Run references resolve only through the allow-listed adapter and exact declared resource;
+   no arbitrary URL, discovery, cross-application reuse, or ownership transfer is possible.
+6. HTTP, uploads, downloads, SSE, and WebSocket behavior enforces every approved numeric limit,
+   closes or cancels failed work, and isolates application failures.
+7. Logs, status, errors, and test output exclude assertions, sessions, restricted members, request
+   and response bodies, visitor metadata, application data, secrets, credentials, and state.
+8. `make check` is deterministic, credential-free, external-network-free, non-mutating,
+   extraction-safe, and mandatory-skip-free in an already synchronized locked environment.
+9. The branch contains no Terraform, state, plan, credential, secret value, cloud call, repository
+   setting change, DNS or identity mutation, deployment, or generated Live evidence.
+10. Finance Assistant and all existing applications and Integration Drafts remain unchanged and
+    inactive.
+
+Near-complete runtime behavior, an untested production adapter, a fake-only hypothetical seam, an
+implicit framework default, a provider lookup during tests, or a Live claim fails AP-M6.
+
+### Required evidence
+
+The pull-request handoff records branch and AP-M5 merge base, evaluated and final revisions, all
+AP-M6 commits and changed paths, frozen dependency digest, Python version, exact commands, duration,
+test counts and outcomes, identifier coverage, security/privacy impact, limitations, and unresolved
+AP-M7/AP-M8 inputs. It confirms that tests used only deterministic adapters and process-local
+loopback, that no external mutation occurred, and that Finance Assistant remained unchanged.
+
+Console output is sufficient. The branch commits no credential, browser state, provider response,
+request payload, generated report, screenshot, or Live evidence bundle.
+
+### Security and privacy impact
+
+AP-M6 introduces executable network parsing, identity, signing, provider-reference, proxy, and
+logging code. Numeric limits, closed failure, header stripping, audience binding, application
+isolation, fake-provider tests, and strict redaction reduce its attack surface. No production
+identity, member set, application payload, key, token, session, or visitor address enters committed
+test data or evidence.
+
+The runtime cannot prove provider IAM, direct-origin denial, key custody, session persistence,
+distributed rate limiting, availability, or cost. Those controls remain unqualified until their
+later provider and Live gates pass.
+
+### Limitations and unresolved inputs
+
+AP-M6 does not deploy or call its production adapters. OAuth client values, secret references,
+bucket names, object generations, key versions, Firestore database, Cloud Run services, caller
+identity, IAM grants, trusted load-balancer metadata, repository federation, and initial Live
+Registration Set remain AP-M7/AP-M8 inputs. Exact provider behavior, direct-origin denial,
+multi-instance effects, browser login, accessibility, load, recovery, and cost remain AP-M9 Live
+evidence.
+
+### Plan trace
+
+| Work packages | Requirements | Decisions | Threats |
+| --- | --- | --- | --- |
+| AP-M6-W1, AP-M6-W2 | AP-PR-001 through AP-PR-008; AP-QR-002 through AP-QR-006 | ADR-001 through ADR-006, ADR-008, ADR-009 | AP-TM-001 through AP-TM-007, AP-TM-009 through AP-TM-013 |
+| AP-M6-W3, AP-M6-W4 | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007; AP-QR-002, AP-QR-003, AP-QR-004, AP-QR-006 | ADR-001, ADR-002, ADR-005, ADR-008 | AP-TM-001, AP-TM-002, AP-TM-007, AP-TM-011, AP-TM-013 |
+| AP-M6-W5, AP-M6-W6 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002, AP-QR-004, AP-QR-006 | ADR-003, ADR-004, ADR-006, ADR-009 | AP-TM-004 through AP-TM-006, AP-TM-010 through AP-TM-013 |
+| AP-M6-W7, AP-M6-W8 | AP-PR-002, AP-PR-003, AP-PR-005, AP-PR-007, AP-PR-008; AP-QR-001 through AP-QR-006 | ADR-001 through ADR-008 | AP-TM-002 through AP-TM-005, AP-TM-007 through AP-TM-013 |
+| AP-M6-W9 through AP-M6-W11 | AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006 | ADR-001 through ADR-009 | AP-TM-001 through AP-TM-014 |
+
+`AP-PR-009`, `AP-QR-001`, `ADR-007`, `AP-TM-008`, and `AP-TM-014` are negative constraints in
+AP-M6: they preserve explicit adoption and exclusive state ownership and do not authorize state or
+application mutation.
+
+## Later delivery sequence
+
+AP-M6 authorizes no later work by itself. Each item below requires a new owner-approved branch,
 plan refinement, evaluation gate, merge, and clean-main handoff.
 
-#### AP-M6 · Networked provider runtime implementation
-
-Implement and deterministically test the networked Shared Edge, root catalogue, Google OIDC/session
-boundary, ES256 assertion envelope, `gcp-cloud-run-v1` resolver, direct-origin application verifier,
-generation loader, status/readback interface, and bounded request/stream behavior without creating
-Terraform or calling a cloud provider.
-
-Before runtime edits, the owner must approve the network server/framework and dependency policy,
-plus exact live header, request-body, response-body, non-streaming timeout, and abusive-traffic
-limits. AP-M5 does not infer them from the in-process fixture profile or provider defaults.
-
-#### AP-M7 · Terraform and workflow implementation
+### AP-M7 · Terraform and workflow implementation
 
 Implement the bootstrap, platform, and per-fixture roots; reusable modules; static policy checks;
 GitHub workflow templates; extraction inputs; secret references; and deterministic configuration
@@ -744,7 +971,7 @@ Exact globally unique bucket names, dedicated repository and workflow subjects, 
 OAuth client references, notification destination, and initial Registration Set values are operator
 inputs resolved through reviewed configuration rather than reusable module assumptions.
 
-#### AP-M8 · Non-production qualification deployment
+### AP-M8 · Non-production qualification deployment
 
 After repository extraction and AP-M6/AP-M7 merges, use separately approved operator actions to
 configure repository protection and federation, bootstrap backends, run authenticated plans,
@@ -755,14 +982,14 @@ exist and read back; it does not make AP-EVAL-M9 pass.
 AP-M8 must stop before any Finance Assistant resource, existing hostname, real application project,
 or Application Adoption action enters scope.
 
-#### AP-M9 · Live qualification
+### AP-M9 · Live qualification
 
 Execute the approved Live gates against the exact deployed revision and Registration Generation.
 Exercise provider routing, identity, IAM, direct-origin denial, state ownership, failure isolation,
 activation, rollback, logging, retention, drift, cost controls, and recovery. Store only approved
 redacted evidence and obtain owner acceptance before calling the platform Live-qualified.
 
-#### Later Application Adoption
+### Later Application Adoption
 
 Only after AP-M9 is accepted may a consuming application propose adoption through its own
 requirements, decisions, contracts, implementation, state transition, cutover, rollback, and
@@ -852,8 +1079,6 @@ The following exact inputs remain required at their named later boundary:
 
 | Input | Required before |
 | --- | --- |
-| Network server/framework and dependency policy | AP-M6 runtime implementation |
-| Header, request-body, response-body, non-streaming timeout, and abusive-traffic limits | AP-M6 runtime implementation |
 | Dedicated GitHub organization, repository, workflow subjects, protected environment, and repository settings | AP-M7 federation implementation and AP-M8 deployment |
 | Globally unique state, configuration, log, and evidence bucket names | AP-M7 environment configuration |
 | DNS managed-zone resource and exact separately approved record transaction | AP-M7 environment configuration and AP-M8 DNS action |

@@ -1,6 +1,7 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M4 deterministic Fixture implementation recorded; AP-M5 infrastructure-planning locations reserved, no infrastructure implemented
+Status: authoritative; AP-M6 Cloud Run attachment resolution, bounded proxying, read-only status,
+and redacted completion events recorded; no provider operation or infrastructure implemented
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this
@@ -16,9 +17,11 @@ directory the new repository root.
 | `docs/` | Platform design authority and future runbooks/evidence indexes |
 | `prompts/` | Bounded task entry points that link to authoritative documents |
 | `integrations/` | Inactive application-adoption inputs with no consuming-app authority |
-| `contracts/` | Version 1 schemas, deterministic reference compiler, and reviewed contract vectors; no runtime adapter |
+| `contracts/` | Version 1 schemas, deterministic reference compiler, reviewed contract vectors, and bounded runtime JSON loading |
 | `fixtures/` | In-process reference edge, synthetic identity, three independent Fixture Applications with app-owned test state, and reviewed registration generations |
-| `tests/` | Behavior-named governance, contract, and Fixture checks |
+| `edge/` | AP-M6 Shared Edge interface, immutable-generation source adapter, catalogue/routing, Google OIDC/sessions, admission, ES256 assertion/JWKS adapters, independent application verification, strict Cloud Run attachment resolution, bounded HTTP/SSE/WebSocket proxying, read-only status, minimized completion events, and accepted runtime behavior only |
+| `tests/` | Behavior-named governance, contract, Fixture, and runtime checks plus explicitly synthetic fixed test material |
+| `pyproject.toml` and `uv.lock` | Direct runtime dependencies and complete frozen transitive resolution |
 | `Makefile` | Portable project-local developer and verification interface |
 | `.gitignore` | Platform-local generated, secret, state, and build exclusions |
 
@@ -28,7 +31,6 @@ These locations may be created only by their approved slice:
 
 | Path | Intended owner |
 | --- | --- |
-| `edge/` | Future networked Shared Edge runtime and provider adapters |
 | `registrations/` | Future reviewed Live Registration Sets; Fixture registrations remain under `fixtures/` |
 | `infrastructure/terraform/bootstrap/` | Future backend-bootstrap root only |
 | `infrastructure/terraform/platform/` | Future Shared Edge Platform State root only |
@@ -39,9 +41,9 @@ These locations may be created only by their approved slice:
 | `docs/runbooks/` | Future operator procedures subordinate to approved plans and evaluation authority |
 
 The reservation is not authorization to scaffold empty modules or imply later capabilities. AP-M6
-may create only `edge/` and implementation-owned registration test inputs after its own approval.
-AP-M7 may create only the planned Terraform and workflow paths after AP-M6 merges. Live evidence
-bundles remain in the private provider evidence store rather than the repository.
+may extend only `edge/` and implementation-owned registration test inputs through its ordered work
+packages. AP-M7 may create only the planned Terraform and workflow paths after AP-M6 merges. Live
+evidence bundles remain in the private provider evidence store rather than the repository.
 
 ## Colocation exceptions
 
