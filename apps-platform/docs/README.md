@@ -14,6 +14,8 @@ networked Shared Edge and production-adapter logic through deterministic fakes a
 loopback. Live (`L`) and Adoption (`A`) evidence remain unavailable. No deployed Shared Edge,
 provider identity, Terraform configuration, cloud resource, DNS change,
 application migration, or production credential is implemented.
+Repository extraction is governed by a reviewed preparation runbook but has not been executed; the
+colocated tree remains authoritative until its explicit cutover gate passes.
 
 ## Current reading order and authority
 
@@ -33,8 +35,11 @@ application migration, or production credential is implemented.
 9. [Version 1 contract index](../contracts/README.md) owns machine interfaces subordinate to the
    requirements, accepted decisions, and system design.
 10. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
-11. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
-12. [Terraform-and-workflow handoff](../prompts/starting_prompt.md) provides a bounded entry point
+11. [Runbook index](runbooks/README.md) owns subordinate, explicitly approved operator procedures.
+12. [Repository extraction runbook](runbooks/repository_extraction.md) defines the history,
+    verification, mutation, and authority-cutover gates for the dedicated repository.
+13. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
+14. [Terraform-and-workflow handoff](../prompts/starting_prompt.md) provides a bounded entry point
     for proposing AP-M7 authority only after AP-M6 merges.
 
 AP-M3 Contract behavior, AP-M4 Fixture behavior, and AP-M5 planning authority are merged and pass

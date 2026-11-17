@@ -1,7 +1,7 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M6 Cloud Run attachment resolution, bounded proxying, read-only status,
-and redacted completion events recorded; no provider operation or infrastructure implemented
+Status: authoritative; AP-M6 runtime recorded and repository-extraction procedure prepared; no
+extraction, provider operation, or infrastructure implemented
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this
@@ -15,6 +15,7 @@ directory the new repository root.
 | `README.md` | Project overview, operational status, and local entry points |
 | `GLOSSARY.md` | Canonical platform vocabulary |
 | `docs/` | Platform design authority and future runbooks/evidence indexes |
+| `docs/runbooks/` | Subordinate operator procedures requiring their own explicit approvals |
 | `prompts/` | Bounded task entry points that link to authoritative documents |
 | `integrations/` | Inactive application-adoption inputs with no consuming-app authority |
 | `contracts/` | Version 1 schemas, deterministic reference compiler, reviewed contract vectors, and bounded runtime JSON loading |
@@ -38,7 +39,6 @@ These locations may be created only by their approved slice:
 | `infrastructure/terraform/modules/` | Future reusable modules with no environment or state ownership of their own |
 | `catalog/` | Root application catalogue implementation |
 | `artifacts/` | Secret-free reviewed evidence indexes and digests, never raw Live evidence bundles |
-| `docs/runbooks/` | Future operator procedures subordinate to approved plans and evaluation authority |
 
 The reservation is not authorization to scaffold empty modules or imply later capabilities. AP-M6
 may extend only `edge/` and implementation-owned registration test inputs through its ordered work
@@ -62,7 +62,7 @@ dedicated repository must recreate its own root workflow and repository settings
 - Keep canonical code, contracts, documentation, tests, prompts, and evidence inside this subtree.
 - Use project-relative paths so `make check` works before and after extraction.
 - Keep Terraform state, credentials, saved plans, caches, and authenticated artifacts outside Git.
-- Record future root-wrapper and Workload Identity Federation recreation steps in the extraction
-  runbook before migration to a dedicated repository.
+- Follow the reviewed [repository extraction runbook](runbooks/repository_extraction.md) before any
+  split, push, repository-setting change, authority cutover, or parent-tree removal.
 - A path move is complete only when every contract consumer, test, command, document, and workflow
   resolves to the new location.
