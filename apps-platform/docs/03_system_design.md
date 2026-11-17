@@ -1,6 +1,6 @@
 # App Platform system design
 
-Version 0.2 | Status: fixture design authority; no fixture runtime or cloud resource is implemented
+Version 0.7 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -9,7 +9,7 @@ consuming application.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007, ADR-008, ADR-009
 
 ## Design outcome
 
@@ -28,10 +28,10 @@ The design separates three kinds of work:
 3. **Application operation:** an Application Owner supplies compatible attachments and retains its
    runtime, data, identity mapping, feature authorization, providers, and Application State.
 
-The system-design-and-contracts slice implements only the first kind. This revision selects the
-deterministic Fixture Application design for delivery item 4, but it does not implement or qualify
-the Shared Edge or any application runtime. Implementation still requires separately approved
-planning and evaluation authority.
+AP-M3 implements the first kind, and AP-M4 implements and Fixture-qualifies the deterministic
+in-process form of the second and third kinds. This revision selects the initial provider topology
+for infrastructure planning. It does not implement a provider adapter, Terraform configuration,
+cloud resource, DNS change, deployment, or Live qualification.
 
 ## Logical topology
 
@@ -63,6 +63,45 @@ planning and evaluation authority.
 The configured hostname, cloud project, region, identity provider, and provider-adapter settings
 are deployment configuration. They are never embedded in reusable contracts or derived from the
 containing Finance Assistant repository.
+
+### Initial Live qualification topology
+
+The initial Live environment is the dedicated non-production GCP project
+`comfforts-platform-non-prod` (project number `455651441682`). Regional services are located in
+`us-west1`; the global load balancer remains a global resource. The first hostname is
+`apps-staging.comfforts.com`. Neither the environment nor its qualification procedure may read,
+import, mutate, or destroy Finance Assistant edge resources, DNS, Terraform state, identity, or
+deployment.
+
+```text
+ Visitor
+    |
+    | HTTP redirect / HTTPS, SSE, WebSocket, upload, download
+    v
+ global external Application Load Balancer
+    |  reserved address + Google-managed certificate
+    |  one serverless backend; no application-prefix routes
+    v
+ Cloud Run Shared Edge (us-west1)
+    |  catalogue + prefix routing + admission + assertion + target selection
+    |  dedicated edge caller
+    v
+ gcp-cloud-run-v1 typed attachment
+    |
+    v
+ application-owned Cloud Run service
+```
+
+The provider URL map performs only hostname-level forwarding and HTTP-to-HTTPS behavior. It sends
+all application traffic to one edge service, so the active Registration Generation remains the
+only application-routing authority. The initial profile has no CDN or WAF. Exact request, response,
+streaming, concurrency, timeout, and scaling limits belong to the later approved infrastructure
+profile and Live gate.
+
+The desired DNS record is platform-owned configuration, but record creation and cutover are an
+explicit, separately approved operator action. A Google-managed certificate covers the hostname,
+not application prefixes. No application attachment needs a separate client-facing DNS name or
+certificate, and this planning decision does not create either the record or certificate.
 
 ## Modules and seams
 
@@ -130,6 +169,30 @@ Protected attachments must accept traffic only through the Shared Edge using bot
 provider admission controls and verified application-side identity validation. A signed identity
 header alone is not permission to expose a public origin. The exact provider adapter and live
 direct-bypass qualification belong to later slices.
+
+### GCP Cloud Run attachment profile
+
+The first provider adapter kind is `gcp-cloud-run-v1`. Its resource reference is inert data with
+the exact grammar
+`urn:comfforts:app-platform:gcp:cloud-run:<project-number>:<region>:<service-name>`. It is not a URL,
+credential, Terraform address, or permission to discover arbitrary resources.
+
+The future adapter may resolve only the named Cloud Run service through GCP metadata and IAM. A
+target is activation-eligible only when provider readback establishes that the exact service exists
+in the declared project and region, reports ready, is assigned to the registration's named
+Application State owner, and has an Application-Owner-approved grant for the platform edge caller.
+No independent DNS check is part of ownership proof.
+
+The first live fixtures may use Cloud Run services in the qualification project while preserving
+separate platform and per-fixture state roots. The same reference grammar permits later
+cross-project targets, but same-project evidence does not qualify them. Later cross-project GCP
+applications use a platform-owned Shared VPC host network, with the application project attached
+as a service project through its own adoption procedure. Network attachment does not give Platform
+State ownership of the application's Cloud Run service, IAM policy, data, or Terraform state.
+
+Protected services require both provider-level direct-invocation denial and application-side
+assertion verification. The load balancer-to-edge and edge-to-application trust details are refined
+by the later identity profile; topology selection alone is not evidence that either control works.
 
 ## Application Registration and Registration Set
 
@@ -272,13 +335,60 @@ Application Principal. A missing, malformed, unsigned, expired, wrong-issuer, or
 assertion fails closed. A public application may receive no identity and must not invent an
 Application Principal for an anonymous request.
 
-The configured identity provider, assertion signer, key discovery, algorithms, maximum assertion
-lifetime, and audience issuance procedure are provider-adapter and deployment decisions. A future
-contract must bind them without weakening the required claims or application verification.
+The initial provider, session, signing, key-discovery, algorithm, lifetime, skew, and rotation
+profile is defined below. It binds the existing Version 1 claims without adding email, provider
+tokens, product roles, or Feature Entitlements to Verified Identity Context.
 
 Admission-policy revocation takes effect at the next request or new streaming-connection boundary.
 This design does not promise termination of an already established connection. Application feature
 revocation remains application-owned.
+
+### Initial Live identity and session profile
+
+The Shared Edge uses Google OIDC authorization code with PKCE and accepts only a verified Google
+issuer and immutable subject. Both consumer Google and Google Workspace accounts may authenticate.
+The Registration Set, not the identity provider, decides whether that identity is admitted to a
+restricted application. The initial profile requires no MFA claim.
+
+The edge creates an opaque Platform Session backed by minimal Firestore Native state in the
+qualification project and region. The browser cookie is host-only, `Secure`, `HttpOnly`,
+`SameSite=Lax`, and scoped to `/`. The session expires absolutely after eight hours and cannot be
+silently renewed past that boundary. The platform retains no Google access or refresh token and
+does not use Visitor identity to call Google APIs.
+
+A valid session may add Verified Identity Context to a public request, while an absent or invalid
+session leaves a public request anonymous. A protected request without a valid session enters the
+edge-owned login flow or fails closed. Restricted membership compares exact issuer-and-subject
+pairs from the reviewed Registration Generation. Email is display-only session metadata and never
+enters the Version 1 assertion.
+
+The platform-reserved logout operation deletes the server-side session, clears the host cookie,
+and accepts only a validated platform-relative return location. It does not revoke the global
+Google session. An application may link to this operation from any registered path but cannot
+implement a second authoritative logout for the Platform Session.
+
+After admission, the edge strips the identity header and creates a compact assertion with a maximum
+60-second lifetime and at most 30 seconds of verifier clock skew. A new assertion is issued for each
+forwarded request or new streaming connection. One environment signer uses a software-protected
+Cloud KMS `EC_SIGN_P256_SHA256` key in `us-west1`, emits `ES256` with a version-specific key
+identifier, and binds every assertion to the registered
+`urn:comfforts:app-platform:audience:<application-id>` value.
+
+Only public verification keys are exposed through `/.well-known/jwks.json`. A new key is published
+before activation, one version signs, and the preceding key remains published for a 24-hour overlap.
+Rotation occurs at least every 90 days. Applications may cache keys for 15 minutes, refresh once on
+an unknown key identifier, and otherwise fail closed when verification material is unavailable or
+stale.
+
+The initial Live profile makes no distributed replay-prevention claim. Short lifetimes, unique
+correlation identifiers, audience binding, TLS, Cloud Run caller IAM, and optional bounded local
+replay checks reduce but do not eliminate replay risk. The Cloud Run edge-caller identity proves
+workload origin; it is not the Visitor and never becomes Verified Identity Context.
+
+Existing application-managed login remains outside this trust boundary. IAP and
+`@react-oauth/google` may continue on existing deployments, but a future Application Adoption must
+remove or isolate them from the platform route before their claims can be treated as application
+identity.
 
 ## Lifecycle and atomic change
 
@@ -304,6 +414,49 @@ compiled generation completely, it must preserve or restore the Last Reviewed Wo
 Configuration. Suspension or retirement removes the application's platform presence but never
 deletes or mutates its Application State.
 
+### Initial Live generation activation
+
+The reviewed Registration Set remains in Git and compiles before planning into an immutable,
+content-addressed GCS configuration object. One candidate Cloud Run edge revision binds the exact
+source commit, compiler, generation digest, object generation, container image digest, identity
+profile, and adapter configuration. The candidate receives no user traffic while attachment,
+ownership, IAM, and provider dependencies are validated.
+
+The current Live generation pointer is the Cloud Run service's 100-percent traffic assignment to
+one immutable edge revision. Owner-approved activation changes that pointer once. The load balancer
+continues to forward all application traffic to the edge and contains no registration-derived
+prefix map. There is no registration API or database in the initial profile.
+
+Readback compares protected-main source and plan digests, Terraform state, provider revision and
+traffic data, the edge's operator-authorized generation status, observable catalogue and route
+behavior, attachment and identity configuration, direct-origin denial, and the State Ownership
+Manifest. Any disagreement makes the generation unqualified even if the apply command returned
+success.
+
+Rollback changes the traffic pointer to the retained preceding revision as a whole and repeats
+readback. The objective is restored traffic assignment and readback within 15 minutes after owner
+approval. Rollback does not change Application State. The previous configuration object, edge
+revision, and replaced application attachment remain available for at least 24 hours; later cleanup
+requires a separate owner-approved action.
+
+Provider partial failure stops for inspection. There is no automatic rollback, unlock, state push,
+target deletion, or DNS change. The predecessor digest, workflow concurrency, state lock, and
+provider revision precondition reject stale or competing changes.
+
+### Initial DNS and TLS sequence
+
+`apps-staging.comfforts.com` is a new qualification record with a 1,800-second TTL. The load
+balancer, reserved address, closed-default edge, and certificate configuration are read back before
+the Platform Owner separately approves record creation. The operator checks authoritative and
+recursive DNS with `dig`, waits for the Google-managed certificate to report active, and then runs
+the Live route and identity readback.
+
+The TTL controls resolver caching rather than guaranteeing propagation time. Failure may cause the
+owner to remove or restore only the new qualification record after inspection, with cached answers
+remaining possible through the TTL. DNS action never changes a Registration Generation and never
+touches `apps.comfforts.com` or any Finance Assistant hostname, record, certificate, load balancer,
+or state.
+
 ## Exclusive state ownership
 
 Every managed resource has exactly one owner recorded in the versioned State Ownership Manifest.
@@ -324,6 +477,35 @@ resource may consume a platform output, but a reference is not management author
 No platform lifecycle action imports, recreates, or destroys an application resource. No
 application lifecycle action mutates or destroys the Shared Edge. Future adoption or state-transfer
 procedures must prove that a resource leaves one state before another state assumes it.
+
+### Initial Terraform state and operator profile
+
+The planned Terraform layout contains one backend-bootstrap root, one Platform State root, and one
+Fixture Application State root per fixture. The bootstrap and platform roots use different keys in
+one platform-state GCS bucket. Every fixture uses its own GCS bucket and root. Future application
+projects retain their own backends. This physical separation supports, but does not replace, the
+State Ownership Manifest and provider readback.
+
+GCS locking serializes each root. Object versioning retains a noncurrent state version until both
+90 days have elapsed and at least 20 newer generations exist. Backend contents, locks, plans, and
+recovery copies are restricted operational data and never enter Git or evidence artifacts.
+
+The only normal mutation path is an exact protected-main plan executed by GitHub Actions through
+OIDC and GCP Workload Identity Federation after explicit environment approval. Pull requests receive
+deterministic checks and advisory read-only plans; the merge commit is planned again and bound to
+the apply by source and plan digests. Each workflow identity is limited to its named root and
+operation. One concurrency guard and the backend lock prevent competing mutations.
+
+The dedicated repository, branch, workflow, and environment values must be known after extraction
+before a federation binding can exist. Until then, this is planning authority only. Local checks,
+validation, read-only planning, and readback remain available, but normal local apply is prohibited.
+An owner-declared break-glass operation uses short-lived credentials, exact targets, state backup,
+readback, and reconciliation; it never uses a stored service-account key.
+
+Bootstrap, import, force-unlock, state push, backend changes, rollback, and destroy are explicit
+operator procedures rather than hidden Terraform side effects. A provider error stops for
+inspection. Manual console changes remain drift and cannot become the reviewed baseline without a
+source change.
 
 ## Failure and rollback behavior
 
@@ -355,9 +537,55 @@ identifiers. They must not contain secret payloads, raw credentials, restricted 
 signed assertions, provider payloads, application request bodies, or application data. A
 correlation identifier is not an identity or authorization signal.
 
-Audit retention, logging backend, alert thresholds, and live cost controls remain deployment and
-evaluation decisions. Their absence is not permission to log more data or imply operational
-monitoring.
+The initial logging, evidence, incident, and cost profile is defined below. Its selection does not
+make a sink, retention policy, alert, responder, quota, or budget operational.
+
+### Initial logging, evidence, incident, and cost profile
+
+The edge emits one structured completion event per request or streaming connection into a dedicated
+Cloud Logging bucket in the qualification project and `us-west1`. Seven-day retention and
+owner-only access apply. Events contain only generation, application and route identifiers, coarse
+outcomes, status class, latency, correlation identifier, and non-secret platform versions. They
+exclude identity, visitor metadata, payloads, application data, assertions, sessions, secrets,
+state, saved plans, and stream chunks. Logs have no external sink.
+
+Control-plane events record digest-bound plan, apply, activation, rollback, DNS/TLS, key, IAM,
+state, drift, break-glass, incident, and destructive-cleanup outcomes without copying protected
+payloads. Provider-required administrative audit metadata remains restricted inside the project and
+is not copied into platform evidence.
+
+Secret-free Live evidence is a 30-day, owner-readable bundle in a dedicated GCS evidence bucket.
+It contains revision and plan digests, generation and image digests, redacted provider and runtime
+readback, commands, timestamps, results, failures, limitations, and evidence-class labels. A
+screenshot or raw provider export is not an authoritative record. Git may hold only a reviewed safe
+index or digest.
+
+The App Platform Owner is the initial incident responder. Response stops new mutation, identifies
+the revision and generation, preserves permitted evidence, and requires an explicit decision for
+suspension, rollback, secret rotation, or cleanup. Only budget notifications are automated in the
+first profile; later security or availability alerts require measured operating needs and a new
+reviewed decision.
+
+The project budget is USD 20 per month with owner notifications at 50, 80, and 100 percent. The
+80-percent threshold pauses new billable changes, and the 100-percent threshold requires an owner
+continuation, suspension, or teardown decision. No threshold disables billing or mutates resources
+automatically.
+
+The Shared Edge uses zero minimum and two maximum 1-vCPU, 512-MiB Cloud Run instances at concurrency
+20. Each Fixture Application uses zero minimum and one maximum instance with the same CPU and memory
+at concurrency 10. Streams last at most 55 minutes and hold concurrency while open. The initial
+profile has one non-production edge and load balancer and no CDN, WAF, HSM, production replica,
+always-on instance, Firestore backup, or Firestore point-in-time recovery.
+
+Firestore holds only expiring Platform Sessions. KMS keeps only active and required overlapping
+verification versions. Artifact Registry retains active, rollback, and current-candidate images;
+cleanup begins in dry-run and deletion remains owner-approved. Terraform checks reject unbounded or
+larger runtimes, extra environments or edges, unapproved billable services, longer retention, and
+missing `environment`, `managed_by`, `state_owner`, or applicable `application_id` labels.
+
+The platform project pays for Shared Edge and initial same-project qualification resources. Later
+application projects pay for their runtime, data, networking, and provider services unless their
+Application Adoption explicitly records another allocation.
 
 ## Fixture boundary
 
@@ -527,13 +755,16 @@ compiler behavior, paths relative to that root, or ownership boundaries.
 
 This design intentionally does not select or implement:
 
-- a cloud project, region, load balancer, certificate, DNS, or provider-specific attachment adapter;
-- Terraform roots, modules, backends, resource names, state-transfer commands, or operator roles;
-- an identity provider, OAuth/IAP configuration, signing key, credential, or IAM binding;
-- the designed Deterministic Reference Edge, Fixture Applications, or their in-memory state;
-- a live catalogue or application runtime, external registration endpoint, registration database,
-  or operator control plane;
-- a log backend, retention period, alerting system, live cost threshold, or evidence store; or
+- Terraform modules, bucket names, backend objects, workflows, repository-bound federation,
+  resource names, state-transfer commands, or IAM grants for the selected state and operator model;
+- OAuth client registration values, Firestore session configuration, KMS key versions, secret
+  versions, credentials, or IAM bindings for the selected identity profile;
+- a live catalogue, Shared Edge runtime, `gcp-cloud-run-v1` resolver, external registration
+  endpoint, registration database, or operator control plane;
+- a configuration bucket, compiled generation object, candidate edge revision, traffic change,
+  DNS record, certificate activation, readback execution, or rollback execution;
+- a log or evidence bucket, sink, retention rule, budget, alert, runtime scaling setting, cleanup
+  policy, label policy, incident automation, or cost-response action;
 - Finance Assistant registration, Application Adoption, migration, access expansion, or cutover.
 
 The implementation plan, evaluation strategy, threat model, versioned schemas, and deterministic
@@ -544,10 +775,12 @@ runtime or control as operational.
 
 This system design remains documentation authority rather than operational evidence. AP-M3 provides
 revision-scoped Contract evidence that the Version 1 schemas and deterministic reference compiler
-satisfy their declared offline gate. Version 0.2 additionally selects the deterministic fixture
-topology and qualification boundary; it is not evidence that the designed pipeline, catalogue,
-admission runtime, identity delivery, fixture attachment, Fixture Application, state control, or
-rollback procedure exists. Runtime, Fixture, Live, and Adoption qualification remain later gates.
+satisfy their declared offline gate. AP-M4 supplies the Fixture evidence defined by Version 0.2.
+Version 0.3 selects the initial GCP Live topology, Version 0.4 selects its identity trust profile,
+Version 0.5 selects state and operator authority, Version 0.6 selects activation, DNS, readback, and
+rollback behavior, and Version 0.7 selects observability, evidence, incident, and cost controls.
+None supplies Terraform, provider, network, identity, deployment, or Live evidence. Adoption
+qualification remains a later application-owned gate.
 
 ## Design trace
 
@@ -555,7 +788,10 @@ rollback procedure exists. Runtime, Fixture, Live, and Adoption qualification re
 | --- | --- | --- |
 | Shared Edge and catalogue | AP-PR-001, AP-PR-003; AP-QR-002, AP-QR-006 | ADR-001, ADR-002 |
 | Registration, routing, and compiled generations | AP-PR-002, AP-PR-003, AP-PR-007; AP-QR-004, AP-QR-006 | ADR-002 |
-| Attachments and exclusive ownership | AP-PR-002, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-003 | ADR-001, ADR-002, ADR-004 |
-| Admission and verified identity | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004 |
-| Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004 |
+| Attachments and exclusive ownership | AP-PR-002, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-003 | ADR-001, ADR-002, ADR-004, ADR-007 |
+| Admission and verified identity | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-006 |
+| Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004, ADR-008 |
 | Fixture and adoption boundary | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 |
+| Initial GCP Live topology and Cloud Run attachments | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
+| Terraform state and operator authority | AP-PR-002, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-007 |
+| Observability, evidence, incidents, and cost | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007, AP-PR-008; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-004, ADR-009 |

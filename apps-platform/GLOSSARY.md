@@ -75,6 +75,11 @@ not authorize any feature inside that application.
 Minimal issuer-and-subject identity information validated by the platform and supplied to a
 Registered Application. It is an input to application identity, not a shared user profile.
 
+## Platform Session
+
+A platform-owned, time-bounded browser authentication context established from verified identity.
+It is neither an Application Principal nor a Feature Entitlement.
+
 ## Application Principal
 
 An immutable, application-scoped identity derived by a Registered Application from Verified

@@ -1,10 +1,12 @@
 # App Platform evaluation strategy
 
-Version 0.2 | Status: deterministic evaluation authority for AP-M3 and AP-M4
+Version 0.3 | Status: deterministic evaluation authority through AP-M5; future AP-M6 through AP-M9 claim boundaries
 
-This document preserves how delivery item 3, AP-M3, is evaluated and defines the Fixture (`F`) gate
-for delivery item 4, AP-M4. AP-EVAL-M4 qualifies only the selected in-process harness. It does not
-qualify a live Shared Edge, provider identity, cloud resource, or consuming application.
+This document preserves how delivery item 3, AP-M3, and delivery item 4, AP-M4, are evaluated. It
+now defines the deterministic planning gate for delivery item 5, AP-M5, and the claim boundaries
+that later AP-M6 through AP-M9 authorities must refine before implementation or use. AP-EVAL-M5
+qualifies planning consistency only; it does not qualify a live Shared Edge, provider identity,
+cloud resource, deployment, or consuming application.
 
 Plan: [App Platform implementation plan](04_implementation_plan.md)
 
@@ -545,3 +547,369 @@ real application can or should adopt the platform.
 
 Infrastructure and Live qualification require a separate owner-approved slice after AP-M4 merges.
 Every Application Adoption remains an application-owned later slice with its own evidence.
+
+## AP-EVAL-M5 · Infrastructure-planning gate
+
+### Evaluation claim
+
+A passing AP-EVAL-M5 result means only that the evaluated repository revision contains complete,
+internally consistent planning authority for the initial GCP qualification topology and for the
+later AP-M6 through AP-M9 delivery sequence.
+
+It proves no provider behavior and creates no new evidence class. AP-EVAL-M3 Contract (`C`) and
+AP-EVAL-M4 Fixture (`F`) regression gates must continue to pass. Live (`L`) and Adoption (`A`)
+evidence remain unavailable.
+
+### Evaluation environment
+
+AP-EVAL-M5 runs through the existing project-local entry points:
+
+```bash
+make check
+make -C apps-platform check
+```
+
+One invocation from the appropriate root is sufficient. The complete command must remain Python
+standard-library-only, credential-free, deterministic, network-free, and non-mutating. It may read
+committed source but may not run Terraform, a provider CLI, DNS lookup, socket, browser, OAuth flow,
+authenticated workflow, or cloud plan. It must create no committed artifact and must return nonzero
+for any failed or skipped mandatory AP-M5 gate.
+
+### AP-EVAL-M5-01 · Authority, identifiers, and trace integrity
+
+Verify that:
+
+- ADR-001 through ADR-009 are unique, accepted, and trace to existing requirements;
+- AP-M5-W1 through AP-M5-W9 are unique, ordered, and trace to AP-PR-001 through AP-PR-009,
+  AP-QR-001 through AP-QR-006, and AP-TM-001 through AP-TM-014;
+- the system design, threat model, implementation plan, evaluation strategy, repository layout, and
+  future handoff agree on the planning-only status;
+- AP-M3 Contract and AP-M4 Fixture authorities remain intact and continue to pass; and
+- every claim distinguishes selected, implemented, deployed, Live-qualified, and adopted behavior.
+
+Documentation presence is not enough: deterministic governance checks must inspect identifiers,
+required decisions, scope exclusions, and later-slice boundaries.
+
+### AP-EVAL-M5-02 · Provider topology and attachment boundary
+
+Verify that the authority consistently selects:
+
+- project `comfforts-platform-non-prod`, project number `455651441682`, region `us-west1`, and no
+  production environment;
+- `apps-staging.comfforts.com` without changing `apps.comfforts.com` or Finance Assistant;
+- one global external Application Load Balancer, Google-managed certificate, HTTP-to-HTTPS
+  behavior, one Cloud Run edge, and no application-prefix duplication in the provider URL map;
+- `gcp-cloud-run-v1` with the exact typed, inert project-number/region/service-name reference;
+- provider metadata, readiness, ownership, and edge-caller grant as activation prerequisites rather
+  than arbitrary URL fetching;
+- separate Platform and Fixture Application State even in one project; and
+- platform-owned Shared VPC networking for later cross-project GCP attachment without transferring
+  application runtime, IAM, data, or state ownership.
+
+The gate rejects a provider command, credential, URL target, cross-state read, Finance path, or
+claim that same-project design qualifies cross-project behavior.
+
+### AP-EVAL-M5-03 · Identity, session, and assertion trust profile
+
+Verify that the authority distinguishes Visitor identity, Platform Session, edge-caller workload
+identity, Application Principal, and Feature Entitlement, and selects:
+
+- Google OIDC authorization code with PKCE for consumer Google and Google Workspace accounts;
+- no initial MFA requirement and no other OIDC provider;
+- an opaque host-only secure cookie, minimal Firestore Native session state, and an eight-hour
+  absolute reauthentication boundary without stored Google access or refresh tokens;
+- optional verified identity on public routes, required identity on authenticated routes, exact
+  issuer-subject restricted membership, and display-only email;
+- platform-owned logout with a validated relative return path;
+- one environment Cloud KMS software ES256 signer with application-specific audiences and public
+  JWKS only;
+- 60-second assertions, 30-second clock skew, 90-day rotation, 24-hour verification overlap, and
+  15-minute application key caching; and
+- no distributed replay-prevention claim.
+
+The gate must preserve existing IAP and `@react-oauth/google` behavior as unchanged application
+inputs until an independently approved Application Adoption.
+
+### AP-EVAL-M5-04 · State, operator, and source-control authority
+
+Verify that planning defines:
+
+- independent bootstrap, platform, and per-fixture Terraform roots;
+- a platform-state GCS bucket and separate state bucket per fixture, with locking, public-access
+  prevention, versioning, and recovery history of at least 90 days and 20 newer generations;
+- no `terraform_remote_state`, application-backend read, shared write authority, committed state,
+  saved plan, or recovery copy;
+- one-time short-lived bootstrap and migration of temporary state only after verified recovery;
+- GitHub Actions OIDC and GCP Workload Identity Federation bound after repository extraction;
+- advisory pull-request plans, an exact protected-main plan, explicit environment approval, source
+  and plan digests, concurrency, and backend locking;
+- separate plan, apply, rollback, import, recovery, and destroy authority; and
+- no routine local apply, with a narrowly scoped, recorded, short-lived break-glass exception.
+
+The same human may review and approve, but normal operation may not bypass protected source,
+workload identity, exact plan, target scoping, readback, or drift reconciliation.
+
+### AP-EVAL-M5-05 · Generation activation, DNS, readback, and rollback
+
+Verify that:
+
+- complete Registration Sets remain reviewed Git inputs with no registration endpoint or database;
+- compilation and predecessor validation produce a digest before planning;
+- immutable configuration objects and edge revisions bind source, compiler, generation, object,
+  image, identity, adapter, and platform versions;
+- the Cloud Run traffic assignment to one revision is the only current Live generation pointer;
+- staging validates dependencies before owner-approved 100-percent traffic activation;
+- source, plan, state, provider, runtime, catalogue, route, attachment, identity, direct-origin, and
+  ownership readback must agree;
+- provider partial failure stops for inspection and never triggers automatic rollback or cleanup;
+- owner-confirmed whole-generation rollback has a 15-minute post-approval objective and never
+  changes Application State;
+- the preceding configuration, revision, and replaced target remain for at least 24 hours; and
+- the separately approved new hostname action uses a 1,800-second TTL, `dig` readback, certificate
+  readiness, and no existing hostname or Finance mutation.
+
+The gate fails if DNS is treated as a registration update, TTL is described as a propagation
+guarantee, or cleanup is automatic at the end of the retention window.
+
+### AP-EVAL-M5-06 · Logging, evidence, privacy, and incident boundary
+
+Verify that the selected seven-day Cloud Logging profile permits only revision and generation
+digests, application and route identifiers, coarse outcomes, status class, latency, correlation
+identifier, and non-secret versions.
+
+It must prohibit assertions, sessions, restricted members, issuer-subject pairs, email, bodies,
+queries, raw application paths, application data, provider payloads, secrets, Terraform state,
+saved plans, stream chunks, intentionally retained IP addresses, and user-agent strings. Logs have
+owner-only access and no external sink.
+
+Verify that Live evidence is a 30-day, owner-readable, private GCS bundle containing redacted
+revision-bound digests, commands, readback, results, failures, limitations, and evidence labels.
+Screenshots, browser state, raw provider output, and unredacted logs are not authoritative evidence.
+The App Platform Owner is the incident contact, and any suspension, rollback, key action, or cleanup
+requires an explicit decision.
+
+### AP-EVAL-M5-07 · Demo-scale resource and cost controls
+
+Verify that planning records:
+
+- a USD 20 monthly budget with owner notifications at 50, 80, and 100 percent;
+- review at 50 percent, a new-billable-change pause at 80 percent, and an explicit owner decision at
+  100 percent without automatic billing disablement or destruction;
+- Shared Edge Cloud Run bounds of zero minimum, two maximum, 1 vCPU, 512 MiB, and concurrency 20;
+- per-fixture bounds of zero minimum, one maximum, 1 vCPU, 512 MiB, and concurrency 10;
+- at most 55 minutes per SSE or WebSocket connection;
+- one non-production edge and load balancer with no CDN, WAF, HSM, production replica, always-on
+  instance, Firestore backup, or PITR;
+- only active and overlapping KMS verification versions and active, rollback, and candidate images;
+- dry-run-first, owner-approved cleanup; and
+- Terraform rejection of unapproved services, larger or unbounded runtimes, longer retention,
+  additional environments or edges, and missing ownership labels.
+
+The gate must state that budgets and maximum instances are safeguards, not guaranteed hard spending
+caps. Future application projects retain their own runtime and billing ownership.
+
+### AP-EVAL-M5-08 · Later-slice and unresolved-input separation
+
+Verify that AP-M6 provider runtime, AP-M7 Terraform/workflows, AP-M8 deployment, AP-M9 Live
+qualification, and Application Adoption remain separate owner-approved branches and merge gates.
+
+The plan must name, rather than infer:
+
+- the network framework and dependency policy;
+- exact live header, body, non-streaming timeout, and abusive-traffic limits;
+- dedicated repository, workflow subject, and protected-environment values;
+- globally unique bucket names and DNS managed-zone resource;
+- OAuth client and notification configuration; and
+- initial live fixture identities, registrations, image digests, and resource references.
+
+An unavailable later input blocks its dependent slice. It is not a skip, provider lookup, fixture
+default, Finance-derived value, or reason to weaken the accepted boundary.
+
+### AP-EVAL-M5-09 · Non-mutation and truthful handoff
+
+Verify that the AP-M5 branch:
+
+- creates none of the reserved `edge/`, `registrations/`, `infrastructure/terraform/`,
+  `docs/runbooks/`, or Live `artifacts/` capabilities;
+- contains no Terraform file, workflow with cloud authority, state, plan, credential, secret,
+  provider command, DNS lookup, browser state, deployment, or generated Live evidence;
+- leaves default verification free of network, credentials, cloud accounts, and mutation;
+- leaves Finance Assistant and every Integration Draft unchanged and inactive;
+- records only planning authority after all nine AP-EVAL-M5 gates pass; and
+- directs the next task to AP-M6 proposal only after this pull request merges.
+
+### Threat coverage boundary
+
+| Threats | AP-EVAL-M5 planning claim |
+| --- | --- |
+| AP-TM-001 through AP-TM-003 | Provider topology, inert Cloud Run reference, catalogue/routing authority, and future validation requirements are explicit |
+| AP-TM-004 through AP-TM-006 | Direct-origin layers, Google OIDC, Platform Sessions, ES256 assertions, audiences, and application authorization separation are explicit |
+| AP-TM-007 through AP-TM-009 | Immutable generation pointer, state roots, concurrency, rollback, IAM, and application-isolation plans are explicit |
+| AP-TM-010 | Prohibited log/evidence data, access, retention, and no-export policy are explicit |
+| AP-TM-011 | Protected-main, WIF, exact-plan, break-glass, drift, and extraction dependencies are explicit |
+| AP-TM-012 | Scale, concurrency, streaming, retention, budget, and billable-resource controls are explicit; remaining input limits are named |
+| AP-TM-013 | DNS/TLS, key, session, configuration, provider-failure, readback, and rollback plans are explicit |
+| AP-TM-014 | Fixture, Live, and Adoption claims remain separate and Finance Assistant remains unchanged |
+
+### Pass, fail, and skip semantics
+
+AP-EVAL-M5 passes only when all nine gates, every AP-EVAL-M3 and AP-EVAL-M4 regression test, and
+the complete `make check` command pass at one repository revision with zero failures, errors,
+unexpected warnings, and mandatory skips.
+
+A missing trace, contradictory decision, false operational claim, undeclared later input, reserved
+implementation path, credential, network dependency, cloud command, external mutation, Finance
+change, or runtime/Live/Adoption claim fails the gate. A later capability being unavailable is an
+explicit limitation, not a skipped AP-M5 gate.
+
+### Required evaluation evidence
+
+The AP-M5 pull-request handoff records:
+
+- branch, AP-M4 merge base, evaluated revision, and final revision;
+- AP-M5 work-package commits and changed paths;
+- exact command and working directory, interpreter version, duration, and test count;
+- pass, failure, error, warning, and skip counts;
+- requirements, ADRs, threats, and later evaluation boundaries covered;
+- security/privacy impact, limitations, and unresolved implementation inputs; and
+- confirmation that no credential, network, provider, Terraform, DNS, identity, repository-setting,
+  deployment, or application mutation occurred.
+
+Console output from the deterministic run is sufficient. AP-M5 evidence contains no cloud result
+because no cloud action is authorized.
+
+### Limitations
+
+AP-EVAL-M5 performs no runtime, Terraform, workflow, repository-setting, browser, accessibility,
+load, concurrency, network, DNS, TLS, IAM, OAuth, KMS, Firestore, provider, budget, logging,
+deployment, rollback, recovery, incident, migration, or application-product test. It cannot qualify
+any selected control as implemented or operational.
+
+## Future evaluation boundaries
+
+The following sections constrain later authorities. They do not authorize implementation or
+provide a passing result. Each later milestone must refine its environment, commands, fixtures,
+expected results, evidence schema, pass/fail semantics, and exact source revision before work begins.
+
+### AP-EVAL-M6 · Networked-provider-runtime gate
+
+AP-EVAL-M6 may qualify only repository implementation of the networked Shared Edge and provider
+runtime through local deterministic and integration tests. It must cover catalogue and prefix
+routing, bounded HTTP behavior, forwarding, public/authenticated/restricted admission, OIDC flow
+seams through fake adapters, session lifecycle, logout, assertion signing and verification, JWKS,
+Cloud Run reference resolution through fake provider metadata, direct-entry application
+verification, immutable generation loading, status/readback, failure isolation, streaming seams,
+redaction, and extraction.
+
+AP-EVAL-M6 uses no real Google account, OAuth client, KMS key, Firestore database, Cloud Run service,
+Terraform, DNS, credential, socket exposed outside the test process, or provider mutation. It
+supplies implementation evidence only and no Live evidence. It cannot begin until the owner approves
+the network framework, dependency policy, and exact remaining request limits.
+
+### AP-EVAL-M7 · Terraform-and-workflow gate
+
+AP-EVAL-M7 may qualify only committed Terraform and workflow implementation through formatting,
+static validation, module contract tests, policy checks, fixture configuration checks, extraction
+tests, and secret/state/plan exclusion. It must prove the root and module ownership boundaries,
+backend configuration shape, typed cross-state inputs, least-privilege role intent, budget and
+scaling policy, explicit destructive targets, workflow source binding, and absence of implicit
+apply.
+
+AP-EVAL-M7 performs no backend initialization, authenticated plan, repository-setting change,
+Workload Identity Federation action, provider API call, resource creation, DNS change, or deploy.
+Static configuration is not deployed evidence and cannot satisfy AP-EVAL-M8 or AP-EVAL-M9.
+
+### AP-EVAL-M8 · Qualification-deployment gate
+
+AP-EVAL-M8 is an explicit operator gate executed only from protected, merged source after repository
+extraction and owner approval. It may configure repository protection and federation, bootstrap
+backends, run authenticated plans, apply exact approved roots, deploy the Shared Edge and Fixture
+Applications, and perform the separately approved qualification DNS/TLS action.
+
+A passing result proves only that the named revision and environment resources exist, state and
+provider inventories agree, no unapproved resource changed, and deployment/readback evidence is
+redacted and retained. Any partial apply stops for inspection. A deployment result cannot qualify
+routing, identity, direct-origin denial, rollback, cost behavior, or application adoption.
+
+### AP-EVAL-M9 · Live-qualification gate
+
+AP-EVAL-M9 supplies Live (`L`) evidence only for the exact non-production project, hostname,
+revision, Registration Generation, and fixture resources named by the approved gate. It uses
+owner-approved non-production Google test identities without retaining their identifiers or browser
+state as evidence. The default `make check` remains separate and credential-free.
+
+#### AP-EVAL-M9-01 · Revision, environment, and evidence integrity
+
+Verify protected-main source and plan digests, compiler and contract versions, image digests,
+Registration Generation and predecessor, Terraform lineages, project number, region, hostname,
+workflow identity, approval, timestamps, and redacted evidence destinations. Any mismatch or
+unapproved resource fails before behavioral claims proceed.
+
+#### AP-EVAL-M9-02 · DNS, TLS, catalogue, and route behavior
+
+Read back authoritative and recursive DNS, certificate status, HTTPS, HTTP redirection, security
+headers, one load-balancer backend, one edge traffic target, catalogue projection, registered exact
+and subpaths, mounts, forwarding, and closed unknown, malformed, reserved, suspended, and retired
+paths. Confirm application prefixes are not duplicated in the provider URL map.
+
+#### AP-EVAL-M9-03 · Attachment ownership and direct-origin denial
+
+Read back each typed Cloud Run target, readiness, project, region, Application State owner, edge
+caller grant, ingress, and absence of arbitrary URL resolution. Prove a protected target rejects an
+unauthenticated direct request and a caller lacking the edge identity, while the reviewed edge path
+reaches only the intended application. Same-project evidence does not qualify cross-project
+attachment.
+
+#### AP-EVAL-M9-04 · OIDC, session, admission, and logout
+
+Exercise anonymous public access, optional identity on public access, authenticated admission,
+restricted allow and deny, invalid/expired session failure, eight-hour boundary configuration,
+cookie attributes, safe redirect state, logout from root and application paths, and display-only
+email. Prove authentication grants no Fixture Application Feature Entitlement.
+
+#### AP-EVAL-M9-05 · Assertion, KMS, JWKS, and application verification
+
+Read back the software ES256 key location and active version, public JWKS, key identifier, one
+environment signer, and application-specific audiences. Exercise valid, missing, visitor-supplied,
+malformed, expired, future, wrong-issuer, wrong-audience, cross-application, and unknown-key
+assertions; 60-second lifetime; 30-second skew; key refresh; overlap; and fail-closed stale-key
+behavior. Record that distributed replay prevention remains unavailable rather than implying it.
+
+#### AP-EVAL-M9-06 · Activation, failure, readback, and rollback
+
+Stage a reviewed successor without traffic, reject a stale predecessor and invalid dependency,
+activate one complete generation, and compare source, state, provider, runtime, route, attachment,
+identity, ownership, and digest readback. Simulate an approved non-destructive partial failure and
+confirm stop-for-inspection. With owner confirmation, measure whole-generation rollback against the
+15-minute objective and prove Application State is unchanged and prior assets remain for 24 hours.
+
+#### AP-EVAL-M9-07 · State, operator, drift, and recovery controls
+
+Read back independent roots, buckets, IAM, locking, versioning, recovery lifecycle, WIF conditions,
+protected environment, concurrency, and plan/apply scope. Confirm platform identities cannot read
+fixture state and fixtures cannot read one another. Introduce only an approved reversible drift
+case, prove detection, and reconcile through source. Break-glass, force-unlock, push, import, and
+destroy remain unexecuted unless a separately approved recovery case requires them.
+
+#### AP-EVAL-M9-08 · Limits, streaming, isolation, and cost inventory
+
+Exercise the approved header, body, timeout, concurrency, and stream boundaries without load claims;
+verify SSE and WebSocket behavior through the edge up to the bounded test duration; and prove one
+fixture's failure does not route to or alter another. Read back scale-to-zero, instance maxima,
+resources, budgets, thresholds, labels, image-retention dry run, approved billable-service inventory,
+and excluded services. State explicitly that budgets and instance maxima are not hard spend caps.
+
+#### AP-EVAL-M9-09 · Logging, redaction, retention, incident, and evidence
+
+Verify one bounded completion event, required control-plane audit events, allowed fields, prohibited
+field absence, owner-only access, seven-day log retention, no external sink, 30-day evidence
+retention, and evidence hashes. Exercise the incident procedure without destructive action and
+confirm screenshots, assertions, identities, IP addresses, payloads, state, and raw provider output
+are absent from authoritative evidence.
+
+#### AP-EVAL-M9-10 · Truthful qualification and adoption boundary
+
+AP-EVAL-M9 passes only when all mandatory gates and AP-EVAL-M3 through AP-EVAL-M8 dependencies pass
+for the exact revision with zero mandatory skips. Report every failure, limitation, residual risk,
+unavailable cross-project claim, and unimplemented alert. Record Live evidence only; leave Finance
+Assistant and every Application Adoption unchanged and unavailable.

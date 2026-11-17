@@ -78,8 +78,12 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("one bounded slice per pull request", instructions)
         self.assertIn("leave each change uncommitted until approval", instructions)
         self.assertIn("Merge it before starting the next documented slice", instructions)
+        self.assertIn(
+            "AP-M5 selects infrastructure and Live-qualification planning boundaries only",
+            instructions,
+        )
 
-    def test_documentation_truthfully_records_fixture_qualification(self) -> None:
+    def test_documentation_truthfully_records_planning_and_evidence_status(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
         overview = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
@@ -87,7 +91,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         normalized_overview = " ".join(overview.split())
 
         self.assertIn(
-            "deterministic Fixture harness implemented and qualified",
+            "AP-M5 infrastructure planning authority implemented and validated",
             normalized_index,
         )
         self.assertIn("Contract (`C`) evidence", normalized_index)
@@ -96,9 +100,10 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Live (`L`) and Adoption (`A`) evidence remain unavailable",
             normalized_index,
         )
-        self.assertIn("AP-M4", overview)
-        self.assertIn("Fixture-qualified", normalized_overview)
-        self.assertIn("no networked platform service", normalized_overview)
+        self.assertIn("AP-M5", overview)
+        self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
+        self.assertIn("No networked platform service", normalized_overview)
+        self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
         self.assertIn("AP-M4 deterministic Fixture implementation recorded", layout)
         self.assertIn("`contracts/`", layout)
@@ -172,8 +177,22 @@ class ProjectAuthorityTest(unittest.TestCase):
         )
         observed = re.findall(r"^## (ADR-\d{3}) ·", decisions, re.MULTILINE)
 
-        self.assertEqual(observed, ["ADR-001", "ADR-002", "ADR-003", "ADR-004"])
-        self.assertEqual(decisions.count("Status: Accepted"), 4)
+        self.assertEqual(
+            observed,
+            [
+                "ADR-001",
+                "ADR-002",
+                "ADR-003",
+                "ADR-004",
+                "ADR-005",
+                "ADR-006",
+                "ADR-007",
+                "ADR-008",
+                "ADR-009",
+            ],
+        )
+        self.assertEqual(decisions.count("Status: Accepted"), 9)
+        normalized_decisions = " ".join(decisions.split())
         for identifier in (
             "AP-PR-001",
             "AP-PR-002",
@@ -191,6 +210,82 @@ class ProjectAuthorityTest(unittest.TestCase):
             "AP-QR-006",
         ):
             self.assertIn(identifier, decisions)
+
+        for live_topology_decision in (
+            "comfforts-platform-non-prod",
+            "apps-staging.comfforts.com",
+            "gcp-cloud-run-v1",
+            "platform-owned Shared VPC",
+            "explicit, separately approved operator actions",
+            "no Terraform configuration",
+        ):
+            self.assertIn(live_topology_decision, decisions)
+
+        for live_identity_decision in (
+            "authorization-code flow",
+            "Consumer Google",
+            "accounts and Google Workspace accounts",
+            "Firestore Native",
+            "absolute lifetime of eight hours",
+            "EC_SIGN_P256_SHA256",
+            "maximum lifetime of 60 seconds",
+            "at most 30 seconds of clock skew",
+            "at least every 90 days",
+            "24-hour verification overlap",
+            "at most 15 minutes",
+            "does not claim distributed replay prevention",
+        ):
+            self.assertIn(live_identity_decision, normalized_decisions)
+
+        for state_and_operator_decision in (
+            "remote GCS backend with native state locking and object versioning",
+            "Each Fixture Application uses a separate state bucket",
+            "at least 90 days old",
+            "at least 20 newer generations",
+            "No platform root uses `terraform_remote_state`",
+            "GitHub Actions using OIDC and GCP Workload Identity Federation",
+            "A pull-request plan is advisory",
+            "Routine workstation apply is prohibited",
+            "Provider-console changes are drift",
+            "no backend bucket, state, workflow, identity, credential, plan",
+        ):
+            self.assertIn(state_and_operator_decision, normalized_decisions)
+
+        for activation_and_rollback_decision in (
+            "content-addressed, immutable compiled configuration object",
+            "traffic assignment to one immutable edge revision",
+            "There is no separate registration endpoint or database",
+            "100 percent of edge traffic",
+            "provider error or incomplete apply stops for inspection",
+            "Successful readback must agree across source, state, provider, and runtime",
+            "initial rollback-time objective is 15 minutes",
+            "available for at least 24 hours",
+            "1,800-second TTL",
+            "checks authoritative and recursive resolution with `dig`",
+            "does not touch `apps.comfforts.com`",
+            "no registration file, configuration bucket, object, edge revision, DNS",
+        ):
+            self.assertIn(activation_and_rollback_decision, normalized_decisions)
+
+        for evidence_and_cost_decision in (
+            "dedicated Cloud Logging bucket",
+            "retention is seven days",
+            "does not intentionally retain source IP addresses",
+            "dedicated private GCS evidence bucket",
+            "Evidence retention is 30 days",
+            "Screenshots, authenticated browser state, raw provider responses",
+            "App Platform Owner is the initial security, availability, privacy, and cost incident contact",
+            "monthly budget of USD 20",
+            "notifications at 50, 80, and 100 percent",
+            "Shared Edge | 0 | 2 | 1 vCPU | 512 MiB | 20",
+            "Each Fixture Application | 0 | 1 | 1 vCPU | 512 MiB | 10",
+            "at most 55 minutes per connection",
+            "no CDN, WAF, HSM key, production replica",
+            "Cleanup policy is evaluated in dry-run mode first",
+            "platform project pays for Shared Edge resources",
+            "no log or evidence bucket, budget, alert, runtime limit",
+        ):
+            self.assertIn(evidence_and_cost_decision, normalized_decisions)
 
     def test_shared_edge_decisions_preserve_exclusive_ownership(self) -> None:
         decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(
@@ -252,7 +347,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("## Application Adoption", glossary)
         self.assertIn("app-owned test state", layout)
 
-    def test_infrastructure_planning_prompt_loads_authority_without_copying_it(
+    def test_provider_runtime_prompt_loads_authority_without_copying_it(
         self,
     ) -> None:
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
@@ -279,8 +374,10 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
             "An Integration Draft is not Application Adoption",
             "credential-free, deterministic, and non-mutating",
-            "updated `main` after the AP-M4 pull request has merged",
-            "propose item 5 planning and evaluation authority",
+            "updated `main` after the AP-M5 pull request has merged",
+            "propose AP-M6, the smallest locally testable networked provider-runtime slice",
+            "network server/framework, dependency policy",
+            "exact live header, request-body, response-body, non-streaming timeout",
             "Do not write Terraform",
         ):
             self.assertIn(boundary, normalized_prompt)
@@ -288,11 +385,11 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertNotIn("## ADR-", prompt)
         self.assertNotIn("terraform apply", prompt)
         self.assertIn(
-            "[Infrastructure-planning handoff](starting_prompt.md)",
+            "[Provider-runtime handoff](starting_prompt.md)",
             prompt_index,
         )
 
-    def test_incremental_delivery_sequence_keeps_infrastructure_separate(self) -> None:
+    def test_incremental_delivery_sequence_keeps_later_slices_separate(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
         normalized_index = " ".join(index.split())
@@ -305,22 +402,29 @@ class ProjectAuthorityTest(unittest.TestCase):
             self.assertIn(completed, index)
         self.assertIn("System design and versioned contracts — complete", index)
         self.assertIn(
-            "Deterministic fixtures — implemented and Fixture-qualified",
+            "Deterministic fixtures — complete and Fixture-qualified",
             index,
         )
         self.assertIn(
-            "Platform infrastructure planning — next after item 4 merges",
+            "Platform infrastructure planning — implemented and planning-validated",
             index,
         )
-        self.assertIn("feat/apps-platform-fixtures", index)
+        for later_slice in (
+            "Networked provider runtime — next after item 5 merges",
+            "Terraform and workflow implementation — later",
+            "Non-production qualification deployment — later",
+            "Live qualification — later",
+            "Finance Application Adoption — later and independent",
+        ):
+            self.assertIn(later_slice, index)
         self.assertIn("separate bounded branch and pull request", normalized_index)
         self.assertIn(
-            "obtain owner approval for the smallest infrastructure implementation plan",
-            normalized_index,
+            "propose AP-M6, the smallest locally testable networked provider-runtime slice",
+            normalized_prompt,
         )
-        self.assertIn("propose item 5 planning and evaluation authority", normalized_prompt)
+        self.assertIn("Wait for owner approval before editing", normalized_prompt)
         self.assertIn("Do not write Terraform", normalized_prompt)
-        self.assertIn("Item 5 belongs on a new bounded branch", normalized_prompt)
+        self.assertIn("AP-M6 belongs on a new bounded branch", normalized_prompt)
 
     def test_fixture_design_selects_a_bounded_in_process_profile(self) -> None:
         design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
@@ -357,6 +461,153 @@ class ProjectAuthorityTest(unittest.TestCase):
 
         self.assertIn("Finance Assistant code", design)
         self.assertIn("network direct-bypass control", threat_model)
+
+    def test_ap_m5_authorities_have_complete_unique_identifiers(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+
+        work_packages = re.findall(r"^#### (AP-M5-W\d+) ·", plan, re.MULTILINE)
+        planning_gates = re.findall(
+            r"^### (AP-EVAL-M5-\d{2}) ·", evaluation, re.MULTILINE
+        )
+        live_gates = re.findall(
+            r"^#### (AP-EVAL-M9-\d{2}) ·", evaluation, re.MULTILINE
+        )
+        future_boundaries = re.findall(
+            r"^### (AP-EVAL-M[6-9]) ·", evaluation, re.MULTILINE
+        )
+
+        self.assertEqual(
+            work_packages,
+            [f"AP-M5-W{index}" for index in range(1, 10)],
+        )
+        self.assertEqual(
+            planning_gates,
+            [f"AP-EVAL-M5-{index:02d}" for index in range(1, 10)],
+        )
+        self.assertEqual(
+            live_gates,
+            [f"AP-EVAL-M9-{index:02d}" for index in range(1, 11)],
+        )
+        self.assertEqual(
+            future_boundaries,
+            ["AP-EVAL-M6", "AP-EVAL-M7", "AP-EVAL-M8", "AP-EVAL-M9"],
+        )
+        for identifiers in (work_packages, planning_gates, live_gates):
+            self.assertEqual(len(identifiers), len(set(identifiers)))
+
+    def test_ap_m5_separates_later_delivery_and_names_missing_inputs(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_plan = " ".join(plan.split())
+        normalized_evaluation = " ".join(evaluation.split())
+
+        for later_slice in (
+            "AP-M6 · Networked provider runtime implementation",
+            "AP-M7 · Terraform and workflow implementation",
+            "AP-M8 · Non-production qualification deployment",
+            "AP-M9 · Live qualification",
+            "Later Application Adoption",
+        ):
+            self.assertIn(later_slice, plan)
+
+        for planning_boundary in (
+            "AP-M5 produces no Contract, Fixture, Live, or Adoption evidence",
+            "Each item below requires a new owner-approved branch",
+            "It does not authorize a listening service",
+            "no later slice inherits mutation authority merely because AP-M5 is accepted",
+            "Network server/framework and dependency policy",
+            "Header, request-body, response-body, non-streaming timeout, and abusive-traffic limits",
+            "Dedicated GitHub organization, repository, workflow subjects",
+            "Globally unique state, configuration, log, and evidence bucket names",
+            "These are unavailable inputs, not permission to query a provider",
+        ):
+            self.assertIn(planning_boundary, normalized_plan)
+
+        for evaluation_boundary in (
+            "AP-EVAL-M5 qualifies planning consistency only",
+            "It proves no provider behavior and creates no new evidence class",
+            "The default `make check` remains separate and credential-free",
+            "A deployment result cannot qualify routing, identity, direct-origin denial",
+            "leave Finance Assistant and every Application Adoption unchanged and unavailable",
+        ):
+            self.assertIn(evaluation_boundary, normalized_evaluation)
+
+    def test_ap_m5_reserved_capabilities_remain_absent(self) -> None:
+        layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(
+            encoding="utf-8"
+        )
+
+        reserved_paths = (
+            "edge",
+            "registrations",
+            "infrastructure",
+            "artifacts",
+            "docs/runbooks",
+        )
+        for relative_path in reserved_paths:
+            self.assertFalse(
+                (PROJECT_ROOT / relative_path).exists(),
+                f"AP-M5 must not create reserved capability path: {relative_path}",
+            )
+
+        for reserved_reference in (
+            "`edge/`",
+            "`registrations/`",
+            "`infrastructure/terraform/bootstrap/`",
+            "`infrastructure/terraform/platform/`",
+            "`infrastructure/terraform/fixtures/<application-id>/`",
+            "`artifacts/`",
+            "`docs/runbooks/`",
+            "not authorization to scaffold empty modules",
+        ):
+            self.assertIn(reserved_reference, layout)
+
+        prohibited_suffixes = (".tf", ".tf.json", ".tfvars", ".tfstate", ".tfplan")
+        prohibited_files = sorted(
+            path.relative_to(PROJECT_ROOT).as_posix()
+            for path in PROJECT_ROOT.rglob("*")
+            if path.is_file()
+            and (
+                path.name.endswith(prohibited_suffixes)
+                or path.name == ".terraform.lock.hcl"
+            )
+        )
+        self.assertEqual(prohibited_files, [])
+        self.assertFalse((PROJECT_ROOT / ".github/workflows").exists())
+
+    def test_ap_m5_default_gate_has_no_live_operator_command(self) -> None:
+        makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_makefile = " ".join(makefile.split())
+
+        for prohibited_command in (
+            "terraform",
+            "gcloud",
+            "gsutil",
+            " dig ",
+            " curl ",
+            "docker",
+            "kubectl",
+            "openssl",
+        ):
+            self.assertNotIn(prohibited_command, f" {normalized_makefile} ")
+
+        self.assertIn(
+            "check: governance-check contract-check fixture-check",
+            makefile,
+        )
+        self.assertIn("credential-free, deterministic, network-free", evaluation)
 
     def test_ap_m4_authorities_have_complete_unique_identifiers(self) -> None:
         plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(

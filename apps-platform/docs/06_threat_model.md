@@ -1,6 +1,6 @@
 # App Platform threat model
 
-Version 0.2 | Status: fixture threat-profile authority; no fixture runtime or qualification is implemented
+Version 0.7 | Status: Fixture-qualified threat model and initial Live control profile; no live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -10,7 +10,7 @@ consuming application's security model.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007, ADR-008, ADR-009
 
 System design: [App Platform system design](03_system_design.md)
 
@@ -261,9 +261,9 @@ Provider adapters resolve only their own typed references with least-privilege c
 cross-registration conflicts. `F` covers attachment selection and application isolation. `L`
 confirms resource identity, IAM, and absence of arbitrary egress.
 
-**Residual risk:** `fixture-in-process-v1` resolves only inert, explicitly supplied fixture targets.
-The first provider-specific attachment kind and its ownership proof remain later approved design
-and infrastructure decisions.
+**Residual risk:** `gcp-cloud-run-v1` and its typed resource grammar are selected for the first Live
+profile, but no provider lookup, IAM grant, ownership readback, or target validation is implemented
+or qualified. The fixture adapter remains the only executable adapter.
 
 ### AP-TM-004 · Direct protected-origin bypass
 
@@ -280,8 +280,10 @@ ingress posture. `F` exercises spoofed headers and direct calls to protected fix
 but can prove only assertion-side denial in one process. `L` must read back and test the actual
 ingress and IAM configuration. `A` repeats the gate for a real application.
 
-**Residual risk:** No network direct-bypass control is implemented until a provider attachment and
-runtime are deployed and qualified. Fixture denial must never be reported as origin isolation.
+**Residual risk:** The planned load-balancer, Cloud Run ingress, edge caller, and application-side
+verification layers name a future network direct-bypass control; they are not implemented until
+separately approved infrastructure and deployment slices complete. Fixture denial must never be
+reported as origin isolation.
 
 ### AP-TM-005 · Identity spoofing, replay, and confused audience
 
@@ -298,10 +300,10 @@ subject pairs. Applications derive their own principals and never use email as a
 missing, forged, expired, wrong-issuer, wrong-audience, and cross-application assertions. `L` covers
 signer, key discovery, algorithms, audience issuance, and clock behavior.
 
-**Residual risk:** The fixture-only signer, zero skew, 60-second lifetime, and bounded replay store
-qualify only deterministic failure behavior. Production signer selection, algorithms, key custody,
-rotation, skew, lifetime, and distributed replay posture remain unresolved deployment and identity
-decisions.
+**Residual risk:** The Live profile selects Google OIDC, ES256 in Cloud KMS, application audiences,
+a 60-second assertion, 30-second skew, and overlapping public keys, but none is implemented or
+qualified. The demo accepts residual cross-instance replay risk because it makes no distributed
+replay-prevention claim.
 
 ### AP-TM-006 · Admission mistaken for feature authorization
 
@@ -335,9 +337,10 @@ window.
 all-or-no-output failure. `F` covers register, update, suspend, retire, attachment replacement, and
 rollback journeys. `L` covers provider partial-failure recovery and drift.
 
-**Residual risk:** Item 4 can qualify only an in-memory, single-caller generation swap. Persistent
-storage, locking, provider transactions, acceptance windows, and operator rollback procedures
-remain later implementation and evaluation decisions.
+**Residual risk:** GCS locking, protected-main concurrency, immutable edge revisions, and one
+traffic pointer are selected but not implemented. Terraform cannot make several provider control
+planes transactional, so partial failure still requires stop, readback, inspection, and an
+owner-approved recovery decision.
 
 ### AP-TM-008 · Dual state ownership or destructive cross-state action
 
@@ -354,8 +357,9 @@ not backend access. Destructive actions identify exact targets and require expli
 fixture and platform lifecycle. `L` covers state inventories, plans, readback, and destructive-action
 guards. `A` proves exclusive ownership at every transfer phase for a real application.
 
-**Residual risk:** A manifest is a declaration until provider/state readback confirms it. Item 3
-cannot qualify live ownership.
+**Residual risk:** Separate roots and buckets reduce accidental cross-owner access but do not prove
+exclusive ownership until state inventory, IAM, provider readback, and destructive plans are
+qualified together.
 
 ### AP-TM-009 · Cross-application lateral movement
 
@@ -390,8 +394,9 @@ identifiers. Secret payloads and application data are prohibited and externally 
 artifacts. `F`, `L`, and `A` inspect generated evidence and logs for redaction without recording the
 prohibited payloads themselves.
 
-**Residual risk:** Log sink access, retention, deletion, and incident response remain deployment
-decisions. Pattern checks supplement but never replace secret storage and access control.
+**Residual risk:** Seven-day owner-only logging, 30-day evidence, no external export, and minimized
+fields are selected but not implemented. Provider-mandated audit metadata may still include operator
+or network information and remains subject to provider access and retention behavior.
 
 ### AP-TM-011 · Unauthorized control-plane change, drift, or supply-chain substitution
 
@@ -408,8 +413,9 @@ provider changes are drift and never become configuration authority.
 extraction-safe checks. `L` covers revision binding, workload identity, least privilege, drift
 readback, plan review, and audit records.
 
-**Residual risk:** Branch protection, reviewer policy, artifact signing, dependency pinning,
-workload identity, and provider audit settings remain repository and infrastructure decisions.
+**Residual risk:** Protected-main, exact-plan binding, and Workload Identity Federation are selected
+but unavailable before repository extraction and infrastructure implementation. The same owner may
+review and apply, so retained evidence and drift readback remain important compensating controls.
 
 ### AP-TM-012 · Availability and cost abuse
 
@@ -426,10 +432,10 @@ resources and operator actions. Rate or abuse controls must not silently broaden
 limit and isolation behavior without load or availability claims. `L` covers provider quotas,
 timeouts, alerts, and billable-resource inventory.
 
-**Residual risk:** The initial platform is demo-scale with no high-availability commitment. Item 4
-selects exact in-process request and response limits but cannot exercise connection, traffic-rate,
-concurrency, network timeout, provider quota, alert, or spending controls. Those remain later owner
-decisions.
+**Residual risk:** Scale-to-zero, maximum instances, concurrency, a 55-minute stream limit, and budget
+notifications are selected but not implemented. Provider limits can be exceeded briefly, budget
+notifications do not cap spend, and exact live header, body, and abusive-traffic limits still
+require implementation-plan and Live-gate values.
 
 ### AP-TM-013 · External dependency failure or stale trust material
 
@@ -445,8 +451,9 @@ status without implying success.
 **Evidence:** `F` covers logical dependency failure using deterministic adapters. `L` covers actual
 DNS, TLS, key rotation, certificate, provider failure, and recovery behavior.
 
-**Residual risk:** Provider availability and disaster recovery beyond the demo commitment remain
-outside the initial qualification claim.
+**Residual risk:** The selected DNS, certificate, immutable-generation, and owner-confirmed rollback
+sequence is not implemented or qualified. Provider availability and disaster recovery beyond the
+15-minute post-approval rollback objective remain outside the demo commitment.
 
 ### AP-TM-014 · Integration Draft or fixture mistaken for Application Adoption
 
@@ -472,13 +479,13 @@ pass:
 
 | Decision | Required before |
 | --- | --- |
-| First live provider attachment kind and provider resource-reference grammar | Infrastructure implementation |
-| Production identity provider, signer, algorithms, keys, rotation, skew, lifetime, and distributed replay posture | Live qualification |
-| Live request, header, body, connection, rate, concurrency, and timeout limits | Live qualification |
-| Cloud project, region, resource topology, ingress, IAM, and state backends | Infrastructure implementation |
-| Operator roles, review separation, branch protection, workload identity, and audit policy | Live mutation |
-| Logging backend, retention, access, redaction, deletion, and incident handling | Live evidence collection |
-| Cost thresholds, quotas, alerts, and approved billable resources | Live qualification |
+| OAuth client values, session-store realization, KMS/JWKS resources, and identity IAM bindings for the selected trust profile | Infrastructure implementation |
+| Exact live header, body, non-streaming timeout, and abusive-traffic limits | Infrastructure implementation and Live qualification |
+| Terraform modules, exact bucket and resource names, ingress realization, and IAM bindings for the selected GCP topology | Infrastructure implementation |
+| Dedicated repository identity, workflow subjects, branch protection, protected environment, and federation bindings | Repository extraction and Live mutation |
+| Configuration-bucket, candidate-revision, traffic-pointer, DNS/TLS, readback, and rollback realization | Infrastructure implementation and Live qualification |
+| Exact log/evidence bucket names, IAM, exclusions, retention rules, and provider audit behavior for the selected profile | Infrastructure implementation and Live evidence collection |
+| Terraform enforcement of selected budgets, scaling caps, labels, image retention, and approved billable resources | Infrastructure implementation and Live qualification |
 | Application-specific principals, data isolation, providers, and entitlements | Each Application Adoption |
 
 An unresolved decision causes its dependent gate to remain unavailable; it is not an accepted risk
@@ -499,8 +506,8 @@ requirements without weakening them.
 
 | Threats | Requirements | Decisions |
 | --- | --- | --- |
-| AP-TM-001 through AP-TM-003 | AP-PR-001, AP-PR-002, AP-PR-003; AP-QR-002, AP-QR-003, AP-QR-004 | ADR-001, ADR-002 |
-| AP-TM-004 through AP-TM-006 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004 |
-| AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004 |
-| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003 |
+| AP-TM-001 through AP-TM-003 | AP-PR-001, AP-PR-002, AP-PR-003; AP-QR-002, AP-QR-003, AP-QR-004 | ADR-001, ADR-002, ADR-005 |
+| AP-TM-004 through AP-TM-006 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-005, ADR-006 |
+| AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005, ADR-007, ADR-008 |
+| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-005, ADR-006, ADR-007, ADR-008, ADR-009 |
 | AP-TM-014 | AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-006 | ADR-004 |

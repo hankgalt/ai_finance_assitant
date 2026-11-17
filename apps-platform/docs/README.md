@@ -1,15 +1,17 @@
 # App Platform documentation
 
-Version 0.9 | Status: deterministic Fixture harness implemented and qualified; Live and Adoption
-qualification unavailable
+Version 1.0 | Status: AP-M5 infrastructure planning authority implemented and validated; Live and
+Adoption qualification unavailable
 
 This directory is the design authority for Comfforts App Platform. AP-M3 supplies Contract (`C`)
 evidence through the logical design, threat boundary, Version 1 schemas, deterministic compiler,
 and reviewed vectors. AP-M4 supplies Fixture (`F`) evidence through a synchronous in-process
 reference edge, synthetic identity boundary, three independent Fixture Applications, reviewed
-registration generations, and deterministic lifecycle journeys. Live (`L`) and Adoption (`A`)
-evidence remain unavailable. No networked Shared Edge, provider identity, Terraform configuration,
-cloud resource, DNS change, application migration, or production credential is implemented.
+registration generations, and deterministic lifecycle journeys. AP-M5 supplies accepted provider
+topology, identity, state, operator, lifecycle, evidence, incident, and cost planning plus a
+deterministic planning gate. Live (`L`) and Adoption (`A`) evidence remain unavailable. No networked
+Shared Edge, provider identity, Terraform configuration, cloud resource, DNS change, application
+migration, or production credential is implemented.
 
 ## Current reading order and authority
 
@@ -18,26 +20,27 @@ cloud resource, DNS change, application migration, or production credential is i
 3. [Product requirements](01_product_requirements.md) defines required behavior, quality, scope, and
    ownership boundaries.
 4. [Architecture decision records](02_architecture_decision_records.md) constrain shared-edge,
-   application, registration, and state ownership.
+   application, registration, state, provider, identity, and operator boundaries.
 5. [System design](03_system_design.md) defines logical modules, interfaces, lifecycle, state
-   ownership, and later runtime boundaries.
+   ownership, selected Live topology, and unresolved implementation inputs.
 6. [Threat model](06_threat_model.md) defines trust zones, threats, controls, and evidence classes.
-7. [AP-M3 and AP-M4 implementation plan](04_implementation_plan.md) owns delivery items 3 and 4.
-8. [AP-M3 and AP-M4 evaluation strategy](05_evaluation_strategy.md) defines the deterministic
-   Contract and Fixture gates.
+7. [AP-M3 through AP-M5 implementation plan](04_implementation_plan.md) owns delivery items 3
+   through 5 and separates later runtime, Terraform, deployment, and Live work.
+8. [Evaluation strategy](05_evaluation_strategy.md) defines AP-M3 through AP-M5 deterministic gates
+   and the future AP-M6 through AP-M9 claim boundaries.
 9. [Version 1 contract index](../contracts/README.md) owns machine interfaces subordinate to the
    requirements, accepted decisions, and system design.
 10. [Repository layout](repository_layout.md) defines capability ownership and extraction rules.
 11. [Prompt ownership](../prompts/README.md) keeps task entry points separate from specifications.
-12. [Infrastructure-planning handoff](../prompts/starting_prompt.md) provides a bounded entry point
-    for proposing item 5 only after AP-M4 merges.
+12. [Provider-runtime handoff](../prompts/starting_prompt.md) provides a bounded entry point for
+    proposing AP-M6 only after AP-M5 merges.
 
-AP-M3 contract behavior and AP-M4 Fixture behavior are implemented at this repository revision and
-pass their deterministic gates. Item 4 delivery is complete only after its pull request merges.
-Item 5 has no approved implementation plan, Live evaluation strategy, provider topology, operator
-procedure, or infrastructure mutation authority; those must be proposed from updated `main` after
-the merge. An absent authority must not be inferred from fixture code, branch history, discussion,
-or an Integration Draft.
+AP-M3 Contract behavior and AP-M4 Fixture behavior are implemented and pass their deterministic
+gates. AP-M5 planning authority is implemented and passes AP-EVAL-M5 at this revision; item 5
+delivery is complete only after this pull request merges. AP-M5 implements no provider runtime or
+infrastructure and grants no mutation authority. AP-M6 still requires an owner-approved runtime
+proposal and its named decisions from updated `main`; an absent authority must not be inferred from
+planning documents, fixture code, branch history, discussion, or an Integration Draft.
 
 ## Incremental delivery sequence
 
@@ -51,22 +54,31 @@ small reviewable commits, merge it, and only then begin the next item.
 3. **System design and versioned contracts — complete:** AP-M3 defines the logical platform, threat
    and evidence boundary, Version 1 machine contracts, deterministic compiler, and reviewed
    vectors. Its pull request is merged, and its repository behavior supplies Contract evidence.
-4. **Deterministic fixtures — implemented and Fixture-qualified:** AP-M4 defines and exercises the
+4. **Deterministic fixtures — complete and Fixture-qualified:** AP-M4 defines and exercises the
    bounded in-process reference edge, synthetic identity, three independent fixtures, reviewed
-   registrations, lifecycle, failure isolation, and rollback. Its checks pass without a socket,
-   credential, provider, Terraform, cloud resource, DNS mutation, or application migration.
-   Completion is recorded only by merging the pull request from `feat/apps-platform-fixtures`.
-5. **Platform infrastructure planning — next after item 4 merges:** from updated `main`, propose and
-   obtain owner approval for the smallest infrastructure implementation plan and Live evaluation
-   strategy. Planning must resolve provider topology, state ownership, identity, ingress, DNS,
-   lifecycle, cost, operator, rollback, and evidence decisions before any infrastructure or live
-   mutation. Implementation belongs to later separately approved work.
-6. **Finance Application Adoption — later and independent:** use the inactive integration package
-   only after platform qualification and Finance-owned adoption approval.
+   registrations, lifecycle, failure isolation, and rollback. Its merged implementation supplies
+   Fixture evidence without a socket, credential, provider, Terraform, cloud resource, DNS
+   mutation, or application migration.
+5. **Platform infrastructure planning — implemented and planning-validated:** AP-M5 records
+   ADR-005 through ADR-009, the provider-specific design, AP-M5 plan, AP-EVAL-M5, and future claim
+   boundaries. It creates no runtime, Terraform, workflow authority, cloud resource, DNS change, or
+   Live evidence. Completion is recorded only after this pull request merges.
+6. **Networked provider runtime — next after item 5 merges:** from updated `main`, propose AP-M6,
+   resolve the network framework, dependency policy, and exact remaining request limits, and obtain
+   owner approval before implementing locally testable runtime behavior. AP-M6 performs no
+   Terraform or cloud mutation.
+7. **Terraform and workflow implementation — later:** AP-M7 may implement reviewed configuration
+   and static gates only after AP-M6 merges; it performs no authenticated plan or apply.
+8. **Non-production qualification deployment — later:** AP-M8 may bootstrap and deploy only through
+   separately approved protected operator actions after repository extraction and AP-M7 merge.
+9. **Live qualification — later:** AP-M9 must execute the approved Live gates against the exact
+   deployed revision and retain redacted evidence before any Live-qualified claim.
+10. **Finance Application Adoption — later and independent:** use the inactive integration package
+    only after platform qualification and Finance-owned adoption approval.
 
 The suggested names are workflow guidance, not product authority. A slice is complete only when its
 declared repository checks pass and its pull request is merged; deployed or qualified status still
-requires the evidence named by its future evaluation authority.
+requires the evidence named by its later evaluation authority.
 
 ## Document precedence
 
@@ -81,10 +93,10 @@ Conflicts are resolved in this order:
 7. Runbooks and delivery evidence
 8. Prompts
 
-Current AP-M3 and AP-M4 authorities authorize the Version 1 contract implementation, the
-deterministic in-process Fixture harness, and their Contract and Fixture evidence only. Missing item
-5 authorities block infrastructure implementation and Live qualification rather than inheriting
-authority from fixture code, the AP-M4 plan, or its evaluation strategy.
+Current AP-M3 and AP-M4 authorities authorize the Version 1 contract implementation, deterministic
+in-process Fixture harness, and their Contract and Fixture evidence. AP-M5 authorizes planning only.
+Provider runtime, Terraform, deployment, Live qualification, and Application Adoption remain
+separate AP-M6 through AP-M9 or application-owned gates rather than inheriting authority from AP-M5.
 
 ## Scope labels
 
@@ -116,7 +128,8 @@ requirements or silently specialize the platform around one application.
 
 ## Evidence discipline
 
-Passing contract and Fixture tests are revision-scoped Contract and Fixture evidence, not deployed
-or operational evidence. Each future capability must name its Live or Adoption gate and, where
-applicable, secret-free live evidence. Credentials, Terraform state, saved plans, authenticated
-browser state, and unredacted external payloads are never committed.
+Passing contract and Fixture tests are revision-scoped Contract and Fixture evidence. Passing
+AP-EVAL-M5 proves planning consistency only. Neither is deployed or operational evidence. Each
+future capability must pass its named gate and, where applicable, retain secret-free Live evidence.
+Credentials, Terraform state, saved plans, authenticated browser state, and unredacted external
+payloads are never committed.

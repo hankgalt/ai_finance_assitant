@@ -28,9 +28,12 @@ repository's security, source-control, and destructive-action guardrails also ap
 - Parent Finance Assistant specifications do not define platform behavior.
 - Application integration drafts are inactive inputs until the consuming application adopts them
   through its own requirements and release process.
-- Version 1 schemas, the reference compiler, and deterministic vectors provide Contract evidence
-  only. Runtime, provider, Fixture, Live, and Adoption claims require their later authorities and
-  evidence gates.
+- Version 1 schemas and the reference compiler provide Contract evidence; the deterministic
+  in-process harness provides Fixture evidence. Provider runtime, Terraform, deployment, Live, and
+  Adoption claims require their later authorities and evidence gates.
+- AP-M5 selects infrastructure and Live-qualification planning boundaries only. It authorizes no
+  provider runtime, Terraform configuration, workflow mutation, credential, cloud action, DNS
+  change, deployment, or Live claim.
 - Keep canonical platform implementation, contracts, tests, prompts, and evidence inside this
   subtree so repository extraction preserves them.
 
