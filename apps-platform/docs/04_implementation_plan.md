@@ -1,16 +1,17 @@
 # App Platform implementation plan
 
-Version 0.2 | Status: implementation-plan authority for AP-M3 and AP-M4
+Version 0.3 | Status: implementation-plan authority for AP-M3 and AP-M4; infrastructure-planning authority for AP-M5
 
-This document preserves delivery item 3, the system-design-and-versioned-contracts slice, and owns
-delivery item 4, the deterministic-fixtures slice. AP-M4 authorizes only the in-process fixture
-implementation defined here. It does not authorize a listening service, live Shared Edge, Terraform
-configuration, cloud resource, DNS change, production identity change, credential, or Application
-Adoption.
+This document preserves delivery item 3, the system-design-and-versioned-contracts slice, and
+delivery item 4, the deterministic-fixtures slice. It now owns delivery item 5, the
+infrastructure-planning slice. AP-M5 records provider, trust, state, operator, lifecycle,
+observability, evidence, and cost authority only. It does not authorize a listening service,
+Terraform configuration, cloud resource, DNS change, identity change, credential, deployment, Live
+qualification, or Application Adoption.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004
+Decisions: ADR-001 through ADR-009
 
 Design: [App Platform system design](03_system_design.md)
 
@@ -542,3 +543,334 @@ owner-approved branches, plans, evaluation gates, and evidence after AP-M4 merge
 | AP-M4-W5 | AP-PR-001 through AP-PR-006, AP-PR-008, AP-PR-009; AP-QR-001 through AP-QR-004, AP-QR-006 | ADR-001 through ADR-004 | AP-TM-001 through AP-TM-006, AP-TM-008 through AP-TM-010, AP-TM-014 |
 | AP-M4-W6 | AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004 | AP-TM-003, AP-TM-007 through AP-TM-009, AP-TM-013 |
 | AP-M4-W7 | AP-PR-008, AP-PR-009; AP-QR-003 through AP-QR-006 | ADR-004 | AP-TM-010, AP-TM-011, AP-TM-014 |
+
+## AP-M5 · Platform infrastructure planning
+
+### Outcome
+
+AP-M5 converts the owner-approved Live decisions into repository authority for the smallest safe
+implementation and qualification sequence. It defines what later slices may implement, how state
+and operator authority remain exclusive, which actions require explicit approval, and what Live
+evidence must prove. AP-M5 produces no Contract, Fixture, Live, or Adoption evidence and authorizes
+no external mutation.
+
+The planned sequence deliberately separates:
+
+1. networked provider runtime implementation;
+2. Terraform and workflow implementation;
+3. qualification-environment deployment and explicit DNS enablement;
+4. Live qualification and evidence review; and
+5. any later Application Adoption.
+
+Passing AP-M5 means the planning authority is internally consistent and complete enough to propose
+those later slices. It does not mean any planned control exists.
+
+### Scope
+
+AP-M5 includes:
+
+- accepted GCP qualification topology and `gcp-cloud-run-v1` attachment decisions;
+- Google OIDC Platform Sessions and application-bound ES256 assertion decisions;
+- GCS backend roots, GitHub OIDC/Workload Identity Federation, protected-main operation, and
+  break-glass authority;
+- immutable Registration Generation staging, activation, DNS/TLS sequencing, readback, rollback,
+  and retention decisions;
+- logging, evidence, incident, privacy, runtime-scaling, budget, cleanup, and cost controls;
+- a later-slice delivery sequence with dependencies, acceptance and rejection boundaries;
+- a deterministic AP-M5 planning gate and separately defined future Live gates; and
+- authority, repository-layout, status, and next-slice handoff updates.
+
+AP-M5 excludes:
+
+- a network listener, Shared Edge runtime, provider adapter, OAuth flow, session store, or signer;
+- Terraform files, modules, state, backends, plans, imports, or provider commands;
+- GitHub workflow mutation, repository settings, Workload Identity Federation, service accounts,
+  IAM bindings, credentials, secrets, or OAuth clients;
+- GCP API enablement, resource creation, deployment, DNS/TLS mutation, or live readback;
+- committed Live evidence, screenshots, authenticated artifacts, or provider payloads; and
+- Finance Assistant requirements, code, infrastructure, Terraform state, DNS, identity, access,
+  deployment, migration, or Application Adoption.
+
+### Dependencies
+
+| Dependency | Required state | AP-M5 treatment |
+| --- | --- | --- |
+| AP-M3 | Merged and Contract-qualified | Preserve Version 1 interfaces and deterministic compiler behavior |
+| AP-M4 | Merged and Fixture-qualified on `main` | Preserve fixture evidence and carry every Live limitation forward |
+| Requirements and ADR-001 through ADR-004 | Authoritative | Do not weaken ownership, admission, fixture-first, or adoption boundaries |
+| Owner Live decisions | Approved | Record them as ADR-005 through ADR-009 and provider-specific design authority |
+| Dedicated GCP project | Identified, with no AP-M5 mutation authority | Record project and region as configuration without calling GCP |
+| Finance Assistant | Outside the slice | Do not read its state or change its edge, DNS, identity, deployment, or access |
+
+If AP-M4 is absent from `main`, an owner decision conflicts with an accepted requirement, or an
+edit would create or mutate an external resource, AP-M5 stops rather than absorbing later work.
+
+### Work packages
+
+#### AP-M5-W1 · Provider and attachment topology
+
+Deliverables update only:
+
+- `docs/02_architecture_decision_records.md` with ADR-005;
+- the GCP topology and Cloud Run attachment sections of `docs/03_system_design.md`;
+- applicable AP-TM-001 through AP-TM-004, AP-TM-007 through AP-TM-014 boundaries in
+  `docs/06_threat_model.md`; and
+- focused authority checks in `tests/test_governance.py`.
+
+This package selects the dedicated project, `us-west1`, qualification hostname, global load
+balancer, one Cloud Run edge, typed attachment grammar, same-project fixture boundary, future
+cross-project Shared VPC ownership, and explicit DNS action. It implements none of them.
+
+#### AP-M5-W2 · Identity and assertion trust profile
+
+Deliverables update only:
+
+- `GLOSSARY.md` with Platform Session;
+- `docs/02_architecture_decision_records.md` with ADR-006;
+- the identity sections of `docs/03_system_design.md` and `docs/06_threat_model.md`; and
+- focused authority checks in `tests/test_governance.py`.
+
+This package selects Google OIDC, edge-managed sessions, Firestore Native, logout, restricted
+membership, KMS ES256 signing, JWKS, lifetime, skew, rotation, caching, and replay posture. Existing
+IAP and application-managed Google login remain unchanged pending Application Adoption.
+
+#### AP-M5-W3 · State and operator authority
+
+Deliverables update only:
+
+- `docs/02_architecture_decision_records.md` with ADR-007;
+- state and operator sections of `docs/03_system_design.md` and `docs/06_threat_model.md`; and
+- focused authority checks in `tests/test_governance.py`.
+
+This package selects state roots and buckets, backend recovery, protected-main operation, federated
+identity, revision/plan binding, concurrency, normal local limits, and break-glass authority. It
+creates no root, bucket, workflow, repository setting, identity, or state.
+
+#### AP-M5-W4 · Activation, DNS, readback, and rollback
+
+Deliverables update only:
+
+- `docs/02_architecture_decision_records.md` with ADR-008;
+- lifecycle sections of `docs/03_system_design.md` and `docs/06_threat_model.md`; and
+- focused authority checks in `tests/test_governance.py`.
+
+This package selects content-addressed configurations, immutable edge revisions, the one active
+generation pointer, staged activation, explicit DNS/TLS sequencing, cross-layer readback, a
+15-minute post-approval rollback objective, and a 24-hour minimum retention window. It performs no
+activation, rollback, DNS lookup, or provider operation.
+
+#### AP-M5-W5 · Observability, evidence, incident, and cost controls
+
+Deliverables update only:
+
+- `docs/02_architecture_decision_records.md` with ADR-009;
+- data, evidence, and cost sections of `docs/03_system_design.md` and
+  `docs/06_threat_model.md`; and
+- focused authority checks in `tests/test_governance.py`.
+
+This package selects minimized seven-day logs, 30-day evidence, owner incident authority, the USD
+20 budget response, scale-to-zero bounds, resource sizes, concurrency, streaming duration, service
+exclusions, image cleanup, labels, and cost allocation. It creates no sink, bucket, budget, runtime,
+alert, or cleanup action.
+
+#### AP-M5-W6 · Delivery plan and repository locations
+
+Deliverables update only:
+
+- `docs/04_implementation_plan.md`;
+- `docs/repository_layout.md`.
+
+This package defines AP-M5 acceptance and the later AP-M6 through AP-M9 separation, identifies
+implementation inputs that remain unresolved and must not be guessed, and reserves later-owned
+locations without creating them.
+
+#### AP-M5-W7 · Evaluation authority
+
+Deliverables update only:
+
+- `docs/05_evaluation_strategy.md`.
+
+This package defines the deterministic AP-EVAL-M5 planning gate and the future AP-EVAL-M6 through
+AP-EVAL-M9 claim boundaries. It performs no Live evaluation and pre-fills no success result.
+
+#### AP-M5-W8 · Planning authority validation
+
+Deliverables update only:
+
+- `tests/test_governance.py` and the default `make check` dependency chain only if required.
+
+This package enforces AP-M5 identifiers, traces, later-slice separation, reserved paths, truthful
+status, and absence of infrastructure or live mutation. It remains standard-library,
+credential-free, deterministic, and non-mutating.
+
+#### AP-M5-W9 · Planning record and next-slice handoff
+
+Deliverables update only after the AP-M5 deterministic gate passes:
+
+- `README.md`, `docs/README.md`, and `prompts/starting_prompt.md`;
+- `AGENTS.md` only if its authority routing must change;
+- `tests/test_governance.py`; and
+- the secret-free pull-request handoff record.
+
+These updates may record AP-M5 as merged planning authority only. They must leave every runtime,
+Terraform, deployment, Live, and Adoption claim unavailable and route the next task to AP-M6 only
+after this pull request merges.
+
+### Later delivery sequence
+
+AP-M5 authorizes no later work by itself. Each item below requires a new owner-approved branch,
+plan refinement, evaluation gate, merge, and clean-main handoff.
+
+#### AP-M6 · Networked provider runtime implementation
+
+Implement and deterministically test the networked Shared Edge, root catalogue, Google OIDC/session
+boundary, ES256 assertion envelope, `gcp-cloud-run-v1` resolver, direct-origin application verifier,
+generation loader, status/readback interface, and bounded request/stream behavior without creating
+Terraform or calling a cloud provider.
+
+Before runtime edits, the owner must approve the network server/framework and dependency policy,
+plus exact live header, request-body, response-body, non-streaming timeout, and abusive-traffic
+limits. AP-M5 does not infer them from the in-process fixture profile or provider defaults.
+
+#### AP-M7 · Terraform and workflow implementation
+
+Implement the bootstrap, platform, and per-fixture roots; reusable modules; static policy checks;
+GitHub workflow templates; extraction inputs; secret references; and deterministic configuration
+tests. AP-M7 may perform local formatting, validation, and credential-free tests only. It does not
+initialize a backend, run an authenticated plan, create a credential, call GCP, mutate repository
+settings, or deploy.
+
+Exact globally unique bucket names, dedicated repository and workflow subjects, DNS zone resource,
+OAuth client references, notification destination, and initial Registration Set values are operator
+inputs resolved through reviewed configuration rather than reusable module assumptions.
+
+#### AP-M8 · Non-production qualification deployment
+
+After repository extraction and AP-M6/AP-M7 merges, use separately approved operator actions to
+configure repository protection and federation, bootstrap backends, run authenticated plans,
+deploy the platform and Fixture Application resources, and perform the separately approved
+`apps-staging.comfforts.com` DNS/TLS action. Deployment evidence proves only that named resources
+exist and read back; it does not make AP-EVAL-M9 pass.
+
+AP-M8 must stop before any Finance Assistant resource, existing hostname, real application project,
+or Application Adoption action enters scope.
+
+#### AP-M9 · Live qualification
+
+Execute the approved Live gates against the exact deployed revision and Registration Generation.
+Exercise provider routing, identity, IAM, direct-origin denial, state ownership, failure isolation,
+activation, rollback, logging, retention, drift, cost controls, and recovery. Store only approved
+redacted evidence and obtain owner acceptance before calling the platform Live-qualified.
+
+#### Later Application Adoption
+
+Only after AP-M9 is accepted may a consuming application propose adoption through its own
+requirements, decisions, contracts, implementation, state transition, cutover, rollback, and
+release authority. Finance Assistant remains unchanged until that independent process approves it.
+
+### Ordered delivery
+
+AP-M5 work proceeds in this order:
+
+1. approve provider and attachment topology;
+2. approve the identity and assertion trust profile;
+3. approve state and operator authority;
+4. approve activation, DNS, readback, and rollback behavior;
+5. approve observability, evidence, incident, and cost controls;
+6. approve the delivery plan and repository locations;
+7. approve evaluation authority;
+8. enforce the complete deterministic planning gate; and
+9. reconcile truthful status and the next-slice handoff.
+
+Each work package is a separate small commit reviewed before the next package is edited. A later
+package may correct an inconsistency or complete traceability, but it may not add provider runtime,
+Terraform, a workflow with live authority, a credential, or external mutation.
+
+### Acceptance criteria
+
+AP-M5 is accepted only when all of the following are true:
+
+1. Every decision traces to AP-PR-001 through AP-PR-009, AP-QR-001 through AP-QR-006, ADR-001
+   through ADR-009, and the applicable AP-TM-001 through AP-TM-014 boundary.
+2. The design defines provider topology, attachment ownership, identity trust, state roots,
+   operator authority, activation, DNS/TLS, readback, rollback, observability, incident response,
+   cost control, retention, and later-slice boundaries without claiming implementation.
+3. AP-M6, AP-M7, AP-M8, AP-M9, and Application Adoption are distinct review and merge boundaries;
+   no later slice inherits mutation authority merely because AP-M5 is accepted.
+4. Every selected cloud value remains environment configuration rather than a reusable contract or
+   Finance-derived assumption.
+5. Exact unresolved implementation inputs are named and block only their dependent later package;
+   they are not silently filled from fixture code, provider defaults, or discussion history.
+6. The default `make check` remains deterministic, credential-free, network-free, non-mutating,
+   extraction-safe, and mandatory-skip-free.
+7. The branch contains no provider runtime, Terraform configuration, workflow with cloud authority,
+   state, saved plan, credential, secret, cloud call, DNS change, identity change, deployment, or
+   generated Live evidence.
+8. Finance Assistant and every existing application resource, state, hostname, identity, access
+   rule, deployment, and integration package remain unchanged and inactive.
+9. Status and handoff text call AP-M5 planning authority only and leave Contract, Fixture, Live,
+   and Adoption evidence classes unchanged.
+
+Near-complete documentation, a missing owner decision disguised as a default, a cloud lookup in the
+default gate, or any operational claim fails AP-M5.
+
+### Required evidence
+
+The pull-request handoff records:
+
+- branch, AP-M4 merge base, evaluated source revision, and final revision;
+- one commit and changed-path list for every AP-M5 work package;
+- exact verification command, working directory, interpreter version, duration, test count,
+  failures, errors, warnings, and skips;
+- requirements, ADRs, threats, and proposed later gates covered;
+- security and privacy impact, limitations, and unresolved implementation inputs;
+- confirmation that no `infrastructure/`, runtime, live registration, state, saved plan, credential,
+  provider call, repository mutation, DNS action, deployment, or authenticated artifact was added;
+  and
+- confirmation that Finance Assistant and every Integration Draft remain unchanged and inactive.
+
+This is planning evidence for review, not a new evidence class and not Live evidence. Console output
+from the deterministic gate is sufficient; generated reports and screenshots are not committed.
+
+### Security and privacy impact
+
+AP-M5 reduces future ambiguity by selecting explicit trust, state, operation, retention, and cost
+boundaries. It introduces no runtime data flow. It records project identifiers, resource-reference
+grammar, and non-secret operational settings, but no real restricted membership, OAuth client,
+credential, key, state, plan, log, IP address, assertion, provider response, or application data.
+
+The selected controls remain declarations until later implementation and Live evidence prove them.
+Their presence must not be used to weaken existing Finance Assistant access or justify migration.
+
+### Limitations and unresolved inputs
+
+AP-M5 does not prove that any cloud resource, identity, state backend, route, certificate, session,
+assertion, log, alert, budget, rollback, or recovery behavior exists. It does not qualify latency,
+availability, throughput, browser behavior, accessibility, or a real application.
+
+The following exact inputs remain required at their named later boundary:
+
+| Input | Required before |
+| --- | --- |
+| Network server/framework and dependency policy | AP-M6 runtime implementation |
+| Header, request-body, response-body, non-streaming timeout, and abusive-traffic limits | AP-M6 runtime implementation |
+| Dedicated GitHub organization, repository, workflow subjects, protected environment, and repository settings | AP-M7 federation implementation and AP-M8 deployment |
+| Globally unique state, configuration, log, and evidence bucket names | AP-M7 environment configuration |
+| DNS managed-zone resource and exact separately approved record transaction | AP-M7 environment configuration and AP-M8 DNS action |
+| OAuth client identifiers, redirect registration, secret references, and owner notification destination | AP-M7 environment configuration and AP-M8 deployment |
+| Initial live Fixture Registration Set, restricted synthetic members, image digests, and attachment resource references | AP-M6/AP-M7 implementation and AP-M8 deployment |
+| Application-specific principals, data, providers, entitlements, state transfer, and cutover | Each Application Adoption |
+
+These are unavailable inputs, not permission to query a provider, copy Finance configuration, or
+invent a value in AP-M5.
+
+### Plan trace
+
+| Work packages | Requirements | Decisions | Threats |
+| --- | --- | --- | --- |
+| AP-M5-W1 | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 | AP-TM-001 through AP-TM-004, AP-TM-007 through AP-TM-014 |
+| AP-M5-W2 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-003, ADR-004, ADR-005, ADR-006 | AP-TM-004 through AP-TM-006, AP-TM-009, AP-TM-010, AP-TM-013 |
+| AP-M5-W3 | AP-PR-002, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-007 | AP-TM-007 through AP-TM-014 |
+| AP-M5-W4 | AP-PR-001 through AP-PR-005, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-004, ADR-008 | AP-TM-002 through AP-TM-005, AP-TM-007 through AP-TM-014 |
+| AP-M5-W5 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007, AP-PR-008; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001 through ADR-004, ADR-009 | AP-TM-001, AP-TM-004, AP-TM-005, AP-TM-007 through AP-TM-014 |
+| AP-M5-W6 through AP-M5-W9 | AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006 | ADR-001 through ADR-009 | AP-TM-001 through AP-TM-014 |

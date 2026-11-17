@@ -1,6 +1,6 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M4 deterministic Fixture implementation recorded
+Status: authoritative; AP-M4 deterministic Fixture implementation recorded; AP-M5 infrastructure-planning locations reserved, no infrastructure implemented
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this
@@ -28,11 +28,20 @@ These locations may be created only by their approved slice:
 
 | Path | Intended owner |
 | --- | --- |
-| `infrastructure/terraform/` | Independent platform state roots and reusable infrastructure modules |
+| `edge/` | Future networked Shared Edge runtime and provider adapters |
+| `registrations/` | Future reviewed Live Registration Sets; Fixture registrations remain under `fixtures/` |
+| `infrastructure/terraform/bootstrap/` | Future backend-bootstrap root only |
+| `infrastructure/terraform/platform/` | Future Shared Edge Platform State root only |
+| `infrastructure/terraform/fixtures/<application-id>/` | Future independently owned Fixture Application State root |
+| `infrastructure/terraform/modules/` | Future reusable modules with no environment or state ownership of their own |
 | `catalog/` | Root application catalogue implementation |
-| `artifacts/` | Secret-free generated or reviewed platform evidence |
+| `artifacts/` | Secret-free reviewed evidence indexes and digests, never raw Live evidence bundles |
+| `docs/runbooks/` | Future operator procedures subordinate to approved plans and evaluation authority |
 
-The reservation is not authorization to scaffold empty modules or imply later capabilities.
+The reservation is not authorization to scaffold empty modules or imply later capabilities. AP-M6
+may create only `edge/` and implementation-owned registration test inputs after its own approval.
+AP-M7 may create only the planned Terraform and workflow paths after AP-M6 merges. Live evidence
+bundles remain in the private provider evidence store rather than the repository.
 
 ## Colocation exceptions
 
