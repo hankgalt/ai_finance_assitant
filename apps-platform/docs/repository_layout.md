@@ -1,6 +1,6 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M6 runtime locations approved after AP-M6-W1 acceptance; no runtime or
+Status: authoritative; AP-M6 locked ASGI runtime foundation recorded; no provider behavior or
 infrastructure implemented
 
 The project is organized as an extractable repository root. Canonical platform files remain under
@@ -19,7 +19,9 @@ directory the new repository root.
 | `integrations/` | Inactive application-adoption inputs with no consuming-app authority |
 | `contracts/` | Version 1 schemas, deterministic reference compiler, and reviewed contract vectors; no runtime adapter |
 | `fixtures/` | In-process reference edge, synthetic identity, three independent Fixture Applications with app-owned test state, and reviewed registration generations |
+| `edge/` | AP-M6 networked Shared Edge interface and implementation; only behavior accepted by the current work package may exist |
 | `tests/` | Behavior-named governance, contract, and Fixture checks |
+| `pyproject.toml` and `uv.lock` | Direct runtime dependencies and complete frozen transitive resolution |
 | `Makefile` | Portable project-local developer and verification interface |
 | `.gitignore` | Platform-local generated, secret, state, and build exclusions |
 
@@ -29,7 +31,6 @@ These locations may be created only by their approved slice:
 
 | Path | Intended owner |
 | --- | --- |
-| `edge/` | Future networked Shared Edge runtime and provider adapters |
 | `registrations/` | Future reviewed Live Registration Sets; Fixture registrations remain under `fixtures/` |
 | `infrastructure/terraform/bootstrap/` | Future backend-bootstrap root only |
 | `infrastructure/terraform/platform/` | Future Shared Edge Platform State root only |
@@ -40,9 +41,9 @@ These locations may be created only by their approved slice:
 | `docs/runbooks/` | Future operator procedures subordinate to approved plans and evaluation authority |
 
 The reservation is not authorization to scaffold empty modules or imply later capabilities. AP-M6
-may create only `edge/` and implementation-owned registration test inputs after its own approval.
-AP-M7 may create only the planned Terraform and workflow paths after AP-M6 merges. Live evidence
-bundles remain in the private provider evidence store rather than the repository.
+may extend only `edge/` and implementation-owned registration test inputs through its ordered work
+packages. AP-M7 may create only the planned Terraform and workflow paths after AP-M6 merges. Live
+evidence bundles remain in the private provider evidence store rather than the repository.
 
 ## Colocation exceptions
 

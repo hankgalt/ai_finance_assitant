@@ -1,7 +1,7 @@
 # App Platform threat model
 
-Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls; no
-provider runtime or live infrastructure is implemented
+Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls; locked
+ASGI foundation implemented; no provider behavior or live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -435,10 +435,11 @@ in-process profile. AP-EVAL-M6 covers the exact network-runtime profile with det
 and isolation tests but no load claim. `L` covers provider quotas, timeouts, alerts, billable-resource
 inventory, and observed multi-instance behavior.
 
-**Residual risk:** All runtime and provider controls remain unimplemented until their named slices
-pass. The AP-M6 token buckets are per instance, are not a WAF or distributed rate limit, and can
-permit twice their per-instance values when both selected instances are active. Provider limits can
-be exceeded briefly, and budget notifications do not cap spend.
+**Residual risk:** AP-M6-W2 implements only construction-time profile rejection and an unconfigured
+closed response. The selected runtime limits and all provider controls remain unimplemented until
+their named slices pass. The AP-M6 token buckets are per instance, are not a WAF or distributed rate
+limit, and can permit twice their per-instance values when both selected instances are active.
+Provider limits can be exceeded briefly, and budget notifications do not cap spend.
 
 ### AP-TM-013 · External dependency failure or stale trust material
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -34,11 +35,16 @@ class ProjectAuthorityTest(unittest.TestCase):
             "fixtures/identity.py",
             "fixtures/reference_edge.py",
             "fixtures/registrations/manifest.v1.json",
+            "edge/__init__.py",
+            "edge/_runtime.py",
             "prompts/README.md",
             "prompts/starting_prompt.md",
+            "pyproject.toml",
             "tests/test_contracts.py",
+            "tests/test_edge_runtime.py",
             "tests/test_fixtures.py",
             "tests/test_governance.py",
+            "uv.lock",
         )
 
         self.assertTrue(all((PROJECT_ROOT / path).is_file() for path in expected_files))
@@ -56,10 +62,39 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertNotIn("terraform apply", makefile)
         self.assertNotIn("gcloud", makefile)
 
+    def test_locked_runtime_foundation_is_extraction_safe(self) -> None:
+        pyproject = tomllib.loads(
+            (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        lock = tomllib.loads((PROJECT_ROOT / "uv.lock").read_text(encoding="utf-8"))
+        makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+        packages = {package["name"]: package for package in lock["package"]}
+
+        self.assertEqual(pyproject["project"]["requires-python"], ">=3.12")
+        self.assertEqual(
+            pyproject["project"]["dependencies"],
+            ["starlette>=1.10,<1.11", "uvicorn>=0.54,<0.55"],
+        )
+        self.assertFalse(pyproject["tool"]["uv"]["package"])
+        self.assertEqual(packages["starlette"]["version"], "1.10.0")
+        self.assertEqual(packages["uvicorn"]["version"], "0.54.0")
+        self.assertIn("hash", packages["starlette"]["sdist"])
+        self.assertIn("hash", packages["uvicorn"]["sdist"])
+        self.assertIn("runtime-check", makefile)
+        self.assertNotIn("uv sync", makefile)
+        self.assertNotIn("uv lock", makefile)
+
     def test_local_ignore_policy_excludes_sensitive_runtime_state(self) -> None:
         ignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
 
-        for pattern in (".env", "**/.terraform/", "*.tfstate", "*.tfplan", "*.tfvars"):
+        for pattern in (
+            ".env",
+            ".venv/",
+            "**/.terraform/",
+            "*.tfstate",
+            "*.tfplan",
+            "*.tfvars",
+        ):
             self.assertIn(pattern, ignore)
         self.assertNotIn(".terraform.lock.hcl", ignore)
 
@@ -95,7 +130,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         normalized_overview = " ".join(overview.split())
 
         self.assertIn(
-            "AP-M6 networked-runtime authority defined",
+            "AP-M6 implementation in progress",
             normalized_index,
         )
         self.assertIn("Contract (`C`) evidence", normalized_index)
@@ -106,10 +141,13 @@ class ProjectAuthorityTest(unittest.TestCase):
         )
         self.assertIn("AP-M6", overview)
         self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
-        self.assertIn("No networked platform service", normalized_overview)
+        self.assertIn(
+            "generation, routing, identity, provider, and proxy behavior remain unavailable",
+            normalized_overview,
+        )
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
-        self.assertIn("AP-M6 runtime locations approved", layout)
+        self.assertIn("AP-M6 locked ASGI runtime foundation recorded", layout)
         self.assertIn("`contracts/`", layout)
         self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)
@@ -414,7 +452,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             index,
         )
         for later_slice in (
-            "Networked provider runtime — authority defined, implementation pending",
+            "Networked provider runtime — implementation in progress",
             "Terraform and workflow implementation — later",
             "Non-production qualification deployment — later",
             "Live qualification — later",
@@ -601,16 +639,23 @@ class ProjectAuthorityTest(unittest.TestCase):
         ):
             self.assertIn(evaluation_boundary, normalized_evaluation)
 
-        self.assertIn("AP-EVAL-M6 covers the exact network-runtime profile", normalized_threat_model)
-        self.assertIn("All runtime and provider controls remain unimplemented", normalized_threat_model)
+        self.assertIn(
+            "AP-EVAL-M6 covers the exact network-runtime profile",
+            normalized_threat_model,
+        )
+        self.assertIn(
+            "The selected runtime limits and all provider controls remain unimplemented",
+            normalized_threat_model,
+        )
 
-    def test_ap_m5_reserved_capabilities_remain_absent(self) -> None:
+    def test_ap_m6_runtime_path_is_bounded_and_later_capabilities_remain_absent(
+        self,
+    ) -> None:
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(
             encoding="utf-8"
         )
 
         reserved_paths = (
-            "edge",
             "registrations",
             "infrastructure",
             "artifacts",
@@ -619,8 +664,11 @@ class ProjectAuthorityTest(unittest.TestCase):
         for relative_path in reserved_paths:
             self.assertFalse(
                 (PROJECT_ROOT / relative_path).exists(),
-                f"AP-M5 must not create reserved capability path: {relative_path}",
+                f"AP-M6 must not create later capability path: {relative_path}",
             )
+
+        self.assertTrue((PROJECT_ROOT / "edge/__init__.py").is_file())
+        self.assertTrue((PROJECT_ROOT / "edge/_runtime.py").is_file())
 
         for reserved_reference in (
             "`edge/`",

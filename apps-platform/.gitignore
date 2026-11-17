@@ -19,6 +19,7 @@ crash.log
 crash.*.log
 
 # Python caches and reports
+.venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/

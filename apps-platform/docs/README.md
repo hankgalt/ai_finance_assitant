@@ -1,7 +1,7 @@
 # App Platform documentation
 
-Version 1.1 | Status: AP-M6 networked-runtime authority defined; runtime, Live, and Adoption
-qualification unavailable
+Version 1.1 | Status: AP-M6 implementation in progress; locked ASGI foundation implemented;
+provider runtime, Live, and Adoption qualification unavailable
 
 This directory is the design authority for Comfforts App Platform. AP-M3 supplies Contract (`C`)
 evidence through the logical design, threat boundary, Version 1 schemas, deterministic compiler,
@@ -36,11 +36,11 @@ migration, or production credential is implemented.
     proposing AP-M6 only after AP-M5 merges.
 
 AP-M3 Contract behavior, AP-M4 Fixture behavior, and AP-M5 planning authority are merged and pass
-their deterministic gates. AP-M6 defines its network module, dependency, limit, implementation, and
-evaluation authority but implements no runtime behavior merely because those documents exist.
-AP-M6-W2 may begin only after owner acceptance of the exact AP-M6-W1 values. An absent behavior or
-later authority must not be inferred from planning documents, fixture code, branch history,
-discussion, or an Integration Draft.
+their deterministic gates. AP-M6-W1 is accepted. AP-M6-W2 implements only the locked dependency
+environment, application factory, typed configuration and adapter bundle, and a closed-default ASGI
+response; it supplies no generation, route, identity, provider, proxy, or operational behavior. An
+absent behavior or later authority must not be inferred from planning documents, fixture code,
+branch history, discussion, or an Integration Draft.
 
 ## Incremental delivery sequence
 
@@ -62,11 +62,11 @@ small reviewable commits, merge it, and only then begin the next item.
 5. **Platform infrastructure planning — implemented and planning-validated:** AP-M5 records
    ADR-005 through ADR-009, the provider-specific design, AP-M5 plan, AP-EVAL-M5, and future claim
    boundaries. It creates no runtime, Terraform, workflow authority, cloud resource, DNS change, or
-   Live evidence. Completion is recorded only after this pull request merges.
-6. **Networked provider runtime — authority defined, implementation pending:** AP-M6 selects the
-   deep ASGI module, locked dependency policy, exact request profile, eleven work packages, and ten
-   deterministic gates. Owner acceptance of AP-M6-W1 permits ordered local implementation; AP-M6
-   performs no Terraform or cloud mutation.
+   Live evidence. Its merged evidence proves planning consistency only.
+6. **Networked provider runtime — implementation in progress:** AP-M6 selects the deep ASGI module,
+   locked dependency policy, exact request profile, eleven work packages, and ten deterministic
+   gates. AP-M6-W2 supplies the locked, closed-default foundation; later work packages remain
+   unavailable. AP-M6 performs no Terraform or cloud mutation.
 7. **Terraform and workflow implementation — later:** AP-M7 may implement reviewed configuration
    and static gates only after AP-M6 merges; it performs no authenticated plan or apply.
 8. **Non-production qualification deployment — later:** AP-M8 may bootstrap and deploy only through

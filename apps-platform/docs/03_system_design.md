@@ -1,7 +1,7 @@
 # App Platform system design
 
-Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile; no
-provider runtime or live infrastructure is implemented
+Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile; locked
+ASGI foundation implemented; no provider behavior or live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
