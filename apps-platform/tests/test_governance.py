@@ -448,6 +448,153 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("Finance Assistant code", design)
         self.assertIn("network direct-bypass control", threat_model)
 
+    def test_ap_m5_authorities_have_complete_unique_identifiers(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+
+        work_packages = re.findall(r"^#### (AP-M5-W\d+) ·", plan, re.MULTILINE)
+        planning_gates = re.findall(
+            r"^### (AP-EVAL-M5-\d{2}) ·", evaluation, re.MULTILINE
+        )
+        live_gates = re.findall(
+            r"^#### (AP-EVAL-M9-\d{2}) ·", evaluation, re.MULTILINE
+        )
+        future_boundaries = re.findall(
+            r"^### (AP-EVAL-M[6-9]) ·", evaluation, re.MULTILINE
+        )
+
+        self.assertEqual(
+            work_packages,
+            [f"AP-M5-W{index}" for index in range(1, 10)],
+        )
+        self.assertEqual(
+            planning_gates,
+            [f"AP-EVAL-M5-{index:02d}" for index in range(1, 10)],
+        )
+        self.assertEqual(
+            live_gates,
+            [f"AP-EVAL-M9-{index:02d}" for index in range(1, 11)],
+        )
+        self.assertEqual(
+            future_boundaries,
+            ["AP-EVAL-M6", "AP-EVAL-M7", "AP-EVAL-M8", "AP-EVAL-M9"],
+        )
+        for identifiers in (work_packages, planning_gates, live_gates):
+            self.assertEqual(len(identifiers), len(set(identifiers)))
+
+    def test_ap_m5_separates_later_delivery_and_names_missing_inputs(self) -> None:
+        plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
+            encoding="utf-8"
+        )
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_plan = " ".join(plan.split())
+        normalized_evaluation = " ".join(evaluation.split())
+
+        for later_slice in (
+            "AP-M6 · Networked provider runtime implementation",
+            "AP-M7 · Terraform and workflow implementation",
+            "AP-M8 · Non-production qualification deployment",
+            "AP-M9 · Live qualification",
+            "Later Application Adoption",
+        ):
+            self.assertIn(later_slice, plan)
+
+        for planning_boundary in (
+            "AP-M5 produces no Contract, Fixture, Live, or Adoption evidence",
+            "Each item below requires a new owner-approved branch",
+            "It does not authorize a listening service",
+            "no later slice inherits mutation authority merely because AP-M5 is accepted",
+            "Network server/framework and dependency policy",
+            "Header, request-body, response-body, non-streaming timeout, and abusive-traffic limits",
+            "Dedicated GitHub organization, repository, workflow subjects",
+            "Globally unique state, configuration, log, and evidence bucket names",
+            "These are unavailable inputs, not permission to query a provider",
+        ):
+            self.assertIn(planning_boundary, normalized_plan)
+
+        for evaluation_boundary in (
+            "AP-EVAL-M5 qualifies planning consistency only",
+            "It proves no provider behavior and creates no new evidence class",
+            "The default `make check` remains separate and credential-free",
+            "A deployment result cannot qualify routing, identity, direct-origin denial",
+            "leave Finance Assistant and every Application Adoption unchanged and unavailable",
+        ):
+            self.assertIn(evaluation_boundary, normalized_evaluation)
+
+    def test_ap_m5_reserved_capabilities_remain_absent(self) -> None:
+        layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(
+            encoding="utf-8"
+        )
+
+        reserved_paths = (
+            "edge",
+            "registrations",
+            "infrastructure",
+            "artifacts",
+            "docs/runbooks",
+        )
+        for relative_path in reserved_paths:
+            self.assertFalse(
+                (PROJECT_ROOT / relative_path).exists(),
+                f"AP-M5 must not create reserved capability path: {relative_path}",
+            )
+
+        for reserved_reference in (
+            "`edge/`",
+            "`registrations/`",
+            "`infrastructure/terraform/bootstrap/`",
+            "`infrastructure/terraform/platform/`",
+            "`infrastructure/terraform/fixtures/<application-id>/`",
+            "`artifacts/`",
+            "`docs/runbooks/`",
+            "not authorization to scaffold empty modules",
+        ):
+            self.assertIn(reserved_reference, layout)
+
+        prohibited_suffixes = (".tf", ".tf.json", ".tfvars", ".tfstate", ".tfplan")
+        prohibited_files = sorted(
+            path.relative_to(PROJECT_ROOT).as_posix()
+            for path in PROJECT_ROOT.rglob("*")
+            if path.is_file()
+            and (
+                path.name.endswith(prohibited_suffixes)
+                or path.name == ".terraform.lock.hcl"
+            )
+        )
+        self.assertEqual(prohibited_files, [])
+        self.assertFalse((PROJECT_ROOT / ".github/workflows").exists())
+
+    def test_ap_m5_default_gate_has_no_live_operator_command(self) -> None:
+        makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+        evaluation = (PROJECT_ROOT / "docs/05_evaluation_strategy.md").read_text(
+            encoding="utf-8"
+        )
+        normalized_makefile = " ".join(makefile.split())
+
+        for prohibited_command in (
+            "terraform",
+            "gcloud",
+            "gsutil",
+            " dig ",
+            " curl ",
+            "docker",
+            "kubectl",
+            "openssl",
+        ):
+            self.assertNotIn(prohibited_command, f" {normalized_makefile} ")
+
+        self.assertIn(
+            "check: governance-check contract-check fixture-check",
+            makefile,
+        )
+        self.assertIn("credential-free, deterministic, network-free", evaluation)
+
     def test_ap_m4_authorities_have_complete_unique_identifiers(self) -> None:
         plan = (PROJECT_ROOT / "docs/04_implementation_plan.md").read_text(
             encoding="utf-8"
