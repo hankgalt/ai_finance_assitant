@@ -1,6 +1,6 @@
 # App Platform system design
 
-Version 0.5 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
+Version 0.6 | Status: Fixture-qualified logical design and initial Live topology authority; no live infrastructure is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -9,7 +9,7 @@ consuming application.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007, ADR-008
 
 ## Design outcome
 
@@ -414,6 +414,49 @@ compiled generation completely, it must preserve or restore the Last Reviewed Wo
 Configuration. Suspension or retirement removes the application's platform presence but never
 deletes or mutates its Application State.
 
+### Initial Live generation activation
+
+The reviewed Registration Set remains in Git and compiles before planning into an immutable,
+content-addressed GCS configuration object. One candidate Cloud Run edge revision binds the exact
+source commit, compiler, generation digest, object generation, container image digest, identity
+profile, and adapter configuration. The candidate receives no user traffic while attachment,
+ownership, IAM, and provider dependencies are validated.
+
+The current Live generation pointer is the Cloud Run service's 100-percent traffic assignment to
+one immutable edge revision. Owner-approved activation changes that pointer once. The load balancer
+continues to forward all application traffic to the edge and contains no registration-derived
+prefix map. There is no registration API or database in the initial profile.
+
+Readback compares protected-main source and plan digests, Terraform state, provider revision and
+traffic data, the edge's operator-authorized generation status, observable catalogue and route
+behavior, attachment and identity configuration, direct-origin denial, and the State Ownership
+Manifest. Any disagreement makes the generation unqualified even if the apply command returned
+success.
+
+Rollback changes the traffic pointer to the retained preceding revision as a whole and repeats
+readback. The objective is restored traffic assignment and readback within 15 minutes after owner
+approval. Rollback does not change Application State. The previous configuration object, edge
+revision, and replaced application attachment remain available for at least 24 hours; later cleanup
+requires a separate owner-approved action.
+
+Provider partial failure stops for inspection. There is no automatic rollback, unlock, state push,
+target deletion, or DNS change. The predecessor digest, workflow concurrency, state lock, and
+provider revision precondition reject stale or competing changes.
+
+### Initial DNS and TLS sequence
+
+`apps-staging.comfforts.com` is a new qualification record with a 1,800-second TTL. The load
+balancer, reserved address, closed-default edge, and certificate configuration are read back before
+the Platform Owner separately approves record creation. The operator checks authoritative and
+recursive DNS with `dig`, waits for the Google-managed certificate to report active, and then runs
+the Live route and identity readback.
+
+The TTL controls resolver caching rather than guaranteeing propagation time. Failure may cause the
+owner to remove or restore only the new qualification record after inspection, with cached answers
+remaining possible through the TTL. DNS action never changes a Registration Generation and never
+touches `apps.comfforts.com` or any Finance Assistant hostname, record, certificate, load balancer,
+or state.
+
 ## Exclusive state ownership
 
 Every managed resource has exactly one owner recorded in the versioned State Ownership Manifest.
@@ -672,6 +715,8 @@ This design intentionally does not select or implement:
   versions, credentials, or IAM bindings for the selected identity profile;
 - a live catalogue, Shared Edge runtime, `gcp-cloud-run-v1` resolver, external registration
   endpoint, registration database, or operator control plane;
+- a configuration bucket, compiled generation object, candidate edge revision, traffic change,
+  DNS record, certificate activation, readback execution, or rollback execution;
 - a log backend, retention period, alerting system, live cost threshold, or evidence store; or
 - Finance Assistant registration, Application Adoption, migration, access expansion, or cutover.
 
@@ -685,9 +730,9 @@ This system design remains documentation authority rather than operational evide
 revision-scoped Contract evidence that the Version 1 schemas and deterministic reference compiler
 satisfy their declared offline gate. AP-M4 supplies the Fixture evidence defined by Version 0.2.
 Version 0.3 selects the initial GCP Live topology, Version 0.4 selects its identity trust profile,
-and Version 0.5 selects state and operator authority. None supplies Terraform, provider, network,
-identity, deployment, or Live evidence. Adoption qualification remains a later application-owned
-gate.
+Version 0.5 selects state and operator authority, and Version 0.6 selects activation, DNS, readback,
+and rollback behavior. None supplies Terraform, provider, network, identity, deployment, or Live
+evidence. Adoption qualification remains a later application-owned gate.
 
 ## Design trace
 
@@ -697,7 +742,7 @@ gate.
 | Registration, routing, and compiled generations | AP-PR-002, AP-PR-003, AP-PR-007; AP-QR-004, AP-QR-006 | ADR-002 |
 | Attachments and exclusive ownership | AP-PR-002, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-003 | ADR-001, ADR-002, ADR-004, ADR-007 |
 | Admission and verified identity | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-006 |
-| Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004 |
+| Lifecycle, failure, and rollback | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-005, AP-QR-006 | ADR-002, ADR-004, ADR-008 |
 | Fixture and adoption boundary | AP-PR-008, AP-PR-009; AP-QR-003, AP-QR-004, AP-QR-006 | ADR-004 |
 | Initial GCP Live topology and Cloud Run attachments | AP-PR-001, AP-PR-002, AP-PR-003, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-002, AP-QR-003, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005 |
 | Terraform state and operator authority | AP-PR-002, AP-PR-007, AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-007 |

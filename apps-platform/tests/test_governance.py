@@ -182,9 +182,10 @@ class ProjectAuthorityTest(unittest.TestCase):
                 "ADR-005",
                 "ADR-006",
                 "ADR-007",
+                "ADR-008",
             ],
         )
-        self.assertEqual(decisions.count("Status: Accepted"), 7)
+        self.assertEqual(decisions.count("Status: Accepted"), 8)
         normalized_decisions = " ".join(decisions.split())
         for identifier in (
             "AP-PR-001",
@@ -243,6 +244,22 @@ class ProjectAuthorityTest(unittest.TestCase):
             "no backend bucket, state, workflow, identity, credential, plan",
         ):
             self.assertIn(state_and_operator_decision, normalized_decisions)
+
+        for activation_and_rollback_decision in (
+            "content-addressed, immutable compiled configuration object",
+            "traffic assignment to one immutable edge revision",
+            "There is no separate registration endpoint or database",
+            "100 percent of edge traffic",
+            "provider error or incomplete apply stops for inspection",
+            "Successful readback must agree across source, state, provider, and runtime",
+            "initial rollback-time objective is 15 minutes",
+            "available for at least 24 hours",
+            "1,800-second TTL",
+            "checks authoritative and recursive resolution with `dig`",
+            "does not touch `apps.comfforts.com`",
+            "no registration file, configuration bucket, object, edge revision, DNS",
+        ):
+            self.assertIn(activation_and_rollback_decision, normalized_decisions)
 
     def test_shared_edge_decisions_preserve_exclusive_ownership(self) -> None:
         decisions = (PROJECT_ROOT / "docs/02_architecture_decision_records.md").read_text(

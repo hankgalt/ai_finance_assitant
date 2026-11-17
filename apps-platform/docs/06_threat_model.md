@@ -1,6 +1,6 @@
 # App Platform threat model
 
-Version 0.5 | Status: Fixture-qualified threat model and initial Live control profile; no live infrastructure is implemented
+Version 0.6 | Status: Fixture-qualified threat model and initial Live control profile; no live infrastructure is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -10,7 +10,7 @@ consuming application's security model.
 
 Requirements: AP-PR-001 through AP-PR-009; AP-QR-001 through AP-QR-006
 
-Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007
+Decisions: ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007, ADR-008
 
 System design: [App Platform system design](03_system_design.md)
 
@@ -337,9 +337,10 @@ window.
 all-or-no-output failure. `F` covers register, update, suspend, retire, attachment replacement, and
 rollback journeys. `L` covers provider partial-failure recovery and drift.
 
-**Residual risk:** GCS locking and protected-main concurrency are selected but not implemented.
-Terraform cannot make several provider control planes transactional, so partial failure still
-requires stop, readback, inspection, and an owner-approved recovery decision.
+**Residual risk:** GCS locking, protected-main concurrency, immutable edge revisions, and one
+traffic pointer are selected but not implemented. Terraform cannot make several provider control
+planes transactional, so partial failure still requires stop, readback, inspection, and an
+owner-approved recovery decision.
 
 ### AP-TM-008 · Dual state ownership or destructive cross-state action
 
@@ -449,8 +450,9 @@ status without implying success.
 **Evidence:** `F` covers logical dependency failure using deterministic adapters. `L` covers actual
 DNS, TLS, key rotation, certificate, provider failure, and recovery behavior.
 
-**Residual risk:** Provider availability and disaster recovery beyond the demo commitment remain
-outside the initial qualification claim.
+**Residual risk:** The selected DNS, certificate, immutable-generation, and owner-confirmed rollback
+sequence is not implemented or qualified. Provider availability and disaster recovery beyond the
+15-minute post-approval rollback objective remain outside the demo commitment.
 
 ### AP-TM-014 · Integration Draft or fixture mistaken for Application Adoption
 
@@ -480,6 +482,7 @@ pass:
 | Live request, header, body, connection, rate, concurrency, and timeout limits | Live qualification |
 | Terraform modules, exact bucket and resource names, ingress realization, and IAM bindings for the selected GCP topology | Infrastructure implementation |
 | Dedicated repository identity, workflow subjects, branch protection, protected environment, and federation bindings | Repository extraction and Live mutation |
+| Configuration-bucket, candidate-revision, traffic-pointer, DNS/TLS, readback, and rollback realization | Infrastructure implementation and Live qualification |
 | Logging backend, retention, access, redaction, deletion, and incident handling | Live evidence collection |
 | Cost thresholds, quotas, alerts, and approved billable resources | Live qualification |
 | Application-specific principals, data isolation, providers, and entitlements | Each Application Adoption |
@@ -504,6 +507,6 @@ requirements without weakening them.
 | --- | --- | --- |
 | AP-TM-001 through AP-TM-003 | AP-PR-001, AP-PR-002, AP-PR-003; AP-QR-002, AP-QR-003, AP-QR-004 | ADR-001, ADR-002, ADR-005 |
 | AP-TM-004 through AP-TM-006 | AP-PR-004, AP-PR-005, AP-PR-006, AP-PR-008; AP-QR-002 | ADR-003, ADR-004, ADR-005, ADR-006 |
-| AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005, ADR-007 |
-| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-005, ADR-006, ADR-007 |
+| AP-TM-007 through AP-TM-009 | AP-PR-003, AP-PR-007, AP-PR-008; AP-QR-001, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-004, ADR-005, ADR-007, ADR-008 |
+| AP-TM-010 through AP-TM-013 | AP-PR-001, AP-PR-003, AP-PR-005, AP-PR-007; AP-QR-002, AP-QR-004, AP-QR-005, AP-QR-006 | ADR-001, ADR-002, ADR-003, ADR-005, ADR-006, ADR-007, ADR-008 |
 | AP-TM-014 | AP-PR-008, AP-PR-009; AP-QR-001, AP-QR-003, AP-QR-006 | ADR-004 |
