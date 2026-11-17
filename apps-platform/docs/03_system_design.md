@@ -1,7 +1,7 @@
 # App Platform system design
 
 Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile;
-catalogue and registered routing implemented locally; no provider operation or live infrastructure
+sessions and admission implemented locally; no provider operation or live infrastructure
 is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
@@ -637,10 +637,22 @@ value for HTML. One canonical raw-path parser rejects percent encoding, alternat
 empty or dot segments, control or whitespace characters, decoded/raw disagreement, invalid UTF-8,
 and paths over 4,096 bytes. The same catch-all request path keeps reserved platform paths disjoint,
 selects only an active segment-bounded application prefix, selects the longest attachment mount,
-and applies the declared rewrite while preserving query bytes. Protected routes stop before the
-handoff until AP-M6-W5 implements admission. Public routes expose only an internal deterministic
-route-selection handoff exercised by a deterministic fake and still return `503`; AP-M6-W4 performs
-no attachment resolution or proxy operation.
+and applies the declared rewrite while preserving query bytes. Public routes expose only an
+internal deterministic route-selection handoff exercised by a deterministic fake and still return
+`503`; AP-M6-W4 performs no attachment resolution or proxy operation.
+
+AP-M6-W5 adds an edge-owned Google authorization-code flow with PKCE and validates only signed
+Google issuer-and-subject identity. A browser receives opaque host-only `Secure`, `HttpOnly`,
+`SameSite=Lax`, `Path=/` cookies; transient login material and minimal sessions remain server-side.
+The Firestore adapter hashes opaque identifiers before using them as document identifiers, consumes
+login flows once, and stores no Google access or refresh token. Sessions expire absolutely after
+eight hours without renewal. Public routing remains anonymous when session storage is unavailable;
+authenticated and restricted routing fail closed. Restricted admission compares the exact reviewed
+issuer-and-subject pair, never email. Logout deletes server state, clears the cookie, and accepts
+only a root or active registered platform-relative return location. Production provider and store
+adapters are exercised with deterministic local transports; default verification performs no
+provider call. The route handoff may receive admitted identity internally but remains unsigned and
+closed until AP-M6-W6 implements the Version 1 assertion.
 
 The initial `qualification-v1` request profile applies before target selection and permits lower
 environment settings but no higher value without a reviewed profile change:

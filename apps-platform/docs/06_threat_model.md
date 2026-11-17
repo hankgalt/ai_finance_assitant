@@ -1,7 +1,7 @@
 # App Platform threat model
 
 Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls;
-catalogue and registered routing implemented locally; no provider operation or live infrastructure
+sessions and admission implemented locally; no provider operation or live infrastructure
 is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
@@ -303,10 +303,12 @@ subject pairs. Applications derive their own principals and never use email as a
 missing, forged, expired, wrong-issuer, wrong-audience, and cross-application assertions. `L` covers
 signer, key discovery, algorithms, audience issuance, and clock behavior.
 
-**Residual risk:** The Live profile selects Google OIDC, ES256 in Cloud KMS, application audiences,
-a 60-second assertion, 30-second skew, and overlapping public keys, but none is implemented or
-qualified. The demo accepts residual cross-instance replay risk because it makes no distributed
-replay-prevention claim.
+**Residual risk:** AP-M6-W5 locally validates Google OIDC through a PKCE-bound, one-use flow and
+matches restricted identities by exact issuer and subject. It retains no provider token and makes
+public admission independent of session-store availability. ES256 assertions, application
+audiences, header replacement, KMS, and public-key overlap remain unimplemented until AP-M6-W6;
+provider operation remains unqualified. The demo accepts residual cross-instance replay risk
+because it makes no distributed replay-prevention claim.
 
 ### AP-TM-006 · Admission mistaken for feature authorization
 
@@ -439,8 +441,9 @@ inventory, and observed multi-instance behavior.
 
 **Residual risk:** AP-M6-W2 implements construction-time profile rejection and an unconfigured
 closed response. AP-M6-W3 bounds compiled-generation bytes and fails closed on load or validation
-failure. AP-M6-W4 enforces the 4,096-byte path limit. The remaining request and proxy limits remain
-unimplemented until their named slices pass.
+failure. AP-M6-W4 enforces the 4,096-byte path limit. AP-M6-W5 bounds identity query and cookie
+inputs and uses absolute session and login-flow expiry. The remaining request and proxy limits
+remain unimplemented until their named slices pass.
 The AP-M6 token buckets are per instance, are not a WAF or distributed rate limit, and can permit
 twice their per-instance values when both selected instances are active. Provider limits can be
 exceeded briefly, and budget notifications do not cap spend.
@@ -459,10 +462,11 @@ status without implying success.
 **Evidence:** `F` covers logical dependency failure using deterministic adapters. `L` covers actual
 DNS, TLS, key rotation, certificate, provider failure, and recovery behavior.
 
-**Residual risk:** Local immutable-generation loading now fails startup on source, contract, or
-digest failure, but the selected DNS, certificate, activation, and owner-confirmed rollback
-sequence is not implemented or qualified. Provider availability and disaster recovery beyond the
-15-minute post-approval rollback objective remain outside the demo commitment.
+**Residual risk:** Local immutable-generation loading fails startup on source, contract, or digest
+failure. AP-M6-W5 fails protected admission closed on provider or session-store failure while public
+routes remain anonymously usable. The selected DNS, certificate, activation, and owner-confirmed
+rollback sequence is not implemented or qualified. Provider availability and disaster recovery
+beyond the 15-minute post-approval rollback objective remain outside the demo commitment.
 
 ### AP-TM-014 · Integration Draft or fixture mistaken for Application Adoption
 

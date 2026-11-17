@@ -8,9 +8,22 @@ import unittest
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import parse_qs, urlencode, urlsplit
+
+import httpx
+from joserfc import jwk, jwt
 
 from edge import RuntimeAdapters, RuntimeConfiguration, create_app
 from edge._generation import GoogleCloudStorageGenerationSource
+from edge._identity import (
+    AuthlibGoogleOidc,
+    FirestoreIdentityStore,
+    IdentityUnavailable,
+    InMemoryIdentityStore,
+    LoginFlow,
+    PlatformIdentity,
+    PlatformSession,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +46,16 @@ GENERATION_DIGEST = (
 )
 
 
+class ResponseHeaders(dict[bytes, bytes]):
+    def __init__(self, pairs: list[tuple[bytes, bytes]]) -> None:
+        super().__init__(pairs)
+        self._pairs = pairs
+
+    def get_all(self, name: bytes) -> list[bytes]:
+        expected = name.lower()
+        return [value for key, value in self._pairs if key.lower() == expected]
+
+
 def valid_generation_payload() -> bytes:
     return (
         PROJECT_ROOT / "contracts/test-vectors/valid/compiled-active.v1.json"
@@ -43,6 +66,7 @@ def generation_configuration(
     *,
     content_digest: str = GENERATION_CONTENT_DIGEST,
     generation_digest: str = GENERATION_DIGEST,
+    external_origin: str | None = None,
 ) -> RuntimeConfiguration:
     return RuntimeConfiguration(
         profile="qualification-v1",
@@ -51,6 +75,7 @@ def generation_configuration(
         generation_object_generation=GENERATION_OBJECT_GENERATION,
         generation_content_digest=content_digest,
         generation_digest=generation_digest,
+        external_origin=external_origin,
     )
 
 
@@ -60,6 +85,8 @@ def compiled_generation() -> dict[str, Any]:
 
 def configured_generation(
     document: dict[str, Any],
+    *,
+    external_origin: str | None = None,
 ) -> tuple[RuntimeConfiguration, StaticGenerationSource]:
     payload = json.dumps(
         document,
@@ -70,6 +97,7 @@ def configured_generation(
     configuration = generation_configuration(
         content_digest="sha256:" + hashlib.sha256(payload).hexdigest(),
         generation_digest=document["generation_digest"],
+        external_origin=external_origin,
     )
     return configuration, StaticGenerationSource(
         bucket=GENERATION_BUCKET,
@@ -101,12 +129,45 @@ def compiled_attachment(
     }
 
 
+def protected_generation(
+    mode: str,
+    *,
+    members: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    document = compiled_generation()
+    document["catalogue"][0]["admission_mode"] = mode
+    policy: dict[str, Any] = {"mode": mode}
+    if members is not None:
+        policy["members"] = members
+    document["admission_policies"][0]["policy"] = policy
+    attachment = document["routes"][0]["attachments"][0]
+    attachment["identity_requirement"] = "verified"
+    attachment["audience"] = (
+        "urn:comfforts:app-platform:audience:alpha-app"
+    )
+    return document
+
+
+def cookie_value(headers: ResponseHeaders, name: str) -> str:
+    prefix = f"{name}=".encode("ascii")
+    matches = [
+        value[len(prefix) :].split(b";", 1)[0].decode("ascii")
+        for value in headers.get_all(b"set-cookie")
+        if value.startswith(prefix)
+    ]
+    if len(matches) != 1:
+        raise AssertionError(f"expected one {name} cookie, got {len(matches)}")
+    return matches[0]
+
+
 async def request(
     app: AsgiApplication,
     path: str = "/",
     *,
+    method: str = "GET",
     raw_path: bytes | None = None,
     query_string: bytes = b"",
+    headers: tuple[tuple[bytes, bytes], ...] = (),
 ) -> tuple[int, dict[bytes, bytes], bytes]:
     incoming = [{"type": "http.request", "body": b"", "more_body": False}]
     outgoing: list[dict[str, Any]] = []
@@ -123,12 +184,12 @@ async def request(
             "asgi": {"version": "3.0", "spec_version": "2.3"},
             "http_version": "1.1",
             "scheme": "https",
-            "method": "GET",
+            "method": method,
             "path": path,
             "raw_path": raw_path if raw_path is not None else path.encode("utf-8"),
             "query_string": query_string,
             "root_path": "",
-            "headers": [],
+            "headers": list(headers),
             "client": ("127.0.0.1", 43210),
             "server": ("testserver", 443),
         },
@@ -144,15 +205,17 @@ async def request(
         for message in outgoing
         if message["type"] == "http.response.body"
     )
-    return start["status"], dict(start["headers"]), body
+    return start["status"], ResponseHeaders(start["headers"]), body
 
 
 async def request_during_lifespan(
     app: AsgiApplication,
     path: str,
     *,
+    method: str = "GET",
     raw_path: bytes | None = None,
     query_string: bytes = b"",
+    headers: tuple[tuple[bytes, bytes], ...] = (),
 ) -> tuple[dict[str, Any], tuple[int, dict[bytes, bytes], bytes]]:
     incoming: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
     outgoing: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -185,8 +248,10 @@ async def request_during_lifespan(
     response = await request(
         app,
         path,
+        method=method,
         raw_path=raw_path,
         query_string=query_string,
+        headers=headers,
     )
     await incoming.put({"type": "lifespan.shutdown"})
     shutdown = await outgoing.get()
@@ -274,6 +339,140 @@ class RecordingRouteHandoff:
         self.requests.append(request)
 
 
+class FixedClock:
+    def __init__(self, value: int) -> None:
+        self.value = value
+
+    def now(self) -> int:
+        return self.value
+
+
+class FixedTokenSource:
+    def __init__(self, values: list[str]) -> None:
+        self._values = values
+
+    def token(self, entropy_bytes: int) -> str:
+        del entropy_bytes
+        return self._values.pop(0)
+
+
+class FakeGoogleOidc:
+    def __init__(self, identity: PlatformIdentity) -> None:
+        self.identity = identity
+        self.authorization_requests: list[dict[str, str]] = []
+        self.authentication_requests: list[dict[str, str]] = []
+        self.failure: Exception | None = None
+
+    async def authorization_url(
+        self,
+        *,
+        redirect_uri: str,
+        state: str,
+        nonce: str,
+        code_verifier: str,
+    ) -> str:
+        self.authorization_requests.append(
+            {
+                "redirect_uri": redirect_uri,
+                "state": state,
+                "nonce": nonce,
+                "code_verifier": code_verifier,
+            }
+        )
+        return "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(
+            {
+                "state": state,
+                "nonce": nonce,
+                "code_challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+                "code_challenge_method": "S256",
+            }
+        )
+
+    async def authenticate(
+        self,
+        *,
+        code: str,
+        redirect_uri: str,
+        nonce: str,
+        code_verifier: str,
+    ) -> PlatformIdentity:
+        self.authentication_requests.append(
+            {
+                "code": code,
+                "redirect_uri": redirect_uri,
+                "nonce": nonce,
+                "code_verifier": code_verifier,
+            }
+        )
+        if self.failure is not None:
+            raise self.failure
+        return self.identity
+
+
+class FakeFirestoreSnapshot:
+    def __init__(self, value: dict[str, Any] | None) -> None:
+        self.exists = value is not None
+        self._value = value
+
+    def to_dict(self) -> dict[str, Any] | None:
+        return copy.deepcopy(self._value)
+
+
+class FakeFirestoreDocument:
+    def __init__(self, documents: dict[str, dict[str, Any]], key: str) -> None:
+        self._documents = documents
+        self._key = key
+
+    async def create(self, value: dict[str, Any]) -> None:
+        if self._key in self._documents:
+            raise RuntimeError("already exists")
+        self._documents[self._key] = copy.deepcopy(value)
+
+    async def get(self, *, transaction: Any = None) -> FakeFirestoreSnapshot:
+        del transaction
+        return FakeFirestoreSnapshot(self._documents.get(self._key))
+
+    async def delete(self) -> None:
+        self._documents.pop(self._key, None)
+
+    def delete_now(self) -> None:
+        self._documents.pop(self._key, None)
+
+
+class FakeFirestoreCollection:
+    def __init__(self, documents: dict[str, dict[str, Any]]) -> None:
+        self._documents = documents
+
+    def document(self, key: str) -> FakeFirestoreDocument:
+        return FakeFirestoreDocument(self._documents, key)
+
+
+class FakeFirestoreTransaction:
+    def __init__(self) -> None:
+        self._deletes: list[FakeFirestoreDocument] = []
+
+    def delete(self, document: FakeFirestoreDocument) -> None:
+        self._deletes.append(document)
+
+    async def commit(self) -> None:
+        for document in self._deletes:
+            document.delete_now()
+
+    async def rollback(self) -> None:
+        self._deletes.clear()
+
+
+class FakeFirestoreClient:
+    def __init__(self) -> None:
+        self.collections: dict[str, dict[str, dict[str, Any]]] = {}
+
+    def collection(self, name: str) -> FakeFirestoreCollection:
+        return FakeFirestoreCollection(self.collections.setdefault(name, {}))
+
+    def transaction(self) -> FakeFirestoreTransaction:
+        return FakeFirestoreTransaction()
+
+
 class StaticStorageBlob:
     def __init__(self, *, generation: int, payload: bytes) -> None:
         self._generation = generation
@@ -337,6 +536,148 @@ class StaticStorageClient:
         if bucket != self._bucket:
             raise LookupError("bucket is unavailable")
         return self._stored_bucket
+
+
+class IdentityAdapterTest(unittest.TestCase):
+    def test_google_oidc_adapter_verifies_signed_identity_and_discards_tokens(
+        self,
+    ) -> None:
+        signing_key = jwk.RSAKey.import_key(
+            json.loads(
+                (
+                    PROJECT_ROOT
+                    / "tests/fixtures/oidc-test-private.jwk.json"
+                ).read_text(encoding="utf-8")
+            )
+        )
+        id_token = jwt.encode(
+            {"alg": "RS256", "kid": "ap-m6-w5-test-only"},
+            {
+                "iss": "https://accounts.google.com",
+                "sub": "google-subject-1",
+                "aud": "test-client",
+                "iat": 1_700_000_000,
+                "exp": 4_102_444_800,
+                "nonce": "expected-nonce",
+                "email": "display@example.com",
+            },
+            signing_key,
+            algorithms=["RS256"],
+        )
+        requests: list[httpx.Request] = []
+
+        def provider(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if request.url.path == "/.well-known/openid-configuration":
+                return httpx.Response(
+                    200,
+                    json={
+                        "issuer": "https://accounts.google.com",
+                        "authorization_endpoint": "https://accounts.google.com/o/oauth2/v2/auth",
+                        "token_endpoint": "https://oauth2.googleapis.com/token",
+                        "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
+                    },
+                )
+            if request.url == "https://oauth2.googleapis.com/token":
+                return httpx.Response(
+                    200,
+                    json={
+                        "access_token": "must-be-discarded",
+                        "refresh_token": "must-also-be-discarded",
+                        "token_type": "Bearer",
+                        "id_token": id_token,
+                    },
+                )
+            if request.url == "https://www.googleapis.com/oauth2/v3/certs":
+                return httpx.Response(
+                    200,
+                    json={"keys": [signing_key.as_dict(private=False)]},
+                )
+            return httpx.Response(404)
+
+        adapter = AuthlibGoogleOidc(
+            client_id="test-client",
+            client_secret="test-secret",
+            transport=httpx.MockTransport(provider),
+        )
+
+        authorization_url = asyncio.run(
+            adapter.authorization_url(
+                redirect_uri="https://apps-staging.comfforts.com/_platform/auth/callback",
+                state="expected-state",
+                nonce="expected-nonce",
+                code_verifier="v" * 43,
+            )
+        )
+        identity = asyncio.run(
+            adapter.authenticate(
+                code="provider-code",
+                redirect_uri="https://apps-staging.comfforts.com/_platform/auth/callback",
+                nonce="expected-nonce",
+                code_verifier="v" * 43,
+            )
+        )
+
+        authorization_query = parse_qs(urlsplit(authorization_url).query)
+        self.assertEqual(authorization_query["code_challenge_method"], ["S256"])
+        self.assertEqual(
+            identity,
+            PlatformIdentity(
+                "https://accounts.google.com",
+                "google-subject-1",
+                "display@example.com",
+            ),
+        )
+        self.assertEqual([request.method for request in requests], ["GET", "GET", "POST", "GET"])
+        self.assertNotIn("must-be-discarded", repr(identity))
+
+        with self.assertRaises(IdentityUnavailable):
+            asyncio.run(
+                adapter.authenticate(
+                    code="provider-code",
+                    redirect_uri="https://apps-staging.comfforts.com/_platform/auth/callback",
+                    nonce="wrong-nonce",
+                    code_verifier="v" * 43,
+                )
+            )
+
+    def test_firestore_adapter_hashes_opaque_ids_and_consumes_flows_once(self) -> None:
+        client = FakeFirestoreClient()
+        store = FirestoreIdentityStore(client, collection_prefix="qualification")
+        flow = LoginFlow(
+            state="state",
+            nonce="nonce",
+            code_verifier="verifier",
+            return_to="/alpha",
+            expires_at=2_000,
+        )
+        session = PlatformSession(
+            PlatformIdentity(
+                "https://accounts.google.com",
+                "subject",
+                "display@example.com",
+            ),
+            expires_at=29_800,
+        )
+
+        asyncio.run(store.put_flow("opaque-flow-id", flow))
+        first_flow = asyncio.run(store.consume_flow("opaque-flow-id"))
+        second_flow = asyncio.run(store.consume_flow("opaque-flow-id"))
+        asyncio.run(store.put_session("opaque-session-id", session))
+        loaded_session = asyncio.run(store.get_session("opaque-session-id"))
+        asyncio.run(store.delete_session("opaque-session-id"))
+
+        self.assertEqual(first_flow, flow)
+        self.assertIsNone(second_flow)
+        self.assertEqual(loaded_session, session)
+        self.assertIsNone(asyncio.run(store.get_session("opaque-session-id")))
+        stored_keys = {
+            key
+            for collection in client.collections.values()
+            for key in collection
+        }
+        self.assertNotIn("opaque-flow-id", stored_keys)
+        self.assertNotIn("opaque-session-id", stored_keys)
 
 
 class SharedEdgeInterfaceTest(unittest.TestCase):
@@ -506,6 +847,433 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         self.assertEqual(status, 503)
         self.assertEqual(body, b"identity unavailable\n")
         self.assertFalse(handoff.requests)
+
+    def test_protected_route_enters_platform_owned_login(self) -> None:
+        configuration, source = configured_generation(
+            protected_generation("authenticated"),
+            external_origin="https://apps-staging.comfforts.com",
+        )
+        handoff = RecordingRouteHandoff()
+        store = InMemoryIdentityStore()
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                route_handoff=handoff,
+                google_oidc=FakeGoogleOidc(
+                    PlatformIdentity("https://accounts.google.com", "visitor-1")
+                ),
+                identity_store=store,
+                clock=FixedClock(1_000),
+                token_source=FixedTokenSource([]),
+            ),
+        )
+
+        _, (status, headers, body) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha/report",
+                query_string=b"view=summary",
+            )
+        )
+
+        self.assertEqual(status, 303)
+        self.assertEqual(
+            headers[b"location"],
+            b"/_platform/login?return_to=%2Falpha%2Freport%3Fview%3Dsummary",
+        )
+        self.assertEqual(headers[b"cache-control"], b"no-store")
+        self.assertEqual(body, b"")
+        self.assertFalse(handoff.requests)
+
+    def test_login_uses_pkce_and_keeps_transient_material_server_side(self) -> None:
+        configuration, source = configured_generation(
+            protected_generation("authenticated"),
+            external_origin="https://apps-staging.comfforts.com",
+        )
+        store = InMemoryIdentityStore()
+        oidc = FakeGoogleOidc(
+            PlatformIdentity("https://accounts.google.com", "visitor-1")
+        )
+        verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                google_oidc=oidc,
+                identity_store=store,
+                clock=FixedClock(10_000),
+                token_source=FixedTokenSource(
+                    [
+                        "flow-id-01234567890123456789",
+                        "state-01234567890123456789012",
+                        "nonce-01234567890123456789012",
+                        verifier,
+                    ]
+                ),
+            ),
+        )
+
+        _, (status, headers, _) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/_platform/login",
+                query_string=b"return_to=%2Falpha",
+            )
+        )
+
+        self.assertEqual(status, 303)
+        provider_query = parse_qs(urlsplit(headers[b"location"].decode()).query)
+        self.assertEqual(provider_query["code_challenge_method"], ["S256"])
+        self.assertEqual(
+            provider_query["code_challenge"],
+            ["E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"],
+        )
+        flow_id = cookie_value(headers, "__Host-comfforts-oidc")
+        self.assertEqual(flow_id, "flow-id-01234567890123456789")
+        self.assertIn(b"Secure", headers.get_all(b"set-cookie")[0])
+        self.assertIn(b"HttpOnly", headers.get_all(b"set-cookie")[0])
+        self.assertIn(b"SameSite=lax", headers.get_all(b"set-cookie")[0])
+        self.assertNotIn(b"Domain=", headers.get_all(b"set-cookie")[0])
+        self.assertEqual(store.flows[flow_id].return_to, "/alpha")
+        self.assertEqual(store.flows[flow_id].expires_at, 10_600)
+        self.assertEqual(oidc.authorization_requests[0]["code_verifier"], verifier)
+
+    def test_callback_creates_absolute_session_and_authenticated_handoff(self) -> None:
+        configuration, source = configured_generation(
+            protected_generation("authenticated"),
+            external_origin="https://apps-staging.comfforts.com",
+        )
+        identity = PlatformIdentity(
+            "https://accounts.google.com",
+            "visitor-1",
+            "display@example.com",
+        )
+        store = InMemoryIdentityStore()
+        flow_id = "flow-id-01234567890123456789"
+        store.flows[flow_id] = LoginFlow(
+            state="expected-state-0123456789012",
+            nonce="expected-nonce-0123456789012",
+            code_verifier="verifier-012345678901234567890123456789012345",
+            return_to="/alpha/report?view=summary",
+            expires_at=2_000,
+        )
+        oidc = FakeGoogleOidc(identity)
+        handoff = RecordingRouteHandoff()
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                route_handoff=handoff,
+                google_oidc=oidc,
+                identity_store=store,
+                clock=FixedClock(1_000),
+                token_source=FixedTokenSource(
+                    ["session-id-01234567890123456789"]
+                ),
+            ),
+        )
+
+        _, (callback_status, callback_headers, _) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/_platform/auth/callback",
+                query_string=b"state=expected-state-0123456789012&code=provider-code",
+                headers=((b"cookie", f"__Host-comfforts-oidc={flow_id}".encode()),),
+            )
+        )
+        session_id = cookie_value(callback_headers, "__Host-comfforts-session")
+        _, (route_status, route_headers, _) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha/report",
+                headers=(
+                    (b"cookie", f"__Host-comfforts-session={session_id}".encode()),
+                ),
+            )
+        )
+
+        self.assertEqual(callback_status, 303)
+        self.assertEqual(
+            callback_headers[b"location"],
+            b"/alpha/report?view=summary",
+        )
+        self.assertEqual(len(callback_headers.get_all(b"set-cookie")), 2)
+        self.assertNotIn(flow_id, store.flows)
+        self.assertEqual(store.sessions[session_id].expires_at, 29_800)
+        self.assertEqual(store.sessions[session_id].identity.email, "display@example.com")
+        self.assertEqual(route_status, 503)
+        self.assertEqual(route_headers.get_all(b"set-cookie"), [])
+        self.assertEqual(handoff.requests[0].identity, identity)
+        self.assertEqual(
+            oidc.authentication_requests[0]["nonce"],
+            "expected-nonce-0123456789012",
+        )
+
+    def test_restricted_admission_uses_exact_issuer_and_subject_not_email(self) -> None:
+        member = {
+            "issuer": "https://accounts.google.com",
+            "subject": "approved-subject",
+        }
+        configuration, source = configured_generation(
+            protected_generation("restricted", members=[member]),
+            external_origin="https://apps-staging.comfforts.com",
+        )
+        store = InMemoryIdentityStore()
+        store.sessions["approved-session-01234567890"] = PlatformSession(
+            identity=PlatformIdentity(
+                member["issuer"], member["subject"], "same@example.com"
+            ),
+            expires_at=10_000,
+        )
+        store.sessions["denied-session-0123456789012"] = PlatformSession(
+            identity=PlatformIdentity(
+                member["issuer"], "different-subject", "same@example.com"
+            ),
+            expires_at=10_000,
+        )
+        handoff = RecordingRouteHandoff()
+        adapters = RuntimeAdapters(
+            generation_source=source,
+            route_handoff=handoff,
+            google_oidc=FakeGoogleOidc(
+                PlatformIdentity(member["issuer"], member["subject"])
+            ),
+            identity_store=store,
+            clock=FixedClock(1_000),
+            token_source=FixedTokenSource([]),
+        )
+        app = create_app(configuration, adapters)
+
+        _, (approved, _, _) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha",
+                headers=((b"cookie", b"__Host-comfforts-session=approved-session-01234567890"),),
+            )
+        )
+        _, (denied, _, denied_body) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha",
+                headers=((b"cookie", b"__Host-comfforts-session=denied-session-0123456789012"),),
+            )
+        )
+
+        self.assertEqual(approved, 503)
+        self.assertEqual(denied, 403)
+        self.assertEqual(denied_body, b"forbidden\n")
+        self.assertEqual(len(handoff.requests), 1)
+
+    def test_public_route_remains_anonymous_when_session_store_is_unavailable(self) -> None:
+        configuration, source = configured_generation(compiled_generation())
+        store = InMemoryIdentityStore()
+        store.available = False
+        handoff = RecordingRouteHandoff()
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                route_handoff=handoff,
+                identity_store=store,
+                clock=FixedClock(1_000),
+            ),
+        )
+
+        _, (status, _, _) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha",
+                headers=((b"cookie", b"__Host-comfforts-session=unavailable-session-0123456"),),
+            )
+        )
+
+        self.assertEqual(status, 503)
+        self.assertEqual(len(handoff.requests), 1)
+        self.assertIsNone(handoff.requests[0].identity)
+
+    def test_public_route_carries_identity_only_for_a_valid_session(self) -> None:
+        configuration, source = configured_generation(compiled_generation())
+        identity = PlatformIdentity(
+            "https://accounts.google.com", "optional-subject"
+        )
+        store = InMemoryIdentityStore()
+        store.sessions["optional-session-012345678901"] = PlatformSession(
+            identity=identity,
+            expires_at=10_000,
+        )
+        handoff = RecordingRouteHandoff()
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                route_handoff=handoff,
+                identity_store=store,
+                clock=FixedClock(1_000),
+            ),
+        )
+
+        asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha",
+                headers=((b"cookie", b"__Host-comfforts-session=optional-session-012345678901"),),
+            )
+        )
+        asyncio.run(request_during_lifespan(app, "/alpha"))
+
+        self.assertEqual(handoff.requests[0].identity, identity)
+        self.assertIsNone(handoff.requests[1].identity)
+
+    def test_identity_dependency_failures_are_closed_and_redacted(self) -> None:
+        configuration, source = configured_generation(
+            protected_generation("authenticated"),
+            external_origin="https://apps-staging.comfforts.com",
+        )
+        store = InMemoryIdentityStore()
+        flow_id = "failure-flow-01234567890123456"
+        store.flows[flow_id] = LoginFlow(
+            state="expected-state-0123456789012",
+            nonce="expected-nonce-0123456789012",
+            code_verifier="verifier-012345678901234567890123456789012345",
+            return_to="/alpha",
+            expires_at=2_000,
+        )
+        oidc = FakeGoogleOidc(
+            PlatformIdentity("https://accounts.google.com", "visitor-1")
+        )
+        oidc.failure = RuntimeError("provider included a sensitive diagnostic")
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                google_oidc=oidc,
+                identity_store=store,
+                clock=FixedClock(1_000),
+                token_source=FixedTokenSource([]),
+            ),
+        )
+
+        _, (mismatch_status, _, mismatch_body) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/_platform/auth/callback",
+                query_string=b"state=wrong-state&code=provider-code",
+                headers=((b"cookie", f"__Host-comfforts-oidc={flow_id}".encode()),),
+            )
+        )
+        store.flows[flow_id] = LoginFlow(
+            state="expected-state-0123456789012",
+            nonce="expected-nonce-0123456789012",
+            code_verifier="verifier-012345678901234567890123456789012345",
+            return_to="/alpha",
+            expires_at=2_000,
+        )
+        _, (provider_status, _, provider_body) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/_platform/auth/callback",
+                query_string=b"state=expected-state-0123456789012&code=provider-code",
+                headers=((b"cookie", f"__Host-comfforts-oidc={flow_id}".encode()),),
+            )
+        )
+        store.available = False
+        _, (store_status, _, store_body) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha",
+                headers=((b"cookie", b"__Host-comfforts-session=unavailable-session-0123456"),),
+            )
+        )
+
+        self.assertEqual((mismatch_status, mismatch_body), (400, b"invalid identity response\n"))
+        self.assertEqual((provider_status, provider_body), (503, b"identity unavailable\n"))
+        self.assertEqual((store_status, store_body), (503, b"identity unavailable\n"))
+        self.assertNotIn(b"sensitive", provider_body)
+
+    def test_expired_session_reauthenticates_without_silent_renewal(self) -> None:
+        configuration, source = configured_generation(
+            protected_generation("authenticated"),
+            external_origin="https://apps-staging.comfforts.com",
+        )
+        store = InMemoryIdentityStore()
+        session_id = "expired-session-0123456789012"
+        store.sessions[session_id] = PlatformSession(
+            identity=PlatformIdentity(
+                "https://accounts.google.com", "visitor-1"
+            ),
+            expires_at=1_000,
+        )
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                google_oidc=FakeGoogleOidc(
+                    PlatformIdentity("https://accounts.google.com", "visitor-1")
+                ),
+                identity_store=store,
+                clock=FixedClock(1_000),
+                token_source=FixedTokenSource([]),
+            ),
+        )
+
+        _, (status, headers, _) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha",
+                headers=((b"cookie", f"__Host-comfforts-session={session_id}".encode()),),
+            )
+        )
+
+        self.assertEqual(status, 303)
+        self.assertEqual(headers[b"location"], b"/_platform/login?return_to=%2Falpha")
+        self.assertNotIn(session_id, store.sessions)
+        self.assertEqual(headers.get_all(b"set-cookie"), [])
+
+    def test_logout_clears_server_session_and_rejects_external_return(self) -> None:
+        configuration, source = configured_generation(
+            compiled_generation(),
+            external_origin="https://apps-staging.comfforts.com",
+        )
+        store = InMemoryIdentityStore()
+        session_id = "logout-session-01234567890123"
+        store.sessions[session_id] = PlatformSession(
+            identity=PlatformIdentity(
+                "https://accounts.google.com", "visitor-1"
+            ),
+            expires_at=10_000,
+        )
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                identity_store=store,
+                clock=FixedClock(1_000),
+            ),
+        )
+
+        _, (status, headers, _) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/_platform/logout",
+                query_string=b"return_to=%2Falpha",
+                headers=((b"cookie", f"__Host-comfforts-session={session_id}".encode()),),
+            )
+        )
+        _, (invalid_status, _, invalid_body) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/_platform/logout",
+                query_string=b"return_to=https%3A%2F%2Fevil.example",
+            )
+        )
+
+        self.assertEqual(status, 303)
+        self.assertEqual(headers[b"location"], b"/alpha")
+        self.assertNotIn(session_id, store.sessions)
+        self.assertIn(b"Max-Age=0", headers.get_all(b"set-cookie")[0])
+        self.assertEqual(invalid_status, 400)
+        self.assertEqual(invalid_body, b"invalid return location\n")
 
     def test_non_active_application_entries_are_excluded_from_catalogue_and_routes(
         self,
@@ -759,6 +1527,9 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "generation digest is invalid"):
             generation_configuration(generation_digest="sha256:not-a-digest")
+
+        with self.assertRaisesRegex(ValueError, "HTTPS origin"):
+            generation_configuration(external_origin="http://apps.example.test/path")
 
     def test_generation_integrity_or_contract_failure_stops_startup(self) -> None:
         invalid_json = b"{"

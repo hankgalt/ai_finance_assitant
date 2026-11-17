@@ -1,8 +1,9 @@
 # Comfforts App Platform
 
-Status: AP-M6 implementation in progress; immutable generation loading, the root catalogue, and
-registered route selection are implemented locally, while identity, attachment-provider, and proxy
-behavior remain unavailable. AP-M4 remains Fixture-qualified and AP-M5 remains planning-validated.
+Status: AP-M6 implementation in progress; immutable generation loading, catalogue, routing,
+Platform Sessions, and admission are implemented locally, while identity assertions,
+attachment-provider, and proxy behavior remain unavailable. AP-M4 remains Fixture-qualified and
+AP-M5 remains planning-validated.
 No Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
 implemented or qualified.
 
@@ -48,9 +49,13 @@ Cloud Storage source adapter. It performs no provider call during construction o
 cannot discover, compile, activate, or mutate a generation. AP-M6-W4 renders the compiled catalogue
 and performs canonical, lifecycle-aware route and mount selection. Its deterministic handoff
 remains closed with `503`; it resolves no target and forwards no application request or response.
-Later work packages own identity, attachment-provider, proxy,
-and operational behavior. No AP-M6 package authorizes Terraform, cloud, DNS, identity
-configuration, deployment, or Live mutation.
+AP-M6-W5 adds Google OIDC authorization-code-with-PKCE behavior, opaque host-only eight-hour
+Platform Sessions, Firestore and in-memory session adapters, optional public identity, exact
+issuer-and-subject restricted admission, and platform-owned logout. Deterministic tests replace
+provider and Firestore I/O; no OAuth credential or provider operation is required. Later work
+packages own signed identity assertions, attachment-provider, proxy, and operational behavior. No
+AP-M6 package authorizes Terraform, cloud, DNS, identity configuration, deployment, or Live
+mutation.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.
