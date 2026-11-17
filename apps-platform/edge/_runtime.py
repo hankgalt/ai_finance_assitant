@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+import json
 import re
 from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit
@@ -20,6 +21,12 @@ from ._generation import (
     GenerationSource,
     LoadedGeneration,
     load_generation,
+)
+from ._assertions import (
+    AssertionIssuer,
+    JWKS_CACHE_SECONDS,
+    VerificationKeySource,
+    public_key_from_jwk,
 )
 from ._identity import (
     Clock,
@@ -139,6 +146,8 @@ class RuntimeAdapters:
     identity_store: IdentityStore | None = None
     clock: Clock | None = None
     token_source: TokenSource | None = None
+    assertion_issuer: AssertionIssuer | None = None
+    verification_key_source: VerificationKeySource | None = None
 
 
 def _single_query_value(request: Request, name: str) -> str | None:
@@ -435,6 +444,33 @@ def create_app(
             _clear_opaque_cookie(response, SESSION_COOKIE)
             return response
 
+        if path == "/.well-known/jwks.json":
+            if adapters.verification_key_source is None:
+                return _closed_response(503, "verification keys unavailable")
+            try:
+                keys = await adapters.verification_key_source.verification_keys()
+                if not 1 <= len(keys) <= 3:
+                    raise ValueError("invalid verification key set")
+                key_ids: set[str] = set()
+                for key in keys:
+                    public_key_from_jwk(key)
+                    if key["kid"] in key_ids:
+                        raise ValueError("duplicate verification key identifier")
+                    key_ids.add(key["kid"])
+                payload = json.dumps(
+                    {"keys": list(keys)},
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            except Exception:
+                return _closed_response(503, "verification keys unavailable")
+            return Response(
+                payload,
+                media_type="application/json",
+                headers={"Cache-Control": f"public, max-age={JWKS_CACHE_SECONDS}"},
+            )
+
         if path == "/":
             return HTMLResponse(
                 render_catalogue(active_generation.configuration),
@@ -480,10 +516,30 @@ def create_app(
             route,
             path,
             request.scope.get("query_string", b""),
-            identity,
         )
         if routed_request is None:
             return _closed_response(404, "not found")
+        assertion: str | None = None
+        if identity is not None:
+            if (
+                routed_request.identity_audience is None
+                or adapters.assertion_issuer is None
+            ):
+                if admission_mode != "public":
+                    return _closed_response(503, "identity assertion unavailable")
+            else:
+                try:
+                    assertion = await adapters.assertion_issuer.issue(
+                        identity,
+                        routed_request.identity_audience,
+                    )
+                except Exception:
+                    if admission_mode != "public":
+                        return _closed_response(503, "identity assertion unavailable")
+        routed_request = replace(
+            routed_request,
+            verified_identity_assertion=assertion,
+        )
         if adapters.route_handoff is not None:
             try:
                 await adapters.route_handoff.dispatch(routed_request)

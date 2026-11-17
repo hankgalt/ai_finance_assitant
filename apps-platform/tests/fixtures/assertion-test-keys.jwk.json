@@ -1,0 +1,18 @@
+{
+  "current": {
+    "crv": "P-256",
+    "d": "sgPlOVUTKfFYpMaLkIaDhEpwCFiUztbjW-VeXz6yQbI",
+    "kid": "ap-m6-w6-current-test-only",
+    "kty": "EC",
+    "x": "VpX9pZVPntQBOzsOcX5VL7ruWb1NzjbbTnguNMZNV54",
+    "y": "f2SCTJGfKr27wx0fW80nzOwhGHzAA_zNzFxnNt0BPrc"
+  },
+  "previous": {
+    "crv": "P-256",
+    "d": "FHL-KVvYwUjqvqPrbXeWvH8ifVJn6c6rWi-LrzAI6Qg",
+    "kid": "ap-m6-w6-previous-test-only",
+    "kty": "EC",
+    "x": "e69adpPi5COfwc46eTN2vRdh1tujBMCSAJLiurDMpHw",
+    "y": "tISf_twQ3Ue0WLYtJrnIRzQ4FDnjKR6m72xTFiuWvHQ"
+  }
+}

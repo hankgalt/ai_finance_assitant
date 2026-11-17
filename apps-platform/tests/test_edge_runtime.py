@@ -1,19 +1,37 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import copy
 import hashlib
 import json
 import unittest
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
+import google_crc32c
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import Prehashed
 from joserfc import jwk, jwt
 
-from edge import RuntimeAdapters, RuntimeConfiguration, create_app
+from edge import (
+    ApplicationIdentityVerifier,
+    RuntimeAdapters,
+    RuntimeConfiguration,
+    create_app,
+)
+from edge._assertions import (
+    AssertionIssuer,
+    CloudKmsAssertionKeys,
+    InMemoryAssertionKeys,
+    KmsKeyVersion,
+    AssertionUnavailable,
+)
 from edge._generation import GoogleCloudStorageGenerationSource
 from edge._identity import (
     AuthlibGoogleOidc,
@@ -24,6 +42,7 @@ from edge._identity import (
     PlatformIdentity,
     PlatformSession,
 )
+from edge.verification import HttpJwksFetcher, InMemoryJwksFetcher
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +63,80 @@ GENERATION_DIGEST = (
     "sha256:dbbf3a48ddfa7457bb5260bf4060958f"
     "31c2485317a255d51b7adca86c9f9224"
 )
+
+
+def assertion_test_jwks() -> tuple[dict[str, Any], dict[str, Any]]:
+    fixture = json.loads(
+        (PROJECT_ROOT / "tests/fixtures/assertion-test-keys.jwk.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    private_key = fixture["current"]
+    public_keys = []
+    for item in fixture.values():
+        public_keys.append(
+            {
+                "alg": "ES256",
+                "crv": item["crv"],
+                "kid": item["kid"],
+                "kty": item["kty"],
+                "use": "sig",
+                "x": item["x"],
+                "y": item["y"],
+            }
+        )
+    return private_key, {"keys": public_keys}
+
+
+def assertion_components(
+    clock: FixedClock,
+    correlation_ids: list[str] | None = None,
+) -> tuple[AssertionIssuer, InMemoryAssertionKeys]:
+    private_key, jwks = assertion_test_jwks()
+    keys = InMemoryAssertionKeys(private_key, jwks["keys"])
+    issuer = AssertionIssuer(
+        keys,
+        clock,
+        FixedTokenSource(
+            correlation_ids or ["correlation-012345678901234"]
+        ),
+    )
+    return issuer, keys
+
+
+def signed_test_assertion(
+    keys: InMemoryAssertionKeys,
+    payload: dict[str, Any],
+    *,
+    key_id: str | None = None,
+) -> str:
+    def encode(value: bytes) -> str:
+        return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+    header = {
+        "alg": "ES256",
+        "kid": key_id or keys.active_key_id,
+        "typ": "JWT",
+    }
+    header_segment = encode(
+        json.dumps(
+            header,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+    payload_segment = encode(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+    signing_input = f"{header_segment}.{payload_segment}"
+    signature = asyncio.run(
+        keys.sign_digest(hashlib.sha256(signing_input.encode("ascii")).digest())
+    )
+    return f"{signing_input}.{encode(signature)}"
 
 
 class ResponseHeaders(dict[bytes, bytes]):
@@ -409,6 +502,48 @@ class FakeGoogleOidc:
         return self.identity
 
 
+class FakeCloudKmsClient:
+    def __init__(self, keys: dict[str, ec.EllipticCurvePrivateKey]) -> None:
+        self.keys = keys
+        self.sign_requests: list[dict[str, Any]] = []
+        self.public_key_requests: list[dict[str, Any]] = []
+        self.corrupt_signature_checksum = False
+
+    async def asymmetric_sign(self, *, request: dict[str, Any]) -> Any:
+        self.sign_requests.append(request)
+        digest = request["digest"]["sha256"]
+        if request["digest_crc32c"] != google_crc32c.value(digest):
+            raise RuntimeError("request checksum mismatch")
+        signature = self.keys[request["name"]].sign(
+            digest,
+            ec.ECDSA(Prehashed(hashes.SHA256())),
+        )
+        checksum = google_crc32c.value(signature)
+        if self.corrupt_signature_checksum:
+            checksum += 1
+        return SimpleNamespace(
+            name=request["name"],
+            signature=signature,
+            signature_crc32c=checksum,
+            verified_digest_crc32c=True,
+            protection_level=SimpleNamespace(name="SOFTWARE"),
+        )
+
+    async def get_public_key(self, *, request: dict[str, Any]) -> Any:
+        self.public_key_requests.append(request)
+        pem = self.keys[request["name"]].public_key().public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        return SimpleNamespace(
+            name=request["name"],
+            pem=pem.decode("ascii"),
+            pem_crc32c=google_crc32c.value(pem),
+            algorithm=SimpleNamespace(name="EC_SIGN_P256_SHA256"),
+            protection_level=SimpleNamespace(name="SOFTWARE"),
+        )
+
+
 class FakeFirestoreSnapshot:
     def __init__(self, value: dict[str, Any] | None) -> None:
         self.exists = value is not None
@@ -553,7 +688,7 @@ class IdentityAdapterTest(unittest.TestCase):
         id_token = jwt.encode(
             {"alg": "RS256", "kid": "ap-m6-w5-test-only"},
             {
-                "iss": "https://accounts.google.com",
+                "iss": "accounts.google.com",
                 "sub": "google-subject-1",
                 "aud": "test-client",
                 "iat": 1_700_000_000,
@@ -679,6 +814,271 @@ class IdentityAdapterTest(unittest.TestCase):
         self.assertNotIn("opaque-flow-id", stored_keys)
         self.assertNotIn("opaque-session-id", stored_keys)
 
+    def test_cloud_kms_adapter_binds_versions_and_validates_integrity(self) -> None:
+        raw_keys = json.loads(
+            (PROJECT_ROOT / "tests/fixtures/assertion-test-keys.jwk.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        current_resource = (
+            "projects/comfforts-platform-non-prod/locations/us-west1/"
+            "keyRings/platform/cryptoKeys/identity/cryptoKeyVersions/2"
+        )
+        previous_resource = (
+            "projects/comfforts-platform-non-prod/locations/us-west1/"
+            "keyRings/platform/cryptoKeys/identity/cryptoKeyVersions/1"
+        )
+        client = FakeCloudKmsClient(
+            {
+                current_resource: jwk.ECKey.import_key(
+                    raw_keys["current"]
+                ).raw_value,
+                previous_resource: jwk.ECKey.import_key(
+                    raw_keys["previous"]
+                ).raw_value,
+            }
+        )
+        current = KmsKeyVersion("kms-version-2", current_resource)
+        previous = KmsKeyVersion("kms-version-1", previous_resource)
+        adapter = CloudKmsAssertionKeys(
+            client,
+            active_key=current,
+            published_keys=(previous, current),
+        )
+
+        signature = asyncio.run(adapter.sign_digest(b"d" * 32))
+        public_keys = asyncio.run(adapter.verification_keys())
+
+        self.assertEqual(len(signature), 64)
+        self.assertEqual(
+            {item["kid"] for item in public_keys},
+            {"kms-version-1", "kms-version-2"},
+        )
+        self.assertTrue(all("d" not in item for item in public_keys))
+        self.assertEqual(client.sign_requests[0]["name"], current_resource)
+        self.assertEqual(len(client.public_key_requests), 2)
+
+        client.corrupt_signature_checksum = True
+        with self.assertRaises(AssertionUnavailable):
+            asyncio.run(adapter.sign_digest(b"e" * 32))
+
+
+class ApplicationVerificationTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.clock = FixedClock(10_000)
+        _, self.keys = assertion_components(self.clock)
+        self.jwks = {"keys": list(asyncio.run(self.keys.verification_keys()))}
+        self.payload = {
+            "contract_version": 1,
+            "issuer": "https://accounts.google.com",
+            "subject": "verified-subject",
+            "audience": "urn:comfforts:app-platform:audience:alpha-app",
+            "issued_at": 10_000,
+            "expires_at": 10_060,
+            "correlation_id": "correlation-0001",
+        }
+
+    def verifier(
+        self,
+        *,
+        clock: FixedClock | None = None,
+        expected_issuer: str = "https://accounts.google.com",
+        expected_audience: str = (
+            "urn:comfforts:app-platform:audience:alpha-app"
+        ),
+        fetcher: InMemoryJwksFetcher | None = None,
+    ) -> ApplicationIdentityVerifier:
+        return ApplicationIdentityVerifier(
+            expected_issuer=expected_issuer,
+            expected_audience=expected_audience,
+            key_fetcher=fetcher or InMemoryJwksFetcher([self.jwks]),
+            clock=clock or self.clock,
+        )
+
+    def test_application_verifier_rejects_invalid_assertions_with_stable_codes(
+        self,
+    ) -> None:
+        valid = signed_test_assertion(self.keys, self.payload)
+        signature_parts = valid.split(".")
+        signature = signature_parts[2]
+        forged = ".".join(
+            (
+                signature_parts[0],
+                signature_parts[1],
+                ("A" if signature[0] != "A" else "B") + signature[1:],
+            )
+        )
+        wrong_version = dict(self.payload, contract_version=2)
+        wrong_issuer = dict(self.payload, issuer="https://issuer.example")
+        wrong_audience = dict(
+            self.payload,
+            audience="urn:comfforts:app-platform:audience:other-app",
+        )
+        overlong = dict(self.payload, expires_at=10_061)
+        cases = (
+            ("missing", None, self.clock, "assertion_missing"),
+            ("malformed", "not-an-assertion", self.clock, "assertion_malformed"),
+            ("forged", forged, self.clock, "assertion_signature_invalid"),
+            (
+                "wrong version",
+                signed_test_assertion(self.keys, wrong_version),
+                self.clock,
+                "identity_contract_invalid",
+            ),
+            (
+                "wrong issuer",
+                signed_test_assertion(self.keys, wrong_issuer),
+                self.clock,
+                "identity_issuer_invalid",
+            ),
+            (
+                "wrong audience",
+                signed_test_assertion(self.keys, wrong_audience),
+                self.clock,
+                "identity_audience_invalid",
+            ),
+            (
+                "expired after skew",
+                valid,
+                FixedClock(10_091),
+                "identity_expired",
+            ),
+            (
+                "premature beyond skew",
+                signed_test_assertion(
+                    self.keys,
+                    dict(self.payload, issued_at=10_031, expires_at=10_091),
+                ),
+                self.clock,
+                "identity_not_yet_valid",
+            ),
+            (
+                "lifetime too long",
+                signed_test_assertion(self.keys, overlong),
+                self.clock,
+                "identity_lifetime_invalid",
+            ),
+        )
+
+        for label, assertion, clock, code in cases:
+            with self.subTest(label=label):
+                result = asyncio.run(
+                    self.verifier(clock=clock).verify(assertion)
+                )
+                self.assertFalse(result.accepted)
+                self.assertEqual(result.code, code)
+                self.assertIsNone(result.identity)
+
+    def test_unknown_key_refreshes_once_and_rotation_overlap_verifies(self) -> None:
+        valid = signed_test_assertion(self.keys, self.payload)
+        current = next(
+            item
+            for item in self.jwks["keys"]
+            if item["kid"] == "ap-m6-w6-current-test-only"
+        )
+        previous = next(
+            item
+            for item in self.jwks["keys"]
+            if item["kid"] == "ap-m6-w6-previous-test-only"
+        )
+        fetcher = InMemoryJwksFetcher(
+            [
+                {"keys": [previous]},
+                {"keys": [current, previous]},
+            ]
+        )
+        verifier = self.verifier(fetcher=fetcher)
+
+        result = asyncio.run(verifier.verify(valid))
+
+        self.assertTrue(result.accepted)
+        self.assertEqual(fetcher.fetch_count, 2)
+
+        raw_keys = json.loads(
+            (PROJECT_ROOT / "tests/fixtures/assertion-test-keys.jwk.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        previous_keys = InMemoryAssertionKeys(
+            raw_keys["previous"],
+            self.jwks["keys"],
+        )
+        previous_assertion = signed_test_assertion(previous_keys, self.payload)
+        overlap_result = asyncio.run(verifier.verify(previous_assertion))
+        self.assertTrue(overlap_result.accepted)
+        self.assertEqual(fetcher.fetch_count, 2)
+
+    def test_clock_skew_boundary_is_inclusive_without_a_replay_claim(self) -> None:
+        expiry_boundary = signed_test_assertion(self.keys, self.payload)
+        future_boundary = signed_test_assertion(
+            self.keys,
+            dict(self.payload, issued_at=10_030, expires_at=10_090),
+        )
+        expiry_verifier = self.verifier(clock=FixedClock(10_090))
+        future_verifier = self.verifier(clock=FixedClock(10_000))
+
+        first = asyncio.run(expiry_verifier.verify(expiry_boundary))
+        repeated = asyncio.run(expiry_verifier.verify(expiry_boundary))
+        future = asyncio.run(future_verifier.verify(future_boundary))
+
+        self.assertTrue(first.accepted)
+        self.assertTrue(repeated.accepted)
+        self.assertTrue(future.accepted)
+
+    def test_unknown_and_stale_verification_keys_fail_closed(self) -> None:
+        valid = signed_test_assertion(self.keys, self.payload)
+        unknown = signed_test_assertion(
+            self.keys,
+            self.payload,
+            key_id="unknown-key-version",
+        )
+        unknown_fetcher = InMemoryJwksFetcher([self.jwks])
+        unknown_result = asyncio.run(
+            self.verifier(fetcher=unknown_fetcher).verify(unknown)
+        )
+        stale_fetcher = InMemoryJwksFetcher([self.jwks])
+        stale_clock = FixedClock(10_000)
+        stale_verifier = self.verifier(
+            clock=stale_clock,
+            fetcher=stale_fetcher,
+        )
+        self.assertTrue(asyncio.run(stale_verifier.verify(valid)).accepted)
+        stale_clock.value = 10_900
+        stale_fetcher.available = False
+        stale_result = asyncio.run(stale_verifier.verify(valid))
+
+        self.assertEqual(unknown_result.code, "assertion_key_unknown")
+        self.assertEqual(unknown_fetcher.fetch_count, 2)
+        self.assertFalse(stale_result.accepted)
+        self.assertEqual(stale_result.code, "verification_keys_unavailable")
+
+    def test_http_jwks_fetcher_verifies_without_external_network(self) -> None:
+        valid = signed_test_assertion(self.keys, self.payload)
+        observed: list[httpx.Request] = []
+
+        def platform(request: httpx.Request) -> httpx.Response:
+            observed.append(request)
+            return httpx.Response(200, json=self.jwks)
+
+        async def verify() -> Any:
+            async with httpx.AsyncClient(
+                transport=httpx.MockTransport(platform)
+            ) as client:
+                fetcher = HttpJwksFetcher(
+                    client,
+                    "https://apps-staging.comfforts.com/.well-known/jwks.json",
+                )
+                return await self.verifier(fetcher=fetcher).verify(valid)
+
+        result = asyncio.run(verify())
+
+        self.assertTrue(result.accepted)
+        self.assertEqual(len(observed), 1)
+        self.assertEqual(
+            str(observed[0].url),
+            "https://apps-staging.comfforts.com/.well-known/jwks.json",
+        )
+
 
 class SharedEdgeInterfaceTest(unittest.TestCase):
     def test_root_catalogue_is_a_safe_projection_of_the_bound_generation(self) -> None:
@@ -718,7 +1118,6 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
             "/_platform",
             "/_platform/status",
             "/.well-known",
-            "/.well-known/jwks.json",
         )
         malformed_paths = (
             ("/alpha//item", None),
@@ -960,6 +1359,8 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         )
         oidc = FakeGoogleOidc(identity)
         handoff = RecordingRouteHandoff()
+        clock = FixedClock(1_000)
+        assertion_issuer, verification_keys = assertion_components(clock)
         app = create_app(
             configuration,
             RuntimeAdapters(
@@ -967,10 +1368,12 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
                 route_handoff=handoff,
                 google_oidc=oidc,
                 identity_store=store,
-                clock=FixedClock(1_000),
+                clock=clock,
                 token_source=FixedTokenSource(
                     ["session-id-01234567890123456789"]
                 ),
+                assertion_issuer=assertion_issuer,
+                verification_key_source=verification_keys,
             ),
         )
 
@@ -1004,7 +1407,9 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         self.assertEqual(store.sessions[session_id].identity.email, "display@example.com")
         self.assertEqual(route_status, 503)
         self.assertEqual(route_headers.get_all(b"set-cookie"), [])
-        self.assertEqual(handoff.requests[0].identity, identity)
+        self.assertIsNotNone(
+            handoff.requests[0].verified_identity_assertion
+        )
         self.assertEqual(
             oidc.authentication_requests[0]["nonce"],
             "expected-nonce-0123456789012",
@@ -1033,6 +1438,8 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
             expires_at=10_000,
         )
         handoff = RecordingRouteHandoff()
+        clock = FixedClock(1_000)
+        assertion_issuer, verification_keys = assertion_components(clock)
         adapters = RuntimeAdapters(
             generation_source=source,
             route_handoff=handoff,
@@ -1040,8 +1447,10 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
                 PlatformIdentity(member["issuer"], member["subject"])
             ),
             identity_store=store,
-            clock=FixedClock(1_000),
+            clock=clock,
             token_source=FixedTokenSource([]),
+            assertion_issuer=assertion_issuer,
+            verification_key_source=verification_keys,
         )
         app = create_app(configuration, adapters)
 
@@ -1090,10 +1499,16 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
 
         self.assertEqual(status, 503)
         self.assertEqual(len(handoff.requests), 1)
-        self.assertIsNone(handoff.requests[0].identity)
+        self.assertIsNone(handoff.requests[0].verified_identity_assertion)
 
     def test_public_route_carries_identity_only_for_a_valid_session(self) -> None:
-        configuration, source = configured_generation(compiled_generation())
+        document = compiled_generation()
+        attachment = document["routes"][0]["attachments"][0]
+        attachment["identity_requirement"] = "verified"
+        attachment["audience"] = (
+            "urn:comfforts:app-platform:audience:alpha-app"
+        )
+        configuration, source = configured_generation(document)
         identity = PlatformIdentity(
             "https://accounts.google.com", "optional-subject"
         )
@@ -1103,13 +1518,17 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
             expires_at=10_000,
         )
         handoff = RecordingRouteHandoff()
+        clock = FixedClock(1_000)
+        assertion_issuer, verification_keys = assertion_components(clock)
         app = create_app(
             configuration,
             RuntimeAdapters(
                 generation_source=source,
                 route_handoff=handoff,
                 identity_store=store,
-                clock=FixedClock(1_000),
+                clock=clock,
+                assertion_issuer=assertion_issuer,
+                verification_key_source=verification_keys,
             ),
         )
 
@@ -1122,8 +1541,12 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         )
         asyncio.run(request_during_lifespan(app, "/alpha"))
 
-        self.assertEqual(handoff.requests[0].identity, identity)
-        self.assertIsNone(handoff.requests[1].identity)
+        self.assertIsNotNone(
+            handoff.requests[0].verified_identity_assertion
+        )
+        self.assertIsNone(
+            handoff.requests[1].verified_identity_assertion
+        )
 
     def test_identity_dependency_failures_are_closed_and_redacted(self) -> None:
         configuration, source = configured_generation(
@@ -1274,6 +1697,165 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
         self.assertIn(b"Max-Age=0", headers.get_all(b"set-cookie")[0])
         self.assertEqual(invalid_status, 400)
         self.assertEqual(invalid_body, b"invalid return location\n")
+
+    def test_edge_replaces_visitor_assertion_with_minimized_application_assertion(
+        self,
+    ) -> None:
+        configuration, source = configured_generation(
+            protected_generation("authenticated")
+        )
+        identity = PlatformIdentity(
+            "https://accounts.google.com",
+            "verified-subject",
+            "display-only@example.com",
+        )
+        store = InMemoryIdentityStore()
+        session_id = "assertion-session-012345678901"
+        store.sessions[session_id] = PlatformSession(identity, expires_at=20_000)
+        clock = FixedClock(10_000)
+        issuer, keys = assertion_components(
+            clock,
+            ["request-correlation-0001"],
+        )
+        handoff = RecordingRouteHandoff()
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                route_handoff=handoff,
+                identity_store=store,
+                clock=clock,
+                assertion_issuer=issuer,
+                verification_key_source=keys,
+            ),
+        )
+
+        _, (status, _, _) = asyncio.run(
+            request_during_lifespan(
+                app,
+                "/alpha/report",
+                headers=(
+                    (b"cookie", f"__Host-comfforts-session={session_id}".encode()),
+                    (
+                        b"x-comfforts-verified-identity",
+                        b"visitor-controlled-forged-value",
+                    ),
+                ),
+            )
+        )
+        assertion = handoff.requests[0].verified_identity_assertion
+        verifier = ApplicationIdentityVerifier(
+            expected_issuer="https://accounts.google.com",
+            expected_audience=(
+                "urn:comfforts:app-platform:audience:alpha-app"
+            ),
+            key_fetcher=InMemoryJwksFetcher(
+                [{"keys": list(asyncio.run(keys.verification_keys()))}]
+            ),
+            clock=clock,
+        )
+        result = asyncio.run(verifier.verify(assertion))
+
+        self.assertEqual(status, 503)
+        self.assertNotEqual(assertion, "visitor-controlled-forged-value")
+        self.assertTrue(result.accepted)
+        assert result.identity is not None
+        self.assertEqual(result.identity.subject, "verified-subject")
+        self.assertEqual(result.identity.issued_at, 10_000)
+        self.assertEqual(result.identity.expires_at, 10_060)
+        self.assertEqual(result.identity.correlation_id, "request-correlation-0001")
+        self.assertFalse(hasattr(result.identity, "email"))
+
+    def test_jwks_publishes_only_current_and_overlapping_public_keys(self) -> None:
+        configuration, source = configured_generation(compiled_generation())
+        clock = FixedClock(10_000)
+        _, keys = assertion_components(clock)
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                verification_key_source=keys,
+            ),
+        )
+
+        _, (status, headers, body) = asyncio.run(
+            request_during_lifespan(app, "/.well-known/jwks.json")
+        )
+        payload = json.loads(body)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(headers[b"cache-control"], b"public, max-age=900")
+        self.assertEqual(headers[b"content-type"], b"application/json")
+        self.assertEqual(len(payload["keys"]), 2)
+        self.assertEqual(
+            {item["kid"] for item in payload["keys"]},
+            {
+                "ap-m6-w6-current-test-only",
+                "ap-m6-w6-previous-test-only",
+            },
+        )
+        self.assertTrue(all("d" not in item for item in payload["keys"]))
+
+    def test_protected_assertion_failure_is_closed_but_public_remains_anonymous(
+        self,
+    ) -> None:
+        clock = FixedClock(10_000)
+        issuer, keys = assertion_components(clock)
+        keys.available = False
+        identity = PlatformIdentity(
+            "https://accounts.google.com", "verified-subject"
+        )
+        store = InMemoryIdentityStore()
+        session_id = "failed-signing-session-0123456"
+        store.sessions[session_id] = PlatformSession(identity, expires_at=20_000)
+        protected_configuration, protected_source = configured_generation(
+            protected_generation("authenticated")
+        )
+        protected_handoff = RecordingRouteHandoff()
+        protected_app = create_app(
+            protected_configuration,
+            RuntimeAdapters(
+                generation_source=protected_source,
+                route_handoff=protected_handoff,
+                identity_store=store,
+                clock=clock,
+                assertion_issuer=issuer,
+            ),
+        )
+        public_document = compiled_generation()
+        public_attachment = public_document["routes"][0]["attachments"][0]
+        public_attachment["identity_requirement"] = "verified"
+        public_attachment["audience"] = (
+            "urn:comfforts:app-platform:audience:alpha-app"
+        )
+        public_configuration, public_source = configured_generation(public_document)
+        public_handoff = RecordingRouteHandoff()
+        public_app = create_app(
+            public_configuration,
+            RuntimeAdapters(
+                generation_source=public_source,
+                route_handoff=public_handoff,
+                identity_store=store,
+                clock=clock,
+                assertion_issuer=issuer,
+            ),
+        )
+        cookie = ((b"cookie", f"__Host-comfforts-session={session_id}".encode()),)
+
+        _, (protected_status, _, protected_body) = asyncio.run(
+            request_during_lifespan(protected_app, "/alpha", headers=cookie)
+        )
+        _, (public_status, _, _) = asyncio.run(
+            request_during_lifespan(public_app, "/alpha", headers=cookie)
+        )
+
+        self.assertEqual(protected_status, 503)
+        self.assertEqual(protected_body, b"identity assertion unavailable\n")
+        self.assertFalse(protected_handoff.requests)
+        self.assertEqual(public_status, 503)
+        self.assertIsNone(
+            public_handoff.requests[0].verified_identity_assertion
+        )
 
     def test_non_active_application_entries_are_excluded_from_catalogue_and_routes(
         self,

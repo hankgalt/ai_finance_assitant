@@ -272,8 +272,11 @@ version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "authlib" },
+    { name = "cryptography" },
     { name = "google-cloud-firestore" },
+    { name = "google-cloud-kms" },
     { name = "google-cloud-storage" },
+    { name = "google-crc32c" },
     { name = "httpx" },
     { name = "starlette" },
     { name = "uvicorn" },
@@ -282,8 +285,11 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "authlib", specifier = ">=1.9,<1.10" },
+    { name = "cryptography", specifier = ">=50,<51" },
     { name = "google-cloud-firestore", specifier = ">=2.34,<2.35" },
+    { name = "google-cloud-kms", specifier = ">=3.19,<3.20" },
     { name = "google-cloud-storage", specifier = ">=3.17,<3.18" },
+    { name = "google-crc32c", specifier = ">=1.9,<1.10" },
     { name = "httpx", specifier = ">=0.28,<0.29" },
     { name = "starlette", specifier = ">=1.10,<1.11" },
     { name = "uvicorn", specifier = ">=0.54,<0.55" },
@@ -419,6 +425,23 @@ wheels = [
 ]
 
 [[package]]
+name = "google-cloud-kms"
+version = "3.19.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", extra = ["grpc"] },
+    { name = "google-auth" },
+    { name = "grpc-google-iam-v1" },
+    { name = "grpcio" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/75/af/732df1b64cd783ef626f139018c49ee10f55f74b1f2d436d9fd12ee0d9bc/google_cloud_kms-3.19.0.tar.gz", hash = "sha256:967f02479b960aa6b6059c78adf2c6fc1b39bd114615a79d872f63b3d7b105aa", size = 436199, upload-time = "2026-11-12T14:23:17.01Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e4/c0/7cee7bad90e4d05e0b4fedad472486be36abaf5842f6d7a7913faa20892d/google_cloud_kms-3.19.0-py3-none-any.whl", hash = "sha256:6b48ae9a7551b27f14a5f7f5a22c3f60bfa06e393d8785568f4397a9c7db021c", size = 352327, upload-time = "2026-11-12T14:22:28.479Z" },
+]
+
+[[package]]
 name = "google-cloud-storage"
 version = "3.17.1"
 source = { registry = "https://pypi.org/simple" }
@@ -485,6 +508,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/62/b6/bc095b23a3e0d978e75c8c18cabe4c11f791837410670e4486f0d539bfba/googleapis_common_protos-1.76.0.tar.gz", hash = "sha256:71db0e44a1d4c2dd024ebad44ca67129cc1e2892e4861df466764749d5ef8642", size = 156250, upload-time = "2026-10-22T23:43:36.263Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/6d/78dc67a9e779e594b49bf62604034d3a6aa428a55afc729cafda4b7333e1/googleapis_common_protos-1.76.0-py3-none-any.whl", hash = "sha256:59e13344a9f3651aa201a03e2bee815a3bf43a4baf1f9ff8a9b62a840ce25fac", size = 307707, upload-time = "2026-10-22T23:43:10.445Z" },
+]
+
+[package.optional-dependencies]
+grpc = [
+    { name = "grpcio" },
+]
+
+[[package]]
+name = "grpc-google-iam-v1"
+version = "0.14.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "googleapis-common-protos", extra = ["grpc"] },
+    { name = "grpcio" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/97/24/0ef24ccdd91ce07be7d6466d39becdd4fbb33e52426ba2391fe334d24bca/grpc_google_iam_v1-0.14.6.tar.gz", hash = "sha256:fc0a683ace0a149184fcd08d667dd64d51ae65e5698e86f7136aa6002a8b5373", size = 24088, upload-time = "2026-10-22T23:43:37.377Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/61/e0/0524fbc82835c22e711ac3e7d7dfb3ee997f99f5eaa22ba6b31cc17b753d/grpc_google_iam_v1-0.14.6-py3-none-any.whl", hash = "sha256:042705a3ce306f289b9c6eafc3453b23f953bab955adcac3c36545758ccd681a", size = 33089, upload-time = "2026-10-22T23:43:12.096Z" },
 ]
 
 [[package]]

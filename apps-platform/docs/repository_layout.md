@@ -1,7 +1,7 @@
 # App Platform repository layout
 
-Status: authoritative; AP-M6 sessions and admission recorded; no provider operation or
-infrastructure implemented
+Status: authoritative; AP-M6 assertions and application verification recorded; no provider
+operation or infrastructure implemented
 
 The project is organized as an extractable repository root. Canonical platform files remain under
 `apps-platform/` while colocated so a later history-preserving subtree extraction can make this
@@ -19,7 +19,7 @@ directory the new repository root.
 | `integrations/` | Inactive application-adoption inputs with no consuming-app authority |
 | `contracts/` | Version 1 schemas, deterministic reference compiler, reviewed contract vectors, and bounded runtime JSON loading |
 | `fixtures/` | In-process reference edge, synthetic identity, three independent Fixture Applications with app-owned test state, and reviewed registration generations |
-| `edge/` | AP-M6 Shared Edge interface, immutable-generation source adapter, catalogue projection, registered routing, Google OIDC/session adapters, admission, and accepted runtime behavior only |
+| `edge/` | AP-M6 Shared Edge interface, immutable-generation source adapter, catalogue/routing, Google OIDC/sessions, admission, ES256 assertion/JWKS adapters, independent application verification, and accepted runtime behavior only |
 | `tests/` | Behavior-named governance, contract, Fixture, and runtime checks plus explicitly synthetic fixed test material |
 | `pyproject.toml` and `uv.lock` | Direct runtime dependencies and complete frozen transitive resolution |
 | `Makefile` | Portable project-local developer and verification interface |

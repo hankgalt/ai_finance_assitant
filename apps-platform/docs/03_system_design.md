@@ -1,7 +1,7 @@
 # App Platform system design
 
 Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile;
-sessions and admission implemented locally; no provider operation or live infrastructure
+assertions and application verification implemented locally; no provider operation or live infrastructure
 is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
@@ -651,8 +651,27 @@ authenticated and restricted routing fail closed. Restricted admission compares 
 issuer-and-subject pair, never email. Logout deletes server state, clears the cookie, and accepts
 only a root or active registered platform-relative return location. Production provider and store
 adapters are exercised with deterministic local transports; default verification performs no
-provider call. The route handoff may receive admitted identity internally but remains unsigned and
-closed until AP-M6-W6 implements the Version 1 assertion.
+provider call. AP-M6-W6 replaces the internal admitted identity at the handoff with its signed
+Version 1 assertion.
+
+AP-M6-W6 replaces any visitor-supplied identity value with a compact ES256 JWS only after identity
+is admitted and the selected attachment supplies its application-specific audience. The payload is
+exactly the Version 1 claim contract: contract version, canonical Google issuer, immutable subject,
+audience, issued and expiry times, and one request correlation identifier. It contains no email,
+session identifier, provider token, role, Feature Entitlement, or shared application principal.
+Assertions last 60 seconds and the independent application verifier accepts at most 30 seconds of
+clock skew.
+
+One signing seam has a deterministic fixed-key adapter and a Cloud KMS adapter bound to exact
+`us-west1` key-version resources. The KMS adapter validates digest, signature, public-key CRC32C,
+algorithm, and returned resource identity before accepting a result. The reserved JWKS path emits
+only bounded P-256 public verification material for the active and overlap keys with a 15-minute
+cache limit. The application verifier accepts an assertion, exact issuer, exact application
+audience, key fetcher, and time; it refreshes once for an unknown key and rejects unavailable or
+stale material. It returns Version 1 Verified Identity Context only after contract, signature,
+issuer, audience, lifetime, and clock validation. It creates no Application Principal, grants no
+Feature Entitlement, and makes no distributed replay-prevention claim. The route handoff remains
+closed with `503` because attachment resolution and proxy delivery belong to AP-M6-W7 and W8.
 
 The initial `qualification-v1` request profile applies before target selection and permits lower
 environment settings but no higher value without a reviewed profile change:

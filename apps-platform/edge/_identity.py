@@ -20,6 +20,7 @@ GOOGLE_DISCOVERY_URL = (
     "https://accounts.google.com/.well-known/openid-configuration"
 )
 GOOGLE_ISSUERS = ("https://accounts.google.com", "accounts.google.com")
+CANONICAL_GOOGLE_ISSUER = "https://accounts.google.com"
 
 
 class IdentityUnavailable(RuntimeError):
@@ -35,7 +36,7 @@ class PlatformIdentity:
     email: str | None = None
 
     def __post_init__(self) -> None:
-        if self.issuer not in GOOGLE_ISSUERS:
+        if self.issuer != CANONICAL_GOOGLE_ISSUER:
             raise ValueError("unsupported identity issuer")
         if (
             not isinstance(self.subject, str)
@@ -405,7 +406,7 @@ class AuthlibGoogleOidc:
             if issuer not in GOOGLE_ISSUERS or not isinstance(subject, str) or not subject:
                 raise IdentityUnavailable("identity provider unavailable")
             return PlatformIdentity(
-                issuer=issuer,
+                issuer=CANONICAL_GOOGLE_ISSUER,
                 subject=subject,
                 email=email if isinstance(email, str) else None,
             )

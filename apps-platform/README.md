@@ -1,9 +1,9 @@
 # Comfforts App Platform
 
 Status: AP-M6 implementation in progress; immutable generation loading, catalogue, routing,
-Platform Sessions, and admission are implemented locally, while identity assertions,
-attachment-provider, and proxy behavior remain unavailable. AP-M4 remains Fixture-qualified and
-AP-M5 remains planning-validated.
+Platform Sessions, admission, identity assertions, and application verification are implemented
+locally, while attachment-provider and proxy behavior remain unavailable. AP-M4 remains
+Fixture-qualified and AP-M5 remains planning-validated.
 No Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
 implemented or qualified.
 
@@ -53,9 +53,14 @@ AP-M6-W5 adds Google OIDC authorization-code-with-PKCE behavior, opaque host-onl
 Platform Sessions, Firestore and in-memory session adapters, optional public identity, exact
 issuer-and-subject restricted admission, and platform-owned logout. Deterministic tests replace
 provider and Firestore I/O; no OAuth credential or provider operation is required. Later work
-packages own signed identity assertions, attachment-provider, proxy, and operational behavior. No
-AP-M6 package authorizes Terraform, cloud, DNS, identity configuration, deployment, or Live
-mutation.
+packages own attachment-provider, proxy, and operational behavior. No AP-M6 package authorizes
+Terraform, cloud, DNS, identity configuration, deployment, or Live mutation.
+
+AP-M6-W6 replaces admitted identity at the route handoff with a minimized, application-audience-
+bound ES256 assertion. It adds deterministic and Cloud KMS signing adapters, public-only JWKS with
+current/overlap keys, and an independent application verifier with bounded caching and fail-closed
+refresh behavior. Fixed synthetic keys and provider fakes exercise the adapters locally; no KMS
+key, credential, external request, or provider resource is used.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

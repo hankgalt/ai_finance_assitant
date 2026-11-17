@@ -6,9 +6,6 @@ import html
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from ._identity import PlatformIdentity
-
-
 MAX_PATH_BYTES = 4_096
 
 
@@ -20,7 +17,8 @@ class RoutedApplicationRequest:
     attachment_id: str
     path: str
     query_string: bytes
-    identity: PlatformIdentity | None = None
+    identity_audience: str | None
+    verified_identity_assertion: str | None = None
 
 
 class RouteHandoff(Protocol):
@@ -118,7 +116,6 @@ def routed_application_request(
     route: dict[str, Any],
     path: str,
     query_string: bytes,
-    identity: PlatformIdentity | None = None,
 ) -> RoutedApplicationRequest | None:
     """Select the longest mount and apply its declared path rewrite."""
 
@@ -157,7 +154,7 @@ def routed_application_request(
         attachment_id=attachment["attachment_id"],
         path=forwarded_path,
         query_string=query_string,
-        identity=identity,
+        identity_audience=attachment["audience"],
     )
 
 

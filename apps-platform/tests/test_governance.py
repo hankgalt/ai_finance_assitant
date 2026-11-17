@@ -36,10 +36,12 @@ class ProjectAuthorityTest(unittest.TestCase):
             "fixtures/reference_edge.py",
             "fixtures/registrations/manifest.v1.json",
             "edge/__init__.py",
+            "edge/_assertions.py",
             "edge/_generation.py",
             "edge/_identity.py",
             "edge/_routing.py",
             "edge/_runtime.py",
+            "edge/verification.py",
             "prompts/README.md",
             "prompts/starting_prompt.md",
             "pyproject.toml",
@@ -47,6 +49,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             "tests/test_edge_runtime.py",
             "tests/test_fixtures.py",
             "tests/test_governance.py",
+            "tests/fixtures/assertion-test-keys.jwk.json",
             "tests/fixtures/oidc-test-private.jwk.json",
             "uv.lock",
         )
@@ -79,8 +82,11 @@ class ProjectAuthorityTest(unittest.TestCase):
             pyproject["project"]["dependencies"],
             [
                 "Authlib>=1.9,<1.10",
+                "cryptography>=50,<51",
+                "google-cloud-kms>=3.19,<3.20",
                 "google-cloud-firestore>=2.34,<2.35",
                 "google-cloud-storage>=3.17,<3.18",
+                "google-crc32c>=1.9,<1.10",
                 "httpx>=0.28,<0.29",
                 "starlette>=1.10,<1.11",
                 "uvicorn>=0.54,<0.55",
@@ -88,14 +94,20 @@ class ProjectAuthorityTest(unittest.TestCase):
         )
         self.assertFalse(pyproject["tool"]["uv"]["package"])
         self.assertEqual(packages["authlib"]["version"], "1.9.8")
+        self.assertEqual(packages["cryptography"]["version"], "50.0.2")
+        self.assertEqual(packages["google-cloud-kms"]["version"], "3.19.0")
         self.assertEqual(packages["google-cloud-firestore"]["version"], "2.34.1")
         self.assertEqual(packages["google-cloud-storage"]["version"], "3.17.1")
+        self.assertEqual(packages["google-crc32c"]["version"], "1.9.0")
         self.assertEqual(packages["httpx"]["version"], "0.28.1")
         self.assertEqual(packages["starlette"]["version"], "1.10.0")
         self.assertEqual(packages["uvicorn"]["version"], "0.54.0")
         self.assertIn("hash", packages["authlib"]["sdist"])
+        self.assertIn("hash", packages["cryptography"]["sdist"])
+        self.assertIn("hash", packages["google-cloud-kms"]["sdist"])
         self.assertIn("hash", packages["google-cloud-firestore"]["sdist"])
         self.assertIn("hash", packages["google-cloud-storage"]["sdist"])
+        self.assertIn("hash", packages["google-crc32c"]["sdist"])
         self.assertIn("hash", packages["httpx"]["sdist"])
         self.assertIn("hash", packages["starlette"]["sdist"])
         self.assertIn("hash", packages["uvicorn"]["sdist"])
@@ -161,12 +173,12 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("AP-M6", overview)
         self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
         self.assertIn(
-            "identity assertions, attachment-provider, and proxy behavior remain unavailable",
+            "attachment-provider and proxy behavior remain unavailable",
             normalized_overview,
         )
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
-        self.assertIn("AP-M6 sessions and admission recorded", layout)
+        self.assertIn("AP-M6 assertions and application verification recorded", layout)
         self.assertIn("`contracts/`", layout)
         self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)

@@ -1,7 +1,7 @@
 # App Platform threat model
 
 Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls;
-sessions and admission implemented locally; no provider operation or live infrastructure
+assertions and application verification implemented locally; no provider operation or live infrastructure
 is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
@@ -283,10 +283,10 @@ ingress posture. `F` exercises spoofed headers and direct calls to protected fix
 but can prove only assertion-side denial in one process. `L` must read back and test the actual
 ingress and IAM configuration. `A` repeats the gate for a real application.
 
-**Residual risk:** The planned load-balancer, Cloud Run ingress, edge caller, and application-side
-verification layers name a future network direct-bypass control; they are not implemented until
-separately approved infrastructure and deployment slices complete. Fixture denial must never be
-reported as origin isolation.
+**Residual risk:** AP-M6-W6 implements local visitor-value replacement and independent assertion
+verification, but the planned load-balancer, Cloud Run ingress, and edge caller remain future
+network direct-bypass controls. They are not implemented until separately approved infrastructure
+and deployment slices complete. Local verifier denial must never be reported as origin isolation.
 
 ### AP-TM-005 · Identity spoofing, replay, and confused audience
 
@@ -304,11 +304,11 @@ missing, forged, expired, wrong-issuer, wrong-audience, and cross-application as
 signer, key discovery, algorithms, audience issuance, and clock behavior.
 
 **Residual risk:** AP-M6-W5 locally validates Google OIDC through a PKCE-bound, one-use flow and
-matches restricted identities by exact issuer and subject. It retains no provider token and makes
-public admission independent of session-store availability. ES256 assertions, application
-audiences, header replacement, KMS, and public-key overlap remain unimplemented until AP-M6-W6;
-provider operation remains unqualified. The demo accepts residual cross-instance replay risk
-because it makes no distributed replay-prevention claim.
+matches restricted identities by exact issuer and subject. AP-M6-W6 locally issues and independently
+verifies minimized ES256 assertions with exact audiences, 60-second lifetimes, 30-second skew,
+versioned keys, and bounded public-key overlap/cache behavior. Cloud KMS operation and application
+delivery remain unqualified. The demo accepts residual cross-instance replay risk because it makes
+no distributed replay-prevention claim.
 
 ### AP-TM-006 · Admission mistaken for feature authorization
 
@@ -400,8 +400,10 @@ artifacts. `F`, `L`, and `A` inspect generated evidence and logs for redaction w
 prohibited payloads themselves.
 
 **Residual risk:** Seven-day owner-only logging, 30-day evidence, no external export, and minimized
-fields are selected but not implemented. Provider-mandated audit metadata may still include operator
-or network information and remains subject to provider access and retention behavior.
+fields are selected but not implemented. AP-M6-W6 assertions exclude email, sessions, provider
+tokens, roles, and application data, but operational redaction remains AP-M6-W9 work. Provider-
+mandated audit metadata may still include operator or network information and remains subject to
+provider access and retention behavior.
 
 ### AP-TM-011 · Unauthorized control-plane change, drift, or supply-chain substitution
 
@@ -464,9 +466,11 @@ DNS, TLS, key rotation, certificate, provider failure, and recovery behavior.
 
 **Residual risk:** Local immutable-generation loading fails startup on source, contract, or digest
 failure. AP-M6-W5 fails protected admission closed on provider or session-store failure while public
-routes remain anonymously usable. The selected DNS, certificate, activation, and owner-confirmed
-rollback sequence is not implemented or qualified. Provider availability and disaster recovery
-beyond the 15-minute post-approval rollback objective remain outside the demo commitment.
+routes remain anonymously usable. AP-M6-W6 fails protected assertion issuance and stale or
+unavailable verification keys closed; public routes may remain anonymous. The selected DNS,
+certificate, activation, and owner-confirmed rollback sequence is not implemented or qualified.
+Provider availability and disaster recovery beyond the 15-minute post-approval rollback objective
+remain outside the demo commitment.
 
 ### AP-TM-014 · Integration Draft or fixture mistaken for Application Adoption
 
