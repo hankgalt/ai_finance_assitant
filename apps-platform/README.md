@@ -1,9 +1,9 @@
 # Comfforts App Platform
 
-Status: AP-M6 implementation in progress; the locked ASGI foundation and immutable generation
-loading are implemented locally, while routing, identity, attachment-provider, and proxy behavior
-remain unavailable. AP-M4 remains Fixture-qualified and AP-M5 remains planning-validated. No
-Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
+Status: AP-M6 implementation in progress; immutable generation loading, the root catalogue, and
+registered route selection are implemented locally, while identity, attachment-provider, and proxy
+behavior remain unavailable. AP-M4 remains Fixture-qualified and AP-M5 remains planning-validated.
+No Terraform configuration, cloud resource, deployment, Live evidence, or Application Adoption is
 implemented or qualified.
 
 Comfforts App Platform is a separately governed project temporarily colocated in the
@@ -45,9 +45,12 @@ AP-M3 through AP-M5 are merged and pass their deterministic gates. AP-M6-W1 is a
 AP-M6-W2 supplies the locked dependency environment and closed-default ASGI foundation. AP-M6-W3
 adds bounded compiled-generation parsing, exact object/content/generation binding, and an injected
 Cloud Storage source adapter. It performs no provider call during construction or verification and
-cannot discover, compile, activate, route, or mutate a generation. Later work packages own routing,
-identity, attachment-provider, proxy, and operational behavior. No AP-M6 package authorizes
-Terraform, cloud, DNS, identity configuration, deployment, or Live mutation.
+cannot discover, compile, activate, or mutate a generation. AP-M6-W4 renders the compiled catalogue
+and performs canonical, lifecycle-aware route and mount selection. Its deterministic handoff
+remains closed with `503`; it resolves no target and forwards no application request or response.
+Later work packages own identity, attachment-provider, proxy,
+and operational behavior. No AP-M6 package authorizes Terraform, cloud, DNS, identity
+configuration, deployment, or Live mutation.
 
 All canonical platform files remain under `apps-platform/` so this directory can later be extracted
 as the root of a dedicated repository while preserving its Git history.

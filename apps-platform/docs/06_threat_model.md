@@ -1,8 +1,8 @@
 # App Platform threat model
 
 Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls;
-immutable generation loading implemented locally; no provider operation or live infrastructure is
-implemented
+catalogue and registered routing implemented locally; no provider operation or live infrastructure
+is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
 assigns control ownership, and names the evidence required before a control may be called
@@ -225,8 +225,8 @@ becomes an executable provider command.
 and deterministic safe projection. `F` covers rendered catalogue behavior. `L` covers deployed
 headers and renderer configuration where applicable.
 
-**Residual risk:** Item 4 selects bounded HTML rendering for Fixture evidence. Live renderer
-technology, response headers, and provider limits remain later decisions.
+**Residual risk:** AP-M6-W4 implements local escaped HTML projection with a no-store response. Live
+headers, browser behavior, and provider limits remain unqualified until the deployed gates pass.
 
 ### AP-TM-002 · Route confusion, shadowing, and traversal
 
@@ -243,8 +243,9 @@ conflicts. Unknown and malformed paths fail closed without fallback to another a
 `F` covers exact paths, subpaths, near-prefixes, encodings, reserved paths, and unmatched requests.
 `L` confirms the provider adapter implements the same behavior.
 
-**Residual risk:** Provider-specific path decoding can differ from the logical contract and requires
-adapter-level conformance tests before live qualification.
+**Residual risk:** AP-M6-W4 compares raw and decoded ASGI paths, rejects alternate encodings, and
+uses segment-bounded route and mount selection locally. Uvicorn and provider-specific decoding still
+require process-local and Live conformance gates before qualification.
 
 ### AP-TM-003 · Malicious or mistaken attachment reference
 
@@ -438,7 +439,8 @@ inventory, and observed multi-instance behavior.
 
 **Residual risk:** AP-M6-W2 implements construction-time profile rejection and an unconfigured
 closed response. AP-M6-W3 bounds compiled-generation bytes and fails closed on load or validation
-failure. The selected request and proxy limits remain unimplemented until their named slices pass.
+failure. AP-M6-W4 enforces the 4,096-byte path limit. The remaining request and proxy limits remain
+unimplemented until their named slices pass.
 The AP-M6 token buckets are per instance, are not a WAF or distributed rate limit, and can permit
 twice their per-instance values when both selected instances are active. Provider limits can be
 exceeded briefly, and budget notifications do not cap spend.

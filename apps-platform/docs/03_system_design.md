@@ -1,8 +1,8 @@
 # App Platform system design
 
 Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile;
-immutable generation loading implemented locally; no provider operation or live infrastructure is
-implemented
+catalogue and registered routing implemented locally; no provider operation or live infrastructure
+is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
 and accepted architecture decisions. It is authoritative only inside the App Platform project. It
@@ -631,6 +631,16 @@ digest before binding the generation in memory. Any missing adapter, source fail
 document, invalid contract, or digest mismatch fails startup with a coarse code. Loading does not
 discover storage, compile registrations, follow a mutable pointer, activate a provider revision, or
 reload during the process lifetime.
+
+AP-M6-W4 renders only the active catalogue projection from that bound generation and escapes every
+value for HTML. One canonical raw-path parser rejects percent encoding, alternate separators,
+empty or dot segments, control or whitespace characters, decoded/raw disagreement, invalid UTF-8,
+and paths over 4,096 bytes. The same catch-all request path keeps reserved platform paths disjoint,
+selects only an active segment-bounded application prefix, selects the longest attachment mount,
+and applies the declared rewrite while preserving query bytes. Protected routes stop before the
+handoff until AP-M6-W5 implements admission. Public routes expose only an internal deterministic
+route-selection handoff exercised by a deterministic fake and still return `503`; AP-M6-W4 performs
+no attachment resolution or proxy operation.
 
 The initial `qualification-v1` request profile applies before target selection and permits lower
 environment settings but no higher value without a reviewed profile change:

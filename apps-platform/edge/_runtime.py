@@ -9,7 +9,7 @@ from typing import Literal
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse, Response
+from starlette.responses import HTMLResponse, PlainTextResponse, Response
 from starlette.routing import Route
 from starlette.types import ASGIApp
 
@@ -20,9 +20,26 @@ from ._generation import (
     LoadedGeneration,
     load_generation,
 )
+from ._routing import (
+    RouteHandoff,
+    is_reserved_path,
+    render_catalogue,
+    request_path,
+    route_admission_mode,
+    routed_application_request,
+    select_application_route,
+)
 
 
 DIGEST_PATTERN = re.compile(r"sha256:[0-9a-f]{64}")
+
+
+def _closed_response(status_code: int, message: str) -> PlainTextResponse:
+    return PlainTextResponse(
+        f"{message}\n",
+        status_code=status_code,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +99,7 @@ class RuntimeAdapters:
     """Injected external behavior used by the Shared Edge."""
 
     generation_source: GenerationSource | None = None
+    route_handoff: RouteHandoff | None = None
 
 
 def create_app(
@@ -107,17 +125,43 @@ def create_app(
                 raise RuntimeError(f"generation startup failed: {error.code}") from None
         yield
 
-    async def unavailable(_: Request) -> Response:
-        message = (
-            "platform routing unavailable\n"
-            if active_generation is not None
-            else "platform unavailable\n"
+    async def unavailable(request: Request) -> Response:
+        if active_generation is None:
+            return _closed_response(503, "platform unavailable")
+        path = request_path(request.scope)
+        if path is None:
+            return _closed_response(400, "invalid request")
+        if path == "/":
+            return HTMLResponse(
+                render_catalogue(active_generation.configuration),
+                headers={"Cache-Control": "no-store"},
+            )
+        if is_reserved_path(active_generation.configuration, path):
+            return _closed_response(404, "not found")
+        route = select_application_route(active_generation.configuration, path)
+        if route is None:
+            return _closed_response(404, "not found")
+        if (
+            route_admission_mode(
+                active_generation.configuration,
+                route["application_id"],
+            )
+            != "public"
+        ):
+            return _closed_response(503, "identity unavailable")
+        routed_request = routed_application_request(
+            route,
+            path,
+            request.scope.get("query_string", b""),
         )
-        return PlainTextResponse(
-            message,
-            status_code=503,
-            headers={"Cache-Control": "no-store"},
-        )
+        if routed_request is None:
+            return _closed_response(404, "not found")
+        if adapters.route_handoff is not None:
+            try:
+                await adapters.route_handoff.dispatch(routed_request)
+            except Exception:
+                pass
+        return _closed_response(503, "application forwarding unavailable")
 
     return Starlette(
         routes=[Route("/{path:path}", unavailable)],

@@ -37,6 +37,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             "fixtures/registrations/manifest.v1.json",
             "edge/__init__.py",
             "edge/_generation.py",
+            "edge/_routing.py",
             "edge/_runtime.py",
             "prompts/README.md",
             "prompts/starting_prompt.md",
@@ -149,12 +150,12 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("AP-M6", overview)
         self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
         self.assertIn(
-            "routing, identity, attachment-provider, and proxy behavior remain unavailable",
+            "identity, attachment-provider, and proxy behavior remain unavailable",
             normalized_overview,
         )
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
-        self.assertIn("AP-M6 immutable generation loading recorded", layout)
+        self.assertIn("AP-M6 catalogue and registered routing recorded", layout)
         self.assertIn("`contracts/`", layout)
         self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)
@@ -651,7 +652,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             normalized_threat_model,
         )
         self.assertIn(
-            "request and proxy limits remain unimplemented",
+            "remaining request and proxy limits remain unimplemented",
             normalized_threat_model,
         )
 
@@ -676,6 +677,7 @@ class ProjectAuthorityTest(unittest.TestCase):
 
         self.assertTrue((PROJECT_ROOT / "edge/__init__.py").is_file())
         self.assertTrue((PROJECT_ROOT / "edge/_generation.py").is_file())
+        self.assertTrue((PROJECT_ROOT / "edge/_routing.py").is_file())
         self.assertTrue((PROJECT_ROOT / "edge/_runtime.py").is_file())
 
         for reserved_reference in (

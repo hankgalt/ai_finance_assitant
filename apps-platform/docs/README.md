@@ -1,7 +1,7 @@
 # App Platform documentation
 
-Version 1.1 | Status: AP-M6 implementation in progress; immutable generation loading implemented
-locally; provider operation, Live, and Adoption qualification unavailable
+Version 1.1 | Status: AP-M6 implementation in progress; catalogue and registered routing
+implemented locally; provider operation, Live, and Adoption qualification unavailable
 
 This directory is the design authority for Comfforts App Platform. AP-M3 supplies Contract (`C`)
 evidence through the logical design, threat boundary, Version 1 schemas, deterministic compiler,
@@ -38,10 +38,12 @@ application migration, or production credential is implemented.
 AP-M3 Contract behavior, AP-M4 Fixture behavior, and AP-M5 planning authority are merged and pass
 their deterministic gates. AP-M6-W1 is accepted. AP-M6-W2 implements the locked dependency
 environment and closed-default ASGI foundation. AP-M6-W3 implements bounded immutable-generation
-loading and a locally tested Cloud Storage source adapter; it performs no provider operation and
-supplies no routing, identity, attachment-provider, proxy, or operational behavior. An absent
-behavior or later authority must not be inferred from planning documents, fixture code, branch
-history, discussion, or an Integration Draft.
+loading and a locally tested Cloud Storage source adapter; it performs no provider operation.
+AP-M6-W4 implements escaped catalogue projection, canonical path closure, registered route and
+mount selection, and path rewriting. Its route handoff remains a closed deterministic seam and
+supplies no identity, attachment-provider, proxy, or operational behavior. An absent behavior or
+later authority must not be inferred from planning documents, fixture code, branch history,
+discussion, or an Integration Draft.
 
 ## Incremental delivery sequence
 
@@ -66,9 +68,9 @@ small reviewable commits, merge it, and only then begin the next item.
    Live evidence. Its merged evidence proves planning consistency only.
 6. **Networked provider runtime — implementation in progress:** AP-M6 selects the deep ASGI module,
    locked dependency policy, exact request profile, eleven work packages, and ten deterministic
-   gates. AP-M6-W2 supplies the locked, closed-default foundation and AP-M6-W3 supplies immutable
-   generation loading; later work packages remain unavailable. AP-M6 performs no Terraform or
-   cloud mutation.
+   gates. AP-M6-W2 supplies the locked foundation, AP-M6-W3 supplies immutable generation loading,
+   and AP-M6-W4 supplies catalogue and registered routing; later work packages remain unavailable.
+   AP-M6 performs no Terraform or cloud mutation.
 7. **Terraform and workflow implementation — later:** AP-M7 may implement reviewed configuration
    and static gates only after AP-M6 merges; it performs no authenticated plan or apply.
 8. **Non-production qualification deployment — later:** AP-M8 may bootstrap and deploy only through
