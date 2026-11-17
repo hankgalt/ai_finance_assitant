@@ -78,8 +78,12 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("one bounded slice per pull request", instructions)
         self.assertIn("leave each change uncommitted until approval", instructions)
         self.assertIn("Merge it before starting the next documented slice", instructions)
+        self.assertIn(
+            "AP-M5 selects infrastructure and Live-qualification planning boundaries only",
+            instructions,
+        )
 
-    def test_documentation_truthfully_records_fixture_qualification(self) -> None:
+    def test_documentation_truthfully_records_planning_and_evidence_status(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         layout = (PROJECT_ROOT / "docs/repository_layout.md").read_text(encoding="utf-8")
         overview = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
@@ -87,7 +91,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         normalized_overview = " ".join(overview.split())
 
         self.assertIn(
-            "deterministic Fixture harness implemented and qualified",
+            "AP-M5 infrastructure planning authority implemented and validated",
             normalized_index,
         )
         self.assertIn("Contract (`C`) evidence", normalized_index)
@@ -96,9 +100,10 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Live (`L`) and Adoption (`A`) evidence remain unavailable",
             normalized_index,
         )
-        self.assertIn("AP-M4", overview)
-        self.assertIn("Fixture-qualified", normalized_overview)
-        self.assertIn("no networked platform service", normalized_overview)
+        self.assertIn("AP-M5", overview)
+        self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
+        self.assertIn("No networked platform service", normalized_overview)
+        self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
         self.assertIn("AP-M4 deterministic Fixture implementation recorded", layout)
         self.assertIn("`contracts/`", layout)
@@ -342,7 +347,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("## Application Adoption", glossary)
         self.assertIn("app-owned test state", layout)
 
-    def test_infrastructure_planning_prompt_loads_authority_without_copying_it(
+    def test_provider_runtime_prompt_loads_authority_without_copying_it(
         self,
     ) -> None:
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
@@ -369,8 +374,10 @@ class ProjectAuthorityTest(unittest.TestCase):
             "Leave Finance Assistant requirements, code, infrastructure, Terraform state, DNS",
             "An Integration Draft is not Application Adoption",
             "credential-free, deterministic, and non-mutating",
-            "updated `main` after the AP-M4 pull request has merged",
-            "propose item 5 planning and evaluation authority",
+            "updated `main` after the AP-M5 pull request has merged",
+            "propose AP-M6, the smallest locally testable networked provider-runtime slice",
+            "network server/framework, dependency policy",
+            "exact live header, request-body, response-body, non-streaming timeout",
             "Do not write Terraform",
         ):
             self.assertIn(boundary, normalized_prompt)
@@ -378,11 +385,11 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertNotIn("## ADR-", prompt)
         self.assertNotIn("terraform apply", prompt)
         self.assertIn(
-            "[Infrastructure-planning handoff](starting_prompt.md)",
+            "[Provider-runtime handoff](starting_prompt.md)",
             prompt_index,
         )
 
-    def test_incremental_delivery_sequence_keeps_infrastructure_separate(self) -> None:
+    def test_incremental_delivery_sequence_keeps_later_slices_separate(self) -> None:
         index = (PROJECT_ROOT / "docs/README.md").read_text(encoding="utf-8")
         prompt = (PROJECT_ROOT / "prompts/starting_prompt.md").read_text(encoding="utf-8")
         normalized_index = " ".join(index.split())
@@ -395,22 +402,29 @@ class ProjectAuthorityTest(unittest.TestCase):
             self.assertIn(completed, index)
         self.assertIn("System design and versioned contracts — complete", index)
         self.assertIn(
-            "Deterministic fixtures — implemented and Fixture-qualified",
+            "Deterministic fixtures — complete and Fixture-qualified",
             index,
         )
         self.assertIn(
-            "Platform infrastructure planning — next after item 4 merges",
+            "Platform infrastructure planning — implemented and planning-validated",
             index,
         )
-        self.assertIn("feat/apps-platform-fixtures", index)
+        for later_slice in (
+            "Networked provider runtime — next after item 5 merges",
+            "Terraform and workflow implementation — later",
+            "Non-production qualification deployment — later",
+            "Live qualification — later",
+            "Finance Application Adoption — later and independent",
+        ):
+            self.assertIn(later_slice, index)
         self.assertIn("separate bounded branch and pull request", normalized_index)
         self.assertIn(
-            "obtain owner approval for the smallest infrastructure implementation plan",
-            normalized_index,
+            "propose AP-M6, the smallest locally testable networked provider-runtime slice",
+            normalized_prompt,
         )
-        self.assertIn("propose item 5 planning and evaluation authority", normalized_prompt)
+        self.assertIn("Wait for owner approval before editing", normalized_prompt)
         self.assertIn("Do not write Terraform", normalized_prompt)
-        self.assertIn("Item 5 belongs on a new bounded branch", normalized_prompt)
+        self.assertIn("AP-M6 belongs on a new bounded branch", normalized_prompt)
 
     def test_fixture_design_selects_a_bounded_in_process_profile(self) -> None:
         design = (PROJECT_ROOT / "docs/03_system_design.md").read_text(
