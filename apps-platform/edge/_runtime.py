@@ -15,6 +15,11 @@ from starlette.responses import HTMLResponse, PlainTextResponse, RedirectRespons
 from starlette.routing import Route
 from starlette.types import ASGIApp
 
+from ._attachments import (
+    ADAPTER_KIND,
+    AttachmentResolutionRequest,
+    AttachmentResolver,
+)
 from ._generation import (
     GenerationBinding,
     GenerationLoadError,
@@ -141,6 +146,7 @@ class RuntimeAdapters:
     """Injected external behavior used by the Shared Edge."""
 
     generation_source: GenerationSource | None = None
+    attachment_resolver: AttachmentResolver | None = None
     route_handoff: RouteHandoff | None = None
     google_oidc: GoogleOidc | None = None
     identity_store: IdentityStore | None = None
@@ -519,6 +525,28 @@ def create_app(
         )
         if routed_request is None:
             return _closed_response(404, "not found")
+        if routed_request.adapter_kind == ADAPTER_KIND:
+            if adapters.attachment_resolver is None:
+                return _closed_response(503, "application attachment unavailable")
+            try:
+                resolved_attachment = await adapters.attachment_resolver.resolve(
+                    AttachmentResolutionRequest(
+                        adapter_kind=routed_request.adapter_kind,
+                        resource_reference=routed_request.resource_reference,
+                        owner_application_id=(
+                            routed_request.attachment_owner_application_id
+                        ),
+                        audience=routed_request.identity_audience,
+                    )
+                )
+            except Exception:
+                return _closed_response(503, "application attachment unavailable")
+            routed_request = replace(
+                routed_request,
+                resolved_attachment=resolved_attachment,
+            )
+        elif routed_request.adapter_kind != "contract-test-v1":
+            return _closed_response(503, "application attachment unavailable")
         assertion: str | None = None
         if identity is not None:
             if (

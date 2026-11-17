@@ -7,6 +7,7 @@ import hashlib
 import json
 import unittest
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -18,12 +19,24 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import Prehashed
 from joserfc import jwk, jwt
+from google.cloud import run_v2
+from google.iam.v1 import policy_pb2
 
 from edge import (
     ApplicationIdentityVerifier,
     RuntimeAdapters,
     RuntimeConfiguration,
     create_app,
+)
+from edge._attachments import (
+    AttachmentResolutionRequest,
+    AttachmentUnavailable,
+    CloudRunAttachmentResolver,
+    CloudRunResource,
+    CloudRunServiceMetadata,
+    GoogleCloudRunMetadataProvider,
+    InMemoryCloudRunMetadataProvider,
+    parse_cloud_run_reference,
 )
 from edge._assertions import (
     AssertionIssuer,
@@ -237,6 +250,26 @@ def protected_generation(
     attachment["identity_requirement"] = "verified"
     attachment["audience"] = (
         "urn:comfforts:app-platform:audience:alpha-app"
+    )
+    return document
+
+
+def cloud_run_generation(
+    *,
+    adapter_kind: str = "gcp-cloud-run-v1",
+    resource_reference: str = (
+        "urn:comfforts:app-platform:gcp:cloud-run:455651441682:"
+        "us-west1:alpha-app"
+    ),
+    audience: str | None = None,
+) -> dict[str, Any]:
+    document = compiled_generation()
+    attachment = document["routes"][0]["attachments"][0]
+    attachment.update(
+        adapter_kind=adapter_kind,
+        resource_reference=resource_reference,
+        identity_requirement="verified" if audience is not None else "none",
+        audience=audience,
     )
     return document
 
@@ -1080,6 +1113,277 @@ class ApplicationVerificationTest(unittest.TestCase):
         )
 
 
+class StaticCloudRunServicesClient:
+    def __init__(self, service: Any, policy: Any) -> None:
+        self.service = service
+        self.policy = policy
+        self.service_requests: list[str] = []
+        self.policy_requests: list[dict[str, str]] = []
+
+    async def get_service(self, *, name: str) -> Any:
+        self.service_requests.append(name)
+        return self.service
+
+    async def get_iam_policy(self, *, request: dict[str, str]) -> Any:
+        self.policy_requests.append(request)
+        return self.policy
+
+
+class CloudRunAttachmentTest(unittest.TestCase):
+    resource_reference = (
+        "urn:comfforts:app-platform:gcp:cloud-run:455651441682:"
+        "us-west1:alpha-app"
+    )
+    edge_caller = (
+        "serviceAccount:apps-platform-edge@comfforts-platform-non-prod."
+        "iam.gserviceaccount.com"
+    )
+    audience = "urn:comfforts:app-platform:audience:alpha-app"
+    target_uri = "https://alpha-app-455651441682.us-west1.run.app"
+
+    def resource(self) -> CloudRunResource:
+        return CloudRunResource(
+            project_number="455651441682",
+            region="us-west1",
+            service_name="alpha-app",
+        )
+
+    def metadata(self) -> CloudRunServiceMetadata:
+        return CloudRunServiceMetadata(
+            resource=self.resource(),
+            target_uri=self.target_uri,
+            ready=True,
+            owner_application_id="alpha-app",
+            audience=self.audience,
+            invoker_principals=frozenset({self.edge_caller}),
+        )
+
+    def request(self) -> AttachmentResolutionRequest:
+        return AttachmentResolutionRequest(
+            adapter_kind="gcp-cloud-run-v1",
+            resource_reference=self.resource_reference,
+            owner_application_id="alpha-app",
+            audience=self.audience,
+        )
+
+    def test_reference_parser_accepts_only_the_exact_cloud_run_urn(self) -> None:
+        resource = parse_cloud_run_reference(self.resource_reference)
+
+        self.assertEqual(resource, self.resource())
+        self.assertEqual(
+            resource.provider_name,
+            "projects/455651441682/locations/us-west1/services/alpha-app",
+        )
+
+        rejected = (
+            "https://alpha-app.example.test",
+            "google_cloud_run_v2_service.alpha-app",
+            "urn:comfforts:app-platform:gcp:cloud-run:user@example.com:us-west1:app",
+            "urn:comfforts:app-platform:gcp:cloud-run:0455651441682:us-west1:app",
+            "urn:comfforts:app-platform:gcp:cloud-run:9223372036854775808:us-west1:app",
+            "urn:comfforts:app-platform:gcp:cloud-run:455651441682:US-west1:app",
+            "urn:comfforts:app-platform:gcp:cloud-run:455651441682:us-west1:app-",
+            "urn:comfforts:app-platform:gcp:cloud-run:455651441682:us-west1:"
+            + "a" * 50,
+            "urn:comfforts:app-platform:gcp:cloud-run:455651441682:us-west1:app?x=1",
+            "urn:comfforts:app-platform:gcp:cloud-run:455651441682:us-west1:app:extra",
+        )
+        for value in rejected:
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    parse_cloud_run_reference(value)
+
+    def test_resolver_binds_exact_metadata_owner_caller_and_audience(self) -> None:
+        provider = InMemoryCloudRunMetadataProvider(
+            {self.resource(): self.metadata()}
+        )
+        resolver = CloudRunAttachmentResolver(provider, self.edge_caller)
+
+        resolved = asyncio.run(resolver.resolve(self.request()))
+
+        self.assertEqual(provider.requests, [self.resource()])
+        self.assertEqual(resolved.resource, self.resource())
+        self.assertEqual(resolved.target_uri, self.target_uri)
+        self.assertEqual(resolved.audience, self.audience)
+
+    def test_resolver_rejects_every_mismatched_or_unavailable_fact(self) -> None:
+        other_resource = CloudRunResource(
+            project_number="455651441683",
+            region="us-west1",
+            service_name="alpha-app",
+        )
+        cases = (
+            ("project", replace(self.metadata(), resource=other_resource)),
+            (
+                "region",
+                replace(
+                    self.metadata(),
+                    resource=replace(self.resource(), region="us-central1"),
+                ),
+            ),
+            (
+                "service",
+                replace(
+                    self.metadata(),
+                    resource=replace(self.resource(), service_name="other-app"),
+                ),
+            ),
+            ("readiness", replace(self.metadata(), ready=False)),
+            (
+                "ownership",
+                replace(self.metadata(), owner_application_id="other-app"),
+            ),
+            (
+                "caller",
+                replace(self.metadata(), invoker_principals=frozenset()),
+            ),
+            (
+                "audience",
+                replace(
+                    self.metadata(),
+                    audience="urn:comfforts:app-platform:audience:other-app",
+                ),
+            ),
+            (
+                "target",
+                replace(self.metadata(), target_uri="https://attacker.example.test"),
+            ),
+            (
+                "malformed target",
+                replace(
+                    self.metadata(),
+                    target_uri="https://alpha-app.us-west1.run.app:invalid",
+                ),
+            ),
+        )
+        for label, metadata in cases:
+            with self.subTest(label=label):
+                provider = InMemoryCloudRunMetadataProvider(
+                    {self.resource(): metadata}
+                )
+                resolver = CloudRunAttachmentResolver(provider, self.edge_caller)
+                with self.assertRaises(AttachmentUnavailable):
+                    asyncio.run(resolver.resolve(self.request()))
+
+        unavailable = InMemoryCloudRunMetadataProvider({})
+        with self.assertRaises(AttachmentUnavailable):
+            asyncio.run(
+                CloudRunAttachmentResolver(
+                    unavailable,
+                    self.edge_caller,
+                ).resolve(self.request())
+            )
+
+        failing = InMemoryCloudRunMetadataProvider(
+            {self.resource(): self.metadata()}
+        )
+        failing.available = False
+        with self.assertRaises(AttachmentUnavailable):
+            asyncio.run(
+                CloudRunAttachmentResolver(
+                    failing,
+                    self.edge_caller,
+                ).resolve(self.request())
+            )
+
+    def test_resolver_rejects_unsupported_adapter_before_provider_access(self) -> None:
+        provider = InMemoryCloudRunMetadataProvider(
+            {self.resource(): self.metadata()}
+        )
+        request = replace(self.request(), adapter_kind="unreviewed-v1")
+
+        with self.assertRaises(AttachmentUnavailable):
+            asyncio.run(
+                CloudRunAttachmentResolver(provider, self.edge_caller).resolve(request)
+            )
+
+        self.assertEqual(provider.requests, [])
+
+    def test_google_provider_uses_injected_client_and_exact_resource_only(self) -> None:
+        resource = self.resource()
+        client = StaticCloudRunServicesClient(
+            run_v2.Service(
+                name=resource.provider_name,
+                labels={
+                    "state_owner": "application",
+                    "application_id": "alpha-app",
+                },
+                annotations={"comfforts.com/identity-audience": self.audience},
+                reconciling=False,
+                generation=7,
+                observed_generation=7,
+                terminal_condition=run_v2.Condition(
+                    type_="Ready",
+                    state=run_v2.Condition.State.CONDITION_SUCCEEDED,
+                ),
+                latest_ready_revision=(
+                    f"{resource.provider_name}/revisions/alpha-app-00007"
+                ),
+                uri=self.target_uri,
+                invoker_iam_disabled=False,
+            ),
+            policy_pb2.Policy(
+                bindings=(
+                    {
+                        "role": "roles/run.invoker",
+                        "members": (self.edge_caller,),
+                    },
+                ),
+            ),
+        )
+        provider = GoogleCloudRunMetadataProvider(client)
+
+        self.assertEqual(client.service_requests, [])
+        self.assertEqual(client.policy_requests, [])
+
+        metadata = asyncio.run(provider.describe(resource))
+
+        self.assertEqual(client.service_requests, [resource.provider_name])
+        self.assertEqual(
+            client.policy_requests,
+            [{"resource": resource.provider_name}],
+        )
+        self.assertEqual(metadata, self.metadata())
+
+    def test_google_provider_does_not_treat_conditional_or_disabled_iam_as_grant(
+        self,
+    ) -> None:
+        resource = self.resource()
+        service = SimpleNamespace(
+            name=resource.provider_name,
+            labels={
+                "state_owner": "application",
+                "application_id": "alpha-app",
+            },
+            annotations={"comfforts.com/identity-audience": self.audience},
+            reconciling=False,
+            generation=1,
+            observed_generation=1,
+            terminal_condition=SimpleNamespace(type_="Ready", state=4),
+            latest_ready_revision=f"{resource.provider_name}/revisions/alpha-app-00001",
+            uri=self.target_uri,
+            invoker_iam_disabled=True,
+        )
+        policy = SimpleNamespace(
+            bindings=(
+                SimpleNamespace(
+                    role="roles/run.invoker",
+                    members=(self.edge_caller,),
+                    condition=SimpleNamespace(expression="request.time < timestamp('2030-01-01T00:00:00Z')"),
+                ),
+            )
+        )
+
+        metadata = asyncio.run(
+            GoogleCloudRunMetadataProvider(
+                StaticCloudRunServicesClient(service, policy)
+            ).describe(resource)
+        )
+
+        self.assertFalse(metadata.ready)
+        self.assertEqual(metadata.invoker_principals, frozenset())
+
+
 class SharedEdgeInterfaceTest(unittest.TestCase):
     def test_root_catalogue_is_a_safe_projection_of_the_bound_generation(self) -> None:
         document = compiled_generation()
@@ -1194,6 +1498,121 @@ class SharedEdgeInterfaceTest(unittest.TestCase):
                 self.assertEqual(routed.query_string, query_string)
 
         self.assertEqual(len(handoff.requests), len(cases))
+
+    def test_cloud_run_route_resolves_provider_metadata_before_handoff(self) -> None:
+        document = cloud_run_generation()
+        configuration, source = configured_generation(document)
+        resource = parse_cloud_run_reference(
+            document["routes"][0]["attachments"][0]["resource_reference"]
+        )
+        edge_caller = (
+            "serviceAccount:apps-platform-edge@comfforts-platform-non-prod."
+            "iam.gserviceaccount.com"
+        )
+        target_uri = "https://alpha-app-455651441682.us-west1.run.app"
+        provider = InMemoryCloudRunMetadataProvider(
+            {
+                resource: CloudRunServiceMetadata(
+                    resource=resource,
+                    target_uri=target_uri,
+                    ready=True,
+                    owner_application_id="alpha-app",
+                    audience=None,
+                    invoker_principals=frozenset({edge_caller}),
+                )
+            }
+        )
+        handoff = RecordingRouteHandoff()
+        app = create_app(
+            configuration,
+            RuntimeAdapters(
+                generation_source=source,
+                attachment_resolver=CloudRunAttachmentResolver(
+                    provider,
+                    edge_caller,
+                ),
+                route_handoff=handoff,
+            ),
+        )
+
+        _, (status, _, body) = asyncio.run(
+            request_during_lifespan(app, "/alpha/report")
+        )
+
+        self.assertEqual(status, 503)
+        self.assertEqual(body, b"application forwarding unavailable\n")
+        self.assertEqual(provider.requests, [resource])
+        self.assertEqual(len(handoff.requests), 1)
+        routed = handoff.requests[0]
+        self.assertEqual(routed.adapter_kind, "gcp-cloud-run-v1")
+        self.assertEqual(
+            routed.resource_reference,
+            document["routes"][0]["attachments"][0]["resource_reference"],
+        )
+        self.assertIsNotNone(routed.resolved_attachment)
+        self.assertEqual(routed.resolved_attachment.target_uri, target_uri)
+
+    def test_cloud_run_resolution_failure_never_reaches_handoff(self) -> None:
+        edge_caller = (
+            "serviceAccount:apps-platform-edge@comfforts-platform-non-prod."
+            "iam.gserviceaccount.com"
+        )
+        cases = (
+            (
+                "missing resolver",
+                cloud_run_generation(),
+                None,
+            ),
+            (
+                "unsupported adapter",
+                cloud_run_generation(adapter_kind="unreviewed-v1"),
+                CloudRunAttachmentResolver(
+                    InMemoryCloudRunMetadataProvider({}),
+                    edge_caller,
+                ),
+            ),
+            (
+                "invalid reference",
+                cloud_run_generation(
+                    resource_reference=(
+                        "urn:comfforts:app-platform:gcp:cloud-run:"
+                        "455651441682:us-west1:alpha-app:extra"
+                    )
+                ),
+                CloudRunAttachmentResolver(
+                    InMemoryCloudRunMetadataProvider({}),
+                    edge_caller,
+                ),
+            ),
+            (
+                "unresolved service",
+                cloud_run_generation(),
+                CloudRunAttachmentResolver(
+                    InMemoryCloudRunMetadataProvider({}),
+                    edge_caller,
+                ),
+            ),
+        )
+        for label, document, resolver in cases:
+            with self.subTest(label=label):
+                configuration, source = configured_generation(document)
+                handoff = RecordingRouteHandoff()
+                app = create_app(
+                    configuration,
+                    RuntimeAdapters(
+                        generation_source=source,
+                        attachment_resolver=resolver,
+                        route_handoff=handoff,
+                    ),
+                )
+
+                _, (status, _, body) = asyncio.run(
+                    request_during_lifespan(app, "/alpha")
+                )
+
+                self.assertEqual(status, 503)
+                self.assertEqual(body, b"application attachment unavailable\n")
+                self.assertFalse(handoff.requests)
 
     def test_route_path_limit_is_enforced_before_handoff(self) -> None:
         configuration, source = configured_generation(compiled_generation())

@@ -275,6 +275,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "google-cloud-firestore" },
     { name = "google-cloud-kms" },
+    { name = "google-cloud-run" },
     { name = "google-cloud-storage" },
     { name = "google-crc32c" },
     { name = "httpx" },
@@ -288,6 +289,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=50,<51" },
     { name = "google-cloud-firestore", specifier = ">=2.34,<2.35" },
     { name = "google-cloud-kms", specifier = ">=3.19,<3.20" },
+    { name = "google-cloud-run", specifier = ">=0.16,<0.17" },
     { name = "google-cloud-storage", specifier = ">=3.17,<3.18" },
     { name = "google-crc32c", specifier = ">=1.9,<1.10" },
     { name = "httpx", specifier = ">=0.28,<0.29" },
@@ -439,6 +441,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/75/af/732df1b64cd783ef626f139018c49ee10f55f74b1f2d436d9fd12ee0d9bc/google_cloud_kms-3.19.0.tar.gz", hash = "sha256:967f02479b960aa6b6059c78adf2c6fc1b39bd114615a79d872f63b3d7b105aa", size = 436199, upload-time = "2026-11-12T14:23:17.01Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e4/c0/7cee7bad90e4d05e0b4fedad472486be36abaf5842f6d7a7913faa20892d/google_cloud_kms-3.19.0-py3-none-any.whl", hash = "sha256:6b48ae9a7551b27f14a5f7f5a22c3f60bfa06e393d8785568f4397a9c7db021c", size = 352327, upload-time = "2026-11-12T14:22:28.479Z" },
+]
+
+[[package]]
+name = "google-cloud-run"
+version = "0.16.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-core", extra = ["grpc"] },
+    { name = "google-auth" },
+    { name = "grpc-google-iam-v1" },
+    { name = "grpcio" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9f/bb/f974a6d853b8e22a1621fad636c0e309470f4fa6c9990cde18950b0b2dad/google_cloud_run-0.16.3.tar.gz", hash = "sha256:3a87db9012059639b0c3d8f3f05d4a692c1f7b417c667ccca7b80cda47caa622", size = 553537, upload-time = "2026-11-12T14:23:22.273Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/51/1a2f411f0fdf106d8ccb6a9e0c83aee3171dce0c1af99c73d7ab92f6debf/google_cloud_run-0.16.3-py3-none-any.whl", hash = "sha256:e1d659cd1a58fbcfa6c0d2b7dfa2e316805657303ca219660112734127d30659", size = 500352, upload-time = "2026-11-12T14:22:35.335Z" },
 ]
 
 [[package]]

@@ -36,6 +36,7 @@ class ProjectAuthorityTest(unittest.TestCase):
             "fixtures/reference_edge.py",
             "fixtures/registrations/manifest.v1.json",
             "edge/__init__.py",
+            "edge/_attachments.py",
             "edge/_assertions.py",
             "edge/_generation.py",
             "edge/_identity.py",
@@ -84,6 +85,7 @@ class ProjectAuthorityTest(unittest.TestCase):
                 "Authlib>=1.9,<1.10",
                 "cryptography>=50,<51",
                 "google-cloud-kms>=3.19,<3.20",
+                "google-cloud-run>=0.16,<0.17",
                 "google-cloud-firestore>=2.34,<2.35",
                 "google-cloud-storage>=3.17,<3.18",
                 "google-crc32c>=1.9,<1.10",
@@ -96,6 +98,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertEqual(packages["authlib"]["version"], "1.9.8")
         self.assertEqual(packages["cryptography"]["version"], "50.0.2")
         self.assertEqual(packages["google-cloud-kms"]["version"], "3.19.0")
+        self.assertEqual(packages["google-cloud-run"]["version"], "0.16.3")
         self.assertEqual(packages["google-cloud-firestore"]["version"], "2.34.1")
         self.assertEqual(packages["google-cloud-storage"]["version"], "3.17.1")
         self.assertEqual(packages["google-crc32c"]["version"], "1.9.0")
@@ -105,6 +108,7 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("hash", packages["authlib"]["sdist"])
         self.assertIn("hash", packages["cryptography"]["sdist"])
         self.assertIn("hash", packages["google-cloud-kms"]["sdist"])
+        self.assertIn("hash", packages["google-cloud-run"]["sdist"])
         self.assertIn("hash", packages["google-cloud-firestore"]["sdist"])
         self.assertIn("hash", packages["google-cloud-storage"]["sdist"])
         self.assertIn("hash", packages["google-crc32c"]["sdist"])
@@ -173,12 +177,12 @@ class ProjectAuthorityTest(unittest.TestCase):
         self.assertIn("AP-M6", overview)
         self.assertIn("AP-M4 remains Fixture-qualified", normalized_overview)
         self.assertIn(
-            "attachment-provider and proxy behavior remain unavailable",
+            "proxy behavior remains unavailable",
             normalized_overview,
         )
         self.assertIn("planning consistency only", normalized_index)
         self.assertIn("Integration draft", index)
-        self.assertIn("AP-M6 assertions and application verification recorded", layout)
+        self.assertIn("AP-M6 Cloud Run attachment resolution recorded", layout)
         self.assertIn("`contracts/`", layout)
         self.assertIn("`fixtures/`", layout)
         self.assertIn("Version 1 schemas", layout)

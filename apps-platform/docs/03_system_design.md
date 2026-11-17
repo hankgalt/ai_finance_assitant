@@ -1,7 +1,7 @@
 # App Platform system design
 
 Version 0.8 | Status: Fixture-qualified logical design and approved AP-M6 runtime profile;
-assertions and application verification implemented locally; no provider operation or live infrastructure
+Cloud Run attachment resolution implemented locally; no provider operation or live infrastructure
 is implemented
 
 This document defines the smallest logical design that can support the App Platform requirements
@@ -670,8 +670,26 @@ cache limit. The application verifier accepts an assertion, exact issuer, exact 
 audience, key fetcher, and time; it refreshes once for an unknown key and rejects unavailable or
 stale material. It returns Version 1 Verified Identity Context only after contract, signature,
 issuer, audience, lifetime, and clock validation. It creates no Application Principal, grants no
-Feature Entitlement, and makes no distributed replay-prevention claim. The route handoff remains
-closed with `503` because attachment resolution and proxy delivery belong to AP-M6-W7 and W8.
+Feature Entitlement, and makes no distributed replay-prevention claim.
+
+AP-M6-W7 accepts only the exact `gcp-cloud-run-v1` URN grammar and turns its project number, region,
+and service name into one exact Cloud Run v2 service read and one exact IAM-policy read. The
+production adapter accepts its Cloud Run client at construction and performs no discovery or I/O
+until resolution; deterministic verification supplies an exact-key in-memory metadata adapter.
+Provider readback is eligible only when the returned resource scope matches, reconciliation has
+completed successfully at the observed generation, a serving revision and provider-derived
+`https://*.run.app` origin exist, and the Invoker IAM check remains enabled.
+
+The Application Owner marks the service with `state_owner=application` and an `application_id`
+label matching the attachment owner. Protected targets also carry the exact application assertion
+audience in the `comfforts.com/identity-audience` annotation; public attachments omit it. An
+unconditional `roles/run.invoker` binding must contain the configured platform edge service-account
+principal. Conditional grants are not interpreted by the runtime. Any URL or state address in the
+registration, unsupported adapter, malformed URN, provider failure, missing service, mismatched
+scope, unready service, owner reuse, caller mismatch, audience mismatch, disabled Invoker check, or
+invalid provider target closes before the internal handoff. The handoff still returns `503` because
+request and stream proxying belong only to AP-M6-W8. Local fake readback is not evidence that IAM,
+ingress, a target service, or an edge caller exists in GCP.
 
 The initial `qualification-v1` request profile applies before target selection and permits lower
 environment settings but no higher value without a reviewed profile change:

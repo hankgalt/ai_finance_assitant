@@ -1,7 +1,7 @@
 # App Platform threat model
 
 Version 0.8 | Status: Fixture-qualified threat model and approved AP-M6 runtime controls;
-assertions and application verification implemented locally; no provider operation or live infrastructure
+Cloud Run attachment resolution implemented locally; no provider operation or live infrastructure
 is implemented
 
 This document defines the security and privacy threats created by the logical App Platform design,
@@ -264,9 +264,10 @@ Provider adapters resolve only their own typed references with least-privilege c
 cross-registration conflicts. `F` covers attachment selection and application isolation. `L`
 confirms resource identity, IAM, and absence of arbitrary egress.
 
-**Residual risk:** `gcp-cloud-run-v1` and its typed resource grammar are selected for the first Live
-profile, but no provider lookup, IAM grant, ownership readback, or target validation is implemented
-or qualified. The fixture adapter remains the only executable adapter.
+**Residual risk:** AP-M6-W7 strictly parses `gcp-cloud-run-v1` and locally validates exact fake
+provider scope, readiness, declared owner, audience, target origin, and edge-caller grant. The
+production adapter is implemented behind an injected client, but no real provider lookup, IAM
+grant, ownership readback, target request, or Live qualification has occurred.
 
 ### AP-TM-004 · Direct protected-origin bypass
 
@@ -284,9 +285,10 @@ but can prove only assertion-side denial in one process. `L` must read back and 
 ingress and IAM configuration. `A` repeats the gate for a real application.
 
 **Residual risk:** AP-M6-W6 implements local visitor-value replacement and independent assertion
-verification, but the planned load-balancer, Cloud Run ingress, and edge caller remain future
-network direct-bypass controls. They are not implemented until separately approved infrastructure
-and deployment slices complete. Local verifier denial must never be reported as origin isolation.
+verification. AP-M6-W7 rejects fake metadata without the exact edge-caller Invoker grant, but it
+does not create or prove that caller, Cloud Run ingress, or network isolation. The load balancer and
+deployed network direct-bypass control remain future work. Local metadata and verifier denial must
+never be reported as origin isolation.
 
 ### AP-TM-005 · Identity spoofing, replay, and confused audience
 
@@ -467,7 +469,8 @@ DNS, TLS, key rotation, certificate, provider failure, and recovery behavior.
 **Residual risk:** Local immutable-generation loading fails startup on source, contract, or digest
 failure. AP-M6-W5 fails protected admission closed on provider or session-store failure while public
 routes remain anonymously usable. AP-M6-W6 fails protected assertion issuance and stale or
-unavailable verification keys closed; public routes may remain anonymous. The selected DNS,
+unavailable verification keys closed; public routes may remain anonymous. AP-M6-W7 fails one
+unavailable or mismatched attachment closed without selecting another target. The selected DNS,
 certificate, activation, and owner-confirmed rollback sequence is not implemented or qualified.
 Provider availability and disaster recovery beyond the 15-minute post-approval rollback objective
 remain outside the demo commitment.

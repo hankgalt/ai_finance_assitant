@@ -6,6 +6,8 @@ import html
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from ._attachments import ResolvedAttachment
+
 MAX_PATH_BYTES = 4_096
 
 
@@ -15,10 +17,14 @@ class RoutedApplicationRequest:
 
     application_id: str
     attachment_id: str
+    attachment_owner_application_id: str
+    adapter_kind: str
+    resource_reference: str
     path: str
     query_string: bytes
     identity_audience: str | None
     verified_identity_assertion: str | None = None
+    resolved_attachment: ResolvedAttachment | None = None
 
 
 class RouteHandoff(Protocol):
@@ -152,6 +158,9 @@ def routed_application_request(
     return RoutedApplicationRequest(
         application_id=route["application_id"],
         attachment_id=attachment["attachment_id"],
+        attachment_owner_application_id=attachment["owner_application_id"],
+        adapter_kind=attachment["adapter_kind"],
+        resource_reference=attachment["resource_reference"],
         path=forwarded_path,
         query_string=query_string,
         identity_audience=attachment["audience"],

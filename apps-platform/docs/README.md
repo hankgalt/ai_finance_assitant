@@ -1,8 +1,8 @@
 # App Platform documentation
 
 Version 1.1 | Status: AP-M6 implementation in progress; catalogue, routing, sessions, admission,
-assertions, and application verification implemented locally; provider operation, Live, and
-Adoption qualification unavailable
+assertions, application verification, and Cloud Run attachment resolution implemented locally;
+provider operation, Live, and Adoption qualification unavailable
 
 This directory is the design authority for Comfforts App Platform. AP-M3 supplies Contract (`C`)
 evidence through the logical design, threat boundary, Version 1 schemas, deterministic compiler,
@@ -46,10 +46,12 @@ Session boundary, public/authenticated/restricted admission, exact restricted me
 expiry, safe logout, and production/fake provider and store seams. Its route handoff remains closed
 until forwarding exists. AP-M6-W6 implements minimized ES256 assertions, exact application
 audiences, Cloud KMS and deterministic signing seams, public-only current/overlap JWKS, visitor-
-value replacement, and independent application verification with bounded key caching. It supplies
-no attachment-provider, proxy, or operational behavior. An absent behavior or later authority must
-not be inferred from planning documents, fixture code, branch history, discussion, or an
-Integration Draft.
+value replacement, and independent application verification with bounded key caching. AP-M6-W7
+implements strict Cloud Run URN parsing, injected production/fake metadata adapters, and exact
+readiness, owner, audience, and edge-caller grant checks. It supplies no proxy or operational
+behavior and performs no provider operation during deterministic verification. An absent behavior
+or later authority must not be inferred from planning documents, fixture code, branch history,
+discussion, or an Integration Draft.
 
 ## Incremental delivery sequence
 
@@ -76,8 +78,9 @@ small reviewable commits, merge it, and only then begin the next item.
    locked dependency policy, exact request profile, eleven work packages, and ten deterministic
    gates. AP-M6-W2 supplies the locked foundation, AP-M6-W3 supplies immutable generation loading,
    AP-M6-W4 supplies catalogue and registered routing, AP-M6-W5 supplies sessions and admission,
-   and AP-M6-W6 supplies assertions and application verification; later work packages remain
-   unavailable. AP-M6 performs no Terraform or cloud mutation.
+   AP-M6-W6 supplies assertions and application verification, and AP-M6-W7 supplies Cloud Run
+   attachment resolution; later work packages remain unavailable. AP-M6 performs no Terraform or
+   cloud mutation.
 7. **Terraform and workflow implementation — later:** AP-M7 may implement reviewed configuration
    and static gates only after AP-M6 merges; it performs no authenticated plan or apply.
 8. **Non-production qualification deployment — later:** AP-M8 may bootstrap and deploy only through
