@@ -1,15 +1,20 @@
 # AI Finance Assistant documentation
 
-Version 3.10 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 credential-free MVP and owner-only live-provider posture qualified; M10 planned | 2026-11-13
+Version 3.11 | Status: M0–M9.1/M6.1 and M2.1 complete; M11 credential-free MVP and owner-only live-provider posture qualified; M10 planned | 2026-11-17
 
 This directory is the design authority for AI Finance Assistant. The product mission is to provide an intelligent, trustworthy, and accessible financial education and analysis platform for U.S. users and U.S. markets. The coursework capstone is an important release and evidence obligation, but it does not define the product's long-term identity.
 
-## Colocated project authority
+## Related project authority
 
-The [`apps-platform/`](../apps-platform/) subtree is a separately governed project. Its
-[documentation](../apps-platform/docs/README.md) is authoritative only for App Platform. Platform
-governance and inactive integration drafts do not alter the Finance Assistant requirements,
-decisions, design, plans, contracts, deployment status, or qualification evidence recorded here.
+[`comfforts/apps-platform`](https://github.com/comfforts/apps-platform) is the canonical repository
+for the separately governed App Platform. Its documentation and inactive Finance integration draft
+are not Finance Assistant authority and do not alter the requirements, decisions, design, plans,
+contracts, deployment status, or qualification evidence recorded here. Finance Application
+Adoption requires a separately approved Finance-owned migration and release gate. For a migration
+task, read the proposed [App Platform migration handoff](integrations/app_platform_migration_handoff.md)
+after the current Finance authorities; it indexes the pinned draft, unresolved compatibility gaps,
+Finance-owned asset/ownership inventory, teardown safety boundary, and future-chat prompt without
+adopting them.
 
 ## Reading order and authority
 

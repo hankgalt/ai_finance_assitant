@@ -2,14 +2,12 @@
 
 These instructions apply to the entire repository.
 
-## Colocated project boundary
+## App Platform boundary
 
-Work under [`apps-platform/`](apps-platform/) is governed by
-[`apps-platform/AGENTS.md`](apps-platform/AGENTS.md) and its documentation authority. Finance
-Assistant requirements and milestones do not define App Platform behavior. The repository-wide
-security, source-control, secret-handling, and destructive-action guardrails in this file continue
-to apply while the projects are colocated; the Finance-specific reading order below applies outside
-that subtree.
+[`comfforts/apps-platform`](https://github.com/comfforts/apps-platform) is the canonical App
+Platform repository. App Platform requirements, implementation, and integration drafts do not
+define Finance Assistant behavior. Adopt a platform interface only through a Finance-owned
+requirement, accepted decision, milestone, and evidence gate in this repository.
 
 ## Before modifying implementation
 

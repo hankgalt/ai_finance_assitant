@@ -14,6 +14,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_ROOT = REPO_ROOT / ".github/workflows"
 DELIVERY_CONTRACT = REPO_ROOT / "contracts/deployment/delivery-policy.v1.json"
 DELIVERY_EVIDENCE = REPO_ROOT / "backend/artifacts/release/deployment/delivery-controls.v1.json"
+APP_PLATFORM_HANDOFF = REPO_ROOT / "docs/integrations/app_platform_migration_handoff.md"
+APP_PLATFORM_ASSETS = REPO_ROOT / "docs/integrations/app_platform_migration_assets.md"
+APP_PLATFORM_STARTING_PROMPT = (
+    REPO_ROOT / "docs/integrations/app_platform_migration_starting_prompt.md"
+)
+APP_PLATFORM_REVIEW_REVISION = "22f32da94854bbc265d40c8125f56b4efbbe7558"
 ACTION_REF = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)(?:\s+#.*)?$", re.MULTILINE)
 IMMUTABLE_ACTION_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
 PINNED_PNPM_SETUP = re.compile(
@@ -164,7 +170,6 @@ def test_delivery_evidence_is_capability_owned_and_truthful_about_activated_cont
 
 def test_workflows_are_known_and_third_party_actions_are_immutable() -> None:
     expected = {
-        "apps-platform-ci.yml",
         "ci.yml",
         "cloud-identity-smoke.yml",
         "images.yml",
@@ -181,6 +186,43 @@ def test_workflows_are_known_and_third_party_actions_are_immutable() -> None:
         references = ACTION_REF.findall(content)
         assert references
         assert all(IMMUTABLE_ACTION_REF.fullmatch(reference) for reference in references)
+
+
+def test_app_platform_migration_handoff_is_pinned_inactive_and_external() -> None:
+    handoff = APP_PLATFORM_HANDOFF.read_text(encoding="utf-8")
+    assets = APP_PLATFORM_ASSETS.read_text(encoding="utf-8")
+    starting_prompt = APP_PLATFORM_STARTING_PROMPT.read_text(encoding="utf-8")
+    normalized_assets = " ".join(assets.split())
+    normalized_prompt = " ".join(starting_prompt.split())
+
+    assert "Status: **Proposed Finance migration input — inactive**" in handoff
+    assert APP_PLATFORM_REVIEW_REVISION in handoff
+    assert "A link to this handoff" in handoff
+    assert "is not Application Adoption" in handoff
+    assert "It authorizes no Finance requirement change" in handoff
+    assert "apps-staging.comfforts.com/finance_assistant" in handoff
+    assert "transfers no existing edge resource or Terraform state" in handoff
+    assert "Status: **Proposed Finance migration input — inactive**" in assets
+    assert APP_PLATFORM_REVIEW_REVISION in assets
+    assert "Mandatory teardown-script safety boundary" in assets
+    assert "fail closed **before any Terraform initialization" in normalized_assets
+    assert "Registration Generation" in normalized_assets
+    assert "references the Finance attachments" in normalized_assets
+    assert (
+        "first implementation pull request must change and test the `down` scripts before any of "
+        "them is run live" in normalized_assets
+    )
+    assert "X-Comfforts-Verified-Identity" in normalized_assets
+    assert (
+        "only the platform repository's separately approved operator workflow" in normalized_assets
+    )
+    assert "Status: **Proposed Finance migration input — inactive**" in starting_prompt
+    assert "Wait for owner approval before editing" in normalized_prompt
+    assert "Stage A transfers no existing edge resource" in normalized_prompt
+    assert "change and test the down scripts before running any of them" in normalized_prompt
+    assert "Finance scripts must never destroy" in normalized_prompt
+    assert not (REPO_ROOT / "apps-platform").exists()
+    assert not (WORKFLOW_ROOT / "apps-platform-ci.yml").exists()
 
 
 def test_ci_runs_credential_free_checks_and_real_postgres_qualification() -> None:
@@ -201,19 +243,6 @@ def test_ci_runs_credential_free_checks_and_real_postgres_qualification() -> Non
     assert "pnpm test" in workflow
     assert "pnpm build" in workflow
     assert "postgres:17.11-alpine3.23@sha256:" in workflow
-
-
-def test_apps_platform_ci_is_path_scoped_and_credential_free() -> None:
-    workflow = _workflow("apps-platform-ci.yml")
-
-    assert workflow.count('      - "apps-platform/**"') == 2
-    assert workflow.count('      - ".github/workflows/apps-platform-ci.yml"') == 2
-    assert "permissions:\n  contents: read" in workflow
-    assert "run: make -C apps-platform check" in workflow
-    assert "secrets." not in workflow
-    assert "id-token: write" not in workflow
-    assert "gcloud" not in workflow
-    assert "terraform" not in workflow
 
 
 def test_pnpm_setup_is_explicit_when_package_manifest_is_not_at_repo_root() -> None:

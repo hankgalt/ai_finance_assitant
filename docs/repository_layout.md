@@ -2,18 +2,18 @@
 
 Status: Authoritative under accepted ADR-029 and ADR-030
 
-Updated: 2026-11-13
+Updated: 2026-11-17
 
 The repository is organized by durable product capability and interface. Milestones describe
 delivery history in `docs/`; they are not ownership boundaries for current machine-readable assets.
 
-## Colocated project boundary
+## External project boundary
 
-`apps-platform/` is a separately governed, extractable project rather than a Finance Assistant
-capability directory. Its own [repository layout](../apps-platform/docs/repository_layout.md) owns
-all canonical platform files. The parent repository contains only short authority pointers and a
-temporary path-scoped CI wrapper. Nothing in the subtree changes Finance Assistant architecture or
-deployment ownership until Finance adopts a separately approved integration contract.
+[`comfforts/apps-platform`](https://github.com/comfforts/apps-platform) owns all canonical App
+Platform files. This repository owns Finance Assistant capabilities only; platform documentation
+and inactive integration drafts do not change Finance architecture or deployment ownership.
+Finance Application Adoption requires a separately approved Finance-owned integration contract,
+migration plan, and release evidence.
 
 ## Ownership rules
 
@@ -35,6 +35,7 @@ deployment ownership until Finance adopts a separately approved integration cont
 
 | Path | Owner |
 | --- | --- |
+| `docs/integrations/` | Proposed cross-project handoff, asset/ownership, teardown-safety, and future-agent inputs; non-authoritative until incorporated through the owning product's requirements and release process |
 | `backend/data/knowledge/` | Finance and Tax knowledge source governance and retrieval cases |
 | `backend/data/calculations/` | Portfolio import and Goal Projection deterministic fixtures |
 | `backend/data/providers/` | Market-data and news adapter fixtures |
