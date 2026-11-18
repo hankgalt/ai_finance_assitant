@@ -35,6 +35,7 @@ migration plan, and release evidence.
 
 | Path | Owner |
 | --- | --- |
+| `docs/integrations/` | Proposed cross-project handoff, asset/ownership, teardown-safety, and future-agent inputs; non-authoritative until incorporated through the owning product's requirements and release process |
 | `backend/data/knowledge/` | Finance and Tax knowledge source governance and retrieval cases |
 | `backend/data/calculations/` | Portfolio import and Goal Projection deterministic fixtures |
 | `backend/data/providers/` | Market-data and news adapter fixtures |

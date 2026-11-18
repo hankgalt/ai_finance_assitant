@@ -25,7 +25,10 @@ the IAP-protected GCP deployment.
 repository and is not a Finance Assistant module or runtime dependency. Its governance and inactive
 integration drafts do not change the Finance Assistant requirements, contracts, Terraform
 ownership, DNS, identity configuration, or deployment. Finance adopts a platform interface only
-through its own approved migration requirements and release process.
+through its own approved migration requirements and release process. The proposed
+[migration packet](docs/integrations/app_platform_migration_handoff.md) preserves the inactive
+source index, compatibility gaps, asset/ownership inventory, teardown safety requirements, and a
+future-chat starting prompt without authorizing adoption.
 
 The planned initial release is a production-oriented private demonstration release for the owner and approved viewers, not a public launch. Live provider demonstrations must remain within approved API terms and configured quotas; a separately selected credential-free mode remains reproducible and clearly labeled synthetic.
 

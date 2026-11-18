@@ -10,7 +10,11 @@ This directory is the design authority for AI Finance Assistant. The product mis
 for the separately governed App Platform. Its documentation and inactive Finance integration draft
 are not Finance Assistant authority and do not alter the requirements, decisions, design, plans,
 contracts, deployment status, or qualification evidence recorded here. Finance Application
-Adoption requires a separately approved Finance-owned migration and release gate.
+Adoption requires a separately approved Finance-owned migration and release gate. For a migration
+task, read the proposed [App Platform migration handoff](integrations/app_platform_migration_handoff.md)
+after the current Finance authorities; it indexes the pinned draft, unresolved compatibility gaps,
+Finance-owned asset/ownership inventory, teardown safety boundary, and future-chat prompt without
+adopting them.
 
 ## Reading order and authority
 
