@@ -23,7 +23,7 @@ APP_PLATFORM_REVIEW_REVISION = "22f32da94854bbc265d40c8125f56b4efbbe7558"
 ACTION_REF = re.compile(r"^\s*-?\s*uses:\s*([^\s#]+)(?:\s+#.*)?$", re.MULTILINE)
 IMMUTABLE_ACTION_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
 PINNED_PNPM_SETUP = re.compile(
-    r"- uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6\.1\.0\n"
+    r"- uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6\.1\.1\n"
     r"\s+with:\n"
     r"\s+version: 11\.25\.0(?:\n|$)"
 )
