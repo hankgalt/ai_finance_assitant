@@ -2,6 +2,13 @@
 
 These instructions apply to the entire repository.
 
+## Branch naming
+
+Name new branches by intent with a semantic prefix such as `feat/`, `fix/`, `docs/`, `chore/`,
+`evidence/`, `refactor/`, `test/`, `ci/`, `build/`, or `release/`, followed by a concise kebab-case
+description. Use the change's dominant purpose for mixed work and honor an explicit user-provided
+name. Use these intent prefixes in place of tool or author prefixes such as `codex/`.
+
 ## App Platform boundary
 
 [`comfforts/apps-platform`](https://github.com/comfforts/apps-platform) is the canonical App

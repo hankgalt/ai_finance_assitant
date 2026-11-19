@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Stable operator entry point for destroying the disposable M11 staging demo
+# runtime. It resolves the sibling lifecycle wizard and replaces this process
+# with its reviewed `down` flow, forwarding any additional arguments.
+
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

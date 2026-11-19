@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
-# Publish the mirrored merged-main image references as non-secret GitHub
-# environment variables. Existing matching values are verified and left
-# untouched so an identical repeated run performs no GitHub writes.
+# Publishes the mirrored merged-main backend and frontend images as immutable,
+# non-secret GitHub environment variables for staging or production. It resolves
+# GitHub's current main revision, requires both Artifact Registry revision tags,
+# converts them to digest-pinned references, and verifies every write by reading
+# it back. Existing matching values are left untouched, so an identical repeated
+# run performs no GitHub writes.
 
 set -euo pipefail
 
