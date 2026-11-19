@@ -189,6 +189,13 @@ finish() {
 # STAGES: owner-only live-provider activation and rollback.
 # ──────────────────────────────────────────────────────────────────────────
 
+# Enables or disables the bounded owner-only live-provider posture in staging.
+# The interactive workflow verifies merged main, account rights, spend limits,
+# and the private deployment; on activation it creates secret metadata, accepts
+# provider keys directly into Secret Manager, applies numeric secret versions,
+# runs live journeys, and writes redacted evidence. Deactivation reviews and
+# applies the credential-free rollback, removes disposable provider secrets,
+# and reconciles protected GitHub variables.
 run_wizard() {
   ACTION="${1:-}"
   case "$ACTION" in

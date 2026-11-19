@@ -198,6 +198,12 @@ finish() {
 # the whole file before the first prompt, so an edit mid-run can't break it.
 # ──────────────────────────────────────────────────────────────────────────
 
+# Creates or destroys the owner-only M11 staging demo runtime while preserving
+# its reusable networking foundation. The interactive workflow validates the
+# operator and immutable images, applies the appropriate Terraform stacks,
+# bootstraps an empty PostgreSQL store, deploys private workloads, and
+# reconciles non-secret GitHub deployment variables; teardown requires review
+# before discarding runtime data and restores the credential-free posture.
 run_wizard() {
 
 ACTION="${1:-}"

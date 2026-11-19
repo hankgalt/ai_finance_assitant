@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
-# Mirror the two images built from the current merged main commit from GHCR to
-# Artifact Registry. Repeated runs against identical state perform read-only
-# verification and skip every repository, Docker-config, and registry write.
+# Mirrors the backend and frontend images for GitHub's current merged-main
+# revision from GHCR into the staging Artifact Registry without rebuilding them.
+# It resolves both source digests before copying, creates only missing revision
+# tags, and verifies digest equality through Docker and gcloud. Repeated runs
+# against identical state perform read-only verification and skip repository,
+# Docker-config, and registry writes.
 
 set -euo pipefail
 

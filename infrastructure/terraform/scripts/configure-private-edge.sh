@@ -198,6 +198,13 @@ finish() {
 # the whole file before the first prompt, so an edit mid-run can't break it.
 # ──────────────────────────────────────────────────────────────────────────
 
+# Creates or removes the Finance Assistant's owner-only HTTPS/IAP edge without
+# exposing the underlying Cloud Run services. The interactive workflow manages
+# the OAuth secret container, guides external OAuth and DNS setup, applies the
+# edge Terraform stack, binds FastAPI to the generated IAP audience, reconciles
+# GitHub variables, and qualifies routing and origin denial. Teardown first
+# removes DNS and restores the backend's fail-closed audience before destroying
+# only the edge resources.
 run_wizard() {
 
 ACTION="${1:-}"

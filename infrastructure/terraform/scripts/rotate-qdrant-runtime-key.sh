@@ -198,6 +198,13 @@ finish() {
 # the whole file before the first prompt, so an edit mid-run can't break it.
 # ──────────────────────────────────────────────────────────────────────────
 
+# Rotates the staging backend's read-only Qdrant runtime credential while
+# preserving the deployed image, private edge, and credential-free provider
+# posture. The interactive workflow creates or selects a replacement key,
+# verifies its permissions, constrains Terraform to a backend secret-version
+# change, applies and read-checks the cutover with rollback on failure, updates
+# the protected GitHub variable, then revokes and destroys the old credential
+# and completes secret-free evidence.
 run_wizard() {
 
 TOTAL_STAGES=7

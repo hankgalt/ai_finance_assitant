@@ -198,6 +198,11 @@ finish() {
 # the whole file before the first prompt, so an edit mid-run can't break it.
 # ───────────────────────────────────────────────────────────────────────────
 
+# Runs the final, revision-scoped qualification of the assembled owner-only
+# private demo without changing infrastructure or provider mode. The interactive
+# workflow verifies merged main, immutable deployed images, IAP and origin
+# controls, prior isolation evidence, authenticated product journeys, cleanup,
+# and final cloud readbacks before installing redacted release evidence.
 run_wizard() {
 
 TOTAL_STAGES=6
